@@ -324,6 +324,107 @@ TextMuted:   #6B7089  (gris para labels)
 
 ---
 
+## Plan v2 — Android Auto
+
+### El problema de categoría (bloqueante)
+
+Android Auto requiere que cada app pertenezca a una categoría aprobada por Google Play. **No existe categoría para diagnóstico OBD2.** Categorías actuales (junio 2026):
+
+```
+✅ Navigation, Audio/Media, Messaging, VoIP
+✅ EV charging, Weather, Games*, Video*, Browsers*
+   (* solo estacionado — Tier 1)
+❌ Vehicle diagnostics / OBD2 / telemetry — NO EXISTE
+```
+
+**Estrategia para v2**: declarar la app bajo la categoría más cercana posible (candidata: IoT o una futura "Vehicle Info" que Google ha mencionado). Monitorear el listado oficial antes de implementar. Si Google rechaza, distribuir vía sideload (APK directo) — válido para open source.
+
+### Restricciones de UI en Android Auto (Car App Library)
+
+Car App Library **prohíbe UI custom**. Solo templates predefinidos:
+
+| Template | Uso en RevScope |
+|----------|----------------|
+| `PaneTemplate` | Pantalla principal — 4 métricas en tiempo real |
+| `ListTemplate` | Lista de PIDs disponibles, lista de DTCs |
+| `GridTemplate` | Selector de pantalla (Dashboard / DTC / Perfil) |
+| `MessageTemplate` | Alertas de temperatura / presión crítica |
+| `SectionedItemTemplate` *(CAL 1.8 alpha)* | Grupos de sensores agrupados por sistema |
+
+**Prohibido**: Canvas custom, Compose en pantalla del carro, gauges dibujados, gráficas animadas.
+
+**Permitido dentro de templates**: colores de acento propietarios, iconos custom, texto formateado.
+
+### Requisitos de calidad Google Play (verificados)
+
+```
+UX-1: touch targets mínimo 64dp
+UX-2: separación mínima 24dp entre targets y bordes
+UX-3: fuente mínima 24sp
+```
+
+### Pantallas wide / aspect ratio (carros nuevos)
+
+Car App Library 1.8 maneja automáticamente pantallas ultrawide (3:1, 4:1).  
+`SectionedItemTemplate` adapta columnas según espacio disponible.  
+RevScope no necesita lógica especial — la librería lo abstrae.
+
+### Arquitectura v2
+
+```
+┌─────────────────────────────────────────┐
+│  Módulo :auto (Car App Library 1.8)     │
+│  ├─ RevScopeCarAppService               │  ← CarAppService entry point
+│  ├─ DashboardCarScreen                  │  ← PaneTemplate, 4 métricas
+│  ├─ DtcCarScreen                        │  ← ListTemplate, códigos error
+│  └─ AlertCarScreen                      │  ← MessageTemplate, alertas
+├─────────────────────────────────────────┤
+│  Foreground Service (nuevo en v2)       │
+│  ├─ OBD2ConnectionService               │  ← mantiene conexión BT viva
+│  │   al pasar a Android Auto            │
+│  └─ TelemetryBroadcaster               │  ← SharedFlow → CarScreen
+└─────────────────────────────────────────┘
+```
+
+**Problema arquitectural clave**: cuando Android Auto toma control, la app pasa a background. La conexión Bluetooth Classic (ClassicBtTransport) debe vivir en un `ForegroundService` con notificación persistente para no ser matada por el sistema.
+
+### Pantalla principal v2 (PaneTemplate)
+
+```
+┌─────────────────────────────────────────────┐
+│  RevScope                    [icono]         │
+├──────────────┬──────────────────────────────┤
+│  RPM         │  VELOCIDAD                   │
+│  3.240       │  87 km/h                     │
+├──────────────┼──────────────────────────────┤
+│  TEMP MOTOR  │  MARCHA EST.                 │
+│  92 °C       │  3ª                          │
+├──────────────┴──────────────────────────────┤
+│  [DTCs]  [Sensores]  [Desconectar]          │
+└─────────────────────────────────────────────┘
+```
+
+Solo lectura mientras se conduce. Interacción de botones solo cuando el carro está estacionado (Car App Library lo enforcea automáticamente).
+
+### Prerrequisitos para iniciar v2
+
+1. v1 completamente estable (todas las fases)
+2. `OBD2ConnectionService` (ForegroundService) extraído de v1 como base
+3. Definir estrategia de categoría Google Play (monitorear anuncios de Google)
+4. Car App Library 1.8 estable (actualmente en alpha a junio 2026)
+5. Dispositivo de prueba con Android Auto activo (Mazda CX-30 o cualquier carro compatible)
+
+### Lo que v2 NO puede hacer (definitivo)
+
+- Gauges animados en pantalla del carro
+- Gráficas de sensores en tiempo real
+- UI de conexión / emparejamiento mientras se conduce
+- Pantalla personalizada tipo HUD
+
+Esas features quedan exclusivamente en la app de teléfono (v1).
+
+---
+
 ## Licencia
 
 Apache License 2.0 — permite uso comercial, modificación, distribución, uso privado.  
