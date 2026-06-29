@@ -1,0 +1,34 @@
+# Android
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Kotlin
+*.class
+*.jar
+*.war
+
+# Keystore (NEVER commit)
+*.jks
+*.keystore
+*.p12
+release/
+signing.properties
+
+# Local config
+local.properties
+keystore.properties
+
+# IDE
+*.swp
+.vscode/
