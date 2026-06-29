@@ -44,7 +44,8 @@ Vehículos objetivo: Mazda CX-30 GT · Renault Kardian · Nissan March · TVS Ap
 │  ├─ DashboardViewModel                               │
 │  ├─ GearViewModel                                    │
 │  ├─ SessionViewModel                                 │
-│  └─ ConnectionViewModel                              │
+│  ├─ ConnectionViewModel  (telemetry + gear table)    │
+│  └─ IntelligenceViewModel (wires IntelligenceOrchestrator → ConnectionViewModel) │
 ├──────────────────────────────────────────────────────┤
 │  Domain / Use Cases                                  │
 │  ├─ ConnectToAdapterUseCase                          │
@@ -54,9 +55,16 @@ Vehículos objetivo: Mazda CX-30 GT · Renault Kardian · Nissan March · TVS Ap
 │  ├─ SaveSessionUseCase                               │
 │  └─ EstimateGearUseCase  (RPM/speed ratio)           │
 ├──────────────────────────────────────────────────────┤
+│  Intelligence Layer (core:intelligence)              │
+│  ├─ IntelligenceOrchestrator  (wires all AI/ML)      │
+│  ├─ AdaptiveGearLearner  (EMA clustering, on-device) │
+│  ├─ AnomalyDetector      (Welford statistics)        │
+│  ├─ DriveStyleClassifier (rule-based, all tiers)     │
+│  └─ DtcExplainer         (Claude API, optional)      │
+├──────────────────────────────────────────────────────┤
 │  TelemetryEngine                                     │
 │  ├─ PidScheduler         (coroutine polling loop)    │
-│  ├─ DerivedMetricsEngine (boost, gear, power calc)   │
+│  ├─ DerivedMetricsEngine (boost, gear, power calc)   │  ← gear table injectable
 │  └─ SessionRecorder      (Room writes)               │
 ├──────────────────────────────────────────────────────┤
 │  OBD Protocol Layer                                  │
@@ -97,11 +105,22 @@ revscope/
 │   │   ├── connection/           # Transports (BT, BLE, WiFi)
 │   │   ├── protocol/             # Parser, builder, negotiator
 │   │   ├── pid/                  # Registry, PID definitions JSON
+│   │   ├── telemetry/            # PidScheduler, DerivedMetricsEngine, SessionRecorder
+│   │   ├── viewmodel/            # ConnectionViewModel
 │   │   └── model/                # OBD data models
+│   │
+│   ├── intelligence/             # AI / ML — no UI dependency
+│   │   ├── gear/                 # AdaptiveGearLearner, GearCluster
+│   │   ├── anomaly/              # AnomalyDetector, AnomalyAlert
+│   │   ├── dtc/                  # DtcExplainer (Claude API), DtcExplanation
+│   │   ├── efficiency/           # DriveStyleClassifier, TripScore, DriveStyle
+│   │   ├── IntelligenceOrchestrator.kt
+│   │   ├── IntelligenceTier.kt
+│   │   └── IntelligenceCapability.kt
 │   │
 │   ├── data/                     # Room + DataStore
 │   │   ├── db/
-│   │   └── datastore/
+│   │   └── datastore/            # PreferencesKeys incl. AI prefs
 │   │
 │   └── common/                   # Extensions, utils
 │
@@ -241,7 +260,56 @@ TextMuted:   #6B7089  (gris para labels)
 
 ---
 
+## Capa de inteligencia (core:intelligence)
+
+### IntelligenceTier
+
+RevScope adapta el nivel de procesamiento según el hardware disponible y la configuración del usuario:
+
+| Tier | Condición de activación | Features activos |
+|------|------------------------|-----------------|
+| `MINIMAL` | < 2 GB RAM o `AI_FEATURES_ENABLED = false` | DriveStyleClassifier (rule-based, O(1)) |
+| `ON_DEVICE` | ≥ 2 GB RAM, detección automática | + AdaptiveGearLearner + AnomalyDetector |
+| `FULL` | ON_DEVICE + `CLAUDE_API_KEY` configurado | + DtcExplainer via Claude Haiku |
+
+`IntelligenceCapability.effectiveTier()` evalúa: RAM del dispositivo → presencia de API key → override manual del usuario.
+
+### Wiring entre módulos (sin dependencia circular)
+
+```
+:core:obd         depende de: nada externo
+:core:intelligence depende de: :core:obd  ← solo una dirección
+:app / :feature    depende de: :core:obd + :core:intelligence
+```
+
+`IntelligenceOrchestrator` recibe un `Flow<ObdReading>` del `ConnectionViewModel` y emite:
+- `gearLearner.gearTable: StateFlow<List<GearCluster>>` — el feature module llama `connectionViewModel.setGearTable()` cuando calibra
+- `anomalyAlerts: SharedFlow<AnomalyAlert>` — alertas para UI
+- `tripScore: StateFlow<TripScore>` — score actualizado cada 30 s
+
+### PreferencesKeys AI
+
+```kotlin
+val CLAUDE_API_KEY = stringPreferencesKey("claude_api_key")
+val INTELLIGENCE_TIER_OVERRIDE = stringPreferencesKey("intelligence_tier_override")  // blank = auto
+val AI_FEATURES_ENABLED = booleanPreferencesKey("ai_features_enabled")  // default true
+```
+
+---
+
 ## Fases de desarrollo v1
+
+### Fase 0 — Inteligencia (completa)
+- [x] `IntelligenceTier` + `IntelligenceCapability` (detección de RAM)
+- [x] `AdaptiveGearLearner` (EMA clustering, 6 marchas, `MIN_OBSERVATIONS=30`)
+- [x] `AnomalyDetector` (Welford online, `BASELINE_MIN_SAMPLES=200`, `3σ`)
+- [x] `DtcExplainer` (Claude Haiku `claude-haiku-4-5-20251001`, cache in-memory, fallback offline)
+- [x] `DriveStyleClassifier` (rule-based: RPM alto, acelerones, carga media)
+- [x] `TripScore` + `DriveStyle` (score 0–100, cuatro niveles)
+- [x] `IntelligenceOrchestrator` (coordina todo, tier-aware)
+- [x] `DerivedMetricsEngine.setGearTable()` (acepta tabla calibrada externa)
+- [x] `ConnectionViewModel.setGearTable()` (expone setter para feature module)
+- [x] `PreferencesKeys` actualizado con claves AI
 
 ### Fase 1 — Capa de conexión y protocolo (semana 1-2)
 - [ ] Proyecto Android + estructura de módulos
@@ -252,13 +320,13 @@ TextMuted:   #6B7089  (gris para labels)
 - [ ] Tests unitarios: parser + registry
 
 ### Fase 2 — Motor de telemetría (semana 2-3)
-- [ ] `PidScheduler`: coroutine loop, polling por prioridad
-- [ ] `DerivedMetricsEngine`: boost, gear, potencia
-- [ ] `SessionRecorder`: Room, graba puntos cada 500ms
-- [ ] `ConnectionViewModel`: StateFlow de estado de conexión
-- [ ] Tests: scheduler con mock transport
+- [x] `PidScheduler`: coroutine loop, polling por prioridad (Mutex half-duplex)
+- [x] `DerivedMetricsEngine`: boost, gear, potencia + `setGearTable()` para calibración adaptativa
+- [x] `SessionRecorder`: Room, graba puntos cada 500ms con buffer
+- [x] `ConnectionViewModel`: StateFlow conexión + `setGearTable()` expuesto
+- [x] Tests: PidSchedulerTest (4 casos) + DerivedMetricsEngineTest (8 casos)
 
-### Fase 3 — UI Dashboard (semana 3-4)
+### Fase 3 — UI Dashboard (SIGUIENTE)
 - [ ] Tema Compose (Dark luxury, Space Grotesk, Inter)
 - [ ] `RpmGauge` composable (arco animado)
 - [ ] `SpeedGauge` composable
@@ -266,7 +334,189 @@ TextMuted:   #6B7089  (gris para labels)
 - [ ] `TempGauge` composable
 - [ ] `BoostBar` composable
 - [ ] `DashboardScreen` ensamblando gauges
+- [ ] `AdapterScanScreen` (ConnectionFlow: Disconnected/Connecting/Connected/Error)
 - [ ] Animaciones spring() para transiciones de valores
+
+#### Specs de implementación — Fase 3
+
+**Módulo**: `feature/dashboard/`  
+**Package**: `com.revscope.feature.dashboard`  
+**Dependencias del módulo**: `:core:obd`, `:core:intelligence`, `:core:data`
+
+##### Tema Compose
+
+```kotlin
+// feature/dashboard/src/main/kotlin/com/revscope/feature/dashboard/ui/theme/RevScopeTheme.kt
+
+object RevScopeColors {
+    val Background   = Color(0xFF0A0A0F)
+    val Surface      = Color(0xFF12121A)
+    val SurfaceHigh  = Color(0xFF1C1C28)
+    val Accent       = Color(0xFFE8FF00)   // amarillo racing — gauges activos
+    val AccentDim    = Color(0xFF8C9900)   // accent apagado para arcos inactivos
+    val Warning      = Color(0xFFFF8C00)   // naranja — temps altas
+    val Danger       = Color(0xFFFF3040)   // rojo — alertas críticas
+    val Success      = Color(0xFF00E676)   // verde — sistemas OK
+    val TextPrimary  = Color(0xFFF0F0F8)
+    val TextMuted    = Color(0xFF6B7089)
+}
+
+// Fuentes: usar FontFamily con GoogleFont provider
+// Space Grotesk → números/valores  |  Inter → labels/texto
+```
+
+##### RpmGauge
+
+```
+Forma: arco de 270° centrado en bottom-center
+Inicio arco: 135° (bottom-left)  Fin arco: 45° (bottom-right)
+Grosor stroke: 12dp
+Colores del arco (gradiente por valor):
+  0–60% redline  →  Success (#00E676)
+  60–85% redline →  Warning (#FF8C00)
+  85–100%        →  Danger  (#FF3040)
+Aguja: línea desde centro, longitud = radio × 0.7, animada con spring(stiffness=Spring.StiffnessMediumLow)
+Redline marker: tick rojo en el ángulo correspondiente al redline del perfil
+Texto central: valor RPM en Space Grotesk bold 36sp, label "RPM" TextMuted 12sp debajo
+Parámetros composable: rpm: Float, maxRpm: Int, modifier: Modifier
+```
+
+##### SpeedGauge
+
+```
+Forma: semicírculo 180° (mitad superior)
+Texto central: velocidad grande en Space Grotesk bold 48sp
+Unidad debajo: "km/h" o "mph" según preferencias
+Arco: fill desde 0° hasta ángulo proporcional a velocidad, color Accent
+Parámetros: speed: Float, maxSpeed: Int = 260, modifier: Modifier
+```
+
+##### GearDisplay
+
+```
+Solo texto — sin arco
+Número de marcha: Space Grotesk ExtraBold, 96sp, color:
+  1–2  → Success (economía)
+  3–4  → Accent  (crucero)
+  5–6  → Warning (alto RPM)
+  0    → muestra "N" color TextMuted
+Estado de calibración: ícono de candado abierto/cerrado debajo del número
+  Cerrado = AdaptiveGearLearner no calibrado aún
+  Abierto = calibrado (gear table vehicle-specific activa)
+Parámetros: gear: Int, isCalibrated: Boolean, modifier: Modifier
+```
+
+##### TempGauge
+
+```
+Forma: barra vertical, fill de abajo hacia arriba
+Rango: -40°C a 130°C (coolant), fill proporcional
+Colores:
+  < 60°C  → TextMuted  (frío)
+  60–105°C → Success   (normal)
+  > 105°C  → Danger    (sobrecalentamiento)
+Valor numérico arriba de la barra
+Parámetros: tempCelsius: Float, modifier: Modifier
+```
+
+##### BoostBar
+
+```
+Forma: barra horizontal
+Rango: -30 kPa (vacío) a +30 kPa (boost)
+Centro = 0 kPa (atmosférica)
+Zona positiva: Warning (#FF8C00), zona negativa (vacío): TextMuted
+Marcador de zona óptima: línea vertical punteada configurable por perfil
+Label: "+X kPa" o "-X kPa" según valor
+Parámetros: boostKpa: Float, modifier: Modifier
+```
+
+##### DashboardScreen layout
+
+```
+┌─────────────────────────────────────────────┐
+│  [ícono BT]  RevScope  [estado: Connected ●] │  TopBar
+├──────────────────────────────────────────────┤
+│                                              │
+│          ┌──────────────────┐               │
+│          │   RPM GAUGE      │               │
+│          │   (270° arc)     │               │
+│          └──────────────────┘               │
+│                                              │
+│  ┌──────────┐  ┌──────┐  ┌──────────┐      │
+│  │ SPEED    │  │ GEAR │  │ TEMP     │      │
+│  │ 87 km/h  │  │  3   │  │  92°C    │      │
+│  └──────────┘  └──────┘  └──────────┘      │
+│                                              │
+│  ┌─────────────────────────────────────┐    │
+│  │ BOOST  ──────|●─────────────────   │    │
+│  │        -10     0      +10    +20 kPa│    │
+│  └─────────────────────────────────────┘    │
+│                                              │
+│  🌿 ECO  Score: 84/100  ↑3 desde ayer       │  TripScore bar
+└──────────────────────────────────────────────┘
+```
+
+##### ViewModel para DashboardScreen
+
+```kotlin
+// feature/dashboard/src/main/kotlin/.../DashboardViewModel.kt
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    private val connectionViewModel: ConnectionViewModel,  // shared via Hilt
+    private val orchestrator: IntelligenceOrchestrator,    // singleton Hilt
+) : ViewModel() {
+
+    val connectionState = connectionViewModel.connectionState
+    val readings = connectionViewModel.readings     // Map<String, ObdReading>
+    val anomalyAlerts = orchestrator.anomalyAlerts
+    val tripScore = orchestrator.tripScore
+    val gearCalibrated: StateFlow<Boolean>  // derivado de orchestrator.gearLearner.isCalibrated()
+
+    // En init: start orchestrator feeding readings into it
+    // Observar gearLearner.gearTable y llamar connectionViewModel.setGearTable() cuando calibra
+}
+```
+
+##### Hilt binding para IntelligenceOrchestrator
+
+```kotlin
+// app/src/main/kotlin/.../di/IntelligenceModule.kt
+@Module @InstallIn(SingletonComponent::class)
+object IntelligenceModule {
+    @Provides @Singleton
+    fun provideIntelligenceOrchestrator(
+        @ApplicationContext context: Context,
+        @Named("claudeApiKey") apiKeyProvider: () -> String?,
+    ): IntelligenceOrchestrator {
+        val tier = IntelligenceCapability.deviceTier(context)
+        return IntelligenceOrchestrator(
+            tier = tier,
+            dtcExplainer = DtcExplainer { apiKeyProvider() },
+        )
+    }
+}
+```
+
+##### AdapterScanScreen
+
+```
+Estado Disconnected:
+  - Botón "Buscar adaptadores" → lanza Classic BT scan
+  - Lista de dispositivos pareados (BluetoothAdapter.bondedDevices)
+  - Tap en dispositivo → connectionViewModel.connectToDevice(address)
+
+Estado Connecting:
+  - CircularProgressIndicator + "Conectando a {name}..."
+
+Estado Connected:
+  - Badge verde + nombre del dispositivo
+  - Botón "Desconectar"
+
+Estado Error:
+  - Mensaje de error con ícono rojo
+  - Botón "Reintentar"
+```
 
 ### Fase 4 — Pantallas secundarias (semana 4-5)
 - [ ] `SensorGraphScreen` con Vico (selección de PIDs)
@@ -749,4 +999,4 @@ fun onCharacteristicChanged(bytes: ByteArray) {
 
 Pedir MTU mayor con `requestMtu(512)` via blessed-android-coroutines — reduce fragmentación.
 
-*Última actualización: 2026-06-28*
+*Última actualización: 2026-06-29*
