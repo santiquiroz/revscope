@@ -6,9 +6,7 @@ sealed class Screen(val route: String) {
     object Sensors : Screen("sensors")
     object Dtc : Screen("dtc")
     object Sessions : Screen("sessions")
-    object VehicleProfile : Screen("vehicle/{profileId}") {
-        fun createRoute(id: Long) = "vehicle/$id"
-    }
+    object VehicleProfile : Screen("vehicle")
     object Settings : Screen("settings")
     object AdapterScan : Screen("adapter_scan")
 }

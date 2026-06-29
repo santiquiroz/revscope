@@ -1,24 +1,232 @@
 package com.revscope.feature.vehicle
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 
-/** Vehicle profile editor (name, type, enabled PIDs, gear ratios) — Phase 4. */
+private val BgColor = Color(0xFF0A0A0F)
+private val SurfaceColor = Color(0xFF12121A)
+private val SurfaceHighColor = Color(0xFF1C1C28)
+private val AccentColor = Color(0xFFE8FF00)
+private val DangerColor = Color(0xFFFF3040)
+private val TextPrimaryColor = Color(0xFFF0F0F8)
+private val TextMutedColor = Color(0xFF6B7089)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun VehicleProfileScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+fun VehicleProfileScreen(
+    vm: VehicleViewModel = hiltViewModel(),
+) {
+    val profiles by vm.profiles.collectAsState()
+    val formName by vm.formName.collectAsState()
+    val formType by vm.formType.collectAsState()
+    val formVin by vm.formVin.collectAsState()
+    val formEnabledPids by vm.formEnabledPids.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgColor),
     ) {
-        Text(
-            text = "Vehicle Profile — Phase 4",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
+        TopAppBar(
+            title = { Text("Perfiles de vehículo", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
         )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            // Existing profiles
+            if (profiles.isNotEmpty()) {
+                Text("Perfiles guardados", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                profiles.forEach { profile ->
+                    ProfileItem(profile = profile, onDelete = { vm.deleteProfile(profile.id) })
+                }
+                Spacer(Modifier.height(4.dp))
+            }
+
+            // New profile form
+            Text("Nuevo perfil", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+
+            OutlinedTextField(
+                value = formName,
+                onValueChange = { vm.setName(it) },
+                label = { Text("Nombre del vehículo", color = TextMutedColor) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentColor,
+                    unfocusedBorderColor = SurfaceHighColor,
+                    focusedTextColor = TextPrimaryColor,
+                    unfocusedTextColor = TextPrimaryColor,
+                ),
+            )
+
+            // Type picker
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TypeChip(
+                    label = "Auto",
+                    icon = { Icon(Icons.Default.DirectionsCar, null, modifier = Modifier.size(16.dp)) },
+                    selected = formType == "CAR",
+                    onClick = { vm.setType("CAR") },
+                )
+                TypeChip(
+                    label = "Moto",
+                    icon = { Icon(Icons.Default.TwoWheeler, null, modifier = Modifier.size(16.dp)) },
+                    selected = formType == "MOTORCYCLE",
+                    onClick = { vm.setType("MOTORCYCLE") },
+                )
+            }
+
+            OutlinedTextField(
+                value = formVin,
+                onValueChange = { vm.setVin(it) },
+                label = { Text("VIN (opcional)", color = TextMutedColor) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentColor,
+                    unfocusedBorderColor = SurfaceHighColor,
+                    focusedTextColor = TextPrimaryColor,
+                    unfocusedTextColor = TextPrimaryColor,
+                ),
+            )
+
+            // PID enablement
+            Text("PIDs activos", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                vm.availablePids.forEach { def ->
+                    val enabled = def.pid in formEnabledPids
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = if (enabled) AccentColor else SurfaceHighColor,
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            .clickable { vm.togglePid(def.pid) }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    ) {
+                        Text(
+                            text = def.nameEs,
+                            fontSize = 11.sp,
+                            color = if (enabled) BgColor else TextMutedColor,
+                            fontWeight = if (enabled) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    }
+                }
+            }
+
+            Button(
+                onClick = { vm.saveProfile() },
+                enabled = formName.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) {
+                Text("Guardar perfil", color = BgColor, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TypeChip(
+    label: String,
+    icon: @Composable () -> Unit,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .background(
+                color = if (selected) AccentColor else SurfaceHighColor,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(modifier = Modifier.size(16.dp)) {
+            icon()
+        }
+        Text(
+            text = label,
+            color = if (selected) BgColor else TextMutedColor,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 13.sp,
+        )
+    }
+}
+
+@Composable
+private fun ProfileItem(profile: VehicleProfileEntity, onDelete: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (profile.type == "MOTORCYCLE") Icons.Default.TwoWheeler else Icons.Default.DirectionsCar,
+            contentDescription = null,
+            tint = AccentColor,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(profile.name, color = TextPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            if (profile.vin != null) {
+                Text("VIN: ${profile.vin}", color = TextMutedColor, fontSize = 11.sp)
+            }
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = DangerColor)
+        }
     }
 }
