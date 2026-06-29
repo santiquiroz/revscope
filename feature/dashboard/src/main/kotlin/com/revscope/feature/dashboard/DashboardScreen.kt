@@ -1,27 +1,212 @@
 package com.revscope.feature.dashboard
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.intelligence.efficiency.TripScore
+import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.viewmodel.ConnectionViewModel
+import com.revscope.feature.dashboard.gauges.BoostBar
+import com.revscope.feature.dashboard.gauges.GearDisplay
+import com.revscope.feature.dashboard.gauges.RpmGauge
+import com.revscope.feature.dashboard.gauges.SpeedGauge
+import com.revscope.feature.dashboard.gauges.TempGauge
+import com.revscope.feature.dashboard.ui.RevScopeColors
+import kotlinx.coroutines.flow.channelFlow
 
-/**
- * Dashboard screen with live gauges — implemented in Phase 3.
- * Displays RPM, speed, gear, temperature, and boost bar.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(
+    onNavigateToAdapterScan: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    connectionVm: ConnectionViewModel = hiltViewModel(),
+    dashboardVm: DashboardViewModel = hiltViewModel(),
+) {
+    val connectionState by connectionVm.connectionState.collectAsState()
+    val readings by connectionVm.readings.collectAsState()
+    val tripScore by dashboardVm.tripScore.collectAsState()
+    val gearCalibrated by dashboardVm.gearCalibrated.collectAsState()
+
+    // Start intelligence once connected; restart on reconnect
+    LaunchedEffect(connectionState) {
+        if (connectionState is ConnectionState.Connected) {
+            val readingsFlow = channelFlow {
+                connectionVm.readings.collect { map ->
+                    map.values.forEach { send(it) }
+                }
+            }
+            dashboardVm.startIntelligence(readingsFlow, connectionVm)
+        }
+    }
+
+    val rpm = readings["0C"]?.value ?: 0f
+    val speed = readings["0D"]?.value ?: 0f
+    val temp = readings["05"]?.value ?: 0f
+    val boost = readings["BOOST"]?.value ?: 0f
+    val gear = readings["GEAR"]?.value?.toInt() ?: 0
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "RevScope",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = RevScopeColors.TextPrimary,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToAdapterScan) {
+                        Icon(
+                            imageVector = Icons.Default.Bluetooth,
+                            contentDescription = "Bluetooth",
+                            tint = when (connectionState) {
+                                is ConnectionState.Connected -> RevScopeColors.Success
+                                is ConnectionState.Connecting -> RevScopeColors.Warning
+                                is ConnectionState.Error -> RevScopeColors.Danger
+                                else -> RevScopeColors.TextMuted
+                            }
+                        )
+                    }
+                },
+                actions = {
+                    ConnectionStatusBadge(connectionState)
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = RevScopeColors.TextMuted,
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = RevScopeColors.Surface,
+                )
+            )
+        },
+        containerColor = RevScopeColors.Background,
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            RpmGauge(
+                rpm = rpm,
+                maxRpm = 8000,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SpeedGauge(
+                    speed = speed,
+                    modifier = Modifier.weight(1f),
+                )
+                GearDisplay(
+                    gear = gear,
+                    isCalibrated = gearCalibrated,
+                    modifier = Modifier.weight(0.6f),
+                )
+                TempGauge(
+                    tempCelsius = temp,
+                    modifier = Modifier.weight(0.6f),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            BoostBar(
+                boostKpa = boost,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            TripScoreBar(tripScore = tripScore)
+        }
+    }
+}
+
+@Composable
+private fun ConnectionStatusBadge(state: ConnectionState) {
+    val (label, color) = when (state) {
+        is ConnectionState.Connected -> "Connected ●" to RevScopeColors.Success
+        is ConnectionState.Connecting -> "Connecting…" to RevScopeColors.Warning
+        is ConnectionState.Error -> "Error ●" to RevScopeColors.Danger
+        ConnectionState.Disconnected -> "Disconnected" to RevScopeColors.TextMuted
+    }
+    Text(
+        text = label,
+        fontSize = 12.sp,
+        color = color,
+        modifier = Modifier.padding(end = 8.dp),
+    )
+}
+
+@Composable
+private fun TripScoreBar(tripScore: TripScore) {
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(RevScopeColors.SurfaceHigh, shape = RoundedCornerShape(8.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
-        Text(
-            text = "Dashboard — Phase 3",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = "${tripScore.style.emoji} ${tripScore.style.label}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = RevScopeColors.TextPrimary,
+            )
+            Text(
+                text = "Score: ${tripScore.overall}/100",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = RevScopeColors.Accent,
+            )
+        }
     }
 }

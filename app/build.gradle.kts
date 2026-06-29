@@ -46,6 +46,7 @@ android {
 
 dependencies {
     implementation(project(":core:obd"))
+    implementation(project(":core:intelligence"))
     implementation(project(":core:data"))
     implementation(project(":core:common"))
     implementation(project(":feature:dashboard"))

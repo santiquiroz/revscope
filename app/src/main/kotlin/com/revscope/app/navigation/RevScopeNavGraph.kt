@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.revscope.feature.dashboard.AdapterScanScreen
 import com.revscope.feature.dashboard.DashboardScreen
 import com.revscope.feature.dtc.DtcScreen
 import com.revscope.feature.gear.GearAnalyzerScreen
@@ -22,7 +23,15 @@ fun RevScopeNavGraph(
         startDestination = Screen.Dashboard.route
     ) {
         composable(Screen.Dashboard.route) {
-            DashboardScreen()
+            DashboardScreen(
+                onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+            )
+        }
+        composable(Screen.AdapterScan.route) {
+            AdapterScanScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
         composable(Screen.GearAnalyzer.route) {
             GearAnalyzerScreen()
