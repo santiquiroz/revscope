@@ -432,4 +432,321 @@ Requiere preservar aviso de copyright y licencia.
 
 ---
 
+---
+
+## Especificaciones de implementación (para nueva sesión de Claude)
+
+### Dependencias exactas (build.gradle.kts)
+
+```kotlin
+// Versiones a usar — no inventar otras
+val composeVersion = "1.7.8"
+val hiltVersion = "2.51.1"
+val roomVersion = "2.7.1"
+val coroutinesVersion = "1.9.0"
+
+dependencies {
+    // Compose BOM
+    implementation(platform("androidx.compose:compose-bom:2025.05.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.activity:activity-compose:1.10.1")
+
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.8.9")
+
+    // Hilt
+    implementation("com.google.dagger:hilt-android:$hiltVersion")
+    kapt("com.google.dagger:hilt-compiler:$hiltVersion")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    // Room
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    kapt("androidx.room:room-compiler:$roomVersion")
+
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.4")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
+
+    // BLE
+    implementation("com.github.weliem:blessed-android-coroutines:2.0.8")
+
+    // Charts
+    implementation("com.patrykandpatrick.vico:compose-m3:2.1.2")
+
+    // PID formula evaluation — usar exp4j (no EvalEx)
+    implementation("net.objecthunter:exp4j:0.4.8")
+
+    // Fonts — Space Grotesk + Inter via Google Fonts
+    implementation("androidx.compose.ui:ui-text-google-fonts")
+
+    // Timber logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
+    testImplementation("io.mockk:mockk:1.13.12")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+}
+```
+
+**Corrección**: usar **exp4j** en todo el proyecto. EvalEx no aplica aquí. exp4j evalúa strings como `"((A*256)+B)/4"` con variables A, B, C, D.
+
+### Package name
+
+```
+com.revscope.app
+```
+
+Paquete de módulos:
+- `com.revscope.core.obd`
+- `com.revscope.core.data`
+- `com.revscope.feature.dashboard`
+- etc.
+
+### Interfaz Transport (contrato sellado)
+
+```kotlin
+// core/obd/connection/Transport.kt
+interface Transport {
+    val isConnected: Boolean
+    suspend fun connect(): Result<Unit>
+    suspend fun disconnect()
+    suspend fun send(command: String)      // envía AT cmd o PID request
+    suspend fun receive(): String          // lee hasta '>' o timeout
+    fun observeConnectionState(): Flow<ConnectionState>
+}
+
+sealed class ConnectionState {
+    object Disconnected : ConnectionState()
+    object Connecting : ConnectionState()
+    data class Connected(val deviceName: String) : ConnectionState()
+    data class Error(val message: String) : ConnectionState()
+}
+```
+
+### Schema JSON de PIDs
+
+```json
+// core/obd/src/main/assets/pids_mode01.json
+[
+  {
+    "mode": "01",
+    "pid": "0C",
+    "name": "Engine RPM",
+    "nameEs": "RPM Motor",
+    "bytes": 2,
+    "formula": "((A*256)+B)/4",
+    "unit": "rpm",
+    "min": 0,
+    "max": 16383,
+    "priority": 1
+  },
+  {
+    "mode": "01",
+    "pid": "0D",
+    "name": "Vehicle Speed",
+    "nameEs": "Velocidad",
+    "bytes": 1,
+    "formula": "A",
+    "unit": "km/h",
+    "min": 0,
+    "max": 255,
+    "priority": 1
+  }
+]
+```
+
+Campo `priority`: 1 = alta frecuencia (100ms), 2 = media (500ms), 3 = baja (2000ms).
+
+### Room — schemas de entidades
+
+```kotlin
+// SessionEntity
+@Entity(tableName = "sessions")
+data class SessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val vehicleProfileId: Long,
+    val startedAt: Long,       // epoch ms
+    val endedAt: Long?,
+    val adapterName: String,
+    val maxRpm: Int,
+    val maxSpeed: Int,
+    val distanceKm: Float
+)
+
+// TelemetryPointEntity
+@Entity(tableName = "telemetry_points",
+        foreignKeys = [ForeignKey(entity = SessionEntity::class,
+                                  parentColumns = ["id"],
+                                  childColumns = ["sessionId"],
+                                  onDelete = CASCADE)],
+        indices = [Index("sessionId")])
+data class TelemetryPointEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val sessionId: Long,
+    val timestamp: Long,       // epoch ms
+    val pid: String,           // "0C", "0D", etc.
+    val value: Float
+)
+
+// VehicleProfileEntity
+@Entity(tableName = "vehicle_profiles")
+data class VehicleProfileEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,          // "Mazda CX-30"
+    val type: String,          // "CAR" | "MOTORCYCLE"
+    val vin: String?,
+    val enabledPids: String,   // JSON array de PIDs activos: ["0C","0D","05"]
+    val gearRatios: String?,   // JSON array floats por marcha: [3.5,2.1,1.4,1.0,0.8,0.6]
+    val createdAt: Long
+)
+```
+
+### DataStore — claves de preferencias
+
+```kotlin
+object PreferencesKeys {
+    val ADAPTER_TYPE = stringPreferencesKey("adapter_type")     // "CLASSIC_BT" | "BLE" | "WIFI"
+    val ADAPTER_ADDRESS = stringPreferencesKey("adapter_address") // MAC o IP
+    val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
+    val POLLING_INTERVAL_MS = intPreferencesKey("polling_interval_ms") // default 200
+    val UNITS_METRIC = booleanPreferencesKey("units_metric")     // true = km/h, °C
+    val THEME_DARK = booleanPreferencesKey("theme_dark")         // siempre true en v1
+}
+```
+
+### BLE UUID sets completos
+
+```kotlin
+// core/obd/connection/BleUuidSets.kt
+object BleUuidSets {
+    val CC254X = BleUuidSet(
+        service    = "0000FFE0-0000-1000-8000-00805F9B34FB",
+        writeChar  = "0000FFE1-0000-1000-8000-00805F9B34FB",
+        notifyChar = "0000FFE1-0000-1000-8000-00805F9B34FB"
+    )
+    val VLINK = BleUuidSet(
+        service    = "000018F0-0000-1000-8000-00805F9B34FB",
+        writeChar  = "00002AF0-0000-1000-8000-00805F9B34FB",
+        notifyChar = "00002AF1-0000-1000-8000-00805F9B34FB"
+    )
+    val NEXAS = BleUuidSet(
+        service    = "0000FFF0-0000-1000-8000-00805F9B34FB",
+        writeChar  = "0000FFF2-0000-1000-8000-00805F9B34FB",
+        notifyChar = "0000FFF1-0000-1000-8000-00805F9B34FB"
+    )
+    val NORDIC_UART = BleUuidSet(
+        service    = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E",
+        writeChar  = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E",
+        notifyChar = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+    )
+    val MICROCHIP = BleUuidSet(
+        service    = "49535343-FE7D-4AE5-8FA9-9FAFD205E455",
+        writeChar  = "49535343-8841-43F4-A8D4-ECBE34729BB3",
+        notifyChar = "49535343-1E4D-4BD9-BA61-23C647249616"
+    )
+    val TIO = BleUuidSet(
+        service    = "0000FEFB-0000-1000-8000-00805F9B34FB",
+        writeChar  = "00000002-0000-0000-0000-000000000000",
+        notifyChar = "00000001-0000-0000-0000-000000000000"
+    )
+    val ALL = listOf(CC254X, VLINK, NEXAS, NORDIC_UART, MICROCHIP, TIO)
+}
+
+data class BleUuidSet(val service: String, val writeChar: String, val notifyChar: String)
+```
+
+### ELM327 — secuencia de inicialización
+
+```
+Paso 1: "AT Z\r"    → reset (esperar "ELM327 v..." + ">")
+Paso 2: "AT E0\r"   → echo off
+Paso 3: "AT L0\r"   → line feeds off
+Paso 4: "AT S0\r"   → spaces off en respuesta (IMPORTANTE para parser)
+Paso 5: "AT H0\r"   → headers off
+Paso 6: "AT SP 0\r" → auto-detect protocolo del vehículo
+Paso 7: "01 00\r"   → query supported PIDs (verifica conexión con ECU)
+```
+
+Timeout por comando: 2000ms. Si paso 7 falla → no hay ECU, no continuar.  
+Con `AT S0` activo, la respuesta de `01 0C` es `410C0FA0>` en vez de `41 0C 0F A0 >`. El parser debe manejar ambos formatos.
+
+### Supported PIDs — query obligatorio antes de pedir datos
+
+OBD-II permite saber qué PIDs soporta el vehículo antes de pedirlos. Sin este paso, pedir un PID no soportado retorna `NO DATA` y bloquea el loop.
+
+```
+Request:  "01 00\r"  → bitmask PIDs 0x01-0x20
+Request:  "01 20\r"  → bitmask PIDs 0x21-0x40
+Request:  "01 40\r"  → bitmask PIDs 0x41-0x60
+Request:  "01 60\r"  → bitmask PIDs 0x61-0x80 (torque, gear ratio)
+
+Ejemplo respuesta "01 00": "4100BE1FA813"
+→ bytes: BE 1F A8 13
+→ bit 0 de BE = PID 0x01 soportado, etc.
+```
+
+`PidRegistry` debe filtrar `pids_mode01.json` contra el bitmask antes de iniciar polling.
+
+### Estrategia de error handling
+
+| Escenario | Acción |
+|-----------|--------|
+| BT desconectado durante sesión | `ConnectionState.Error` → UI muestra banner, intenta reconectar 3 veces con backoff 1s/2s/4s |
+| PID retorna `"NO DATA"` | Marcar PID como no soportado, excluir del scheduler |
+| PID retorna `"UNABLE TO CONNECT"` | ECU no responde → detener sesión, mostrar error |
+| Timeout sin `'>'` en 3000ms | Reenviar comando una vez. Si falla de nuevo → reconectar |
+| `"BUFFER FULL"` | Reducir frecuencia de polling 50% automáticamente |
+| Error de parsing (respuesta inesperada) | Log + skip, no crashear |
+
+### Navegación Compose
+
+```kotlin
+// Rutas
+sealed class Screen(val route: String) {
+    object Dashboard : Screen("dashboard")
+    object GearAnalyzer : Screen("gear")
+    object Sensors : Screen("sensors")
+    object Dtc : Screen("dtc")
+    object Sessions : Screen("sessions")
+    object VehicleProfile : Screen("vehicle/{profileId}") {
+        fun createRoute(id: Long) = "vehicle/$id"
+    }
+    object Settings : Screen("settings")
+    object AdapterScan : Screen("adapter_scan")
+}
+```
+
+Bottom navigation bar: Dashboard · Sensores · DTC · Historial  
+Settings y AdapterScan accesibles vía ícono en TopBar.
+
+### BLE — manejo de MTU
+
+BLE default MTU = 23 bytes → 20 bytes útiles por paquete.  
+Respuestas ELM327 largas (ej. VIN, múltiples DTCs) llegan en múltiples paquetes.  
+`BleTransport.receive()` debe acumular paquetes hasta encontrar `'>'`.
+
+```kotlin
+// Patrón de acumulación en BleTransport
+private val buffer = StringBuilder()
+
+fun onCharacteristicChanged(bytes: ByteArray) {
+    buffer.append(String(bytes))
+    if (buffer.contains('>')) {
+        val complete = buffer.toString()
+        buffer.clear()
+        responseChannel.trySend(complete)
+    }
+}
+```
+
+Pedir MTU mayor con `requestMtu(512)` via blessed-android-coroutines — reduce fragmentación.
+
 *Última actualización: 2026-06-28*
