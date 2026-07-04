@@ -62,6 +62,7 @@ fun VehicleProfileScreen(
     val formType by vm.formType.collectAsState()
     val formVin by vm.formVin.collectAsState()
     val formEnabledPids by vm.formEnabledPids.collectAsState()
+    val editingProfile by vm.editingProfile.collectAsState()
 
     Column(
         modifier = Modifier
@@ -80,17 +81,32 @@ fun VehicleProfileScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Existing profiles
+            // Existing profiles — tap to edit
             if (profiles.isNotEmpty()) {
-                Text("Perfiles guardados", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "Perfiles guardados (toca uno para editarlo)",
+                    color = TextMutedColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
                 profiles.forEach { profile ->
-                    ProfileItem(profile = profile, onDelete = { vm.deleteProfile(profile.id) })
+                    ProfileItem(
+                        profile = profile,
+                        isEditing = editingProfile?.id == profile.id,
+                        onClick = { vm.startEditing(profile) },
+                        onDelete = { vm.deleteProfile(profile.id) },
+                    )
                 }
                 Spacer(Modifier.height(4.dp))
             }
 
-            // New profile form
-            Text("Nuevo perfil", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            // Profile form (create or edit)
+            Text(
+                editingProfile?.let { "Editando: ${it.name}" } ?: "Nuevo perfil",
+                color = if (editingProfile != null) AccentColor else TextMutedColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
 
             OutlinedTextField(
                 value = formName,
@@ -167,7 +183,20 @@ fun VehicleProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) {
-                Text("Guardar perfil", color = BgColor, fontWeight = FontWeight.Bold)
+                Text(
+                    if (editingProfile != null) "Actualizar perfil" else "Guardar perfil",
+                    color = BgColor,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            if (editingProfile != null) {
+                Button(
+                    onClick = { vm.cancelEditing() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+                ) {
+                    Text("Cancelar edición", color = TextPrimaryColor)
+                }
             }
         }
     }
@@ -204,11 +233,20 @@ private fun TypeChip(
 }
 
 @Composable
-private fun ProfileItem(profile: VehicleProfileEntity, onDelete: () -> Unit) {
+private fun ProfileItem(
+    profile: VehicleProfileEntity,
+    isEditing: Boolean,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(
+                if (isEditing) SurfaceHighColor else SurfaceColor,
+                RoundedCornerShape(8.dp),
+            )
+            .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
