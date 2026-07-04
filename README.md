@@ -85,7 +85,18 @@ cd revscope
 
 ### Android Auto
 
-Android Auto app → tap version 10× → developer settings → *Unknown sources* → connect phone to the car. RevScope appears in the Auto launcher.
+Gauge apps aren't a Play-approved Auto category, so RevScope runs on Android Auto via developer mode (one-time setup):
+
+1. On the phone: **Settings → Apps → Android Auto → Additional settings in the app** (or open the Android Auto app directly).
+2. Scroll to the bottom and **tap "Version" 10 times** → accept "Allow development settings".
+3. Open the **⋮ menu → Developer settings** → enable **"Unknown sources"**.
+4. Connect the phone to the car (USB or wireless Auto). **RevScope** appears in the Auto app launcher.
+5. Open it: speed, RPM, coolant temp and battery voltage refresh live at 1 Hz, with a *Reconectar* button if the adapter link drops.
+
+Notes:
+- The car screen reads the **same Bluetooth connection** the phone already has with the ELM327 — nothing extra to pair.
+- If RevScope doesn't show up: Android Auto → Developer settings → "Application mode: Developer", then force-close and reopen Android Auto.
+- Works on the desktop head unit emulator (DHU) too, for testing without a car.
 
 ---
 
