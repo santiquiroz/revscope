@@ -1,6 +1,9 @@
 package com.revscope.core.data.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.revscope.core.data.db.AppDatabase
 import com.revscope.core.data.db.dao.SessionDao
@@ -13,14 +16,26 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+// Single process-wide DataStore — a second instance on the same file throws at runtime
+private val Context.settingsDataStore: DataStore<Preferences>
+        by preferencesDataStore(name = "revscope_settings")
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DataModule {
 
     @Provides
     @Singleton
+    fun provideSettingsDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
+        context.settingsDataStore
+
+    @Provides
+    @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "revscope.db")
+            // Pre-1.0: schema changes wipe local telemetry instead of crashing.
+            // Replace with real Migrations before first public release.
+            .fallbackToDestructiveMigration()
             .build()
 
     @Provides

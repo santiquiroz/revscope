@@ -15,7 +15,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         TelemetryPointEntity::class,
         VehicleProfileEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

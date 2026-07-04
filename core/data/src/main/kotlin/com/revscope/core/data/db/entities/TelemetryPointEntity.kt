@@ -15,7 +15,8 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE,
         )
     ],
-    indices = [Index("sessionId")],
+    // Composite index covers observeBySession (prefix) and observeBySessionAndPid+ORDER BY
+    indices = [Index("sessionId", "pid", "timestamp")],
 )
 data class TelemetryPointEntity(
     @PrimaryKey(autoGenerate = true)

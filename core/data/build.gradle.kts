@@ -24,12 +24,18 @@ android {
     }
 }
 
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
+
 dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
 
-    implementation(libs.datastore.preferences)
+    api(libs.datastore.preferences)
     implementation(libs.coroutines.android)
 
     implementation(libs.hilt.android)

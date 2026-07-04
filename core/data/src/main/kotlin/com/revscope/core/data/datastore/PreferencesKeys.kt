@@ -12,6 +12,9 @@ object PreferencesKeys {
     /** Adapter hardware address (Bluetooth MAC) or IP for WiFi adapters */
     val ADAPTER_ADDRESS = stringPreferencesKey("adapter_address")
 
+    /** Display name of the last successfully connected adapter */
+    val ADAPTER_NAME = stringPreferencesKey("adapter_name")
+
     /** ID of the currently selected VehicleProfileEntity */
     val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
 
@@ -38,4 +41,10 @@ object PreferencesKeys {
 
     /** Master kill switch for all AI/ML features (default true) */
     val AI_FEATURES_ENABLED = booleanPreferencesKey("ai_features_enabled")
+
+    /**
+     * User-defined PID definitions (JSON array, same schema as pids_mode01.json).
+     * Used for manufacturer-specific parameters, e.g. TVS ride mode via Mode 22.
+     */
+    val CUSTOM_PIDS_JSON = stringPreferencesKey("custom_pids_json")
 }
