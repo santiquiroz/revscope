@@ -91,8 +91,12 @@ fun DashboardScreen(
         onDispose { view.keepScreenOn = false }
     }
 
+    // Active vehicle profile drives gauge scale and redline; falls back to globals
+    val activeProfile by connectionVm.activeProfile.collectAsState()
+    val gaugeMaxRpm = activeProfile?.maxRpm ?: 8000
+
     // Shift light: warn at 95% of redline, screaming red past it
-    val redline = dashboardVm.redlineRpm.toFloat()
+    val redline = (activeProfile?.redlineRpm ?: dashboardVm.redlineRpm).toFloat()
     val shiftLightColor by remember {
         derivedStateOf {
             when {
@@ -190,7 +194,7 @@ fun DashboardScreen(
             }
             RpmGauge(
                 rpm = rpm,
-                maxRpm = 8000,
+                maxRpm = gaugeMaxRpm,
                 modifier = Modifier.padding(vertical = 8.dp),
             )
 

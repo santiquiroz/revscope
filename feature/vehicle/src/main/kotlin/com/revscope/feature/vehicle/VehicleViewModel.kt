@@ -6,6 +6,8 @@ import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.protocol.ResponseParser
+import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,9 +45,36 @@ class VehicleViewModel @Inject constructor(
     private val _editingProfile = MutableStateFlow<VehicleProfileEntity?>(null)
     val editingProfile: StateFlow<VehicleProfileEntity?> = _editingProfile.asStateFlow()
 
+    private val _formMaxRpm = MutableStateFlow("8000")
+    val formMaxRpm: StateFlow<String> = _formMaxRpm.asStateFlow()
+
+    private val _formRedlineRpm = MutableStateFlow("6500")
+    val formRedlineRpm: StateFlow<String> = _formRedlineRpm.asStateFlow()
+
+    private val _vinStatus = MutableStateFlow<String?>(null)
+    val vinStatus: StateFlow<String?> = _vinStatus.asStateFlow()
+
     fun setName(v: String) { _formName.value = v }
     fun setType(v: String) { _formType.value = v }
     fun setVin(v: String) { _formVin.value = v }
+    fun setMaxRpm(v: String) { _formMaxRpm.value = v }
+    fun setRedlineRpm(v: String) { _formRedlineRpm.value = v }
+
+    /** Reads the VIN from the connected vehicle (Mode 09 02) into the form. */
+    fun readVinFromVehicle(connectionVm: ConnectionViewModel) {
+        viewModelScope.launch {
+            _vinStatus.value = "Leyendo VIN…"
+            val vin = connectionVm.rawExchange("09 02\r", 4_000)
+                .getOrNull()
+                ?.let { ResponseParser.parseVinResponse(it) }
+            if (vin != null) {
+                _formVin.value = vin
+                _vinStatus.value = "VIN leído"
+            } else {
+                _vinStatus.value = "El vehículo no reporta VIN por OBD"
+            }
+        }
+    }
 
     /** Loads an existing profile into the form; [saveProfile] then updates instead of inserting. */
     fun startEditing(profile: VehicleProfileEntity) {
@@ -54,6 +83,8 @@ class VehicleViewModel @Inject constructor(
         _formType.value = profile.type
         _formVin.value = profile.vin.orEmpty()
         _formEnabledPids.value = parseEnabledPids(profile.enabledPids)
+        _formMaxRpm.value = profile.maxRpm.toString()
+        _formRedlineRpm.value = profile.redlineRpm.toString()
     }
 
     fun cancelEditing() = resetForm()
@@ -77,6 +108,8 @@ class VehicleViewModel @Inject constructor(
     fun saveProfile() {
         val name = _formName.value.trim()
         if (name.isEmpty()) return
+        val maxRpm = (_formMaxRpm.value.toIntOrNull() ?: 8_000).coerceIn(3_000, 20_000)
+        val redline = (_formRedlineRpm.value.toIntOrNull() ?: 6_500).coerceIn(2_000, maxRpm)
         viewModelScope.launch {
             val editing = _editingProfile.value
             if (editing != null) {
@@ -86,6 +119,8 @@ class VehicleViewModel @Inject constructor(
                         type = _formType.value,
                         vin = _formVin.value.trim().ifEmpty { null },
                         enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
+                        maxRpm = maxRpm,
+                        redlineRpm = redline,
                     )
                 )
             } else {
@@ -97,6 +132,8 @@ class VehicleViewModel @Inject constructor(
                         enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
                         gearRatios = null,
                         createdAt = System.currentTimeMillis(),
+                        maxRpm = maxRpm,
+                        redlineRpm = redline,
                     )
                 )
             }
@@ -117,6 +154,9 @@ class VehicleViewModel @Inject constructor(
         _formType.value = "CAR"
         _formVin.value = ""
         _formEnabledPids.value = DEFAULT_PIDS
+        _formMaxRpm.value = "8000"
+        _formRedlineRpm.value = "6500"
+        _vinStatus.value = null
     }
 
     private companion object {

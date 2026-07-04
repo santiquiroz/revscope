@@ -57,9 +57,17 @@ class AlertsEngine @Inject constructor(
     @Volatile private var voltageMin = DEFAULT_VOLTAGE_MIN
     @Volatile private var redlineRpm = DEFAULT_REDLINE_RPM
 
+    /** Active vehicle profile's redline — takes precedence over the global setting. */
+    @Volatile private var redlineOverride: Int? = null
+
     private val lastFired = mutableMapOf<AlertType, Long>()
 
-    val currentRedlineRpm: Int get() = redlineRpm
+    val currentRedlineRpm: Int get() = redlineOverride ?: redlineRpm
+
+    fun setRedlineOverride(rpm: Int?) {
+        redlineOverride = rpm
+        Timber.i("AlertsEngine: redline override = $rpm")
+    }
 
     suspend fun reloadThresholds() {
         runCatching {
@@ -86,7 +94,7 @@ class AlertsEngine @Inject constructor(
                     cooldownMs = ALERT_COOLDOWN_MS,
                 )
             }
-            "0C" -> if (reading.value >= redlineRpm) {
+            "0C" -> if (reading.value >= currentRedlineRpm) {
                 fire(
                     AlertType.REDLINE,
                     "RPM en zona roja: ${reading.value.toInt()}",

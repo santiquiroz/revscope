@@ -15,4 +15,8 @@ data class VehicleProfileEntity(
     /** JSON array of gear ratio floats: [3.5,2.1,1.4,1.0,0.8,0.6] — null if unknown */
     val gearRatios: String?,
     val createdAt: Long,        // epoch ms
+    /** RPM gauge full-scale (e.g. 8000 car, 12000 bike) */
+    val maxRpm: Int = 8_000,
+    /** Redline — drives the shift light and the RPM audio alert */
+    val redlineRpm: Int = 6_500,
 )

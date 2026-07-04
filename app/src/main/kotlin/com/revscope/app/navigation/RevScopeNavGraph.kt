@@ -148,7 +148,7 @@ fun RevScopeNavGraph(
                 )
             }
             composable(Screen.VehicleProfile.route) {
-                VehicleProfileScreen()
+                VehicleProfileScreen(connectionVm = connectionVm)
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(

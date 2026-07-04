@@ -1,6 +1,7 @@
 package com.revscope.core.obd.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.model.DtcCode
@@ -25,7 +26,11 @@ class ConnectionViewModel @Inject constructor(
     val connectionState: StateFlow<ConnectionState> = manager.connectionState
     val readings: StateFlow<Map<String, ObdReading>> = manager.readings
     val lastAdapterAddress: StateFlow<String?> = manager.lastAdapterAddress
+    val activeProfile: StateFlow<VehicleProfileEntity?> = manager.activeProfile
+    val lastReadVin: StateFlow<String?> = manager.lastReadVin
     val alerts: SharedFlow<AlertsEngine.ObdAlert> = alertsEngine.alerts
+
+    fun setActiveProfile(profile: VehicleProfileEntity?) = manager.setActiveProfile(profile)
 
     fun setGearTable(table: List<Pair<Int, Double>>) = manager.setGearTable(table)
 

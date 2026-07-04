@@ -208,6 +208,27 @@ object ResponseParser {
         }
     }
 
+    // ── Mode 09 — vehicle information ────────────────────────────────────────
+
+    /**
+     * Extracts the 17-char VIN from a Mode 09 PID 02 response.
+     * Payload: "49 02 01" (+record count) followed by 17 ASCII bytes, usually
+     * delivered as an ISO-TP multi-frame ("014\r0:490201...\r1:...").
+     * Returns null when the ECU doesn't implement 09 02 (common on motorcycles).
+     */
+    fun parseVinResponse(raw: String): String? {
+        var clean = stripTransientPrefixes(cleanResponse(raw))
+        if (isErrorResponse(clean)) return null
+        clean = stripIsoTpFraming(clean)
+        val index = clean.indexOf("4902")
+        if (index == -1) return null
+        var hex = clean.substring(index + 4)
+        if (hex.startsWith("01")) hex = hex.drop(2) // NODI record-count byte
+        val bytes = hexToBytes(hex.take(34)) ?: return null
+        val vin = String(bytes, Charsets.US_ASCII).filter { it.isLetterOrDigit() }
+        return vin.takeIf { it.length == 17 }
+    }
+
     // ── DTC parsing ──────────────────────────────────────────────────────────
 
     /**

@@ -41,8 +41,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.viewmodel.ConnectionViewModel
 
 private val BgColor = Color(0xFF0A0A0F)
 private val SurfaceColor = Color(0xFF12121A)
@@ -55,6 +59,7 @@ private val TextMutedColor = Color(0xFF6B7089)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun VehicleProfileScreen(
+    connectionVm: ConnectionViewModel = hiltViewModel(),
     vm: VehicleViewModel = hiltViewModel(),
 ) {
     val profiles by vm.profiles.collectAsState()
@@ -63,6 +68,11 @@ fun VehicleProfileScreen(
     val formVin by vm.formVin.collectAsState()
     val formEnabledPids by vm.formEnabledPids.collectAsState()
     val editingProfile by vm.editingProfile.collectAsState()
+    val formMaxRpm by vm.formMaxRpm.collectAsState()
+    val formRedlineRpm by vm.formRedlineRpm.collectAsState()
+    val vinStatus by vm.vinStatus.collectAsState()
+    val activeProfile by connectionVm.activeProfile.collectAsState()
+    val connectionState by connectionVm.connectionState.collectAsState()
 
     Column(
         modifier = Modifier
@@ -93,7 +103,9 @@ fun VehicleProfileScreen(
                     ProfileItem(
                         profile = profile,
                         isEditing = editingProfile?.id == profile.id,
+                        isActive = activeProfile?.id == profile.id,
                         onClick = { vm.startEditing(profile) },
+                        onActivate = { connectionVm.setActiveProfile(profile) },
                         onDelete = { vm.deleteProfile(profile.id) },
                     )
                 }
@@ -137,18 +149,62 @@ fun VehicleProfileScreen(
                 )
             }
 
-            OutlinedTextField(
-                value = formVin,
-                onValueChange = { vm.setVin(it) },
-                label = { Text("VIN (opcional)", color = TextMutedColor) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentColor,
-                    unfocusedBorderColor = SurfaceHighColor,
-                    focusedTextColor = TextPrimaryColor,
-                    unfocusedTextColor = TextPrimaryColor,
-                ),
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = formVin,
+                    onValueChange = { vm.setVin(it) },
+                    label = { Text("VIN — activa el perfil solo al conectar", color = TextMutedColor, fontSize = 11.sp) },
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentColor,
+                        unfocusedBorderColor = SurfaceHighColor,
+                        focusedTextColor = TextPrimaryColor,
+                        unfocusedTextColor = TextPrimaryColor,
+                    ),
+                )
+                Button(
+                    onClick = { vm.readVinFromVehicle(connectionVm) },
+                    enabled = connectionState is ConnectionState.Connected,
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+                ) {
+                    Text("Leer VIN", color = TextPrimaryColor, fontSize = 12.sp)
+                }
+            }
+            vinStatus?.let { Text(it, color = TextMutedColor, fontSize = 11.sp) }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = formMaxRpm,
+                    onValueChange = { vm.setMaxRpm(it) },
+                    label = { Text("RPM máx gauge", color = TextMutedColor, fontSize = 11.sp) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentColor,
+                        unfocusedBorderColor = SurfaceHighColor,
+                        focusedTextColor = TextPrimaryColor,
+                        unfocusedTextColor = TextPrimaryColor,
+                    ),
+                )
+                OutlinedTextField(
+                    value = formRedlineRpm,
+                    onValueChange = { vm.setRedlineRpm(it) },
+                    label = { Text("Zona roja RPM", color = TextMutedColor, fontSize = 11.sp) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentColor,
+                        unfocusedBorderColor = SurfaceHighColor,
+                        focusedTextColor = TextPrimaryColor,
+                        unfocusedTextColor = TextPrimaryColor,
+                    ),
+                )
+            }
 
             // PID enablement
             Text("PIDs activos", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
@@ -236,7 +292,9 @@ private fun TypeChip(
 private fun ProfileItem(
     profile: VehicleProfileEntity,
     isEditing: Boolean,
+    isActive: Boolean,
     onClick: () -> Unit,
+    onActivate: () -> Unit,
     onDelete: () -> Unit,
 ) {
     Row(
@@ -259,8 +317,29 @@ private fun ProfileItem(
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(profile.name, color = TextPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            if (profile.vin != null) {
-                Text("VIN: ${profile.vin}", color = TextMutedColor, fontSize = 11.sp)
+            Text(
+                "gauge ${profile.maxRpm} · roja ${profile.redlineRpm}" +
+                    (profile.vin?.let { " · VIN ${it.takeLast(6)}" } ?: ""),
+                color = TextMutedColor,
+                fontSize = 11.sp,
+            )
+        }
+        if (isActive) {
+            Text(
+                "ACTIVO",
+                color = AccentColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .background(SurfaceHighColor, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+            )
+        } else {
+            Button(
+                onClick = onActivate,
+                colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+            ) {
+                Text("Usar", color = TextPrimaryColor, fontSize = 11.sp)
             }
         }
         IconButton(onClick = onDelete) {

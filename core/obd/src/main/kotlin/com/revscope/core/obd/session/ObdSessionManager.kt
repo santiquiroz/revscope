@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.edit
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
+import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.SessionEntity
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.connection.ClassicBtTransport
 import com.revscope.core.obd.connection.ConnectionState
@@ -15,7 +17,9 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.protocol.ElmCommandBuilder
 import com.revscope.core.obd.protocol.ProtocolNegotiator
+import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
@@ -56,6 +60,7 @@ class ObdSessionManager @Inject constructor(
     private val registry: PidRegistry,
     private val sessionDao: SessionDao,
     private val telemetryDao: TelemetryDao,
+    private val profileDao: VehicleProfileDao,
     private val settings: DataStore<Preferences>,
     private val alertsEngine: AlertsEngine,
 ) {
@@ -70,6 +75,12 @@ class ObdSessionManager @Inject constructor(
 
     private val _lastAdapterAddress = MutableStateFlow<String?>(null)
     val lastAdapterAddress: StateFlow<String?> = _lastAdapterAddress.asStateFlow()
+
+    private val _activeProfile = MutableStateFlow<VehicleProfileEntity?>(null)
+    val activeProfile: StateFlow<VehicleProfileEntity?> = _activeProfile.asStateFlow()
+
+    private val _lastReadVin = MutableStateFlow<String?>(null)
+    val lastReadVin: StateFlow<String?> = _lastReadVin.asStateFlow()
 
     private var transport: ClassicBtTransport? = null
     private var telemetryJob: Job? = null
@@ -94,8 +105,52 @@ class ObdSessionManager @Inject constructor(
     init {
         scope.launch {
             loadCustomPids()
+            loadSavedActiveProfile()
             autoConnectToLastAdapter()
         }
+    }
+
+    /** Manual profile activation from the profiles screen. Persisted across restarts. */
+    fun setActiveProfile(profile: VehicleProfileEntity?) {
+        _activeProfile.value = profile
+        alertsEngine.setRedlineOverride(profile?.redlineRpm)
+        scope.launch {
+            runCatching {
+                settings.edit { prefs ->
+                    if (profile != null) prefs[PreferencesKeys.ACTIVE_PROFILE_ID] = profile.id
+                    else prefs.remove(PreferencesKeys.ACTIVE_PROFILE_ID)
+                }
+            }
+        }
+    }
+
+    private suspend fun loadSavedActiveProfile() {
+        runCatching {
+            val id = settings.data.first()[PreferencesKeys.ACTIVE_PROFILE_ID] ?: return
+            profileDao.getById(id)?.let {
+                _activeProfile.value = it
+                alertsEngine.setRedlineOverride(it.redlineRpm)
+            }
+        }.onFailure { Timber.w(it, "ObdSessionManager: failed to load active profile") }
+    }
+
+    /**
+     * Reads the VIN (Mode 09 02) and auto-activates the matching profile.
+     * Motorcycles often don't implement 09 02 — the previously active profile stays.
+     */
+    private suspend fun resolveProfileByVin(bt: ClassicBtTransport) {
+        val vin = runCatching { bt.exchange(ElmCommandBuilder.readVin(), VIN_TIMEOUT_MS) }
+            .getOrNull()
+            ?.let { ResponseParser.parseVinResponse(it) }
+            ?: run {
+                Timber.i("ObdSessionManager: ECU did not return a VIN")
+                return
+            }
+        _lastReadVin.value = vin
+        Timber.i("ObdSessionManager: VIN = $vin")
+        val match = runCatching { profileDao.getByVin(vin) }.getOrNull() ?: return
+        Timber.i("ObdSessionManager: auto-activating profile '${match.name}' by VIN")
+        setActiveProfile(match)
     }
 
     fun setGearTable(table: List<Pair<Int, Double>>) = derivedEngine.setGearTable(table)
@@ -260,6 +315,7 @@ class ObdSessionManager @Inject constructor(
         }
         registry.setSupportedPids(negotiationResult.supportedPids)
         alertsEngine.reloadThresholds()
+        resolveProfileByVin(bt)
 
         val sessionId = createSession(deviceName)
         currentSessionId = sessionId
@@ -373,6 +429,7 @@ class ObdSessionManager @Inject constructor(
         const val VBAT_PID = "VBAT"
 
         private const val DTC_TIMEOUT_MS = 5_000L
+        private const val VIN_TIMEOUT_MS = 4_000L
         private const val VOLTAGE_TIMEOUT_MS = 2_000L
         private const val VOLTAGE_POLL_INTERVAL_MS = 10_000L
         // 15 s > 12 s connect watchdog, so attempts never overlap; ~3 min covers a fuel stop

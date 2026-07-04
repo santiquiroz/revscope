@@ -117,6 +117,29 @@ class ResponseParserTest {
         assertNull(ResponseParser.parseMultiPidResponse("?>", mapOf("0C" to 2)))
     }
 
+    // ── VIN (Mode 09 02) ─────────────────────────────────────────────────────
+
+    @Test
+    fun `parseVinResponse decodes ISO-TP multiframe VIN`() {
+        // VIN "1HGBH41JXMN109186" as ASCII hex, split across ISO-TP frames
+        val vinHex = "314847424834314A584D4E313039313836"
+        val raw = "014\r0:490201${vinHex.take(8)}\r1:${vinHex.substring(8, 22)}\r2:${vinHex.drop(22)}\r>"
+        assertEquals("1HGBH41JXMN109186", ResponseParser.parseVinResponse(raw))
+    }
+
+    @Test
+    fun `parseVinResponse decodes single-line VIN`() {
+        val vinHex = "314847424834314A584D4E313039313836"
+        assertEquals("1HGBH41JXMN109186", ResponseParser.parseVinResponse("490201$vinHex>"))
+    }
+
+    @Test
+    fun `parseVinResponse returns null on NO DATA or garbage`() {
+        assertNull(ResponseParser.parseVinResponse("NO DATA>"))
+        assertNull(ResponseParser.parseVinResponse("7F0912>"))
+        assertNull(ResponseParser.parseVinResponse("4902013132>")) // too short
+    }
+
     // ── hexToBytes ────────────────────────────────────────────────────────────
 
     @Test
