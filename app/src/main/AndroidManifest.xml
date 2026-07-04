@@ -26,6 +26,9 @@
     <!-- Location required for BT discovery on API ≤ 29 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- Alerts: haptic feedback on overheat/low-voltage/redline -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:name=".RevScopeApp"
         android:label="@string/app_name"
@@ -43,6 +46,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Android Auto: template app descriptor (service lives in :feature:auto) -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
 
     </application>
 

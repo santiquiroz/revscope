@@ -1,6 +1,7 @@
 package com.revscope.core.data.datastore
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -47,4 +48,18 @@ object PreferencesKeys {
      * Used for manufacturer-specific parameters, e.g. TVS ride mode via Mode 22.
      */
     val CUSTOM_PIDS_JSON = stringPreferencesKey("custom_pids_json")
+
+    // ── Alerts ───────────────────────────────────────────────────────────────
+
+    /** Master switch for audio/haptic alerts (default true) */
+    val ALERTS_ENABLED = booleanPreferencesKey("alerts_enabled")
+
+    /** Coolant temperature alert threshold in °C (default 105) */
+    val ALERT_TEMP_MAX_C = intPreferencesKey("alert_temp_max_c")
+
+    /** Battery voltage alert threshold in volts (default 11.8) */
+    val ALERT_VOLTAGE_MIN = floatPreferencesKey("alert_voltage_min")
+
+    /** Redline RPM for audio alert and dashboard shift light (default 10500) */
+    val ALERT_REDLINE_RPM = intPreferencesKey("alert_redline_rpm")
 }

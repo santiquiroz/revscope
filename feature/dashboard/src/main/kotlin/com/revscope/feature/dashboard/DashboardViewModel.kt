@@ -3,6 +3,7 @@ package com.revscope.feature.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.intelligence.IntelligenceOrchestrator
+import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +19,11 @@ import javax.inject.Inject
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     val orchestrator: IntelligenceOrchestrator,
+    private val alertsEngine: AlertsEngine,
 ) : ViewModel() {
+
+    /** Redline used by the shift light — cached in AlertsEngine from DataStore. */
+    val redlineRpm: Int get() = alertsEngine.currentRedlineRpm
 
     val anomalyAlerts = orchestrator.anomalyAlerts
     val tripScore = orchestrator.tripScore

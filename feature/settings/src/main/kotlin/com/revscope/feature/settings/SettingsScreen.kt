@@ -22,6 +22,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -57,6 +59,10 @@ fun SettingsScreen(
 ) {
     val apiKey by vm.apiKey.collectAsState()
     val customPidsJson by vm.customPidsJson.collectAsState()
+    val alertsEnabled by vm.alertsEnabled.collectAsState()
+    val tempMaxC by vm.tempMaxC.collectAsState()
+    val voltageMin by vm.voltageMin.collectAsState()
+    val redlineRpm by vm.redlineRpm.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -89,6 +95,69 @@ fun SettingsScreen(
             NavRow("Escáner Modo 22 (descubrir PIDs del fabricante)", onNavigateToScanner)
             NavRow("Analizador de marchas", onNavigateToGearAnalyzer)
             NavRow("Perfiles de vehículo", onNavigateToVehicleProfiles)
+
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Alertas de audio y vibración")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Alertas activas (suenan por el intercom/parlante)",
+                    color = TextPrimaryColor,
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = alertsEnabled,
+                    onCheckedChange = vm::updateAlertsEnabled,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = BgColor,
+                        checkedTrackColor = AccentColor,
+                    ),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = tempMaxC,
+                    onValueChange = vm::updateTempMaxC,
+                    label = { Text("Temp máx °C", fontSize = 11.sp) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = settingsFieldColors(),
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = voltageMin,
+                    onValueChange = vm::updateVoltageMin,
+                    label = { Text("Volt mín", fontSize = 11.sp) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    colors = settingsFieldColors(),
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = redlineRpm,
+                    onValueChange = vm::updateRedlineRpm,
+                    label = { Text("Zona roja RPM", fontSize = 11.sp) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = settingsFieldColors(),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                "La zona roja también controla el shift light del dashboard.",
+                color = TextMutedColor,
+                fontSize = 11.sp,
+            )
+            Button(
+                onClick = vm::saveAlertSettings,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Guardar alertas", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("IA — Explicación de códigos DTC")

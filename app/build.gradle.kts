@@ -56,6 +56,7 @@ dependencies {
     implementation(project(":feature:session"))
     implementation(project(":feature:vehicle"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:auto"))
 
     // Compose BOM
     implementation(platform(libs.compose.bom))

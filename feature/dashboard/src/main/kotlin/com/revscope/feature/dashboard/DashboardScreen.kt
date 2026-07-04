@@ -1,6 +1,7 @@
 package com.revscope.feature.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,16 +23,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.obd.connection.ConnectionState
@@ -76,8 +82,42 @@ fun DashboardScreen(
     val temp by remember { derivedStateOf { (readingsState.value["05"]?.value ?: 0.0).toFloat() } }
     val boost by remember { derivedStateOf { (readingsState.value["BOOST"]?.value ?: 0.0).toFloat() } }
     val gear by remember { derivedStateOf { readingsState.value["GEAR"]?.value?.toInt() ?: 0 } }
+    val vbat by remember { derivedStateOf { readingsState.value["VBAT"]?.value } }
+
+    // Riding with the screen off is useless — keep it on while telemetry flows
+    val view = LocalView.current
+    DisposableEffect(connectionState) {
+        view.keepScreenOn = connectionState is ConnectionState.Connected
+        onDispose { view.keepScreenOn = false }
+    }
+
+    // Shift light: warn at 95% of redline, screaming red past it
+    val redline = dashboardVm.redlineRpm.toFloat()
+    val shiftLightColor by remember {
+        derivedStateOf {
+            when {
+                rpm >= redline -> RevScopeColors.Danger
+                rpm >= redline * 0.95f -> RevScopeColors.Accent
+                else -> null
+            }
+        }
+    }
+
+    var activeAlert by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        connectionVm.alerts.collect { alert ->
+            activeAlert = alert.message
+        }
+    }
+    LaunchedEffect(activeAlert) {
+        if (activeAlert != null) {
+            delay(5_000)
+            activeAlert = null
+        }
+    }
 
     Scaffold(
+        modifier = shiftLightColor?.let { Modifier.border(6.dp, it) } ?: Modifier,
         topBar = {
             TopAppBar(
                 title = {
@@ -103,6 +143,15 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    vbat?.let { volts ->
+                        Text(
+                            text = "%.1fV".format(volts),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (volts < 11.8) RevScopeColors.Danger else RevScopeColors.TextMuted,
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
                     ConnectionStatusBadge(connectionState)
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
@@ -126,6 +175,19 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            activeAlert?.let { message ->
+                Text(
+                    text = "⚠ $message",
+                    color = RevScopeColors.Background,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(RevScopeColors.Danger, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             RpmGauge(
                 rpm = rpm,
                 maxRpm = 8000,

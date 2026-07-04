@@ -18,6 +18,7 @@ mockk = "1.13.12"
 androidxTestExt = "1.2.1"
 orgJson = "20231013"
 lifecycleViewmodel = "2.8.7"
+carApp = "1.4.0"
 
 [libraries]
 # Compose BOM
@@ -71,6 +72,10 @@ org-json = { group = "org.json", name = "json", version.ref = "orgJson" }
 
 # Lifecycle ViewModel
 lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodel" }
+lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleViewmodel" }
+
+# Android Auto (Car App Library)
+car-app = { group = "androidx.car.app", name = "app", version.ref = "carApp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
