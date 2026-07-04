@@ -32,3 +32,6 @@ keystore.properties
 # IDE
 *.swp
 .vscode/
+
+# Session logs from adb debugging
+logs/
