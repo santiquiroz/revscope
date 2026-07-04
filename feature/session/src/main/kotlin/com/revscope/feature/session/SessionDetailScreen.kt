@@ -143,6 +143,23 @@ private fun ReportContent(
             StatCard("Acel. máx", "${report.maxThrottlePct}%", Modifier.weight(1f))
         }
 
+        if (report.gpsTrack.size >= 2) {
+            Text(
+                "Recorrido GPS — %.1f km · máx %d km/h (GPS)".format(
+                    java.util.Locale("es"), report.gpsDistanceKm, report.gpsMaxSpeedKmh,
+                ),
+                color = AccentColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            TrackMap(
+                track = report.gpsTrack,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp),
+            )
+        }
+
         if (report.rpmSeries.size >= 2) {
             ChartSection("RPM durante el viaje", report.rpmSeries)
         }

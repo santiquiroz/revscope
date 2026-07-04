@@ -3,10 +3,12 @@ package com.revscope.feature.session
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
+import com.revscope.core.obd.telemetry.TripStatsCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +25,7 @@ private const val CHART_MAX_POINTS = 240
 class SessionDetailViewModel @Inject constructor(
     private val sessionDao: SessionDao,
     private val telemetryDao: TelemetryDao,
+    private val gpsDao: GpsDao,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -36,6 +39,10 @@ class SessionDetailViewModel @Inject constructor(
         val totalPoints: Int,
         val rpmSeries: List<Float>,
         val speedSeries: List<Float>,
+        /** lat/lon pairs, downsampled — empty when no GPS was recorded */
+        val gpsTrack: List<Pair<Double, Double>>,
+        val gpsDistanceKm: Double,
+        val gpsMaxSpeedKmh: Int,
     )
 
     sealed class UiState {
@@ -61,6 +68,8 @@ class SessionDetailViewModel @Inject constructor(
             }
             val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
             val speedPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0D")
+            val gpsPoints = gpsDao.pointsForSession(sessionId)
+            val gpsTrack = downsampleTrack(gpsPoints.map { it.latitude to it.longitude })
 
             _state.value = UiState.Ready(
                 TripReport(
@@ -73,6 +82,9 @@ class SessionDetailViewModel @Inject constructor(
                     totalPoints = telemetryDao.countForSession(sessionId),
                     rpmSeries = downsample(rpmPoints),
                     speedSeries = downsample(speedPoints),
+                    gpsTrack = gpsTrack,
+                    gpsDistanceKm = TripStatsCalculator.gpsDistanceKm(gpsPoints),
+                    gpsMaxSpeedKmh = (gpsDao.maxSpeed(sessionId) ?: 0f).roundToInt(),
                 )
             )
         } catch (e: CancellationException) {
@@ -88,5 +100,15 @@ class SessionDetailViewModel @Inject constructor(
         if (points.size <= CHART_MAX_POINTS) return points.map { it.value }
         val step = points.size / CHART_MAX_POINTS
         return points.filterIndexed { index, _ -> index % step == 0 }.map { it.value }
+    }
+
+    private fun downsampleTrack(points: List<Pair<Double, Double>>): List<Pair<Double, Double>> {
+        if (points.size <= TRACK_MAX_POINTS) return points
+        val step = points.size / TRACK_MAX_POINTS
+        return points.filterIndexed { index, _ -> index % step == 0 }
+    }
+
+    private companion object {
+        const val TRACK_MAX_POINTS = 600
     }
 }

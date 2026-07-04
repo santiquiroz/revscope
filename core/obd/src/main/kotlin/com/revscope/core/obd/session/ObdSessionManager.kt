@@ -1,6 +1,7 @@
 package com.revscope.core.obd.session
 
 import android.bluetooth.BluetoothAdapter
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -20,6 +21,8 @@ import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ElmCommandBuilder
 import com.revscope.core.obd.protocol.ProtocolNegotiator
 import com.revscope.core.obd.protocol.ResponseParser
+import com.revscope.core.obd.service.ObdForegroundService
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
@@ -56,6 +59,7 @@ import kotlin.math.roundToInt
  */
 @Singleton
 class ObdSessionManager @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val bluetoothAdapter: BluetoothAdapter?,
     private val registry: PidRegistry,
     private val sessionDao: SessionDao,
@@ -82,13 +86,16 @@ class ObdSessionManager @Inject constructor(
     private val _lastReadVin = MutableStateFlow<String?>(null)
     val lastReadVin: StateFlow<String?> = _lastReadVin.asStateFlow()
 
+    /** Active recording session — the foreground service keys the GPS track to this. */
+    private val _currentSessionIdFlow = MutableStateFlow<Long?>(null)
+    val currentSessionId: StateFlow<Long?> = _currentSessionIdFlow.asStateFlow()
+
     private var transport: ClassicBtTransport? = null
     private var telemetryJob: Job? = null
     private var stateJob: Job? = null
     private var reconnectJob: Job? = null
     private var voltageJob: Job? = null
     private var currentDeviceAddress: String? = null
-    private var currentSessionId: Long? = null
     private val derivedEngine = DerivedMetricsEngine()
 
     private enum class ConnectMode {
@@ -168,6 +175,7 @@ class ObdSessionManager @Inject constructor(
 
     fun disconnect() {
         reconnectJob?.cancel()
+        ObdForegroundService.stop(appContext)
         scope.launch {
             stopTelemetry()
             transport?.disconnect()
@@ -266,6 +274,8 @@ class ObdSessionManager @Inject constructor(
                         reconnectJob?.cancel()
                         _connectionState.value = state
                         saveLastAdapter(deviceAddress, state.deviceName)
+                        // Keeps recording + GPS alive with the app backgrounded
+                        ObdForegroundService.start(appContext)
                         startTelemetry(bt, state.deviceName)
                         return@onEach
                     }
@@ -318,7 +328,7 @@ class ObdSessionManager @Inject constructor(
         resolveProfileByVin(bt)
 
         val sessionId = createSession(deviceName)
-        currentSessionId = sessionId
+        _currentSessionIdFlow.value = sessionId
 
         startVoltagePolling(bt)
 
@@ -351,8 +361,8 @@ class ObdSessionManager @Inject constructor(
                 // PidScheduler's circuit breaker lands here when the adapter vanishes
                 Timber.e(e, "ObdSessionManager: telemetry link lost")
                 voltageJob?.cancel()
-                currentSessionId?.let { id -> runCatching { updateSessionEnd(id) } }
-                currentSessionId = null
+                _currentSessionIdFlow.value?.let { id -> runCatching { updateSessionEnd(id) } }
+                _currentSessionIdFlow.value = null
                 runCatching { transport?.disconnect() }
                 transport = null
                 _connectionState.value = ConnectionState.Error("Connection lost — adapter not responding")
@@ -392,8 +402,8 @@ class ObdSessionManager @Inject constructor(
         // before updateSessionEnd computes the trip aggregates.
         telemetryJob?.cancelAndJoin()
         telemetryJob = null
-        currentSessionId?.let { id -> updateSessionEnd(id) }
-        currentSessionId = null
+        _currentSessionIdFlow.value?.let { id -> updateSessionEnd(id) }
+        _currentSessionIdFlow.value = null
     }
 
     private suspend fun createSession(deviceName: String): Long =
