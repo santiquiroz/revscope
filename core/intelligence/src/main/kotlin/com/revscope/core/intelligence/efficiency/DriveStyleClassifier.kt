@@ -66,8 +66,8 @@ class DriveStyleClassifier(redlineRpm: Int = DEFAULT_REDLINE) {
         val penaltyHighRpm = (highRpmPct * PENALTY_HIGH_RPM_MAX).toInt()
         val penaltyHardAcc = (hardAccelerations * PENALTY_HARD_ACCEL_PER_EVENT)
             .coerceAtMost(PENALTY_HARD_ACCEL_MAX)
-        val penaltyLoad = ((avgLoad - HIGH_LOAD_BASELINE).coerceAtLeast(0f) /
-            (100f - HIGH_LOAD_BASELINE) * PENALTY_LOAD_MAX).toInt()
+        val penaltyLoad = ((avgLoad - HIGH_LOAD_BASELINE).coerceAtLeast(0.0) /
+            (100.0 - HIGH_LOAD_BASELINE) * PENALTY_LOAD_MAX).toInt()
 
         val overall = (100 - penaltyHighRpm - penaltyHardAcc - penaltyLoad).coerceIn(0, 100)
 

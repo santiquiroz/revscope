@@ -1,12 +1,14 @@
 package com.revscope.core.intelligence.dtc
 
 import com.revscope.core.obd.model.ObdReading
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 import javax.net.ssl.HttpsURLConnection
 
 private const val CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
@@ -27,13 +29,13 @@ private const val READ_TIMEOUT_MS = 20_000
  *
  * Falls back gracefully when no API key is configured or the call fails.
  *
- * @param apiKeyProvider Lambda that returns the user's Claude API key or null.
+ * @param apiKeyProvider Suspend lambda that returns the user's Claude API key or null.
  *                       Called on each [explain] invocation so key changes take effect
  *                       without restarting the ViewModel.
  */
-class DtcExplainer(private val apiKeyProvider: () -> String?) {
+class DtcExplainer(private val apiKeyProvider: suspend () -> String?) {
 
-    private val cache = mutableMapOf<String, DtcExplanation>()
+    private val cache = ConcurrentHashMap<String, DtcExplanation>()
 
     suspend fun explain(dtcCode: String, context: List<ObdReading>): DtcExplanation {
         cache[dtcCode]?.let { return it.copy(source = "cache") }
@@ -102,6 +104,8 @@ class DtcExplainer(private val apiKeyProvider: () -> String?) {
                 .getString("text")
 
             DtcExplanation(code = dtcCode, explanation = text.trim(), source = "claude")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.e(e, "DtcExplainer: API call failed for $dtcCode")
             DtcExplanation.fallback(dtcCode)

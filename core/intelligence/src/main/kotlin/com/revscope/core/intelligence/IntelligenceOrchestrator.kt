@@ -9,6 +9,7 @@ import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.intelligence.gear.AdaptiveGearLearner
 import com.revscope.core.obd.model.ObdReading
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -53,16 +54,23 @@ class IntelligenceOrchestrator(
     private val _tripScore = MutableStateFlow(TripScore.empty())
     val tripScore: StateFlow<TripScore> = _tripScore.asStateFlow()
 
+    private var readingsJob: Job? = null
+    private var scoreJob: Job? = null
+
     /**
      * Begins observing [readings] and drives all intelligence features.
-     * Must be called once per session; cancel [scope] to stop.
+     * Idempotent: calling again (e.g. on reconnect) cancels the previous session's
+     * collectors before launching new ones, so processing is never duplicated.
      */
     fun start(readings: Flow<ObdReading>, scope: CoroutineScope) {
-        scope.launch {
+        readingsJob?.cancel()
+        scoreJob?.cancel()
+
+        readingsJob = scope.launch {
             readings.collect { reading -> processReading(reading) }
         }
 
-        scope.launch {
+        scoreJob = scope.launch {
             while (true) {
                 delay(TRIP_SCORE_UPDATE_INTERVAL_MS)
                 _tripScore.value = driveStyleClassifier.score()
