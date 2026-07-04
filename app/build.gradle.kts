@@ -26,6 +26,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Sideload distribution via GitHub Releases — debug-keystore signing
+            // is intentional until a proper release keystore exists.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
