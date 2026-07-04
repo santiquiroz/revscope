@@ -3,6 +3,7 @@ package com.revscope.core.obd.telemetry
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.obd.model.ObdReading
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import timber.log.Timber
 
@@ -38,6 +39,8 @@ class SessionRecorder(private val telemetryDao: TelemetryDao) {
         try {
             telemetryDao.insertAll(snapshot)
             Timber.d("SessionRecorder: flushed ${snapshot.size} points")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Timber.e(e, "SessionRecorder: flush failed (${snapshot.size} points lost)")
         }

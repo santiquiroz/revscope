@@ -28,6 +28,10 @@ object ResponseParser {
         "?",
     )
 
+    // Status banners the ELM prints BEFORE the actual payload on the first
+    // command after a protocol reset (e.g. "SEARCHING...4100BE3F9011").
+    private val TRANSIENT_PREFIXES = listOf("SEARCHING...", "SEARCHING", "STOPPED")
+
     // ── Core utilities ───────────────────────────────────────────────────────
 
     /**
@@ -41,6 +45,26 @@ object ResponseParser {
             .replace("\n", "")
             .uppercase()
             .trim()
+
+    /**
+     * Removes transient status banners glued in front of a payload so a valid
+     * response like "SEARCHING...4100BE3F9011" parses as "4100BE3F9011".
+     * A banner with no payload after it still reads as an error downstream.
+     */
+    private fun stripTransientPrefixes(clean: String): String {
+        var result = clean
+        var stripped = true
+        while (stripped) {
+            stripped = false
+            for (prefix in TRANSIENT_PREFIXES) {
+                if (result.startsWith(prefix) && result.length > prefix.length) {
+                    result = result.removePrefix(prefix)
+                    stripped = true
+                }
+            }
+        }
+        return result
+    }
 
     /**
      * Converts a hex string (e.g. "0FA0") to a ByteArray.
@@ -73,7 +97,7 @@ object ResponseParser {
      *   Formula: ((A*256)+B)/4 → ((15*256)+160)/4 = 1000 rpm
      */
     fun parsePidResponse(raw: String, pid: String): ByteArray? {
-        val clean = cleanResponse(raw)
+        val clean = stripTransientPrefixes(cleanResponse(raw))
 
         if (isErrorResponse(clean)) {
             Timber.w("parsePidResponse: error for PID $pid — '$raw'")
@@ -93,6 +117,60 @@ object ResponseParser {
         }
     }
 
+    // ── Multi-PID (batched) response parsing ────────────────────────────────
+
+    /**
+     * Parses the response to a batched request like "01 0C 0D" where the ECU returns
+     * one "41" frame containing several PID+data pairs back to back:
+     *   "410C1AF00D3C" → {0C=[1A,F0], 0D=[3C]}
+     *
+     * Handles ISO-TP multi-frame framing ("00E0:41...1:...") that the ELM emits when
+     * the combined payload exceeds a single CAN frame.
+     *
+     * @param pidByteCounts expected data-byte count per requested PID — used to walk
+     *        the concatenated payload. Walking stops at the first unknown PID (padding).
+     * @return parsed bytes per PID, or null when the response carries no usable data
+     *         (error token, missing "41" header) — callers treat null as "batching
+     *         unsupported" and fall back to single-PID requests.
+     */
+    fun parseMultiPidResponse(raw: String, pidByteCounts: Map<String, Int>): Map<String, ByteArray>? {
+        var clean = stripTransientPrefixes(cleanResponse(raw))
+        if (isErrorResponse(clean)) return null
+        clean = stripIsoTpFraming(clean)
+        if (!clean.startsWith("41")) return null
+
+        val result = mutableMapOf<String, ByteArray>()
+        var i = 2
+        while (i + 2 <= clean.length && result.size < pidByteCounts.size) {
+            val pid = clean.substring(i, i + 2)
+            val byteCount = pidByteCounts[pid] ?: break // padding or foreign PID — stop
+            val dataEnd = i + 2 + byteCount * 2
+            if (dataEnd > clean.length) break
+            val bytes = hexToBytes(clean.substring(i + 2, dataEnd)) ?: break
+            result[pid] = bytes
+            i = dataEnd
+        }
+        return result.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * Collapses ELM327 ISO-TP framing into a flat payload.
+     * "00E0:410C1AF00D3C1:055A1122" → "410C1AF00D3C055A1122"
+     * (3-digit length prefix, then "N:"-indexed segments; each part before a colon
+     * carries the next segment's index as its final character).
+     */
+    private fun stripIsoTpFraming(clean: String): String {
+        if (!clean.contains(':')) return clean
+        val parts = clean.split(':')
+        if (parts.size < 2) return clean
+        return buildString {
+            for (idx in 1 until parts.size) {
+                val part = parts[idx]
+                append(if (idx < parts.size - 1) part.dropLast(1) else part)
+            }
+        }
+    }
+
     // ── Supported PIDs bitmask parsing ───────────────────────────────────────
 
     /**
@@ -107,8 +185,8 @@ object ResponseParser {
      *   Bit 0 of BE = PID 0x01, bit 1 = 0x02, ... bit 31 of 13 = 0x20
      */
     fun parseSupportedPids(raw: String): Set<String> {
-        val clean = cleanResponse(raw)
-        if (clean.length < 4) return emptySet()
+        val clean = stripTransientPrefixes(cleanResponse(raw))
+        if (clean.length < 4 || !clean.startsWith("41")) return emptySet()
 
         // Header "41XX" — XX is the "supported PIDs" PID that was requested
         val requestPidHex = clean.substring(2, 4)

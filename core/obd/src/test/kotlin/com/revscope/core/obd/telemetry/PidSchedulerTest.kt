@@ -11,6 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 class PidSchedulerTest {
 
@@ -42,11 +43,9 @@ class PidSchedulerTest {
     @Test
     fun `emits ObdReading with correct value for valid response`() = runTest {
         // 0C response "410C0FA0" → bytes [0x0F, 0xA0] → ((15*256)+160)/4 = 1000 rpm
-        // 0D response "410D3C"   → bytes [0x3C]         → A = 60 km/h
-        // Any receive call returns an RPM response — the 0D parse will fail the header
+        // Any exchange call returns an RPM response — the 0D parse will fail the header
         // check and return null, so only 0C readings will be emitted
-        coEvery { transport.send(any()) } returns Unit
-        coEvery { transport.receive() } returns "410C0FA0>"
+        coEvery { transport.exchange(any(), any()) } returns "410C0FA0>"
 
         val scheduler = PidScheduler(transport, registry)
         val readings = scheduler.observeReadings().take(1).toList()
@@ -60,12 +59,11 @@ class PidSchedulerTest {
     @Test
     fun `excludes PID after NO DATA response and polls remaining PIDs`() = runTest {
         // 0C always returns NO DATA; 0D always returns a valid speed reading
-        var lastSentCommand = ""
-        coEvery { transport.send(any()) } answers { lastSentCommand = firstArg() }
-        coEvery { transport.receive() } answers {
+        coEvery { transport.exchange(any(), any()) } answers {
+            val command = firstArg<String>()
             when {
-                lastSentCommand.contains("0C") -> "NO DATA>"
-                lastSentCommand.contains("0D") -> "410D3C>"
+                command.contains("0C") -> "NO DATA>"
+                command.contains("0D") -> "410D3C>"
                 else -> "NO DATA>"
             }
         }
@@ -79,12 +77,11 @@ class PidSchedulerTest {
     }
 
     @Test
-    fun `retries once on transport exception then continues`() = runTest {
+    fun `retries once on transport timeout exception then continues`() = runTest {
+        // Real contract: ClassicBtTransport.exchange throws IOException on read timeout
         var callCount = 0
-        coEvery { transport.send(any()) } returns Unit
-        coEvery { transport.receive() } answers {
-            // First receive throws; second onwards returns a valid RPM response
-            if (callCount++ == 0) throw Exception("simulated timeout")
+        coEvery { transport.exchange(any(), any()) } answers {
+            if (callCount++ == 0) throw IOException("Read timeout after 2000 ms without prompt")
             "410C0FA0>"
         }
 
@@ -96,10 +93,60 @@ class PidSchedulerTest {
     }
 
     @Test
+    fun `batches priority-1 PIDs into one exchange and emits all readings`() = runTest {
+        // 0C (2 bytes) + 0D (1 byte) fit one CAN frame → single "01 0C 0D" request
+        val commands = mutableListOf<String>()
+        coEvery { transport.exchange(any(), any()) } answers {
+            val cmd = firstArg<String>()
+            commands += cmd
+            when {
+                cmd.contains("0C") && cmd.contains("0D") -> "410C0FA00D3C>"
+                else -> "NO DATA>"
+            }
+        }
+
+        val scheduler = PidScheduler(transport, registry)
+        val readings = scheduler.observeReadings().take(2).toList()
+
+        assertTrue("first command must batch both PIDs", commands.first().startsWith("01 0C 0D"))
+        assertEquals(1000.0, readings.first { it.pid == "0C" }.value, 0.001)
+        assertEquals(60.0, readings.first { it.pid == "0D" }.value, 0.001)
+    }
+
+    @Test
+    fun `falls back to single-PID polling when adapter rejects batches`() = runTest {
+        coEvery { transport.exchange(any(), any()) } answers {
+            val cmd = firstArg<String>().trimEnd()
+            val requestedPids = cmd.removePrefix("01 ").split(" ")
+            when {
+                requestedPids.size > 1 -> "?>"          // K-line adapter: batch rejected
+                cmd.contains("0C") -> "410C0FA0>"
+                cmd.contains("0D") -> "410D3C>"
+                else -> "NO DATA>"
+            }
+        }
+
+        val scheduler = PidScheduler(transport, registry)
+        val readings = scheduler.observeReadings().take(2).toList()
+
+        assertEquals(1000.0, readings.first { it.pid == "0C" }.value, 0.001)
+        assertEquals(60.0, readings.first { it.pid == "0D" }.value, 0.001)
+    }
+
+    @Test
+    fun `kills flow after consecutive link failures so connection layer can react`() = runTest {
+        coEvery { transport.exchange(any(), any()) } throws IOException("dead socket")
+
+        val scheduler = PidScheduler(transport, registry)
+        val result = runCatching { scheduler.observeReadings().take(1).toList() }
+
+        assertTrue("flow must fail when the adapter link is dead", result.isFailure)
+    }
+
+    @Test
     fun `doubles interval multiplier on BUFFER FULL response`() = runTest {
         var callCount = 0
-        coEvery { transport.send(any()) } returns Unit
-        coEvery { transport.receive() } answers {
+        coEvery { transport.exchange(any(), any()) } answers {
             // Return BUFFER FULL twice then valid RPM
             if (callCount++ < 2) "BUFFER FULL>" else "410C0FA0>"
         }

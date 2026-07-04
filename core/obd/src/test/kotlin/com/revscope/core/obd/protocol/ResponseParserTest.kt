@@ -41,6 +41,82 @@ class ResponseParserTest {
         assertEquals("", result)
     }
 
+    // ── Transient prefixes (real Vgate iCar Pro 2S behaviour) ────────────────
+
+    @Test
+    fun `parseSupportedPids handles SEARCHING banner glued to payload`() {
+        // Real response captured from Mazda CX-30 on first 01 00 after AT SP 0
+        val pids = ResponseParser.parseSupportedPids("SEARCHING...\r4100BE3F9011\r>")
+        assertEquals(
+            setOf("01", "03", "04", "05", "06", "07", "0B", "0C", "0D", "0E", "0F", "10", "11", "14", "1C", "20"),
+            pids,
+        )
+    }
+
+    @Test
+    fun `parsePidResponse handles SEARCHING banner glued to payload`() {
+        val bytes = ResponseParser.parsePidResponse("SEARCHING...\r410C0FA0\r>", "0C")
+        assertArrayEquals(byteArrayOf(0x0F, 0xA0.toByte()), bytes)
+    }
+
+    @Test
+    fun `parsePidResponse handles STOPPED banner glued to payload`() {
+        val bytes = ResponseParser.parsePidResponse("STOPPED\r410D3C\r>", "0D")
+        assertArrayEquals(byteArrayOf(0x3C), bytes)
+    }
+
+    @Test
+    fun `bare SEARCHING without payload is still an error`() {
+        assertTrue(ResponseParser.isErrorResponse("SEARCHING...\r>"))
+        assertEquals(emptySet<String>(), ResponseParser.parseSupportedPids("SEARCHING...\r>"))
+        assertNull(ResponseParser.parsePidResponse("SEARCHING...\r>", "0C"))
+    }
+
+    // ── Multi-PID batched responses ───────────────────────────────────────────
+
+    @Test
+    fun `parseMultiPidResponse walks single-frame batch of two PIDs`() {
+        // "01 0C 0D" → 41 | 0C 1A F0 | 0D 3C
+        val result = ResponseParser.parseMultiPidResponse(
+            "410C1AF00D3C>",
+            mapOf("0C" to 2, "0D" to 1),
+        )
+        checkNotNull(result)
+        assertArrayEquals(byteArrayOf(0x1A, 0xF0.toByte()), result["0C"])
+        assertArrayEquals(byteArrayOf(0x3C), result["0D"])
+    }
+
+    @Test
+    fun `parseMultiPidResponse handles ISO-TP multi-frame framing`() {
+        // ELM output for a >7 byte payload: length prefix + "N:" segments
+        val raw = "00A\r0:410C1AF00D3C\r1:055A\r>"
+        val result = ResponseParser.parseMultiPidResponse(
+            raw,
+            mapOf("0C" to 2, "0D" to 1, "05" to 1),
+        )
+        checkNotNull(result)
+        assertArrayEquals(byteArrayOf(0x1A, 0xF0.toByte()), result["0C"])
+        assertArrayEquals(byteArrayOf(0x3C), result["0D"])
+        assertArrayEquals(byteArrayOf(0x5A), result["05"])
+    }
+
+    @Test
+    fun `parseMultiPidResponse stops at padding bytes`() {
+        // Trailing 0000 padding must not be misread as a PID
+        val result = ResponseParser.parseMultiPidResponse(
+            "410D3C0000>",
+            mapOf("0C" to 2, "0D" to 1),
+        )
+        checkNotNull(result)
+        assertEquals(setOf("0D"), result.keys)
+    }
+
+    @Test
+    fun `parseMultiPidResponse returns null on NO DATA or missing header`() {
+        assertNull(ResponseParser.parseMultiPidResponse("NO DATA>", mapOf("0C" to 2)))
+        assertNull(ResponseParser.parseMultiPidResponse("?>", mapOf("0C" to 2)))
+    }
+
     // ── hexToBytes ────────────────────────────────────────────────────────────
 
     @Test

@@ -20,7 +20,8 @@ import timber.log.Timber
  */
 class PidRegistry(pidsJson: String) {
 
-    private val definitions: Map<String, PidDefinition> = parseDefinitions(pidsJson)
+    private val definitions: MutableMap<String, PidDefinition> =
+        parseDefinitions(pidsJson).toMutableMap()
 
     // Null means "not yet set" — all PIDs allowed. Set after ProtocolNegotiator runs.
     private var supportedPidFilter: Set<String>? = null
@@ -39,6 +40,18 @@ class PidRegistry(pidsJson: String) {
     /** Returns the [PidDefinition] for [pid], or null if unknown. */
     fun getDefinition(pid: String): PidDefinition? = definitions[pid.uppercase()]
 
+    /**
+     * Merges user-defined PIDs (same JSON schema as pids_mode01.json) into the registry.
+     * Enables manufacturer-specific parameters (e.g. Mode 22 ride mode) without a rebuild.
+     * Entries with an existing PID key override the built-in definition.
+     */
+    fun addDefinitions(customJson: String) {
+        val custom = parseDefinitions(customJson)
+        if (custom.isEmpty()) return
+        definitions.putAll(custom)
+        Timber.i("PidRegistry: merged ${custom.size} custom PID definitions: ${custom.keys}")
+    }
+
     /** All definitions regardless of ECU support status. */
     fun allDefinitions(): Collection<PidDefinition> = definitions.values
 
@@ -47,7 +60,10 @@ class PidRegistry(pidsJson: String) {
      * has not been called yet).
      */
     fun definitionsForPriority(priority: Int): List<PidDefinition> =
-        definitions.values.filter { it.priority == priority && isAllowedByFilter(it.pid) }
+        definitions.values.filter { def ->
+            // The ECU support bitmap only describes Mode 01 — custom modes (21/22) bypass it
+            def.priority == priority && (def.mode != "01" || isAllowedByFilter(def.pid))
+        }
 
     /**
      * Evaluates the formula for [pid] against [rawBytes] from the adapter.
