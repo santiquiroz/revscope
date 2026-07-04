@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Base theme — window background matches dark HUD palette -->
-    <style name="Theme.RevScope" parent="android:Theme.Material.NoTitleBar">
+    <style name="Theme.RevScope" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">#0A0A0F</item>
         <item name="android:statusBarColor">#0A0A0F</item>
         <item name="android:navigationBarColor">#0A0A0F</item>

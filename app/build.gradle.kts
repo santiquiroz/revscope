@@ -61,6 +61,7 @@ dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.ui.google.fonts)
     implementation(libs.activity.compose)
@@ -70,6 +71,9 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    // DataStore — settingsDataStore in IntelligenceModule
+    implementation(libs.datastore.preferences)
 
     // Timber
     implementation(libs.timber)

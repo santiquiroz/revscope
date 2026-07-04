@@ -52,16 +52,20 @@ fun SensorGraphScreen(
 ) {
     val selectedPid by vm.selectedPid.collectAsState()
     val history by vm.history.collectAsState()
-    val modelProducer = remember { CartesianChartModelProducer() }
+    // Fresh producer per PID: cancelling a runTransaction mid-flight (old code keyed
+    // the effect on `history`) leaves Vico with an empty partial → crash on next update.
+    val modelProducer = remember(selectedPid) { CartesianChartModelProducer() }
 
     LaunchedEffect(Unit) {
         vm.observeReadings(connectionVm)
     }
 
-    LaunchedEffect(history) {
-        if (history.size >= 2) {
-            modelProducer.runTransaction {
-                lineSeries { series(y = history.map { it.value }) }
+    LaunchedEffect(selectedPid) {
+        vm.history.collect { points ->
+            if (points.size >= 2) {
+                modelProducer.runTransaction {
+                    lineSeries { series(y = points.map { it.value }) }
+                }
             }
         }
     }

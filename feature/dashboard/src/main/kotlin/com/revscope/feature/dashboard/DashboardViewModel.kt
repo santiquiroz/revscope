@@ -6,6 +6,7 @@ import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,17 +27,21 @@ class DashboardViewModel @Inject constructor(
         .map { table -> table.all { it.observationCount >= 30 } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    private var gearTableJob: Job? = null
+
     /**
      * Wires [readings] into the intelligence orchestrator and feeds calibrated gear
      * ratios back into [connectionVm] once [AdaptiveGearLearner] converges.
      *
-     * Safe to call multiple times — subsequent calls reset the orchestrator session.
+     * Safe to call multiple times (e.g. on reconnect) — subsequent calls reset the
+     * orchestrator session and replace the previous gear-table collector.
      */
     fun startIntelligence(readings: Flow<ObdReading>, connectionVm: ConnectionViewModel) {
         orchestrator.resetTrip()
         orchestrator.start(readings, viewModelScope)
 
-        viewModelScope.launch {
+        gearTableJob?.cancel()
+        gearTableJob = viewModelScope.launch {
             orchestrator.gearLearner.gearTable.collect { table ->
                 val calibrated = table.all { it.observationCount >= 30 }
                 if (calibrated) {

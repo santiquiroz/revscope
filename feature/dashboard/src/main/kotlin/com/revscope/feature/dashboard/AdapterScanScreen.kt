@@ -3,7 +3,9 @@ package com.revscope.feature.dashboard
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -36,17 +38,23 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import com.revscope.feature.dashboard.ui.RevScopeColors
@@ -58,15 +66,25 @@ fun AdapterScanScreen(
     connectionVm: ConnectionViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val connectionState by connectionVm.connectionState.collectAsState()
+    val lastAdapterAddress by connectionVm.lastAdapterAddress.collectAsState()
+
+    var hasBluetoothPermission by remember { mutableStateOf(hasBtConnectPermission(context)) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* permissions granted — UI will refresh */ }
+    ) { hasBluetoothPermission = hasBtConnectPermission(context) }
 
-    val hasBluetoothPermission = remember(context) {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
-                PackageManager.PERMISSION_GRANTED
+    // Covers grants made outside the launcher (e.g. from system Settings)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasBluetoothPermission = hasBtConnectPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val bondedDevices: List<BluetoothDevice> = remember(hasBluetoothPermission) {
@@ -114,6 +132,7 @@ fun AdapterScanScreen(
             when (val state = connectionState) {
                 ConnectionState.Disconnected -> DisconnectedContent(
                     bondedDevices = bondedDevices,
+                    lastAdapterAddress = lastAdapterAddress,
                     hasPermission = hasBluetoothPermission,
                     onRequestPermission = {
                         permissionLauncher.launch(
@@ -135,16 +154,25 @@ fun AdapterScanScreen(
 
                 is ConnectionState.Error -> ErrorContent(
                     message = state.message,
-                    onRetry = { connectionVm.disconnect() },
+                    onRetry = { connectionVm.reconnectToLast() },
+                    onChooseAnother = { connectionVm.disconnect() },
                 )
             }
         }
     }
 }
 
+// BLUETOOTH_CONNECT is a runtime permission only from API 31; below that it is
+// granted at install time via the legacy BLUETOOTH manifest permission.
+private fun hasBtConnectPermission(context: Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) ==
+        PackageManager.PERMISSION_GRANTED
+
 @Composable
 private fun DisconnectedContent(
     bondedDevices: List<BluetoothDevice>,
+    lastAdapterAddress: String?,
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
     onConnectDevice: (String) -> Unit,
@@ -193,16 +221,21 @@ private fun DisconnectedContent(
             fontSize = 13.sp,
         )
     } else {
+        val sortedDevices = bondedDevices.sortedByDescending { it.address == lastAdapterAddress }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(bondedDevices) { device ->
-                DeviceItem(device = device, onClick = { onConnectDevice(device.address) })
+            items(sortedDevices, key = { it.address }) { device ->
+                DeviceItem(
+                    device = device,
+                    isLastUsed = device.address == lastAdapterAddress,
+                    onClick = { onConnectDevice(device.address) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DeviceItem(device: BluetoothDevice, onClick: () -> Unit) {
+private fun DeviceItem(device: BluetoothDevice, isLastUsed: Boolean, onClick: () -> Unit) {
     val name = try { device.name ?: device.address } catch (_: SecurityException) { device.address }
 
     Row(
@@ -215,9 +248,20 @@ private fun DeviceItem(device: BluetoothDevice, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RevScopeColors.Accent)
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(name, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(device.address, color = RevScopeColors.TextMuted, fontSize = 11.sp)
+        }
+        if (isLastUsed) {
+            Text(
+                "Último usado",
+                color = RevScopeColors.Accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
         }
     }
 }
@@ -263,7 +307,7 @@ private fun ConnectedContent(deviceName: String, onDisconnect: () -> Unit) {
 }
 
 @Composable
-private fun ErrorContent(message: String, onRetry: () -> Unit) {
+private fun ErrorContent(message: String, onRetry: () -> Unit, onChooseAnother: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -277,12 +321,25 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         )
         Spacer(Modifier.height(12.dp))
         Text(message, color = RevScopeColors.Danger, fontSize = 14.sp)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Reintentando en segundo plano…",
+            color = RevScopeColors.TextMuted,
+            fontSize = 12.sp,
+        )
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
         ) {
-            Text("Retry", color = RevScopeColors.Background)
+            Text("Reintentar ahora", color = RevScopeColors.Background)
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = onChooseAnother,
+            colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
+        ) {
+            Text("Elegir otro dispositivo", color = RevScopeColors.TextPrimary)
         }
     }
 }

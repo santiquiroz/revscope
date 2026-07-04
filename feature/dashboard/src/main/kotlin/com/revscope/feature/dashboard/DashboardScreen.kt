@@ -24,7 +24,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -51,7 +53,7 @@ fun DashboardScreen(
     dashboardVm: DashboardViewModel = hiltViewModel(),
 ) {
     val connectionState by connectionVm.connectionState.collectAsState()
-    val readings by connectionVm.readings.collectAsState()
+    val readingsState = connectionVm.readings.collectAsState()
     val tripScore by dashboardVm.tripScore.collectAsState()
     val gearCalibrated by dashboardVm.gearCalibrated.collectAsState()
 
@@ -67,11 +69,13 @@ fun DashboardScreen(
         }
     }
 
-    val rpm = readings["0C"]?.value ?: 0f
-    val speed = readings["0D"]?.value ?: 0f
-    val temp = readings["05"]?.value ?: 0f
-    val boost = readings["BOOST"]?.value ?: 0f
-    val gear = readings["GEAR"]?.value?.toInt() ?: 0
+    // derivedStateOf: the readings map mutates ~20×/s, but each gauge only recomposes
+    // when ITS value actually changes — not on every unrelated PID update.
+    val rpm by remember { derivedStateOf { (readingsState.value["0C"]?.value ?: 0.0).toFloat() } }
+    val speed by remember { derivedStateOf { (readingsState.value["0D"]?.value ?: 0.0).toFloat() } }
+    val temp by remember { derivedStateOf { (readingsState.value["05"]?.value ?: 0.0).toFloat() } }
+    val boost by remember { derivedStateOf { (readingsState.value["BOOST"]?.value ?: 0.0).toFloat() } }
+    val gear by remember { derivedStateOf { readingsState.value["GEAR"]?.value?.toInt() ?: 0 } }
 
     Scaffold(
         topBar = {

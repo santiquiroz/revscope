@@ -7,6 +7,7 @@ import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,8 +35,11 @@ class SensorViewModel @Inject constructor(
         _history.value = emptyList()
     }
 
+    private var readingsJob: Job? = null
+
     fun observeReadings(connectionVm: ConnectionViewModel) {
-        viewModelScope.launch {
+        readingsJob?.cancel()
+        readingsJob = viewModelScope.launch {
             connectionVm.readings.collect { map ->
                 val pid = _selectedPid.value
                 val reading = map[pid] ?: return@collect

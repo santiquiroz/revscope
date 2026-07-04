@@ -19,6 +19,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:obd"))
     implementation(project(":core:data"))
     implementation(project(":core:common"))
     implementation(platform(libs.compose.bom))
@@ -27,5 +28,6 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)
 }
