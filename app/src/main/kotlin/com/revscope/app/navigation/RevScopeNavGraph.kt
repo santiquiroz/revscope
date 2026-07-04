@@ -22,16 +22,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.revscope.feature.dashboard.AdapterScanScreen
 import com.revscope.feature.dashboard.DashboardScreen
 import com.revscope.feature.dtc.DtcScreen
 import com.revscope.feature.gear.GearAnalyzerScreen
 import com.revscope.feature.sensors.SensorGraphScreen
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
+import com.revscope.feature.session.SessionDetailScreen
 import com.revscope.feature.session.SessionHistoryScreen
 import com.revscope.feature.settings.Mode22ScannerScreen
 import com.revscope.feature.settings.SettingsScreen
@@ -130,7 +133,19 @@ fun RevScopeNavGraph(
                 DtcScreen(connectionVm = connectionVm)
             }
             composable(Screen.Sessions.route) {
-                SessionHistoryScreen()
+                SessionHistoryScreen(
+                    onOpenSession = { sessionId ->
+                        navController.navigate(Screen.SessionDetail.withId(sessionId))
+                    },
+                )
+            }
+            composable(
+                route = Screen.SessionDetail.route,
+                arguments = listOf(navArgument("sessionId") { type = NavType.LongType }),
+            ) {
+                SessionDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                )
             }
             composable(Screen.VehicleProfile.route) {
                 VehicleProfileScreen()

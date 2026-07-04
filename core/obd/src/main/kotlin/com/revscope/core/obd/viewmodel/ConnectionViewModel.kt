@@ -20,10 +20,12 @@ import com.revscope.core.obd.protocol.ProtocolNegotiator
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
+import com.revscope.core.obd.telemetry.TripStatsCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +40,7 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class ConnectionViewModel @Inject constructor(
@@ -255,7 +258,9 @@ class ConnectionViewModel @Inject constructor(
     }
 
     private suspend fun stopTelemetry() {
-        telemetryJob?.cancel()
+        // Join so SessionRecorder's final NonCancellable flush lands in Room
+        // before updateSessionEnd computes the trip aggregates.
+        telemetryJob?.cancelAndJoin()
         telemetryJob = null
         currentSessionId?.let { id -> updateSessionEnd(id) }
         currentSessionId = null
@@ -274,9 +279,20 @@ class ConnectionViewModel @Inject constructor(
             )
         )
 
+    /** Closes the session and fills the trip aggregates shown in history/reports. */
     private suspend fun updateSessionEnd(sessionId: Long) {
         val session = sessionDao.getById(sessionId) ?: return
-        sessionDao.update(session.copy(endedAt = System.currentTimeMillis()))
+        val maxRpm = telemetryDao.maxValue(sessionId, "0C") ?: 0f
+        val maxSpeed = telemetryDao.maxValue(sessionId, "0D") ?: 0f
+        val speedPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0D")
+        sessionDao.update(
+            session.copy(
+                endedAt = System.currentTimeMillis(),
+                maxRpm = maxRpm.roundToInt(),
+                maxSpeed = maxSpeed.roundToInt(),
+                distanceKm = TripStatsCalculator.distanceKm(speedPoints).toFloat(),
+            )
+        )
     }
 
     /**
@@ -326,7 +342,7 @@ class ConnectionViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         reconnectJob?.cancel()
-        telemetryJob?.cancel()
+        val job = telemetryJob
         telemetryJob = null
         val bt = transport
         transport = null
@@ -335,6 +351,7 @@ class ConnectionViewModel @Inject constructor(
         // viewModelScope's Job is already cancelled here — NonCancellable is the only
         // way this cleanup actually runs, otherwise the Bluetooth socket leaks.
         viewModelScope.launch(NonCancellable) {
+            job?.cancelAndJoin() // let the recorder's final flush finish first
             sessionId?.let { runCatching { updateSessionEnd(it) } }
             bt?.disconnect()
         }

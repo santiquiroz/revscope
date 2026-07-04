@@ -4,7 +4,9 @@ import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.obd.model.ObdReading
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 private const val FLUSH_INTERVAL_MS = 500L
@@ -21,16 +23,23 @@ class SessionRecorder(private val telemetryDao: TelemetryDao) {
         val buffer = mutableListOf<TelemetryPointEntity>()
         var lastFlushMs = System.currentTimeMillis()
 
-        readings.collect { reading ->
-            buffer += reading.toEntity(sessionId)
-            val now = System.currentTimeMillis()
-            if (now - lastFlushMs >= FLUSH_INTERVAL_MS) {
-                flushBuffer(buffer)
-                lastFlushMs = now
+        try {
+            readings.collect { reading ->
+                buffer += reading.toEntity(sessionId)
+                val now = System.currentTimeMillis()
+                if (now - lastFlushMs >= FLUSH_INTERVAL_MS) {
+                    flushBuffer(buffer)
+                    lastFlushMs = now
+                }
+            }
+        } finally {
+            // Sessions end by cancellation (disconnect/onCleared) or link loss — the
+            // final flush must survive both, or the last 500 ms of every trip is lost
+            // and the aggregates computed right after read an incomplete table.
+            if (buffer.isNotEmpty()) {
+                withContext(NonCancellable) { flushBuffer(buffer) }
             }
         }
-
-        if (buffer.isNotEmpty()) flushBuffer(buffer)
     }
 
     private suspend fun flushBuffer(buffer: MutableList<TelemetryPointEntity>) {

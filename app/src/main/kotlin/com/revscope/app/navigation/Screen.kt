@@ -10,4 +10,7 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object AdapterScan : Screen("adapter_scan")
     object Mode22Scanner : Screen("mode22_scanner")
+    object SessionDetail : Screen("session_detail/{sessionId}") {
+        fun withId(sessionId: Long) = "session_detail/$sessionId"
+    }
 }

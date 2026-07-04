@@ -1,6 +1,7 @@
 package com.revscope.feature.session
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +51,7 @@ private val dateFormat = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale("es"))
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionHistoryScreen(
+    onOpenSession: (Long) -> Unit = {},
     vm: SessionViewModel = hiltViewModel(),
 ) {
     val sessions by vm.sessions.collectAsState()
@@ -79,6 +81,7 @@ fun SessionHistoryScreen(
                 items(sessions, key = { it.id }) { session ->
                     SessionItem(
                         session = session,
+                        onClick = { onOpenSession(session.id) },
                         onDelete = { vm.deleteSession(session.id) },
                     )
                 }
@@ -88,7 +91,7 @@ fun SessionHistoryScreen(
 }
 
 @Composable
-private fun SessionItem(session: SessionEntity, onDelete: () -> Unit) {
+private fun SessionItem(session: SessionEntity, onClick: () -> Unit, onDelete: () -> Unit) {
     val durationMs = (session.endedAt ?: System.currentTimeMillis()) - session.startedAt
     val durationMin = TimeUnit.MILLISECONDS.toMinutes(durationMs)
     val durationSec = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60
@@ -97,6 +100,7 @@ private fun SessionItem(session: SessionEntity, onDelete: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
     ) {

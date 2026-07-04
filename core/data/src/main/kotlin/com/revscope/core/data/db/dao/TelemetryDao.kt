@@ -26,4 +26,24 @@ interface TelemetryDao {
 
     @Query("DELETE FROM telemetry_points WHERE sessionId = :sessionId")
     suspend fun deleteBySession(sessionId: Long)
+
+    // ── Trip report aggregates ───────────────────────────────────────────────
+
+    @Query(
+        "SELECT * FROM telemetry_points WHERE sessionId = :sessionId AND pid = :pid ORDER BY timestamp ASC"
+    )
+    suspend fun pointsForSessionAndPid(sessionId: Long, pid: String): List<TelemetryPointEntity>
+
+    @Query(
+        "SELECT MAX(value) FROM telemetry_points WHERE sessionId = :sessionId AND pid = :pid"
+    )
+    suspend fun maxValue(sessionId: Long, pid: String): Float?
+
+    @Query(
+        "SELECT AVG(value) FROM telemetry_points WHERE sessionId = :sessionId AND pid = :pid AND value > 0"
+    )
+    suspend fun avgNonZeroValue(sessionId: Long, pid: String): Float?
+
+    @Query("SELECT COUNT(*) FROM telemetry_points WHERE sessionId = :sessionId")
+    suspend fun countForSession(sessionId: Long): Int
 }
