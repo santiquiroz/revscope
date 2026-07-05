@@ -164,16 +164,18 @@ Key design decisions:
 - [x] Foreground service (recording survives backgrounding)
 - [x] GPS track on trip reports + GPS vs OBD speed
 
+- [x] 0–100 km/h automatic timer (self-arming, interpolated, spoken over intercom)
+- [x] Lap timer / track mode (GPS finish-line crossing detection, live lap clock, spoken laps)
+- [x] Spoken alerts & results over helmet intercom (TTS)
+- [x] CSV trip export & sharing
+- [x] DTC freeze frame (Mode 02 — engine snapshot at fault time)
+- [x] Shareable PID packs (export Mode 22 discoveries)
+
 ### Next
-- [ ] 0–100 km/h automatic timer
-- [ ] Lap timer / track mode (start-line crossing detection over the GPS track)
-- [ ] CSV / image export & trip sharing
 - [ ] Ride mode display (via Mode 22 discovery)
-- [ ] Voice status reports over helmet intercom (TTS)
 - [ ] Handlebar / helmet media-button actions (MediaSession/AVRCP)
 - [ ] Trip comparison (same route, run A vs run B)
-- [ ] Shareable community PID packs (export/import Mode 22 discoveries)
-- [ ] DTC freeze frame (Mode 02)
+- [ ] PID pack import from shared files
 - [ ] BLE + WiFi transports
 
 ### Before any store release
