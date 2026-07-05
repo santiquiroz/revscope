@@ -31,8 +31,11 @@ Audio + haptic alerts on the media stream (so they reach a Bluetooth helmet inte
 ### It explains fault codes like a mechanic.
 Plug in a Claude API key and DTCs come back as two sentences of plain language, *in context* — a P0171 with +18 % fuel trim gets "probable vacuum leak", not a generic dictionary entry. No key? Everything else still works fully offline.
 
-### It reports every trip.
-Sessions record to a local database automatically. Tap any trip for a report: duration, real distance (integrated from speed), max/avg speed and RPM, max coolant temp, and full RPM/speed charts.
+### It reports every trip — with the route.
+Sessions record to a local database automatically. Tap any trip for a report: duration, real distance (integrated from speed), max/avg speed and RPM, max coolant temp, full RPM/speed charts — and your **GPS route drawn as a racing line**, fully offline, with GPS distance and GPS max speed next to the OBD numbers (spoiler: your speedometer lies).
+
+### It doesn't die in your pocket.
+A foreground service keeps telemetry and the GPS track recording with the screen off or the app backgrounded. The persistent notification doubles as a mini-dashboard: speed, coolant temp and battery voltage, live.
 
 ### It shows up in your car.
 An Android Auto screen (Car App Library) mirrors speed, RPM, temp and voltage at 1 Hz on the head unit — from the same connection the phone uses. Sideload-only (Google doesn't allow gauge apps on Play for Auto): enable *Unknown sources* in Android Auto's developer settings.
@@ -51,6 +54,8 @@ A built-in **Mode 22 scanner** sweeps manufacturer DID ranges and highlights ide
 | ⚠️ **Alerts** | Overheat / low voltage / redline → audio (helmet intercom) + vibration, per-vehicle thresholds |
 | 🔧 **Fault codes** | Read/clear DTCs, optional Claude AI contextual explanations |
 | 🗂️ **Trip reports** | Distance, max/avg stats, RPM & speed charts per session |
+| 🛰️ **GPS track** | Offline racing-line route map + GPS vs OBD speed/distance |
+| 🔒 **Background recording** | Foreground service with live mini-dashboard notification |
 | 🚗 **Vehicle profiles** | VIN auto-detection, per-vehicle gauge scale and redline |
 | 🚙 **Android Auto** | Live pane on the head unit (sideload) |
 | 🔬 **Mode 22 scanner** | Discover manufacturer PIDs (ride modes, etc.) + runtime custom PIDs |
@@ -82,6 +87,7 @@ cd revscope
 
 - **Profiles** → create your vehicle: type, RPM gauge max, redline. Tap *Leer VIN* while connected so it auto-activates from then on.
 - **Settings** → alert thresholds (temp / voltage / redline) and optional Claude API key for DTC explanations.
+- Grant **location** (GPS route on reports) and **notifications** (background recording status) when asked — both optional; denying them only disables those features.
 
 ### Android Auto
 
@@ -155,10 +161,10 @@ Key design decisions:
 - [x] VIN-based vehicle profiles + per-vehicle gauges
 - [x] Mode 22 scanner + runtime custom PIDs
 - [x] Android Auto pane
+- [x] Foreground service (recording survives backgrounding)
+- [x] GPS track on trip reports + GPS vs OBD speed
 - [ ] 0–100 km/h automatic timer
-- [ ] Foreground service (recording survives process death)
 - [ ] CSV / image export & sharing
-- [ ] GPS track on trip reports
 - [ ] DTC freeze frame (Mode 02)
 - [ ] BLE + WiFi transports
 - [ ] Ride mode display (via Mode 22 discovery)
