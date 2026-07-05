@@ -17,6 +17,7 @@ import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.track.TrackModeEngine
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +42,7 @@ class ObdForegroundService : Service() {
 
     @Inject lateinit var sessionManager: ObdSessionManager
     @Inject lateinit var gpsDao: GpsDao
+    @Inject lateinit var trackModeEngine: TrackModeEngine
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var gpsRecorder: GpsTrackRecorder? = null
@@ -84,7 +86,7 @@ class ObdForegroundService : Service() {
                 gpsRecorder?.stop()
                 gpsRecorder = null
                 if (sessionId != null) {
-                    gpsRecorder = GpsTrackRecorder(applicationContext, gpsDao).also {
+                    gpsRecorder = GpsTrackRecorder(applicationContext, gpsDao, trackModeEngine).also {
                         it.start(scope, sessionId)
                     }
                 }

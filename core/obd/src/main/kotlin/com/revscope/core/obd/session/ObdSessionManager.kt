@@ -6,9 +6,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
+import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.alerts.AlertsEngine
@@ -22,6 +24,7 @@ import com.revscope.core.obd.protocol.ElmCommandBuilder
 import com.revscope.core.obd.protocol.ProtocolNegotiator
 import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.service.ObdForegroundService
+import com.revscope.core.obd.track.TrackModeEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.LaunchTimerEngine
@@ -66,8 +69,10 @@ class ObdSessionManager @Inject constructor(
     private val sessionDao: SessionDao,
     private val telemetryDao: TelemetryDao,
     private val profileDao: VehicleProfileDao,
+    private val lapDao: LapDao,
     private val settings: DataStore<Preferences>,
     private val alertsEngine: AlertsEngine,
+    private val trackModeEngine: TrackModeEngine,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -123,6 +128,23 @@ class ObdSessionManager @Inject constructor(
         }
         scope.launch {
             launchTimer.results.collect { onLaunchResult(it) }
+        }
+        scope.launch {
+            trackModeEngine.lapEvents.collect { lap ->
+                alertsEngine.announceLap(lap.number, lap.timeMs)
+                _currentSessionIdFlow.value?.let { sessionId ->
+                    runCatching {
+                        lapDao.insert(
+                            LapEntity(
+                                sessionId = sessionId,
+                                lapNumber = lap.number,
+                                timeMs = lap.timeMs,
+                                completedAt = System.currentTimeMillis(),
+                            )
+                        )
+                    }.onFailure { Timber.w(it, "ObdSessionManager: failed to persist lap") }
+                }
+            }
         }
     }
 

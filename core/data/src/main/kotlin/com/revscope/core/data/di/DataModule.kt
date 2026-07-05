@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.revscope.core.data.db.AppDatabase
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
@@ -50,4 +51,7 @@ object DataModule {
 
     @Provides
     fun provideGpsDao(db: AppDatabase): GpsDao = db.gpsDao()
+
+    @Provides
+    fun provideLapDao(db: AppDatabase): LapDao = db.lapDao()
 }

@@ -155,6 +155,19 @@ class AlertsEngine @Inject constructor(
         speak(message)
     }
 
+    /** Spoken lap time — "Vuelta 3: 1 minuto 42.5" over the helmet intercom. */
+    fun announceLap(lapNumber: Int, timeMs: Long) {
+        val minutes = timeMs / 60_000
+        val seconds = (timeMs % 60_000) / 1000.0
+        val phrase = if (minutes > 0) {
+            "Vuelta $lapNumber: $minutes ${if (minutes == 1L) "minuto" else "minutos"} %.1f".format(Locale("es"), seconds)
+        } else {
+            "Vuelta $lapNumber: %.1f segundos".format(Locale("es"), seconds)
+        }
+        Timber.i("AlertsEngine: $phrase")
+        speak(phrase)
+    }
+
     /** Spoken 0-100 result — reaches the helmet intercom over the media stream. */
     fun announceLaunch(to60Ms: Long?, to100Ms: Long?) {
         val phrase = when {

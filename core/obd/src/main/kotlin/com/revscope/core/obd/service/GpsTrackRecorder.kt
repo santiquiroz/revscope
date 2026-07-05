@@ -9,6 +9,7 @@ import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.entities.GpsPointEntity
+import com.revscope.core.obd.track.TrackModeEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -30,6 +31,7 @@ private const val MPS_TO_KMH = 3.6f
 class GpsTrackRecorder(
     private val context: Context,
     private val gpsDao: GpsDao,
+    private val trackModeEngine: TrackModeEngine? = null,
 ) {
 
     private val buffer = mutableListOf<GpsPointEntity>()
@@ -93,14 +95,16 @@ class GpsTrackRecorder(
     }
 
     private fun onLocation(sessionId: Long, location: Location) {
+        val timestamp = location.time.takeIf { it > 0 } ?: System.currentTimeMillis()
         val point = GpsPointEntity(
             sessionId = sessionId,
-            timestamp = location.time.takeIf { it > 0 } ?: System.currentTimeMillis(),
+            timestamp = timestamp,
             latitude = location.latitude,
             longitude = location.longitude,
             speedKmh = if (location.hasSpeed()) location.speed * MPS_TO_KMH else 0f,
         )
         synchronized(buffer) { buffer += point }
+        trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
     }
 
     private suspend fun flush() {

@@ -11,8 +11,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
+import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.obd.telemetry.TripStatsCalculator
@@ -34,6 +36,7 @@ class SessionDetailViewModel @Inject constructor(
     private val sessionDao: SessionDao,
     private val telemetryDao: TelemetryDao,
     private val gpsDao: GpsDao,
+    private val lapDao: LapDao,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -51,6 +54,7 @@ class SessionDetailViewModel @Inject constructor(
         val gpsTrack: List<Pair<Double, Double>>,
         val gpsDistanceKm: Double,
         val gpsMaxSpeedKmh: Int,
+        val laps: List<LapEntity>,
     )
 
     sealed class UiState {
@@ -93,6 +97,7 @@ class SessionDetailViewModel @Inject constructor(
                     gpsTrack = gpsTrack,
                     gpsDistanceKm = TripStatsCalculator.gpsDistanceKm(gpsPoints),
                     gpsMaxSpeedKmh = (gpsDao.maxSpeed(sessionId) ?: 0f).roundToInt(),
+                    laps = lapDao.lapsForSession(sessionId),
                 )
             )
         } catch (e: CancellationException) {

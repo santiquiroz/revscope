@@ -200,6 +200,41 @@ private fun ReportContent(
             )
         }
 
+        if (report.laps.isNotEmpty()) {
+            val bestMs = report.laps.minOf { it.timeMs }
+            Text(
+                "Vueltas (${report.laps.size})",
+                color = AccentColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            report.laps.forEach { lap ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceColor, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        "Vuelta ${lap.lapNumber}",
+                        color = TextPrimaryColor,
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    val minutes = lap.timeMs / 60_000
+                    val seconds = (lap.timeMs % 60_000) / 1000
+                    val hundredths = (lap.timeMs % 1000) / 10
+                    Text(
+                        "%d:%02d.%02d".format(minutes, seconds, hundredths) +
+                            (if (lap.timeMs == bestMs) "  ★" else ""),
+                        color = if (lap.timeMs == bestMs) Color(0xFF3DFF8E) else AccentColor,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+
         if (report.rpmSeries.size >= 2) {
             ChartSection("RPM durante el viaje", report.rpmSeries)
         }

@@ -30,6 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.revscope.feature.dashboard.AdapterScanScreen
 import com.revscope.feature.dashboard.DashboardScreen
+import com.revscope.feature.dashboard.TrackModeScreen
 import com.revscope.feature.dtc.DtcScreen
 import com.revscope.feature.gear.GearAnalyzerScreen
 import com.revscope.feature.sensors.SensorGraphScreen
@@ -155,6 +156,12 @@ fun RevScopeNavGraph(
                     onNavigateToScanner = { navController.navigate(Screen.Mode22Scanner.route) },
                     onNavigateToGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
                     onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
+                    onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
+                )
+            }
+            composable(Screen.TrackMode.route) {
+                TrackModeScreen(
+                    onNavigateBack = { navController.popBackStack() },
                 )
             }
             composable(Screen.Mode22Scanner.route) {
