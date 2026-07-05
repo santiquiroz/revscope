@@ -25,4 +25,16 @@ interface ImuDao {
 
     @Query("SELECT MAX(ABS(leanDeg)) FROM imu_points WHERE sessionId = :sessionId")
     suspend fun maxAbsLean(sessionId: Long): Float?
+
+    // ── Per-lap window aggregates ────────────────────────────────────────────
+
+    @Query(
+        "SELECT MAX(ABS(gLat)) FROM imu_points WHERE sessionId = :sessionId AND timestamp BETWEEN :fromMs AND :toMs"
+    )
+    suspend fun maxAbsLateralGBetween(sessionId: Long, fromMs: Long, toMs: Long): Float?
+
+    @Query(
+        "SELECT MAX(ABS(leanDeg)) FROM imu_points WHERE sessionId = :sessionId AND timestamp BETWEEN :fromMs AND :toMs"
+    )
+    suspend fun maxAbsLeanBetween(sessionId: Long, fromMs: Long, toMs: Long): Float?
 }

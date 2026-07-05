@@ -62,7 +62,15 @@ class SessionDetailViewModel @Inject constructor(
         val maxLateralG: Float?,
         val maxBrakingG: Float?,
         val maxLeanDeg: Float?,
+        /** (gLat, gLong) samples for the friction circle, downsampled */
+        val frictionPoints: List<Pair<Float, Float>>,
+        /** aligned with gpsTrack — true where braking hard */
+        val brakingMask: List<Boolean>,
+        /** per-lap peaks, same order as [laps] */
+        val lapStats: List<LapStat>,
     )
+
+    data class LapStat(val maxAbsG: Float?, val maxAbsLean: Float?)
 
     sealed class UiState {
         object Loading : UiState()
@@ -88,11 +96,26 @@ class SessionDetailViewModel @Inject constructor(
             val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
             val speedPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0D")
             val gpsPoints = gpsDao.pointsForSession(sessionId)
-            val trackTriples = downsampleTrack(
-                gpsPoints.map { Triple(it.latitude, it.longitude, it.speedKmh) }
-            )
-            val gpsTrack = trackTriples.map { it.first to it.second }
-            val gpsTrackSpeeds = trackTriples.map { it.third }
+            val sampledGps = downsampleList(gpsPoints, TRACK_MAX_POINTS)
+            val gpsTrack = sampledGps.map { it.latitude to it.longitude }
+            val gpsTrackSpeeds = sampledGps.map { it.speedKmh }
+
+            val imuPoints = imuDao.pointsForSession(sessionId)
+            val frictionPoints = downsampleList(imuPoints, FRICTION_MAX_POINTS)
+                .map { it.gLat to it.gLong }
+            val imuTimestamps = imuPoints.map { it.timestamp }
+            val brakingMask = sampledGps.map { gps ->
+                minGLongAround(imuPoints, imuTimestamps, gps.timestamp) < BRAKING_G_THRESHOLD
+            }
+
+            val laps = lapDao.lapsForSession(sessionId)
+            val lapStats = laps.map { lap ->
+                val from = lap.completedAt - lap.timeMs
+                LapStat(
+                    maxAbsG = imuDao.maxAbsLateralGBetween(sessionId, from, lap.completedAt),
+                    maxAbsLean = imuDao.maxAbsLeanBetween(sessionId, from, lap.completedAt),
+                )
+            }
 
             _state.value = UiState.Ready(
                 TripReport(
@@ -109,10 +132,13 @@ class SessionDetailViewModel @Inject constructor(
                     gpsTrackSpeeds = gpsTrackSpeeds,
                     gpsDistanceKm = TripStatsCalculator.gpsDistanceKm(gpsPoints),
                     gpsMaxSpeedKmh = (gpsDao.maxSpeed(sessionId) ?: 0f).roundToInt(),
-                    laps = lapDao.lapsForSession(sessionId),
+                    laps = laps,
                     maxLateralG = imuDao.maxAbsLateralG(sessionId),
                     maxBrakingG = imuDao.maxBrakingG(sessionId)?.let { -it },
                     maxLeanDeg = imuDao.maxAbsLean(sessionId),
+                    frictionPoints = frictionPoints,
+                    brakingMask = brakingMask,
+                    lapStats = lapStats,
                 )
             )
         } catch (e: CancellationException) {
@@ -159,15 +185,38 @@ class SessionDetailViewModel @Inject constructor(
         }
     }
 
-    private fun downsampleTrack(
-        points: List<Triple<Double, Double, Float>>,
-    ): List<Triple<Double, Double, Float>> {
-        if (points.size <= TRACK_MAX_POINTS) return points
-        val step = points.size / TRACK_MAX_POINTS
+    private fun <T> downsampleList(points: List<T>, max: Int): List<T> {
+        if (points.size <= max) return points
+        val step = points.size / max
         return points.filterIndexed { index, _ -> index % step == 0 }
+    }
+
+    /** Lowest longitudinal G within ±600 ms of [targetMs] — binary search over sorted IMU. */
+    private fun minGLongAround(
+        imu: List<com.revscope.core.data.db.entities.ImuPointEntity>,
+        timestamps: List<Long>,
+        targetMs: Long,
+    ): Float {
+        if (imu.isEmpty()) return 0f
+        var index = timestamps.binarySearch(targetMs).let { if (it < 0) -it - 1 else it }
+        var minG = 0f
+        var i = index
+        while (i < imu.size && imu[i].timestamp <= targetMs + BRAKING_WINDOW_MS) {
+            if (imu[i].gLong < minG) minG = imu[i].gLong
+            i++
+        }
+        i = index - 1
+        while (i >= 0 && imu[i].timestamp >= targetMs - BRAKING_WINDOW_MS) {
+            if (imu[i].gLong < minG) minG = imu[i].gLong
+            i--
+        }
+        return minG
     }
 
     private companion object {
         const val TRACK_MAX_POINTS = 600
+        const val FRICTION_MAX_POINTS = 1_500
+        const val BRAKING_G_THRESHOLD = -0.25f
+        const val BRAKING_WINDOW_MS = 600L
     }
 }

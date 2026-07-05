@@ -46,6 +46,8 @@ fun TrackMap(
     track: List<Pair<Double, Double>>,
     modifier: Modifier = Modifier,
     speeds: List<Float> = emptyList(),
+    /** true at indices where the vehicle was braking hard — drawn as red dots */
+    brakingMask: List<Boolean> = emptyList(),
 ) {
     Canvas(
         modifier = modifier
@@ -102,6 +104,13 @@ fun TrackMap(
                 color = TrackColor,
                 style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
             )
+        }
+        if (brakingMask.size == track.size) {
+            for (i in track.indices) {
+                if (brakingMask[i]) {
+                    drawCircle(EndColor, radius = 3.dp.toPx(), center = project(i), alpha = 0.85f)
+                }
+            }
         }
         drawCircle(StartColor, radius = 6.dp.toPx(), center = project(0))
         drawCircle(EndColor, radius = 6.dp.toPx(), center = project(track.size - 1))

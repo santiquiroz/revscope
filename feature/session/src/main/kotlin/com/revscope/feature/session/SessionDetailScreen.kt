@@ -195,12 +195,33 @@ private fun ReportContent(
             TrackMap(
                 track = report.gpsTrack,
                 speeds = report.gpsTrackSpeeds,
+                brakingMask = report.brakingMask,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp),
             )
             Text(
-                "azul = lento · amarillo = medio · rojo = rápido",
+                "azul = lento · amarillo = medio · rojo = rápido · puntos rojos = frenadas fuertes",
+                color = TextMutedColor,
+                fontSize = 10.sp,
+            )
+        }
+
+        if (report.frictionPoints.isNotEmpty()) {
+            Text(
+                "Círculo de fricción — agarre usado (rojo = frenando)",
+                color = AccentColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            FrictionCircle(
+                points = report.frictionPoints,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(260.dp),
+            )
+            Text(
+                "anillos = 0.5G y 1.0G · arriba acelera · abajo frena · izq/der curvas",
                 color = TextMutedColor,
                 fontSize = 10.sp,
             )
@@ -225,19 +246,27 @@ private fun ReportContent(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
-            report.laps.forEach { lap ->
+            report.laps.forEachIndexed { index, lap ->
+                val stat = report.lapStats.getOrNull(index)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(SurfaceColor, RoundedCornerShape(8.dp))
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 ) {
-                    Text(
-                        "Vuelta ${lap.lapNumber}",
-                        color = TextPrimaryColor,
-                        fontSize = 13.sp,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Vuelta ${lap.lapNumber}", color = TextPrimaryColor, fontSize = 13.sp)
+                        if (stat?.maxAbsG != null || stat?.maxAbsLean != null) {
+                            Text(
+                                buildList {
+                                    stat.maxAbsG?.let { add("%.2fG".format(it)) }
+                                    stat.maxAbsLean?.let { add("%.0f° lean".format(it)) }
+                                }.joinToString(" · "),
+                                color = TextMutedColor,
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
                     val minutes = lap.timeMs / 60_000
                     val seconds = (lap.timeMs % 60_000) / 1000
                     val hundredths = (lap.timeMs % 1000) / 10
