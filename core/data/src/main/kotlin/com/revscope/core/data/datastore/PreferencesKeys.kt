@@ -62,4 +62,7 @@ object PreferencesKeys {
 
     /** Redline RPM for audio alert and dashboard shift light (default 10500) */
     val ALERT_REDLINE_RPM = intPreferencesKey("alert_redline_rpm")
+
+    /** Spoken alerts and launch results via TTS (default true) */
+    val ALERT_TTS_ENABLED = booleanPreferencesKey("alert_tts_enabled")
 }

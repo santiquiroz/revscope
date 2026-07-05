@@ -29,6 +29,7 @@ class ConnectionViewModel @Inject constructor(
     val activeProfile: StateFlow<VehicleProfileEntity?> = manager.activeProfile
     val lastReadVin: StateFlow<String?> = manager.lastReadVin
     val alerts: SharedFlow<AlertsEngine.ObdAlert> = alertsEngine.alerts
+    val launchResults = manager.launchResults
 
     fun setActiveProfile(profile: VehicleProfileEntity?) = manager.setActiveProfile(profile)
 

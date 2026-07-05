@@ -34,6 +34,9 @@ interface TelemetryDao {
     )
     suspend fun pointsForSessionAndPid(sessionId: Long, pid: String): List<TelemetryPointEntity>
 
+    @Query("SELECT * FROM telemetry_points WHERE sessionId = :sessionId ORDER BY timestamp ASC")
+    suspend fun pointsForSession(sessionId: Long): List<TelemetryPointEntity>
+
     @Query(
         "SELECT MAX(value) FROM telemetry_points WHERE sessionId = :sessionId AND pid = :pid"
     )

@@ -113,6 +113,16 @@ fun DashboardScreen(
             activeAlert = alert.message
         }
     }
+    LaunchedEffect(Unit) {
+        connectionVm.launchResults.collect { result ->
+            activeAlert = when {
+                result.to100Ms != null -> "🏁 0-100 en %.2fs".format(result.to100Ms!! / 1000.0) +
+                    (result.to60Ms?.let { "  (0-60: %.2fs)".format(it / 1000.0) } ?: "")
+                result.to60Ms != null -> "🏁 0-60 en %.2fs".format(result.to60Ms!! / 1000.0)
+                else -> activeAlert
+            }
+        }
+    }
     LaunchedEffect(activeAlert) {
         if (activeAlert != null) {
             delay(5_000)

@@ -7,6 +7,8 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.speech.tts.TextToSpeech
+import java.util.Locale
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
@@ -60,6 +62,17 @@ class AlertsEngine @Inject constructor(
     /** Active vehicle profile's redline — takes precedence over the global setting. */
     @Volatile private var redlineOverride: Int? = null
 
+    @Volatile private var ttsEnabled = true
+    @Volatile private var ttsReady = false
+
+    private val tts: TextToSpeech by lazy {
+        TextToSpeech(context) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            if (ttsReady) tts.language = Locale("es")
+            Timber.i("AlertsEngine: TTS ready=$ttsReady")
+        }
+    }
+
     private val lastFired = mutableMapOf<AlertType, Long>()
 
     val currentRedlineRpm: Int get() = redlineOverride ?: redlineRpm
@@ -76,6 +89,8 @@ class AlertsEngine @Inject constructor(
             tempMaxC = prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: DEFAULT_TEMP_MAX_C
             voltageMin = prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: DEFAULT_VOLTAGE_MIN
             redlineRpm = prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: DEFAULT_REDLINE_RPM
+            ttsEnabled = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
+            if (ttsEnabled) tts // touch the lazy so the engine warms up early
             Timber.i("AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm")
         }.onFailure { Timber.w(it, "AlertsEngine: failed to load thresholds") }
     }
@@ -137,6 +152,27 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(type, message, value))
         playTone(tonePattern, toneDurationMs)
         vibrate(vibrationMs)
+        speak(message)
+    }
+
+    /** Spoken 0-100 result — reaches the helmet intercom over the media stream. */
+    fun announceLaunch(to60Ms: Long?, to100Ms: Long?) {
+        val phrase = when {
+            to100Ms != null -> "Cero a cien en %.1f segundos".format(Locale("es"), to100Ms / 1000.0)
+            to60Ms != null -> "Cero a sesenta en %.1f segundos".format(Locale("es"), to60Ms / 1000.0)
+            else -> return
+        }
+        Timber.i("AlertsEngine: $phrase")
+        speak(phrase)
+    }
+
+    private fun speak(text: String) {
+        if (!enabled || !ttsEnabled) return
+        runCatching {
+            if (ttsReady) {
+                tts.speak(text, TextToSpeech.QUEUE_ADD, null, "revscope_alert")
+            }
+        }.onFailure { Timber.w(it, "AlertsEngine: TTS failed") }
     }
 
     private fun playTone(tone: Int, durationMs: Int) {

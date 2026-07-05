@@ -14,4 +14,7 @@ data class SessionEntity(
     val maxRpm: Int,
     val maxSpeed: Int,
     val distanceKm: Float,
+    /** Best automatic launch times this session — null if no full run happened */
+    val best0to60Ms: Long? = null,
+    val best0to100Ms: Long? = null,
 )

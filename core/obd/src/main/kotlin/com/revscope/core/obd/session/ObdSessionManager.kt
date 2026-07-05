@@ -24,6 +24,7 @@ import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.service.ObdForegroundService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
+import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
 import com.revscope.core.obd.telemetry.TripStatsCalculator
@@ -98,6 +99,11 @@ class ObdSessionManager @Inject constructor(
     private var currentDeviceAddress: String? = null
     private val derivedEngine = DerivedMetricsEngine()
 
+    private val launchTimer = LaunchTimerEngine()
+    val launchResults = launchTimer.results
+    private var bestTo60Ms: Long? = null
+    private var bestTo100Ms: Long? = null
+
     private enum class ConnectMode {
         /** User-initiated: publish every state transition. */
         NORMAL,
@@ -115,6 +121,22 @@ class ObdSessionManager @Inject constructor(
             loadSavedActiveProfile()
             autoConnectToLastAdapter()
         }
+        scope.launch {
+            launchTimer.results.collect { onLaunchResult(it) }
+        }
+    }
+
+    private suspend fun onLaunchResult(result: LaunchTimerEngine.LaunchResult) {
+        result.to60Ms?.let { if (it < (bestTo60Ms ?: Long.MAX_VALUE)) bestTo60Ms = it }
+        result.to100Ms?.let { if (it < (bestTo100Ms ?: Long.MAX_VALUE)) bestTo100Ms = it }
+        alertsEngine.announceLaunch(result.to60Ms, result.to100Ms)
+        // Persist immediately so a crash mid-trip doesn't lose the run
+        val sessionId = _currentSessionIdFlow.value ?: return
+        runCatching {
+            sessionDao.getById(sessionId)?.let { session ->
+                sessionDao.update(session.copy(best0to60Ms = bestTo60Ms, best0to100Ms = bestTo100Ms))
+            }
+        }.onFailure { Timber.w(it, "ObdSessionManager: failed to persist launch result") }
     }
 
     /** Manual profile activation from the profiles screen. Persisted across restarts. */
@@ -329,6 +351,9 @@ class ObdSessionManager @Inject constructor(
 
         val sessionId = createSession(deviceName)
         _currentSessionIdFlow.value = sessionId
+        bestTo60Ms = null
+        bestTo100Ms = null
+        launchTimer.reset()
 
         startVoltagePolling(bt)
 
@@ -348,6 +373,7 @@ class ObdSessionManager @Inject constructor(
                         allFlow.collect { reading ->
                             _readings.value = _readings.value + (reading.pid to reading)
                             alertsEngine.process(reading)
+                            launchTimer.process(reading)
                         }
                     }
 

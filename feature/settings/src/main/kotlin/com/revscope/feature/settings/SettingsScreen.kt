@@ -60,6 +60,7 @@ fun SettingsScreen(
     val apiKey by vm.apiKey.collectAsState()
     val customPidsJson by vm.customPidsJson.collectAsState()
     val alertsEnabled by vm.alertsEnabled.collectAsState()
+    val ttsEnabled by vm.ttsEnabled.collectAsState()
     val tempMaxC by vm.tempMaxC.collectAsState()
     val voltageMin by vm.voltageMin.collectAsState()
     val redlineRpm by vm.redlineRpm.collectAsState()
@@ -111,6 +112,25 @@ fun SettingsScreen(
                 Switch(
                     checked = alertsEnabled,
                     onCheckedChange = vm::updateAlertsEnabled,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = BgColor,
+                        checkedTrackColor = AccentColor,
+                    ),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Voz (TTS): alertas y tiempos 0-100 hablados",
+                    color = TextPrimaryColor,
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = ttsEnabled,
+                    onCheckedChange = vm::updateTtsEnabled,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = BgColor,
                         checkedTrackColor = AccentColor,

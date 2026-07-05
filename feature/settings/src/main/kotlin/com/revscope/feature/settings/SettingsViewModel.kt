@@ -36,6 +36,9 @@ class SettingsViewModel @Inject constructor(
     private val _alertsEnabled = MutableStateFlow(true)
     val alertsEnabled: StateFlow<Boolean> = _alertsEnabled.asStateFlow()
 
+    private val _ttsEnabled = MutableStateFlow(true)
+    val ttsEnabled: StateFlow<Boolean> = _ttsEnabled.asStateFlow()
+
     private val _tempMaxC = MutableStateFlow("105")
     val tempMaxC: StateFlow<String> = _tempMaxC.asStateFlow()
 
@@ -55,6 +58,7 @@ class SettingsViewModel @Inject constructor(
                 _apiKey.value = prefs[PreferencesKeys.CLAUDE_API_KEY].orEmpty()
                 _customPidsJson.value = prefs[PreferencesKeys.CUSTOM_PIDS_JSON].orEmpty()
                 _alertsEnabled.value = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
+                _ttsEnabled.value = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
                 _tempMaxC.value = (prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: 105).toString()
                 _voltageMin.value = (prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: 11.8f).toString()
                 _redlineRpm.value = (prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: 10_500).toString()
@@ -72,6 +76,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateAlertsEnabled(value: Boolean) {
         _alertsEnabled.value = value
+    }
+
+    fun updateTtsEnabled(value: Boolean) {
+        _ttsEnabled.value = value
     }
 
     fun updateTempMaxC(value: String) {
@@ -102,6 +110,7 @@ class SettingsViewModel @Inject constructor(
             val result = runCatching {
                 settings.edit {
                     it[PreferencesKeys.ALERTS_ENABLED] = _alertsEnabled.value
+                    it[PreferencesKeys.ALERT_TTS_ENABLED] = _ttsEnabled.value
                     it[PreferencesKeys.ALERT_TEMP_MAX_C] = temp
                     it[PreferencesKeys.ALERT_VOLTAGE_MIN] = voltage
                     it[PreferencesKeys.ALERT_REDLINE_RPM] = redline

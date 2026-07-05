@@ -1,8 +1,15 @@
 package com.revscope.feature.session
 
+import android.content.Context
+import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
@@ -23,6 +30,7 @@ private const val CHART_MAX_POINTS = 240
 
 @HiltViewModel
 class SessionDetailViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val sessionDao: SessionDao,
     private val telemetryDao: TelemetryDao,
     private val gpsDao: GpsDao,
@@ -100,6 +108,32 @@ class SessionDetailViewModel @Inject constructor(
         if (points.size <= CHART_MAX_POINTS) return points.map { it.value }
         val step = points.size / CHART_MAX_POINTS
         return points.filterIndexed { index, _ -> index % step == 0 }.map { it.value }
+    }
+
+    /**
+     * Writes the full session (telemetry + GPS) as CSV to app cache and returns a
+     * shareable content:// Uri. Runs on IO — thousands of rows.
+     */
+    suspend fun exportCsv(): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val telemetry = telemetryDao.pointsForSession(sessionId)
+            val gps = gpsDao.pointsForSession(sessionId)
+            val exportDir = File(appContext.cacheDir, "exports").apply { mkdirs() }
+            val file = File(exportDir, "revscope_trip_$sessionId.csv")
+            file.bufferedWriter().use { out ->
+                out.appendLine("section,timestamp,key,value1,value2")
+                telemetry.forEach { p ->
+                    out.appendLine("obd,${p.timestamp},${p.pid},${p.value},")
+                }
+                gps.forEach { p ->
+                    out.appendLine("gps,${p.timestamp},${p.latitude},${p.longitude},${p.speedKmh}")
+                }
+            }
+            FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
+        } catch (e: Exception) {
+            Timber.e(e, "SessionDetail: CSV export failed")
+            null
+        }
     }
 
     private fun downsampleTrack(points: List<Pair<Double, Double>>): List<Pair<Double, Double>> {

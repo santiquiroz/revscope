@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,13 +29,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
@@ -59,6 +64,8 @@ fun SessionDetailScreen(
     vm: SessionDetailViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -67,6 +74,22 @@ fun SessionDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimaryColor)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        scope.launch {
+                            vm.exportCsv()?.let { uri ->
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/csv"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Compartir viaje"))
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Exportar CSV", tint = AccentColor)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
@@ -141,6 +164,23 @@ private fun ReportContent(
             StatCard("RPM máx", report.maxRpm.toString(), Modifier.weight(1f))
             StatCard("RPM prom", report.avgRpm.toString(), Modifier.weight(1f))
             StatCard("Acel. máx", "${report.maxThrottlePct}%", Modifier.weight(1f))
+        }
+        if (session.best0to60Ms != null || session.best0to100Ms != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatCard(
+                    "🏁 0-60",
+                    session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
+                    Modifier.weight(1f),
+                )
+                StatCard(
+                    "🏁 0-100",
+                    session.best0to100Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
+                    Modifier.weight(1f),
+                )
+            }
         }
 
         if (report.gpsTrack.size >= 2) {
