@@ -32,6 +32,7 @@ class GpsTrackRecorder(
     private val context: Context,
     private val gpsDao: GpsDao,
     private val trackModeEngine: TrackModeEngine? = null,
+    private val onBearing: ((Float) -> Unit)? = null,
 ) {
 
     private val buffer = mutableListOf<GpsPointEntity>()
@@ -105,6 +106,7 @@ class GpsTrackRecorder(
         )
         synchronized(buffer) { buffer += point }
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
+        if (location.hasBearing()) onBearing?.invoke(location.bearing)
     }
 
     private suspend fun flush() {

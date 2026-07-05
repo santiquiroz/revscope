@@ -3,11 +3,13 @@ package com.revscope.core.data.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.GpsPointEntity
+import com.revscope.core.data.db.entities.ImuPointEntity
 import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
@@ -20,8 +22,9 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         VehicleProfileEntity::class,
         GpsPointEntity::class,
         LapEntity::class,
+        ImuPointEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,4 +33,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun vehicleProfileDao(): VehicleProfileDao
     abstract fun gpsDao(): GpsDao
     abstract fun lapDao(): LapDao
+    abstract fun imuDao(): ImuDao
 }

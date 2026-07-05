@@ -194,10 +194,27 @@ private fun ReportContent(
             )
             TrackMap(
                 track = report.gpsTrack,
+                speeds = report.gpsTrackSpeeds,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp),
             )
+            Text(
+                "azul = lento · amarillo = medio · rojo = rápido",
+                color = TextMutedColor,
+                fontSize = 10.sp,
+            )
+        }
+
+        if (report.maxLateralG != null || report.maxLeanDeg != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatCard("G lat máx", report.maxLateralG?.let { "%.2f".format(it) } ?: "—", Modifier.weight(1f))
+                StatCard("Frenada máx", report.maxBrakingG?.let { "%.2f G".format(-it) } ?: "—", Modifier.weight(1f))
+                StatCard("Lean máx", report.maxLeanDeg?.let { "%.0f°".format(it) } ?: "—", Modifier.weight(1f))
+            }
         }
 
         if (report.laps.isNotEmpty()) {

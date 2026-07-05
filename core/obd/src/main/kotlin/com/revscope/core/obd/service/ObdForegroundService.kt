@@ -14,8 +14,11 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.motion.MotionMetricsHub
+import com.revscope.core.obd.motion.MotionSensorRecorder
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.track.TrackModeEngine
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,10 +45,13 @@ class ObdForegroundService : Service() {
 
     @Inject lateinit var sessionManager: ObdSessionManager
     @Inject lateinit var gpsDao: GpsDao
+    @Inject lateinit var imuDao: ImuDao
     @Inject lateinit var trackModeEngine: TrackModeEngine
+    @Inject lateinit var motionHub: MotionMetricsHub
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var gpsRecorder: GpsTrackRecorder? = null
+    private var motionRecorder: MotionSensorRecorder? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -61,6 +67,7 @@ class ObdForegroundService : Service() {
 
     override fun onDestroy() {
         gpsRecorder?.stop()
+        motionRecorder?.stop()
         scope.cancel()
         Timber.i("ObdForegroundService: destroyed")
         super.onDestroy()
@@ -85,10 +92,19 @@ class ObdForegroundService : Service() {
             sessionManager.currentSessionId.collect { sessionId ->
                 gpsRecorder?.stop()
                 gpsRecorder = null
+                motionRecorder?.stop()
+                motionRecorder = null
                 if (sessionId != null) {
-                    gpsRecorder = GpsTrackRecorder(applicationContext, gpsDao, trackModeEngine).also {
+                    val imu = MotionSensorRecorder(applicationContext, imuDao, motionHub).also {
                         it.start(scope, sessionId)
                     }
+                    motionRecorder = imu
+                    gpsRecorder = GpsTrackRecorder(
+                        applicationContext,
+                        gpsDao,
+                        trackModeEngine,
+                        onBearing = imu::updateGpsBearing,
+                    ).also { it.start(scope, sessionId) }
                 }
             }
         }

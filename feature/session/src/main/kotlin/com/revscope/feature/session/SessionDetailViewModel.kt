@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
@@ -37,6 +38,7 @@ class SessionDetailViewModel @Inject constructor(
     private val telemetryDao: TelemetryDao,
     private val gpsDao: GpsDao,
     private val lapDao: LapDao,
+    private val imuDao: ImuDao,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -52,9 +54,14 @@ class SessionDetailViewModel @Inject constructor(
         val speedSeries: List<Float>,
         /** lat/lon pairs, downsampled — empty when no GPS was recorded */
         val gpsTrack: List<Pair<Double, Double>>,
+        /** speed (km/h) per track point, same indices as gpsTrack — for color grading */
+        val gpsTrackSpeeds: List<Float>,
         val gpsDistanceKm: Double,
         val gpsMaxSpeedKmh: Int,
         val laps: List<LapEntity>,
+        val maxLateralG: Float?,
+        val maxBrakingG: Float?,
+        val maxLeanDeg: Float?,
     )
 
     sealed class UiState {
@@ -81,7 +88,11 @@ class SessionDetailViewModel @Inject constructor(
             val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
             val speedPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0D")
             val gpsPoints = gpsDao.pointsForSession(sessionId)
-            val gpsTrack = downsampleTrack(gpsPoints.map { it.latitude to it.longitude })
+            val trackTriples = downsampleTrack(
+                gpsPoints.map { Triple(it.latitude, it.longitude, it.speedKmh) }
+            )
+            val gpsTrack = trackTriples.map { it.first to it.second }
+            val gpsTrackSpeeds = trackTriples.map { it.third }
 
             _state.value = UiState.Ready(
                 TripReport(
@@ -95,9 +106,13 @@ class SessionDetailViewModel @Inject constructor(
                     rpmSeries = downsample(rpmPoints),
                     speedSeries = downsample(speedPoints),
                     gpsTrack = gpsTrack,
+                    gpsTrackSpeeds = gpsTrackSpeeds,
                     gpsDistanceKm = TripStatsCalculator.gpsDistanceKm(gpsPoints),
                     gpsMaxSpeedKmh = (gpsDao.maxSpeed(sessionId) ?: 0f).roundToInt(),
                     laps = lapDao.lapsForSession(sessionId),
+                    maxLateralG = imuDao.maxAbsLateralG(sessionId),
+                    maxBrakingG = imuDao.maxBrakingG(sessionId)?.let { -it },
+                    maxLeanDeg = imuDao.maxAbsLean(sessionId),
                 )
             )
         } catch (e: CancellationException) {
@@ -133,6 +148,9 @@ class SessionDetailViewModel @Inject constructor(
                 gps.forEach { p ->
                     out.appendLine("gps,${p.timestamp},${p.latitude},${p.longitude},${p.speedKmh}")
                 }
+                imuDao.pointsForSession(sessionId).forEach { p ->
+                    out.appendLine("imu,${p.timestamp},${p.gLat},${p.gLong},${p.leanDeg}")
+                }
             }
             FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
         } catch (e: Exception) {
@@ -141,7 +159,9 @@ class SessionDetailViewModel @Inject constructor(
         }
     }
 
-    private fun downsampleTrack(points: List<Pair<Double, Double>>): List<Pair<Double, Double>> {
+    private fun downsampleTrack(
+        points: List<Triple<Double, Double, Float>>,
+    ): List<Triple<Double, Double, Float>> {
         if (points.size <= TRACK_MAX_POINTS) return points
         val step = points.size / TRACK_MAX_POINTS
         return points.filterIndexed { index, _ -> index % step == 0 }

@@ -19,14 +19,34 @@ private val MapBg = Color(0xFF12121A)
 private val TrackColor = Color(0xFFE8FF00)
 private val StartColor = Color(0xFF3DFF8E)
 private val EndColor = Color(0xFFFF3D5A)
+private val SlowColor = Color(0xFF3D8BFF)
+private val MidColor = Color(0xFFE8FF00)
+private val FastColor = Color(0xFFFF3D5A)
+
+private fun speedColor(fraction: Float): Color = if (fraction < 0.5f) {
+    lerpColor(SlowColor, MidColor, fraction * 2f)
+} else {
+    lerpColor(MidColor, FastColor, (fraction - 0.5f) * 2f)
+}
+
+private fun lerpColor(from: Color, to: Color, t: Float): Color = Color(
+    red = from.red + (to.red - from.red) * t,
+    green = from.green + (to.green - from.green) * t,
+    blue = from.blue + (to.blue - from.blue) * t,
+)
 
 /**
  * Offline racing-line view of the GPS track: the route drawn as a normalized
  * polyline, no map tiles needed. Longitude is scaled by cos(latitude) so shapes
- * keep real-world proportions.
+ * keep real-world proportions. With [speeds], segments grade from slow (blue)
+ * to fast (red) like real telemetry software.
  */
 @Composable
-fun TrackMap(track: List<Pair<Double, Double>>, modifier: Modifier = Modifier) {
+fun TrackMap(
+    track: List<Pair<Double, Double>>,
+    modifier: Modifier = Modifier,
+    speeds: List<Float> = emptyList(),
+) {
     Canvas(
         modifier = modifier
             .background(MapBg, RoundedCornerShape(12.dp))
@@ -55,19 +75,34 @@ fun TrackMap(track: List<Pair<Double, Double>>, modifier: Modifier = Modifier) {
             offsetY + ((maxY - ys[index]) * scale).toFloat(),
         )
 
-        val path = Path().apply {
-            val first = project(0)
-            moveTo(first.x, first.y)
+        if (speeds.size == track.size && speeds.isNotEmpty()) {
+            // Speed-graded segments: blue (slow) → yellow → red (fast)
+            val maxSpeed = speeds.max().coerceAtLeast(1f)
             for (i in 1 until track.size) {
-                val p = project(i)
-                lineTo(p.x, p.y)
+                val fraction = ((speeds[i - 1] + speeds[i]) / 2f / maxSpeed).coerceIn(0f, 1f)
+                drawLine(
+                    color = speedColor(fraction),
+                    start = project(i - 1),
+                    end = project(i),
+                    strokeWidth = 4.dp.toPx(),
+                    cap = StrokeCap.Round,
+                )
             }
+        } else {
+            val path = Path().apply {
+                val first = project(0)
+                moveTo(first.x, first.y)
+                for (i in 1 until track.size) {
+                    val p = project(i)
+                    lineTo(p.x, p.y)
+                }
+            }
+            drawPath(
+                path = path,
+                color = TrackColor,
+                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
         }
-        drawPath(
-            path = path,
-            color = TrackColor,
-            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
         drawCircle(StartColor, radius = 6.dp.toPx(), center = project(0))
         drawCircle(EndColor, radius = 6.dp.toPx(), center = project(track.size - 1))
     }

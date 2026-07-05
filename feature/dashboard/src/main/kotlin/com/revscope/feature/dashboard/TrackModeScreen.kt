@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import com.revscope.core.obd.motion.MotionMetricsHub
 import com.revscope.core.obd.track.TrackModeEngine
 import com.revscope.feature.dashboard.ui.RevScopeColors
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,6 +48,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TrackModeViewModel @Inject constructor(
     val engine: TrackModeEngine,
+    val motionHub: MotionMetricsHub,
 ) : ViewModel()
 
 private fun formatLap(ms: Long): String {
@@ -63,6 +65,7 @@ fun TrackModeScreen(
     vm: TrackModeViewModel = hiltViewModel(),
 ) {
     val state by vm.engine.state.collectAsState()
+    val motion by vm.motionHub.snapshot.collectAsState()
 
     // Live current-lap clock, ticking locally at 10 Hz
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -143,6 +146,19 @@ fun TrackModeScreen(
                     TrackStat("Última", state.laps.lastOrNull()?.let { formatLap(it.timeMs) } ?: "—", Modifier.weight(1f))
                     TrackStat("Mejor", state.bestLapMs?.let { formatLap(it) } ?: "—", Modifier.weight(1f))
                     TrackStat("Vueltas", state.laps.size.toString(), Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TrackStat("G lat", "%.2f".format(motion.gLat), Modifier.weight(1f))
+                    TrackStat("G long", "%.2f".format(motion.gLong), Modifier.weight(1f))
+                    TrackStat(
+                        if (motion.calibrated) "Lean" else "Lean (calibrando…)",
+                        "%.0f°".format(motion.leanDeg),
+                        Modifier.weight(1f),
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
 
