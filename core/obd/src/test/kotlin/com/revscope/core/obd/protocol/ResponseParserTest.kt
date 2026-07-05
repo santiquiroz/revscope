@@ -117,6 +117,21 @@ class ResponseParserTest {
         assertNull(ResponseParser.parseMultiPidResponse("?>", mapOf("0C" to 2)))
     }
 
+    // ── Freeze frame (Mode 02) ───────────────────────────────────────────────
+
+    @Test
+    fun `parseFreezeFramePid extracts data after frame byte`() {
+        // 42 0C 00 1A F0 → RPM bytes captured at fault time
+        val bytes = ResponseParser.parseFreezeFramePid("420C001AF0>", "0C")
+        assertArrayEquals(byteArrayOf(0x1A, 0xF0.toByte()), bytes)
+    }
+
+    @Test
+    fun `parseFreezeFramePid returns null when no frame stored`() {
+        assertNull(ResponseParser.parseFreezeFramePid("NO DATA>", "0C"))
+        assertNull(ResponseParser.parseFreezeFramePid("7F0212>", "0C"))
+    }
+
     // ── VIN (Mode 09 02) ─────────────────────────────────────────────────────
 
     @Test

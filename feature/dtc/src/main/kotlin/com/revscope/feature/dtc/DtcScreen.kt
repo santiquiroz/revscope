@@ -46,6 +46,30 @@ private val DangerColor = Color(0xFFFF3040)
 private val TextPrimaryColor = Color(0xFFF0F0F8)
 private val TextMutedColor = Color(0xFF6B7089)
 
+@Composable
+private fun FreezeFrameCard(items: List<FreezeFrameItem>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceHighColor, RoundedCornerShape(8.dp))
+            .padding(14.dp),
+    ) {
+        Text(
+            "📸 Freeze frame — el motor al momento de la falla",
+            color = AccentColor,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(6.dp))
+        items.forEach { item ->
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(item.label, color = TextMutedColor, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text(item.value, color = TextPrimaryColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DtcScreen(
@@ -53,6 +77,7 @@ fun DtcScreen(
     vm: DtcViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
+    val freezeFrame by vm.freezeFrame.collectAsState()
 
     Column(
         modifier = Modifier
@@ -98,6 +123,9 @@ fun DtcScreen(
                         StatusContent("Sin códigos de falla activos ✓", SuccessColor)
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (freezeFrame.isNotEmpty()) {
+                                item(key = "freeze_frame") { FreezeFrameCard(freezeFrame) }
+                            }
                             items(s.codes) { item -> DtcItem(item) }
                         }
                     }

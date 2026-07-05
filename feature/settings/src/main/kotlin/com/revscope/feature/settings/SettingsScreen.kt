@@ -27,12 +27,14 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +69,7 @@ fun SettingsScreen(
     val redlineRpm by vm.redlineRpm.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
@@ -224,10 +227,24 @@ fun SettingsScreen(
                 colors = settingsFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(
-                onClick = vm::saveCustomPids,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            ) { Text("Validar y aplicar", color = BgColor) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = vm::saveCustomPids,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+                ) { Text("Validar y aplicar", color = BgColor) }
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "RevScope PID pack")
+                            putExtra(Intent.EXTRA_TEXT, customPidsJson)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Compartir PID pack"))
+                    },
+                    enabled = customPidsJson.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+                ) { Text("Compartir pack", color = TextPrimaryColor) }
+            }
 
             Spacer(Modifier.height(24.dp))
         }

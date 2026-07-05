@@ -208,6 +208,25 @@ object ResponseParser {
         }
     }
 
+    // ── Mode 02 — freeze frame ───────────────────────────────────────────────
+
+    /**
+     * Parses a Mode 02 (freeze frame) response: "42" + PID + frame# + data.
+     * Returns the data bytes captured at the moment the DTC was set, or null
+     * when the ECU has no frame stored (NO DATA).
+     */
+    fun parseFreezeFramePid(raw: String, pid: String): ByteArray? {
+        val clean = stripTransientPrefixes(cleanResponse(raw))
+        if (isErrorResponse(clean)) return null
+        val header = "42${pid.uppercase()}"
+        val index = clean.indexOf(header)
+        if (index == -1) return null
+        var data = clean.substring(index + header.length)
+        if (data.length >= 2) data = data.drop(2) // frame-number byte (usually 00)
+        if (data.length % 2 != 0) data = data.dropLast(1)
+        return hexToBytes(data)?.takeIf { it.isNotEmpty() }
+    }
+
     // ── Mode 09 — vehicle information ────────────────────────────────────────
 
     /**
