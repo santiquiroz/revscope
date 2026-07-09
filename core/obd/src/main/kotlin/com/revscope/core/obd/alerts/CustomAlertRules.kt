@@ -15,7 +15,11 @@ object CustomAlertRules {
 
     data class Rule(val pid: String, val min: Double?, val max: Double?, val nombre: String)
 
-    /** Parses the JSON array `[{pid, min?, max?, nombre}]`. Invalid JSON yields an empty list. */
+    /**
+     * Parses the JSON array `[{pid, min?, max?, nombre}]`. Invalid JSON yields an empty list.
+     * A rule where both bounds are present and `min > max` matches every reading, so it is
+     * skipped rather than included.
+     */
     fun parse(json: String): List<Rule> {
         if (json.isBlank()) return emptyList()
         return try {
@@ -23,11 +27,14 @@ object CustomAlertRules {
             buildList {
                 for (i in 0 until array.length()) {
                     val obj = array.getJSONObject(i)
+                    val min = if (obj.has("min")) obj.getDouble("min") else null
+                    val max = if (obj.has("max")) obj.getDouble("max") else null
+                    if (isInvertedRange(min, max)) continue
                     add(
                         Rule(
                             pid = obj.getString("pid").uppercase(),
-                            min = if (obj.has("min")) obj.getDouble("min") else null,
-                            max = if (obj.has("max")) obj.getDouble("max") else null,
+                            min = min,
+                            max = max,
                             nombre = obj.getString("nombre"),
                         )
                     )
@@ -38,6 +45,10 @@ object CustomAlertRules {
             emptyList()
         }
     }
+
+    /** True when both bounds are present and inverted (`min > max`) — such a rule matches everything. */
+    fun isInvertedRange(min: Double?, max: Double?): Boolean =
+        min != null && max != null && min > max
 
     /** Returns the Spanish "out of range" message for [reading], or null if within range. */
     fun evaluate(reading: ObdReading, rules: List<Rule>): String? {

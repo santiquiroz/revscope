@@ -92,4 +92,20 @@ class CustomAlertRulesTest {
         val reading = ObdReading(pid = "0A", value = 150.0, unit = "u")
         assertEquals("Test fuera de rango: 150 u", CustomAlertRules.evaluate(reading, rules))
     }
+
+    @Test
+    fun `regla con minimo mayor al maximo es descartada por parse`() {
+        val rules = CustomAlertRules.parse(
+            """[{"pid":"0A","min":400,"max":200,"nombre":"Rango invertido"}]"""
+        )
+        assertTrue(rules.isEmpty())
+    }
+
+    @Test
+    fun `regla sin pid es descartada sin lanzar excepcion`() {
+        val rules = CustomAlertRules.parse(
+            """[{"min":100,"max":200,"nombre":"Sin PID"}]"""
+        )
+        assertTrue(rules.isEmpty())
+    }
 }

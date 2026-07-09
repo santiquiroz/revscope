@@ -198,13 +198,13 @@ class AlertsEngine @Inject constructor(
         speak(message)
     }
 
-    /** Spoken statistical-anomaly alert from AnomalyDetector — cooldown per identical message. */
-    fun announceAnomaly(mensaje: String) {
+    /** Spoken statistical-anomaly alert from AnomalyDetector — cooldown per stable alert [key]. */
+    fun announceAnomaly(key: String, mensaje: String) {
         if (!enabled) return
         val now = System.currentTimeMillis()
         synchronized(lastAnomalyAnnounced) {
-            if (now - (lastAnomalyAnnounced[mensaje] ?: 0L) < ANOMALY_COOLDOWN_MS) return
-            lastAnomalyAnnounced[mensaje] = now
+            if (now - (lastAnomalyAnnounced[key] ?: 0L) < ANOMALY_COOLDOWN_MS) return
+            lastAnomalyAnnounced[key] = now
         }
         Timber.w("AlertsEngine: anomaly — $mensaje")
         _alerts.tryEmit(ObdAlert(AlertType.ANOMALY, mensaje, 0.0))

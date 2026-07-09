@@ -112,7 +112,11 @@ class IntelligenceOrchestrator(
             _anomalyAlerts.emit(alert)
             // Single app-wide Hilt singleton — the one non-duplicating place to speak anomalies,
             // regardless of which (if any) screen is collecting anomalyAlerts.
-            alertsEngine.announceAnomaly(alert.message)
+            alertsEngine.announceAnomaly(anomalyAlertKey(alert), alert.message)
         }
     }
+
+    /** Stable cooldown key per anomaly subtype+PID — the message text embeds the live value. */
+    private fun anomalyAlertKey(alert: AnomalyAlert): String =
+        "${alert::class.simpleName}:${alert.pid}"
 }

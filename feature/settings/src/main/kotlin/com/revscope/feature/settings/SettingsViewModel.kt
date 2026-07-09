@@ -13,6 +13,7 @@ import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.alerts.CustomAlertRules
 import com.revscope.core.obd.cameras.SpeedCameraUpdater
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import org.json.JSONObject
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -288,11 +290,15 @@ class SettingsViewModel @Inject constructor(
 
     private fun isValidCustomAlertJson(json: String): Boolean = try {
         val array = JSONArray(json)
-        (0 until array.length()).all { i ->
-            val obj = array.getJSONObject(i)
-            obj.has("pid") && obj.has("nombre")
-        }
+        (0 until array.length()).all { i -> isValidCustomAlertRule(array.getJSONObject(i)) }
     } catch (_: Exception) {
         false
+    }
+
+    private fun isValidCustomAlertRule(obj: JSONObject): Boolean {
+        if (!obj.has("pid") || !obj.has("nombre")) return false
+        val min = if (obj.has("min")) obj.getDouble("min") else null
+        val max = if (obj.has("max")) obj.getDouble("max") else null
+        return !CustomAlertRules.isInvertedRange(min, max)
     }
 }
