@@ -11,15 +11,19 @@ import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
+
+private const val MINUTE_MS = 60_000L
 
 @HiltViewModel
 class AlDiaViewModel @Inject constructor(
@@ -41,9 +45,18 @@ class AlDiaViewModel @Inject constructor(
     val licenseExpiresAt: StateFlow<Long?> =
         licenseExpiresAtFlow.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    /** Re-emits every minute so statuses re-evaluate across day/pico-y-placa boundaries. */
+    private val minuteTicker = flow {
+        while (true) {
+            emit(Unit)
+            delay(MINUTE_MS)
+        }
+    }
+
     val docStatuses: StateFlow<List<DocumentStatusCalculator.DocStatus>> =
-        combine(activeProfile, licenseExpiresAtFlow, rulesFlow, ::calculateStatuses)
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        combine(activeProfile, licenseExpiresAtFlow, rulesFlow, minuteTicker) { profile, license, rules, _ ->
+            calculateStatuses(profile, license, rules)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private fun calculateStatuses(
         profile: VehicleProfileEntity?,

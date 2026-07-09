@@ -15,14 +15,18 @@ import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val MINUTE_MS = 60_000L
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
@@ -42,6 +46,14 @@ class DashboardViewModel @Inject constructor(
         .map { table -> table.all { it.observationCount >= 30 } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /** Re-emits every minute so the banner re-evaluates across day/pico-y-placa boundaries. */
+    private val minuteTicker = flow {
+        while (true) {
+            emit(Unit)
+            delay(MINUTE_MS)
+        }
+    }
+
     /** Thin contextual banner ("⚠ SOAT vencido · Pico y placa hasta las 20:00"); null when all clear. */
     val alDiaBanner: StateFlow<String?> = combine(
         sessionManager.activeProfile,
@@ -51,8 +63,10 @@ class DashboardViewModel @Inject constructor(
                 ?.let(PicoYPlacaEngine::parseRulesJson)
                 ?: PicoYPlacaEngine.MEDELLIN_2026_S1
         },
-        ::computeAlDiaBanner,
-    ).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        minuteTicker,
+    ) { profile, licenseExpiresAt, rules, _ ->
+        computeAlDiaBanner(profile, licenseExpiresAt, rules)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var gearTableJob: Job? = null
 

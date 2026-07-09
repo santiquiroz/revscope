@@ -225,7 +225,11 @@ private fun MultasCard(plate: String?) {
 
 private fun openSimit(context: Context, plate: String?) {
     copyPlateToClipboard(context, plate)
-    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SIMIT_URL)))
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SIMIT_URL)))
+    }.onFailure {
+        Toast.makeText(context, "No hay navegador disponible", Toast.LENGTH_SHORT).show()
+    }
 }
 
 private fun copyPlateToClipboard(context: Context, plate: String?) {

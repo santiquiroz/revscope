@@ -2,6 +2,7 @@ package com.revscope.core.obd.legal
 
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 
@@ -44,11 +45,11 @@ object DocumentStatusCalculator {
         nowMs: Long,
         timeZoneId: String = "America/Bogota",
     ): List<DocStatus> = listOf(
-        expiryStatus(DocType.SOAT, "SOAT", documents.soatExpiresAt, nowMs),
-        expiryStatus(DocType.RTM, "Tecnomecánica", documents.rtmExpiresAt, nowMs),
+        expiryStatus(DocType.SOAT, "SOAT", documents.soatExpiresAt, nowMs, timeZoneId),
+        expiryStatus(DocType.RTM, "Tecnomecánica", documents.rtmExpiresAt, nowMs, timeZoneId),
         picoYPlacaStatus(documents, rules, nowMs, timeZoneId),
-        expiryStatus(DocType.TODO_RIESGO, "Todo riesgo", documents.insuranceExpiresAt, nowMs),
-        expiryStatus(DocType.LICENCIA, "Licencia", documents.licenseExpiresAt, nowMs),
+        expiryStatus(DocType.TODO_RIESGO, "Todo riesgo", documents.insuranceExpiresAt, nowMs, timeZoneId),
+        expiryStatus(DocType.LICENCIA, "Licencia", documents.licenseExpiresAt, nowMs, timeZoneId),
     )
 
     /** Convierte un perfil de vehículo + fecha de licencia (DataStore) en [VehicleDocuments]. */
@@ -79,21 +80,32 @@ object DocumentStatusCalculator {
     private fun picoYPlacaBannerPhrase(status: DocStatus?): String =
         status?.horaLimite?.let { "Pico y placa hasta las $it:00" } ?: "Pico y placa restringido hoy"
 
-    private fun expiryStatus(tipo: DocType, titulo: String, expiresAt: Long?, nowMs: Long): DocStatus {
+    private fun expiryStatus(
+        tipo: DocType,
+        titulo: String,
+        expiresAt: Long?,
+        nowMs: Long,
+        timeZoneId: String,
+    ): DocStatus {
         if (expiresAt == null) return DocStatus(tipo, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
-        val daysUntil = daysBetweenUtc(nowMs, expiresAt)
+        val daysUntil = daysBetween(nowMs, expiresAt, timeZoneId)
         return when {
-            daysUntil < 0 -> DocStatus(tipo, Nivel.VENCIDO, titulo, "Venció hace ${-daysUntil} días")
+            daysUntil < 0 -> DocStatus(tipo, Nivel.VENCIDO, titulo, vencidoHaceDiasTexto(daysUntil))
             daysUntil == 0L -> DocStatus(tipo, Nivel.ATENCION, titulo, "Vence hoy")
             daysUntil <= WARNING_THRESHOLD_DAYS -> DocStatus(tipo, Nivel.ATENCION, titulo, "Vence en $daysUntil días")
             else -> DocStatus(tipo, Nivel.OK, titulo, "Vence en $daysUntil días")
         }
     }
 
-    private fun daysBetweenUtc(nowMs: Long, expiresAtMs: Long): Long {
-        val today = Instant.ofEpochMilli(nowMs).atZone(ZoneOffset.UTC).toLocalDate()
+    private fun vencidoHaceDiasTexto(daysUntil: Long): String {
+        val diasVencido = -daysUntil
+        return if (diasVencido == 1L) "Venció hace 1 día" else "Venció hace $diasVencido días"
+    }
+
+    private fun daysBetween(nowMs: Long, expiresAtMs: Long, timeZoneId: String): Long {
+        val nowDate = Instant.ofEpochMilli(nowMs).atZone(ZoneId.of(timeZoneId)).toLocalDate()
         val expiryDate = Instant.ofEpochMilli(expiresAtMs).atZone(ZoneOffset.UTC).toLocalDate()
-        return ChronoUnit.DAYS.between(today, expiryDate)
+        return ChronoUnit.DAYS.between(nowDate, expiryDate)
     }
 
     private fun picoYPlacaStatus(
