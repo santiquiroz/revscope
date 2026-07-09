@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.obd.R
@@ -25,6 +26,7 @@ class TripSummaryNotifier @Inject constructor(
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
             ?.putExtra(EXTRA_SESSION_ID, session.id)
             ?: return
+        launch.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pending = PendingIntent.getActivity(
             context, session.id.toInt(), launch,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

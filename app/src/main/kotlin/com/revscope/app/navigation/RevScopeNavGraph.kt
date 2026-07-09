@@ -77,6 +77,7 @@ private val bottomNavRoutes = bottomNavItems.map { it.screen.route }.toSet()
 fun RevScopeNavGraph(
     navController: NavHostController = rememberNavController(),
     initialSessionId: Long? = null,
+    onInitialSessionConsumed: () -> Unit = {},
 ) {
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
@@ -88,7 +89,10 @@ fun RevScopeNavGraph(
         hiltViewModel(LocalContext.current as ComponentActivity)
 
     LaunchedEffect(initialSessionId) {
-        initialSessionId?.let { navController.navigate(Screen.SessionDetail.withId(it)) }
+        initialSessionId?.let {
+            navController.navigate(Screen.SessionDetail.withId(it))
+            onInitialSessionConsumed()
+        }
     }
 
     Scaffold(
