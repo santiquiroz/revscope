@@ -190,7 +190,6 @@ fun DashboardScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = RevScopeColors.Surface,
                 ),
-                windowInsets = WindowInsets(0.dp),
             )
         },
         containerColor = RevScopeColors.Background,

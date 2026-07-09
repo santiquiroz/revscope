@@ -1,8 +1,7 @@
 package com.revscope.app.navigation
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
@@ -22,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -99,22 +99,6 @@ fun RevScopeNavGraph(
 
     Scaffold(
         containerColor = BgColor,
-        topBar = {
-            if (currentRoute in bottomNavRoutes) {
-                val connState by connectionVm.connectionState.collectAsState()
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    ConnectionChip(state = connState) {
-                        navController.navigate(Screen.AdapterScan.route)
-                    }
-                }
-            }
-        },
         bottomBar = {
             if (currentRoute in bottomNavRoutes) {
                 NavigationBar(containerColor = SurfaceColor) {
@@ -145,100 +129,115 @@ fun RevScopeNavGraph(
             }
         },
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(innerPadding),
-        ) {
-            composable(Screen.Dashboard.route) {
-                DashboardScreen(
-                    onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },
-                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                    onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
-                    connectionVm = connectionVm,
-                )
-            }
-            composable(Screen.Workshop.route) {
-                WorkshopScreen(
-                    connectionVm = connectionVm,
-                    onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
-                    onOpenDtc = { navController.navigate(Screen.Dtc.route) },
-                    onOpenLiveMixture = { navController.navigate(Screen.LiveMixture.route) },
-                    onOpenSensors = { navController.navigate(Screen.Sensors.route) },
-                    onOpenScanner = { navController.navigate(Screen.Mode22Scanner.route) },
-                    onOpenGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
-                    onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
-                )
-            }
-            composable(Screen.HealthCheck.route) {
-                HealthCheckScreen(onNavigateBack = { navController.popBackStack() })
-            }
-            composable(Screen.LiveMixture.route) {
-                LiveMixtureScreen(onNavigateBack = { navController.popBackStack() })
-            }
-            composable(Screen.LiveMap.route) { LiveMapScreen() }
-            composable(Screen.AdapterScan.route) {
-                AdapterScanScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    connectionVm = connectionVm,
-                )
-            }
-            composable(Screen.GearAnalyzer.route) {
-                GearAnalyzerScreen()
-            }
-            composable(Screen.Sensors.route) {
-                SensorGraphScreen(connectionVm = connectionVm)
-            }
-            composable(Screen.Dtc.route) {
-                DtcScreen(connectionVm = connectionVm)
-            }
-            composable(Screen.Sessions.route) {
-                SessionHistoryScreen(
-                    onOpenSession = { sessionId ->
-                        navController.navigate(Screen.SessionDetail.withId(sessionId))
-                    },
-                    onCompareSessions = { a, b ->
-                        navController.navigate(Screen.SessionCompare.withIds(a, b))
-                    },
-                )
-            }
-            composable(
-                route = Screen.SessionCompare.route,
-                arguments = listOf(
-                    navArgument("sessionA") { type = NavType.LongType },
-                    navArgument("sessionB") { type = NavType.LongType },
-                ),
+        Box(Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Dashboard.route,
+                modifier = Modifier.padding(innerPadding),
             ) {
-                SessionCompareScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                )
+                composable(Screen.Dashboard.route) {
+                    DashboardScreen(
+                        onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },
+                        onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
+                        connectionVm = connectionVm,
+                    )
+                }
+                composable(Screen.Workshop.route) {
+                    WorkshopScreen(
+                        connectionVm = connectionVm,
+                        onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
+                        onOpenDtc = { navController.navigate(Screen.Dtc.route) },
+                        onOpenLiveMixture = { navController.navigate(Screen.LiveMixture.route) },
+                        onOpenSensors = { navController.navigate(Screen.Sensors.route) },
+                        onOpenScanner = { navController.navigate(Screen.Mode22Scanner.route) },
+                        onOpenGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
+                        onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
+                    )
+                }
+                composable(Screen.HealthCheck.route) {
+                    HealthCheckScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(Screen.LiveMixture.route) {
+                    LiveMixtureScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(Screen.LiveMap.route) { LiveMapScreen() }
+                composable(Screen.AdapterScan.route) {
+                    AdapterScanScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        connectionVm = connectionVm,
+                    )
+                }
+                composable(Screen.GearAnalyzer.route) {
+                    GearAnalyzerScreen()
+                }
+                composable(Screen.Sensors.route) {
+                    SensorGraphScreen(connectionVm = connectionVm)
+                }
+                composable(Screen.Dtc.route) {
+                    DtcScreen(connectionVm = connectionVm)
+                }
+                composable(Screen.Sessions.route) {
+                    SessionHistoryScreen(
+                        onOpenSession = { sessionId ->
+                            navController.navigate(Screen.SessionDetail.withId(sessionId))
+                        },
+                        onCompareSessions = { a, b ->
+                            navController.navigate(Screen.SessionCompare.withIds(a, b))
+                        },
+                    )
+                }
+                composable(
+                    route = Screen.SessionCompare.route,
+                    arguments = listOf(
+                        navArgument("sessionA") { type = NavType.LongType },
+                        navArgument("sessionB") { type = NavType.LongType },
+                    ),
+                ) {
+                    SessionCompareScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                    )
+                }
+                composable(
+                    route = Screen.SessionDetail.route,
+                    arguments = listOf(navArgument("sessionId") { type = NavType.LongType }),
+                ) {
+                    SessionDetailScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Screen.VehicleProfile.route) {
+                    VehicleProfileScreen(connectionVm = connectionVm)
+                }
+                composable(Screen.Settings.route) {
+                    SettingsScreen(
+                        onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
+                    )
+                }
+                composable(Screen.TrackMode.route) {
+                    TrackModeScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Screen.Mode22Scanner.route) {
+                    Mode22ScannerScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        connectionVm = connectionVm,
+                    )
+                }
             }
-            composable(
-                route = Screen.SessionDetail.route,
-                arguments = listOf(navArgument("sessionId") { type = NavType.LongType }),
-            ) {
-                SessionDetailScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                )
-            }
-            composable(Screen.VehicleProfile.route) {
-                VehicleProfileScreen(connectionVm = connectionVm)
-            }
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
-                )
-            }
-            composable(Screen.TrackMode.route) {
-                TrackModeScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                )
-            }
-            composable(Screen.Mode22Scanner.route) {
-                Mode22ScannerScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    connectionVm = connectionVm,
-                )
+            if (currentRoute in bottomNavRoutes) {
+                val connState by connectionVm.connectionState.collectAsState()
+                Box(
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(top = 4.dp),
+                ) {
+                    ConnectionChip(state = connState) {
+                        navController.navigate(Screen.AdapterScan.route)
+                    }
+                }
             }
         }
     }

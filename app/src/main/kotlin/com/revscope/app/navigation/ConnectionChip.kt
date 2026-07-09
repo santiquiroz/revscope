@@ -28,22 +28,22 @@ fun ConnectionChip(state: ConnectionState, onClick: () -> Unit) {
     }
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFF1C1C28),
+        color = Color(0xE61C1C28),
         modifier = Modifier.clickable(onClick = onClick),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
             Box(
                 Modifier
-                    .size(8.dp)
+                    .size(7.dp)
                     .background(color, CircleShape)
             )
             Text(
                 text = label,
                 color = Color(0xFFB0B4C8),
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 modifier = Modifier.padding(start = 8.dp),
             )
         }

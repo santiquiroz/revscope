@@ -86,7 +86,6 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Ajustes", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
-                windowInsets = WindowInsets(0.dp),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
