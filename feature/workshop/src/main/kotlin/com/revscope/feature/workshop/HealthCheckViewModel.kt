@@ -13,11 +13,13 @@ import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.workshop.DiagnosticRules
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
@@ -86,10 +88,12 @@ class HealthCheckViewModel @Inject constructor(
     fun share(context: Context) {
         val done = _state.value as? UiState.Done ?: return
         viewModelScope.launch {
-            val uri = HealthReportCard.render(
-                context, done.items, done.dtcCodes,
-                sessionManager.activeProfile.value?.name ?: "Mi vehículo", done.timestamp,
-            ) ?: return@launch
+            val uri = withContext(Dispatchers.IO) {
+                HealthReportCard.render(
+                    context, done.items, done.dtcCodes,
+                    sessionManager.activeProfile.value?.name ?: "Mi vehículo", done.timestamp,
+                )
+            } ?: return@launch
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, uri)
