@@ -109,7 +109,12 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
 
         FloatingActionButton(
-            onClick = { openExternalNavigation(context, route.lastOrNull()) },
+            onClick = {
+                openExternalNavigation(
+                    context,
+                    route.lastOrNull() ?: viewModel.initialCenter.value,
+                )
+            },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         ) {
             Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps")
