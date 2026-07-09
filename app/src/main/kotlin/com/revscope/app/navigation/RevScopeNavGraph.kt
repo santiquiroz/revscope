@@ -85,6 +85,8 @@ fun RevScopeNavGraph(
     navController: NavHostController = rememberNavController(),
     initialSessionId: Long? = null,
     onInitialSessionConsumed: () -> Unit = {},
+    initialOpenAlDia: Boolean = false,
+    onInitialOpenAlDiaConsumed: () -> Unit = {},
 ) {
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
@@ -101,6 +103,13 @@ fun RevScopeNavGraph(
         initialSessionId?.let {
             navController.navigate(Screen.SessionDetail.withId(it))
             onInitialSessionConsumed()
+        }
+    }
+
+    LaunchedEffect(initialOpenAlDia) {
+        if (initialOpenAlDia) {
+            navController.navigate(Screen.AlDia.route)
+            onInitialOpenAlDiaConsumed()
         }
     }
 

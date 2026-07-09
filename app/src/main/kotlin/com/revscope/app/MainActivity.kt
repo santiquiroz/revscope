@@ -9,6 +9,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.revscope.app.navigation.RevScopeNavGraph
 import com.revscope.app.ui.theme.RevScopeTheme
+import com.revscope.core.obd.legal.DailyStatusWorker
 import com.revscope.core.obd.service.TripSummaryNotifier
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,17 +18,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class MainActivity : ComponentActivity() {
 
     private val pendingSessionId = MutableStateFlow<Long?>(null)
+    private val pendingOpenAlDia = MutableStateFlow(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         pendingSessionId.value = consumeSessionId(intent)
+        pendingOpenAlDia.value = consumeOpenAlDia(intent)
         setContent {
             val openSessionId by pendingSessionId.collectAsState()
+            val openAlDia by pendingOpenAlDia.collectAsState()
             RevScopeTheme {
                 RevScopeNavGraph(
                     initialSessionId = openSessionId,
                     onInitialSessionConsumed = { pendingSessionId.value = null },
+                    initialOpenAlDia = openAlDia,
+                    onInitialOpenAlDiaConsumed = { pendingOpenAlDia.value = false },
                 )
             }
         }
@@ -37,11 +43,18 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         pendingSessionId.value = consumeSessionId(intent)
+        pendingOpenAlDia.value = consumeOpenAlDia(intent)
     }
 
     private fun consumeSessionId(intent: Intent?): Long? {
         val id = intent?.getLongExtra(TripSummaryNotifier.EXTRA_SESSION_ID, -1L)?.takeIf { it > 0 }
         intent?.removeExtra(TripSummaryNotifier.EXTRA_SESSION_ID)
         return id
+    }
+
+    private fun consumeOpenAlDia(intent: Intent?): Boolean {
+        val shouldOpen = intent?.getBooleanExtra(DailyStatusWorker.EXTRA_OPEN_AL_DIA, false) ?: false
+        intent?.removeExtra(DailyStatusWorker.EXTRA_OPEN_AL_DIA)
+        return shouldOpen
     }
 }

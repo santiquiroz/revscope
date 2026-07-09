@@ -43,6 +43,11 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 
+    // WorkManager — DailyStatusWorker (notificación diaria de documentos)
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    kapt(libs.androidx.hilt.compiler)
+
     implementation(libs.lifecycle.viewmodel.ktx)
 
     implementation(libs.exp4j)

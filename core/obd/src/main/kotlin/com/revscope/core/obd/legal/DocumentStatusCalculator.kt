@@ -25,6 +25,8 @@ object DocumentStatusCalculator {
         val detalle: String,
         /** Hora límite de la restricción de pico y placa (0-23); null para los demás tipos. */
         val horaLimite: Int? = null,
+        /** Días hasta el vencimiento (negativo si ya venció); null para pico y placa y sin configurar. */
+        val diasRestantes: Long? = null,
     )
 
     data class VehicleDocuments(
@@ -90,10 +92,11 @@ object DocumentStatusCalculator {
         if (expiresAt == null) return DocStatus(tipo, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
         val daysUntil = daysBetween(nowMs, expiresAt, timeZoneId)
         return when {
-            daysUntil < 0 -> DocStatus(tipo, Nivel.VENCIDO, titulo, vencidoHaceDiasTexto(daysUntil))
-            daysUntil == 0L -> DocStatus(tipo, Nivel.ATENCION, titulo, "Vence hoy")
-            daysUntil <= WARNING_THRESHOLD_DAYS -> DocStatus(tipo, Nivel.ATENCION, titulo, "Vence en $daysUntil días")
-            else -> DocStatus(tipo, Nivel.OK, titulo, "Vence en $daysUntil días")
+            daysUntil < 0 -> DocStatus(tipo, Nivel.VENCIDO, titulo, vencidoHaceDiasTexto(daysUntil), diasRestantes = daysUntil)
+            daysUntil == 0L -> DocStatus(tipo, Nivel.ATENCION, titulo, "Vence hoy", diasRestantes = daysUntil)
+            daysUntil <= WARNING_THRESHOLD_DAYS ->
+                DocStatus(tipo, Nivel.ATENCION, titulo, "Vence en $daysUntil días", diasRestantes = daysUntil)
+            else -> DocStatus(tipo, Nivel.OK, titulo, "Vence en $daysUntil días", diasRestantes = daysUntil)
         }
     }
 

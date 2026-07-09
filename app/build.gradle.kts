@@ -78,6 +78,11 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
+    // WorkManager — Configuration.Provider con HiltWorkerFactory para DailyStatusWorker
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    kapt(libs.androidx.hilt.compiler)
+
     // DataStore — settingsDataStore in IntelligenceModule
     implementation(libs.datastore.preferences)
 
