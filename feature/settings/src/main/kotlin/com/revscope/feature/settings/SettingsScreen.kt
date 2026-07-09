@@ -4,8 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -53,7 +56,7 @@ private val AccentColor = Color(0xFFE8FF00)
 private val TextPrimaryColor = Color(0xFFF0F0F8)
 private val TextMutedColor = Color(0xFF6B7089)
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     onNavigateToVehicleProfiles: () -> Unit = {},
@@ -82,6 +85,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = { Text("Ajustes", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
+                windowInsets = WindowInsets(0.dp),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -238,7 +242,10 @@ fun SettingsScreen(
                 colors = settingsFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Button(
                     onClick = vm::saveCustomPids,
                     colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
