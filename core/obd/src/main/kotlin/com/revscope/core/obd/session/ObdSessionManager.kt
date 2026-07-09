@@ -368,15 +368,25 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
+    /** Best-effort probe that still honors coroutine cancellation. */
+    private suspend fun probe(bt: ClassicBtTransport, command: String, timeoutMs: Long): String? =
+        try {
+            bt.exchange(command, timeoutMs)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+
     /**
      * Ignition-off signature: the ELM adapter still answers (battery-powered)
      * but the ECU is silent. A dead socket falls back to the movement heuristic.
      */
     private suspend fun classifyLinkLoss(bt: ClassicBtTransport?): EngineOffDetector.LinkLossCause {
         if (bt != null) {
-            val adapterAnswer = runCatching { bt.exchange("AT RV\r", VOLTAGE_TIMEOUT_MS) }.getOrNull()
+            val adapterAnswer = probe(bt, "AT RV\r", VOLTAGE_TIMEOUT_MS)
             if (adapterAnswer != null && parseVoltage(adapterAnswer) != null) {
-                val ecuAnswer = runCatching { bt.exchange("010C\r", PROBE_TIMEOUT_MS) }.getOrNull()
+                val ecuAnswer = probe(bt, "010C\r", PROBE_TIMEOUT_MS)
                 val ecuSilent = ecuAnswer == null ||
                     ecuAnswer.contains("NO DATA", ignoreCase = true) ||
                     ecuAnswer.contains("UNABLE", ignoreCase = true) ||
