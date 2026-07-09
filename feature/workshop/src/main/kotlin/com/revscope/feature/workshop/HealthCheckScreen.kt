@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,13 +51,25 @@ fun HealthCheckScreen(
     viewModel: HealthCheckViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNavigateBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
             }
-            Text("Chequeo de salud", color = TextColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Chequeo de salud",
+                color = TextColor,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            if (state is HealthCheckViewModel.UiState.Done) {
+                IconButton(onClick = { viewModel.share(context) }) {
+                    Icon(Icons.Default.PhotoCamera, "Compartir informe", tint = AccentColor)
+                }
+            }
         }
 
         Button(

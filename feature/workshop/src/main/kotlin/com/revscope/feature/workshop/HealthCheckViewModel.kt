@@ -1,5 +1,7 @@
 package com.revscope.feature.workshop
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.db.dao.HealthReportDao
@@ -78,6 +80,22 @@ class HealthCheckViewModel @Inject constructor(
                 Timber.e(e, "HealthCheck failed")
                 _state.value = UiState.Error("Falló el chequeo: ${e.message}")
             }
+        }
+    }
+
+    fun share(context: Context) {
+        val done = _state.value as? UiState.Done ?: return
+        viewModelScope.launch {
+            val uri = HealthReportCard.render(
+                context, done.items, done.dtcCodes,
+                sessionManager.activeProfile.value?.name ?: "Mi vehículo", done.timestamp,
+            ) ?: return@launch
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Compartir informe"))
         }
     }
 
