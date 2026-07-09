@@ -34,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 
 private val SurfaceColor = Color(0xFF12121A)
@@ -46,7 +45,7 @@ private val TextMutedColor = Color(0xFF6B7089)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VehiclePickerSheet(
-    vm: VehiclePickerViewModel = hiltViewModel(),
+    vm: VehiclePickerViewModel,
     onDismiss: () -> Unit,
     onManageVehicles: () -> Unit,
 ) {

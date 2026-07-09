@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,8 +103,8 @@ fun RevScopeNavGraph(
         }
     }
 
-    var showVehiclePicker by remember { mutableStateOf(false) }
-    var hasOfferedVehiclePicker by remember { mutableStateOf(false) }
+    var showVehiclePicker by rememberSaveable { mutableStateOf(false) }
+    var hasOfferedVehiclePicker by rememberSaveable { mutableStateOf(false) }
     val vehicleProfiles by vehiclePickerVm.profiles.collectAsState()
     val askVehicleOnStart by vehiclePickerVm.askOnStart.collectAsState()
 

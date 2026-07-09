@@ -11,14 +11,16 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
-/** Backs the startup vehicle picker sheet. Loads profiles and the ask-on-start flag once. */
+/** Backs the startup vehicle picker sheet. Streams profiles reactively and loads the ask-on-start flag once. */
 @HiltViewModel
 class VehiclePickerViewModel @Inject constructor(
     private val profileDao: VehicleProfileDao,
@@ -26,8 +28,8 @@ class VehiclePickerViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
 ) : ViewModel() {
 
-    private val _profiles = MutableStateFlow<List<VehicleProfileEntity>>(emptyList())
-    val profiles: StateFlow<List<VehicleProfileEntity>> = _profiles.asStateFlow()
+    val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _askOnStart = MutableStateFlow(true)
     val askOnStart: StateFlow<Boolean> = _askOnStart.asStateFlow()
@@ -35,18 +37,10 @@ class VehiclePickerViewModel @Inject constructor(
     val activeProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
 
     init {
-        // Both loads land in the same coroutine resumption (no suspension between the two
-        // assignments) so Compose collectors see them together — avoids the picker briefly
-        // flashing with a stale askOnStart default while profiles has already loaded.
         viewModelScope.launch {
-            val loadedProfiles = runCatching { profileDao.observeAll().first() }
-                .onFailure { Timber.w(it, "VehiclePickerViewModel: failed to load profiles") }
-                .getOrDefault(emptyList())
-            val loadedAskOnStart = runCatching { settings.data.first()[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true }
+            _askOnStart.value = runCatching { settings.data.first()[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true }
                 .onFailure { Timber.w(it, "VehiclePickerViewModel: failed to load ask-on-start") }
                 .getOrDefault(true)
-            _profiles.value = loadedProfiles
-            _askOnStart.value = loadedAskOnStart
         }
     }
 
@@ -55,6 +49,7 @@ class VehiclePickerViewModel @Inject constructor(
     }
 
     fun disableAsking() {
+        _askOnStart.value = false
         viewModelScope.launch {
             runCatching {
                 settings.edit { it[PreferencesKeys.ASK_VEHICLE_ON_START] = false }
