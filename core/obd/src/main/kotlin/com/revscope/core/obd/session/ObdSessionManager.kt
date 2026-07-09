@@ -24,6 +24,7 @@ import com.revscope.core.obd.protocol.ElmCommandBuilder
 import com.revscope.core.obd.protocol.ProtocolNegotiator
 import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.service.ObdForegroundService
+import com.revscope.core.obd.service.TripSummaryNotifier
 import com.revscope.core.obd.track.TrackModeEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
@@ -73,6 +74,7 @@ class ObdSessionManager @Inject constructor(
     private val settings: DataStore<Preferences>,
     private val alertsEngine: AlertsEngine,
     private val trackModeEngine: TrackModeEngine,
+    private val tripSummaryNotifier: TripSummaryNotifier,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -103,6 +105,7 @@ class ObdSessionManager @Inject constructor(
     private var voltageJob: Job? = null
     private var currentDeviceAddress: String? = null
     private val derivedEngine = DerivedMetricsEngine()
+    private val engineOffDetector = EngineOffDetector()
 
     private val launchTimer = LaunchTimerEngine()
     val launchResults = launchTimer.results
@@ -346,16 +349,56 @@ class ObdSessionManager @Inject constructor(
         }.onFailure { Timber.w(it, "ObdSessionManager: failed to persist last adapter") }
     }
 
-    private fun scheduleAutoReconnect() {
+    private fun scheduleAutoReconnect(pendingSummarySessionId: Long?) {
         val address = currentDeviceAddress ?: _lastAdapterAddress.value ?: return
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
-            repeat(AUTO_RECONNECT_MAX_ATTEMPTS) { attempt ->
-                delay(AUTO_RECONNECT_INTERVAL_MS)
+            AUTO_RECONNECT_BACKOFF_MS.forEachIndexed { attempt, waitMs ->
+                delay(waitMs)
                 if (_connectionState.value is ConnectionState.Connected) return@launch
                 Timber.i("ObdSessionManager: auto-reconnect attempt ${attempt + 1} to $address")
                 connect(address, ConnectMode.BACKGROUND)
             }
+            // Give the last attempt time to finish its 12 s connect watchdog
+            delay(RECONNECT_FINAL_GRACE_MS)
+            if (_connectionState.value !is ConnectionState.Connected) {
+                Timber.i("ObdSessionManager: reconnect exhausted — clean shutdown")
+                finalShutdown(pendingSummarySessionId)
+            }
+        }
+    }
+
+    /**
+     * Ignition-off signature: the ELM adapter still answers (battery-powered)
+     * but the ECU is silent. A dead socket falls back to the movement heuristic.
+     */
+    private suspend fun classifyLinkLoss(bt: ClassicBtTransport?): EngineOffDetector.LinkLossCause {
+        if (bt != null) {
+            val adapterAnswer = runCatching { bt.exchange("AT RV\r", VOLTAGE_TIMEOUT_MS) }.getOrNull()
+            if (adapterAnswer != null && parseVoltage(adapterAnswer) != null) {
+                val ecuAnswer = runCatching { bt.exchange("010C\r", PROBE_TIMEOUT_MS) }.getOrNull()
+                val ecuSilent = ecuAnswer == null ||
+                    ecuAnswer.contains("NO DATA", ignoreCase = true) ||
+                    ecuAnswer.contains("UNABLE", ignoreCase = true) ||
+                    ecuAnswer.contains("STOPPED", ignoreCase = true)
+                return if (ecuSilent) EngineOffDetector.LinkLossCause.ENGINE_OFF
+                else EngineOffDetector.LinkLossCause.LINK_FAULT
+            }
+        }
+        return if (engineOffDetector.movedRecently()) EngineOffDetector.LinkLossCause.LINK_FAULT
+        else EngineOffDetector.LinkLossCause.ENGINE_OFF
+    }
+
+    /** Stops everything battery-hungry and posts the trip summary. Terminal state. */
+    private suspend fun finalShutdown(summarySessionId: Long?) {
+        voltageJob?.cancel()
+        runCatching { transport?.disconnect() }
+        transport = null
+        ObdForegroundService.stop(appContext)
+        _connectionState.value = ConnectionState.Disconnected
+        _readings.value = emptyMap()
+        summarySessionId?.let { id ->
+            runCatching { sessionDao.getById(id) }.getOrNull()?.let { tripSummaryNotifier.post(it) }
         }
     }
 
@@ -376,6 +419,7 @@ class ObdSessionManager @Inject constructor(
         bestTo60Ms = null
         bestTo100Ms = null
         launchTimer.reset()
+        engineOffDetector.reset()
 
         startVoltagePolling(bt)
 
@@ -396,6 +440,7 @@ class ObdSessionManager @Inject constructor(
                             _readings.value = _readings.value + (reading.pid to reading)
                             alertsEngine.process(reading)
                             launchTimer.process(reading)
+                            if (reading.pid == "0D") engineOffDetector.onSpeed(reading.value)
                         }
                     }
 
@@ -406,15 +451,27 @@ class ObdSessionManager @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // PidScheduler's circuit breaker lands here when the adapter vanishes
+                // PidScheduler's circuit breaker lands here when the ECU stops answering
                 Timber.e(e, "ObdSessionManager: telemetry link lost")
                 voltageJob?.cancel()
-                _currentSessionIdFlow.value?.let { id -> runCatching { updateSessionEnd(id) } }
+                val closedSessionId = _currentSessionIdFlow.value
+                closedSessionId?.let { id -> runCatching { updateSessionEnd(id) } }
                 _currentSessionIdFlow.value = null
+                // Probe BEFORE dropping the transport — the adapter may still answer
+                val cause = classifyLinkLoss(transport)
                 runCatching { transport?.disconnect() }
                 transport = null
-                _connectionState.value = ConnectionState.Error("Connection lost — adapter not responding")
-                scheduleAutoReconnect()
+                when (cause) {
+                    EngineOffDetector.LinkLossCause.ENGINE_OFF -> {
+                        Timber.i("ObdSessionManager: engine off — clean shutdown")
+                        finalShutdown(closedSessionId)
+                    }
+                    EngineOffDetector.LinkLossCause.LINK_FAULT -> {
+                        _connectionState.value =
+                            ConnectionState.Error("Connection lost — adapter not responding")
+                        scheduleAutoReconnect(closedSessionId)
+                    }
+                }
             }
         }
     }
@@ -490,9 +547,10 @@ class ObdSessionManager @Inject constructor(
         private const val VIN_TIMEOUT_MS = 4_000L
         private const val VOLTAGE_TIMEOUT_MS = 2_000L
         private const val VOLTAGE_POLL_INTERVAL_MS = 10_000L
-        // 15 s > 12 s connect watchdog, so attempts never overlap; ~3 min covers a fuel stop
-        private const val AUTO_RECONNECT_INTERVAL_MS = 15_000L
-        private const val AUTO_RECONNECT_MAX_ATTEMPTS = 12
+        // 15 s > 12 s connect watchdog, so attempts never overlap; total ≈ 3 min
+        private val AUTO_RECONNECT_BACKOFF_MS = listOf(15_000L, 30_000L, 60_000L, 60_000L)
+        private const val RECONNECT_FINAL_GRACE_MS = 15_000L
+        private const val PROBE_TIMEOUT_MS = 3_000L
 
         private val DTC_PREFIX = mapOf(0 to 'P', 1 to 'C', 2 to 'B', 3 to 'U')
         private val VOLTAGE_REGEX = Regex("""(\d{1,2}(?:\.\d{1,2})?)V""")
