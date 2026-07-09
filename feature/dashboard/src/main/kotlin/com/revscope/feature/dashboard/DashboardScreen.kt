@@ -168,7 +168,6 @@ fun DashboardScreen(
                             modifier = Modifier.padding(end = 8.dp),
                         )
                     }
-                    ConnectionStatusBadge(connectionState)
                     IconButton(onClick = onNavigateToTrackMode) {
                         Icon(
                             imageVector = Icons.Default.Flag,
@@ -253,22 +252,6 @@ fun DashboardScreen(
             TripScoreBar(tripScore = tripScore)
         }
     }
-}
-
-@Composable
-private fun ConnectionStatusBadge(state: ConnectionState) {
-    val (label, color) = when (state) {
-        is ConnectionState.Connected -> "Connected ●" to RevScopeColors.Success
-        is ConnectionState.Connecting -> "Connecting…" to RevScopeColors.Warning
-        is ConnectionState.Error -> "Error ●" to RevScopeColors.Danger
-        ConnectionState.Disconnected -> "Disconnected" to RevScopeColors.TextMuted
-    }
-    Text(
-        text = label,
-        fontSize = 12.sp,
-        color = color,
-        modifier = Modifier.padding(end = 8.dp),
-    )
 }
 
 @Composable
