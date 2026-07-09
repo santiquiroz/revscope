@@ -28,6 +28,8 @@ private const val DEFAULT_REDLINE_RPM = 10_500
 private const val ALERT_COOLDOWN_MS = 30_000L
 private const val REDLINE_COOLDOWN_MS = 10_000L
 private const val TONE_VOLUME = 90
+private const val ANOMALY_COOLDOWN_MS = 60_000L
+private const val CUSTOM_ALERT_COOLDOWN_MS = 120_000L
 
 /**
  * Turns telemetry readings into audible/haptic alerts. Audio goes out on the media
@@ -42,7 +44,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM }
 
     data class ObdAlert(
         val type: AlertType,
@@ -65,6 +67,9 @@ class AlertsEngine @Inject constructor(
     @Volatile private var ttsEnabled = true
     @Volatile private var ttsReady = false
 
+    @Volatile private var customRules: List<CustomAlertRules.Rule> = emptyList()
+    @Volatile private var milAnnouncedThisSession = false
+
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
@@ -74,6 +79,8 @@ class AlertsEngine @Inject constructor(
     }
 
     private val lastFired = mutableMapOf<AlertType, Long>()
+    private val lastAnomalyAnnounced = mutableMapOf<String, Long>()
+    private val lastCustomAlertFired = mutableMapOf<String, Long>()
 
     val currentRedlineRpm: Int get() = redlineOverride ?: redlineRpm
 
@@ -90,8 +97,12 @@ class AlertsEngine @Inject constructor(
             voltageMin = prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: DEFAULT_VOLTAGE_MIN
             redlineRpm = prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: DEFAULT_REDLINE_RPM
             ttsEnabled = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
+            customRules = CustomAlertRules.parse(prefs[PreferencesKeys.CUSTOM_ALERTS_JSON].orEmpty())
             if (ttsEnabled) tts // touch the lazy so the engine warms up early
-            Timber.i("AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm")
+            Timber.i(
+                "AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm " +
+                    "customRules=${customRules.size}"
+            )
         }.onFailure { Timber.w(it, "AlertsEngine: failed to load thresholds") }
     }
 
@@ -132,6 +143,23 @@ class AlertsEngine @Inject constructor(
                 )
             }
         }
+        evaluateCustomAlert(reading)
+    }
+
+    /** User-defined per-PID threshold from Settings' custom-alerts JSON, 120s cooldown per PID. */
+    private fun evaluateCustomAlert(reading: ObdReading) {
+        if (customRules.isEmpty()) return
+        val message = CustomAlertRules.evaluate(reading, customRules) ?: return
+        val now = System.currentTimeMillis()
+        synchronized(lastCustomAlertFired) {
+            if (now - (lastCustomAlertFired[reading.pid] ?: 0L) < CUSTOM_ALERT_COOLDOWN_MS) return
+            lastCustomAlertFired[reading.pid] = now
+        }
+        Timber.w("AlertsEngine: custom alert — $message")
+        _alerts.tryEmit(ObdAlert(AlertType.CUSTOM, message, reading.value))
+        playTone(ToneGenerator.TONE_SUP_ERROR, 500)
+        vibrate(longArrayOf(0, 250, 150, 250))
+        speak(message)
     }
 
     private fun fire(
@@ -168,6 +196,38 @@ class AlertsEngine @Inject constructor(
         playTone(ToneGenerator.TONE_PROP_ACK, 300)
         vibrate(longArrayOf(0, 200, 100, 200))
         speak(message)
+    }
+
+    /** Spoken statistical-anomaly alert from AnomalyDetector — cooldown per identical message. */
+    fun announceAnomaly(mensaje: String) {
+        if (!enabled) return
+        val now = System.currentTimeMillis()
+        synchronized(lastAnomalyAnnounced) {
+            if (now - (lastAnomalyAnnounced[mensaje] ?: 0L) < ANOMALY_COOLDOWN_MS) return
+            lastAnomalyAnnounced[mensaje] = now
+        }
+        Timber.w("AlertsEngine: anomaly — $mensaje")
+        _alerts.tryEmit(ObdAlert(AlertType.ANOMALY, mensaje, 0.0))
+        playTone(ToneGenerator.TONE_PROP_BEEP2, 300)
+        vibrate(longArrayOf(0, 200))
+        speak(mensaje)
+    }
+
+    /** Spoken check-engine-light warning — fires once per session, until [resetSessionFlags]. */
+    fun announceMilOn() {
+        if (!enabled || milAnnouncedThisSession) return
+        milAnnouncedThisSession = true
+        val message = "Se encendió el testigo del motor. Revisa los códigos de falla."
+        Timber.w("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.MIL_ON, message, 1.0))
+        playTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 800)
+        vibrate(longArrayOf(0, 400, 150, 400))
+        speak(message)
+    }
+
+    /** Resets per-session flags (e.g. MIL-on). Call where a new telemetry session starts. */
+    fun resetSessionFlags() {
+        milAnnouncedThisSession = false
     }
 
     /** Spoken lap time — "Vuelta 3: 1 minuto 42.5" over the helmet intercom. */

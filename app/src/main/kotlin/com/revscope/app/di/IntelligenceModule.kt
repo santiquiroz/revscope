@@ -8,6 +8,7 @@ import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.intelligence.IntelligenceCapability
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.intelligence.dtc.DtcExplainer
+import com.revscope.core.obd.alerts.AlertsEngine
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,6 +29,7 @@ object IntelligenceModule {
         @ApplicationContext context: Context,
         settings: DataStore<Preferences>,
         secureKeyStore: SecureKeyStore,
+        alertsEngine: AlertsEngine,
     ): IntelligenceOrchestrator {
         val tier = IntelligenceCapability.deviceTier(context)
 
@@ -50,6 +52,7 @@ object IntelligenceModule {
         return IntelligenceOrchestrator(
             tier = tier,
             dtcExplainer = DtcExplainer(apiKeyProvider),
+            alertsEngine = alertsEngine,
         )
     }
 }

@@ -49,6 +49,9 @@ class SettingsViewModel @Inject constructor(
     private val _customPidsJson = MutableStateFlow("")
     val customPidsJson: StateFlow<String> = _customPidsJson.asStateFlow()
 
+    private val _customAlertsJson = MutableStateFlow("")
+    val customAlertsJson: StateFlow<String> = _customAlertsJson.asStateFlow()
+
     private val _alertsEnabled = MutableStateFlow(true)
     val alertsEnabled: StateFlow<Boolean> = _alertsEnabled.asStateFlow()
 
@@ -78,6 +81,7 @@ class SettingsViewModel @Inject constructor(
                 val prefs = settings.data.first()
                 _apiKey.value = withContext(Dispatchers.IO) { loadApiKeyMigrating(prefs[PreferencesKeys.CLAUDE_API_KEY]) }
                 _customPidsJson.value = prefs[PreferencesKeys.CUSTOM_PIDS_JSON].orEmpty()
+                _customAlertsJson.value = prefs[PreferencesKeys.CUSTOM_ALERTS_JSON].orEmpty()
                 _alertsEnabled.value = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
                 _ttsEnabled.value = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
                 _tempMaxC.value = (prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: 105).toString()
@@ -102,6 +106,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateCustomPidsJson(value: String) {
         _customPidsJson.value = value
+    }
+
+    fun updateCustomAlertsJson(value: String) {
+        _customAlertsJson.value = value
     }
 
     fun updateAlertsEnabled(value: Boolean) {
@@ -205,6 +213,26 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun saveCustomAlerts() {
+        viewModelScope.launch {
+            val json = _customAlertsJson.value.trim()
+            if (json.isNotEmpty() && !isValidCustomAlertJson(json)) {
+                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                return@launch
+            }
+            val result = runCatching {
+                settings.edit { it[PreferencesKeys.CUSTOM_ALERTS_JSON] = json }
+            }
+            if (result.isSuccess) alertsEngine.reloadThresholds()
+            _lastSaveResult.value = if (result.isSuccess) {
+                val count = if (json.isEmpty()) 0 else JSONArray(json).length()
+                SaveResult(true, if (count > 0) "$count alertas personalizadas aplicadas" else "Alertas personalizadas limpiadas")
+            } else {
+                SaveResult(false, "Error guardando alertas personalizadas")
+            }
+        }
+    }
+
     fun dismissSaveResult() {
         _lastSaveResult.value = null
     }
@@ -253,6 +281,16 @@ class SettingsViewModel @Inject constructor(
             val obj = array.getJSONObject(i)
             listOf("mode", "pid", "name", "nameEs", "bytes", "formula", "unit", "min", "max", "priority")
                 .all { obj.has(it) }
+        }
+    } catch (_: Exception) {
+        false
+    }
+
+    private fun isValidCustomAlertJson(json: String): Boolean = try {
+        val array = JSONArray(json)
+        (0 until array.length()).all { i ->
+            val obj = array.getJSONObject(i)
+            obj.has("pid") && obj.has("nombre")
         }
     } catch (_: Exception) {
         false

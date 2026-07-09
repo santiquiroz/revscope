@@ -64,6 +64,7 @@ fun SettingsScreen(
 ) {
     val apiKey by vm.apiKey.collectAsState()
     val customPidsJson by vm.customPidsJson.collectAsState()
+    val customAlertsJson by vm.customAlertsJson.collectAsState()
     val activeVehicleProfile by vm.activeVehicleProfile.collectAsState()
     val askVehicleOnStart by vm.askVehicleOnStart.collectAsState()
     val alertsEnabled by vm.alertsEnabled.collectAsState()
@@ -305,6 +306,32 @@ fun SettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
                 ) { Text("Importar", color = TextPrimaryColor) }
             }
+
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Alertas personalizadas por PID")
+            Text(
+                "Umbral por PID en JSON: [{\"pid\":\"0A\",\"min\":200,\"nombre\":\"Presión de combustible\"}]. " +
+                    "Para TPMS u otros sensores del fabricante, define primero el PID custom (Modo 22) y luego su alerta aquí.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            OutlinedTextField(
+                value = customAlertsJson,
+                onValueChange = vm::updateCustomAlertsJson,
+                label = { Text("JSON de alertas custom", fontSize = 12.sp) },
+                minLines = 4,
+                maxLines = 10,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                ),
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = vm::saveCustomAlerts,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Validar y aplicar", color = BgColor) }
 
             Spacer(Modifier.height(24.dp))
         }

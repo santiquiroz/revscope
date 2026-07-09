@@ -7,6 +7,7 @@ import com.revscope.core.intelligence.dtc.DtcExplainer
 import com.revscope.core.intelligence.efficiency.DriveStyleClassifier
 import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.intelligence.gear.AdaptiveGearLearner
+import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.model.ObdReading
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -42,6 +43,7 @@ private const val TRIP_SCORE_UPDATE_INTERVAL_MS = 30_000L
 class IntelligenceOrchestrator(
     val tier: IntelligenceTier,
     private val dtcExplainer: DtcExplainer,
+    private val alertsEngine: AlertsEngine,
 ) {
     val gearLearner = AdaptiveGearLearner()
 
@@ -108,6 +110,9 @@ class IntelligenceOrchestrator(
         if (alert != null) {
             Timber.d("IntelligenceOrchestrator: anomaly detected — $alert")
             _anomalyAlerts.emit(alert)
+            // Single app-wide Hilt singleton — the one non-duplicating place to speak anomalies,
+            // regardless of which (if any) screen is collecting anomalyAlerts.
+            alertsEngine.announceAnomaly(alert.message)
         }
     }
 }

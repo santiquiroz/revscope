@@ -22,6 +22,7 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ElmCommandBuilder
 import com.revscope.core.obd.protocol.ProtocolNegotiator
+import com.revscope.core.obd.protocol.ReadinessParser
 import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.service.ObdForegroundService
 import com.revscope.core.obd.service.TripSummaryNotifier
@@ -104,6 +105,7 @@ class ObdSessionManager @Inject constructor(
     private var stateJob: Job? = null
     private var reconnectJob: Job? = null
     private var voltageJob: Job? = null
+    private var milWatchJob: Job? = null
     private var currentDeviceAddress: String? = null
     private val derivedEngine = DerivedMetricsEngine()
     private val engineOffDetector = EngineOffDetector()
@@ -450,6 +452,7 @@ class ObdSessionManager @Inject constructor(
     /** Stops everything battery-hungry and posts the trip summary. Terminal state. */
     private suspend fun finalShutdown(summarySessionId: Long?) {
         voltageJob?.cancel()
+        milWatchJob?.cancel()
         runCatching { transport?.disconnect() }
         transport = null
         activeScheduler = null
@@ -475,6 +478,7 @@ class ObdSessionManager @Inject constructor(
         }
         registry.setSupportedPids(negotiationResult.supportedPids)
         alertsEngine.reloadThresholds()
+        alertsEngine.resetSessionFlags()
         resolveProfileByVin(bt)
         if (_activeProfile.value == null) activateProfileByAdapter()
 
@@ -486,6 +490,7 @@ class ObdSessionManager @Inject constructor(
         engineOffDetector.reset()
 
         startVoltagePolling(bt)
+        startMilWatch(bt)
 
         telemetryJob = scope.launch {
             try {
@@ -520,6 +525,7 @@ class ObdSessionManager @Inject constructor(
                 // PidScheduler's circuit breaker lands here when the ECU stops answering
                 Timber.e(e, "ObdSessionManager: telemetry link lost")
                 voltageJob?.cancel()
+                milWatchJob?.cancel()
                 val closedSessionId = _currentSessionIdFlow.value
                 closedSessionId?.let { id -> runCatching { updateSessionEnd(id) } }
                 _currentSessionIdFlow.value = null
@@ -567,8 +573,39 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
+    /**
+     * Watches the MIL (check-engine light) while driving. First check 15s after connect
+     * (readiness monitors need the ECU settled), then every 120s — cheap enough to run
+     * alongside the main telemetry pipeline without starving it.
+     */
+    private fun startMilWatch(bt: ClassicBtTransport) {
+        milWatchJob?.cancel()
+        milWatchJob = scope.launch {
+            delay(MIL_WATCH_FIRST_DELAY_MS)
+            while (true) {
+                try {
+                    checkMilStatus(bt)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.w(e, "ObdSessionManager: MIL watch failed")
+                }
+                delay(MIL_WATCH_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun checkMilStatus(bt: ClassicBtTransport) {
+        val raw = probe(bt, "01 01\r", DTC_TIMEOUT_MS) ?: return
+        val status = ReadinessParser.parse(raw) ?: return
+        if (!status.milOn) return
+        alertsEngine.announceMilOn()
+        _readings.value = _readings.value + (MIL_PID to ObdReading(pid = MIL_PID, value = 1.0, unit = ""))
+    }
+
     private suspend fun stopTelemetry() {
         voltageJob?.cancel()
+        milWatchJob?.cancel()
         // Join so SessionRecorder's final NonCancellable flush lands in Room
         // before updateSessionEnd computes the trip aggregates.
         telemetryJob?.cancelAndJoin()
@@ -609,11 +646,14 @@ class ObdSessionManager @Inject constructor(
 
     companion object {
         const val VBAT_PID = "VBAT"
+        const val MIL_PID = "MIL"
 
         private const val DTC_TIMEOUT_MS = 5_000L
         private const val VIN_TIMEOUT_MS = 4_000L
         private const val VOLTAGE_TIMEOUT_MS = 2_000L
         private const val VOLTAGE_POLL_INTERVAL_MS = 10_000L
+        private const val MIL_WATCH_FIRST_DELAY_MS = 15_000L
+        private const val MIL_WATCH_INTERVAL_MS = 120_000L
         // 15 s > 12 s connect watchdog, so attempts never overlap; total ≈ 3 min
         private val AUTO_RECONNECT_BACKOFF_MS = listOf(15_000L, 30_000L, 60_000L, 60_000L)
         private const val RECONNECT_FINAL_GRACE_MS = 15_000L

@@ -69,6 +69,12 @@ object PreferencesKeys {
     /** Spoken alerts and launch results via TTS (default true) */
     val ALERT_TTS_ENABLED = booleanPreferencesKey("alert_tts_enabled")
 
+    /**
+     * User-defined per-PID threshold alerts (JSON array): [{pid, min?, max?, nombre}].
+     * Evaluated in AlertsEngine.process against every reading, 120s cooldown per PID.
+     */
+    val CUSTOM_ALERTS_JSON = stringPreferencesKey("custom_alerts_json")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */
