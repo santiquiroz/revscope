@@ -68,4 +68,12 @@ object PreferencesKeys {
 
     /** Spoken alerts and launch results via TTS (default true) */
     val ALERT_TTS_ENABLED = booleanPreferencesKey("alert_tts_enabled")
+
+    // ── Vehículo al día ──────────────────────────────────────────────────────
+
+    /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */
+    val LICENSE_EXPIRES_AT = longPreferencesKey("license_expires_at")
+
+    /** User-editable override of PicoYPlacaEngine.CityRules as JSON (rotation changes each semester) */
+    val PICO_PLACA_RULES_JSON = stringPreferencesKey("pico_placa_rules_json")
 }

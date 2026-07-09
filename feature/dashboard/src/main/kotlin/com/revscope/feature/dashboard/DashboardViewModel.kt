@@ -1,16 +1,24 @@
 package com.revscope.feature.dashboard
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.legal.DocumentStatusCalculator
+import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,6 +28,8 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     val orchestrator: IntelligenceOrchestrator,
     private val alertsEngine: AlertsEngine,
+    sessionManager: ObdSessionManager,
+    settings: DataStore<Preferences>,
 ) : ViewModel() {
 
     /** Redline used by the shift light — cached in AlertsEngine from DataStore. */
@@ -31,6 +41,18 @@ class DashboardViewModel @Inject constructor(
     val gearCalibrated: StateFlow<Boolean> = orchestrator.gearLearner.gearTable
         .map { table -> table.all { it.observationCount >= 30 } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** Thin contextual banner ("⚠ SOAT vencido · Pico y placa hasta las 20:00"); null when all clear. */
+    val alDiaBanner: StateFlow<String?> = combine(
+        sessionManager.activeProfile,
+        settings.data.map { it[PreferencesKeys.LICENSE_EXPIRES_AT] },
+        settings.data.map { prefs ->
+            prefs[PreferencesKeys.PICO_PLACA_RULES_JSON]
+                ?.let(PicoYPlacaEngine::parseRulesJson)
+                ?: PicoYPlacaEngine.MEDELLIN_2026_S1
+        },
+        ::computeAlDiaBanner,
+    ).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var gearTableJob: Job? = null
 
@@ -54,5 +76,16 @@ class DashboardViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun computeAlDiaBanner(
+        profile: VehicleProfileEntity?,
+        licenseExpiresAt: Long?,
+        rules: PicoYPlacaEngine.CityRules,
+    ): String? {
+        if (profile == null) return null
+        val documents = DocumentStatusCalculator.fromProfile(profile, licenseExpiresAt)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, System.currentTimeMillis())
+        return DocumentStatusCalculator.bannerText(statuses)
     }
 }

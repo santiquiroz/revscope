@@ -54,6 +54,7 @@ import com.revscope.feature.session.SessionHistoryScreen
 import com.revscope.feature.settings.Mode22ScannerScreen
 import com.revscope.feature.settings.SettingsScreen
 import com.revscope.feature.vehicle.VehicleProfileScreen
+import com.revscope.feature.workshop.AlDiaScreen
 import com.revscope.feature.workshop.HealthCheckScreen
 import com.revscope.feature.workshop.LiveMixtureScreen
 import com.revscope.feature.workshop.WorkshopScreen
@@ -158,18 +159,26 @@ fun RevScopeNavGraph(
                         onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                         onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
+                        onNavigateToAlDia = { navController.navigate(Screen.AlDia.route) },
                         connectionVm = connectionVm,
                     )
                 }
                 composable(Screen.Workshop.route) {
                     WorkshopScreen(
                         connectionVm = connectionVm,
+                        onOpenAlDia = { navController.navigate(Screen.AlDia.route) },
                         onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
                         onOpenDtc = { navController.navigate(Screen.Dtc.route) },
                         onOpenLiveMixture = { navController.navigate(Screen.LiveMixture.route) },
                         onOpenSensors = { navController.navigate(Screen.Sensors.route) },
                         onOpenScanner = { navController.navigate(Screen.Mode22Scanner.route) },
                         onOpenGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
+                        onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
+                    )
+                }
+                composable(Screen.AlDia.route) {
+                    AlDiaScreen(
+                        onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
                         onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
                     )
                 }

@@ -2,6 +2,7 @@ package com.revscope.feature.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ fun DashboardScreen(
     onNavigateToAdapterScan: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToTrackMode: () -> Unit = {},
+    onNavigateToAlDia: () -> Unit = {},
     connectionVm: ConnectionViewModel = hiltViewModel(),
     dashboardVm: DashboardViewModel = hiltViewModel(),
 ) {
@@ -67,6 +69,7 @@ fun DashboardScreen(
     val readingsState = connectionVm.readings.collectAsState()
     val tripScore by dashboardVm.tripScore.collectAsState()
     val gearCalibrated by dashboardVm.gearCalibrated.collectAsState()
+    val alDiaBanner by dashboardVm.alDiaBanner.collectAsState()
 
     // Start intelligence once connected; restart on reconnect
     LaunchedEffect(connectionState) {
@@ -202,6 +205,20 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            alDiaBanner?.let { message ->
+                Text(
+                    text = "⚠ $message",
+                    color = RevScopeColors.TextPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToAlDia)
+                        .background(RevScopeColors.Danger, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             activeAlert?.let { message ->
                 Text(
                     text = "⚠ $message",

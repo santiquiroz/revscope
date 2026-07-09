@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,9 +52,15 @@ private data class WorkshopTool(
     val onOpen: () -> Unit,
 )
 
+private data class WorkshopSection(
+    val title: String,
+    val tools: List<WorkshopTool>,
+)
+
 @Composable
 fun WorkshopScreen(
     connectionVm: ConnectionViewModel,
+    onOpenAlDia: () -> Unit,
     onOpenHealthCheck: () -> Unit,
     onOpenDtc: () -> Unit,
     onOpenLiveMixture: () -> Unit,
@@ -65,21 +72,9 @@ fun WorkshopScreen(
     val connState by connectionVm.connectionState.collectAsState()
     val isConnected = connState is ConnectionState.Connected
 
-    val tools = listOf(
-        WorkshopTool(Icons.Default.MonitorHeart, "Chequeo de salud",
-            "Escaneo completo con diagnóstico en español — DTCs, readiness, mezcla, batería", false, onOpenHealthCheck),
-        WorkshopTool(Icons.Default.BugReport, "Códigos de falla (DTC)",
-            "Leer, explicar con IA y borrar códigos de error", true, onOpenDtc),
-        WorkshopTool(Icons.Default.Science, "Mezcla y combustión",
-            "Trims, O2, lambda y MAF interpretados en vivo", true, onOpenLiveMixture),
-        WorkshopTool(Icons.Default.Timeline, "Gráficas de sensores",
-            "Curvas en tiempo real de cualquier PID", true, onOpenSensors),
-        WorkshopTool(Icons.Default.Search, "Escáner avanzado (Mode 22)",
-            "Descubrir PIDs propietarios del fabricante", true, onOpenScanner),
-        WorkshopTool(Icons.Default.Settings, "Analizador de marchas",
-            "Calibrar la relación RPM/velocidad por marcha", true, onOpenGearAnalyzer),
-        WorkshopTool(Icons.Default.DirectionsCar, "Perfiles de vehículo",
-            "Vehículos guardados, línea roja y VIN", false, onOpenProfiles),
+    val sections = buildWorkshopSections(
+        onOpenAlDia, onOpenHealthCheck, onOpenDtc, onOpenLiveMixture,
+        onOpenSensors, onOpenScanner, onOpenGearAnalyzer, onOpenProfiles,
     )
 
     LazyColumn(
@@ -96,11 +91,68 @@ fun WorkshopScreen(
                 )
             }
         }
-        items(tools) { tool ->
-            val enabled = isConnected || !tool.needsConnection
-            ToolCard(tool, enabled)
+        sections.forEach { section ->
+            item { SectionHeader(section.title) }
+            items(section.tools) { tool ->
+                val enabled = isConnected || !tool.needsConnection
+                ToolCard(tool, enabled)
+            }
         }
     }
+}
+
+private fun buildWorkshopSections(
+    onOpenAlDia: () -> Unit,
+    onOpenHealthCheck: () -> Unit,
+    onOpenDtc: () -> Unit,
+    onOpenLiveMixture: () -> Unit,
+    onOpenSensors: () -> Unit,
+    onOpenScanner: () -> Unit,
+    onOpenGearAnalyzer: () -> Unit,
+    onOpenProfiles: () -> Unit,
+): List<WorkshopSection> = listOf(
+    WorkshopSection(
+        "Estado",
+        listOf(
+            WorkshopTool(Icons.Default.Verified, "Vehículo al día",
+                "SOAT, tecnomecánica, pico y placa, multas y todo riesgo", false, onOpenAlDia),
+            WorkshopTool(Icons.Default.MonitorHeart, "Chequeo de salud",
+                "Escaneo completo con diagnóstico en español — DTCs, readiness, mezcla, batería", false, onOpenHealthCheck),
+        ),
+    ),
+    WorkshopSection(
+        "Diagnóstico",
+        listOf(
+            WorkshopTool(Icons.Default.BugReport, "Códigos de falla (DTC)",
+                "Leer, explicar con IA y borrar códigos de error", true, onOpenDtc),
+            WorkshopTool(Icons.Default.Science, "Mezcla y combustión",
+                "Trims, O2, lambda y MAF interpretados en vivo", true, onOpenLiveMixture),
+            WorkshopTool(Icons.Default.Timeline, "Gráficas de sensores",
+                "Curvas en tiempo real de cualquier PID", true, onOpenSensors),
+            WorkshopTool(Icons.Default.Search, "Escáner avanzado (Mode 22)",
+                "Descubrir PIDs propietarios del fabricante", true, onOpenScanner),
+        ),
+    ),
+    WorkshopSection(
+        "Vehículo",
+        listOf(
+            WorkshopTool(Icons.Default.Settings, "Analizador de marchas",
+                "Calibrar la relación RPM/velocidad por marcha", true, onOpenGearAnalyzer),
+            WorkshopTool(Icons.Default.DirectionsCar, "Perfiles de vehículo",
+                "Vehículos guardados, línea roja y VIN", false, onOpenProfiles),
+        ),
+    ),
+)
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        title.uppercase(),
+        color = TextMutedColor,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(top = 8.dp),
+    )
 }
 
 @Composable
