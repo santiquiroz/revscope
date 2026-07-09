@@ -75,6 +75,9 @@ class SettingsViewModel @Inject constructor(
     private val _redlineRpm = MutableStateFlow("10500")
     val redlineRpm: StateFlow<String> = _redlineRpm.asStateFlow()
 
+    private val _fuelPriceCop = MutableStateFlow("16000")
+    val fuelPriceCop: StateFlow<String> = _fuelPriceCop.asStateFlow()
+
     private val _lastSaveResult = MutableStateFlow<SaveResult?>(null)
     val lastSaveResult: StateFlow<SaveResult?> = _lastSaveResult.asStateFlow()
 
@@ -96,6 +99,8 @@ class SettingsViewModel @Inject constructor(
                 _voltageMin.value = (prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: 11.8f).toString()
                 _redlineRpm.value = (prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: 10_500).toString()
                 _askVehicleOnStart.value = prefs[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true
+                _fuelPriceCop.value =
+                    (prefs[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON] ?: 16_000.0).toLong().toString()
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
         }
     }
@@ -138,6 +143,28 @@ class SettingsViewModel @Inject constructor(
 
     fun updateRedlineRpm(value: String) {
         _redlineRpm.value = value
+    }
+
+    fun updateFuelPriceCop(value: String) {
+        _fuelPriceCop.value = value
+    }
+
+    fun saveFuelPriceCop() {
+        viewModelScope.launch {
+            val price = _fuelPriceCop.value.toDoubleOrNull()
+            if (price == null || price !in 1_000.0..50_000.0) {
+                _lastSaveResult.value = SaveResult(false, "Precio fuera de rango (1.000-50.000 COP)")
+                return@launch
+            }
+            val result = runCatching {
+                settings.edit { it[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON] = price }
+            }
+            _lastSaveResult.value = if (result.isSuccess) {
+                SaveResult(true, "Precio de combustible actualizado")
+            } else {
+                SaveResult(false, "Error guardando precio de combustible")
+            }
+        }
     }
 
     fun saveAlertSettings() {

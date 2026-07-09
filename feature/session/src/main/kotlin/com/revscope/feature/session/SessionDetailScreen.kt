@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.obd.trip.EcoScoreCalculator
 import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -210,6 +211,20 @@ private fun ReportContent(
             StatCard("RPM prom", report.avgRpm.toString(), Modifier.weight(1f))
             StatCard("Acel. máx", "${report.maxThrottlePct}%", Modifier.weight(1f))
         }
+        val fuelCostCop = session.fuelCostCop
+        if (fuelCostCop != null) {
+            StatCard(
+                "Costo combustible",
+                "$" + "%,.0f".format(Locale("es", "CO"), fuelCostCop),
+                Modifier.fillMaxWidth(),
+            )
+        }
+
+        val ecoScore = session.ecoScore
+        if (ecoScore != null) {
+            EcoCard(score = ecoScore, desglose = report.ecoDesglose)
+        }
+
         if (session.best0to60Ms != null || session.best0to100Ms != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -419,6 +434,48 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
         Text(value, color = AccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Text(label, color = TextMutedColor, fontSize = 11.sp)
     }
+}
+
+@Composable
+private fun EcoCard(score: Int, desglose: EcoScoreCalculator.Desglose?) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceColor, RoundedCornerShape(12.dp))
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Eco",
+                color = AccentColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            Text("$score", color = ecoScoreColor(score), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(6.dp))
+        if (desglose != null) {
+            Text(
+                "Aceleradas bruscas: ${desglose.aceleradasBruscas}  ·  Frenadas bruscas: ${desglose.frenadasBruscas}",
+                color = TextMutedColor,
+                fontSize = 11.sp,
+            )
+            Text(
+                "RPM alto sostenido: ${desglose.tiempoAltasRpmSeg} s  ·  Bonus crucero: +${desglose.bonusCrucero}",
+                color = TextMutedColor,
+                fontSize = 11.sp,
+            )
+        } else {
+            Text("Desglose no disponible para este viaje", color = TextMutedColor, fontSize = 11.sp)
+        }
+    }
+}
+
+private fun ecoScoreColor(score: Int): Color = when {
+    score >= 80 -> Color(0xFF3DFF8E)
+    score >= 50 -> Color(0xFFE8FF00)
+    else -> Color(0xFFFF5C5C)
 }
 
 @Composable

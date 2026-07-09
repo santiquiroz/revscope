@@ -61,10 +61,15 @@ class TripSummaryNotifier @Inject constructor(
 
         fun summaryText(session: SessionEntity): String {
             val minutes = ((session.endedAt ?: session.startedAt) - session.startedAt) / 60_000
-            return String.format(
+            val base = String.format(
                 LOCALE_ES, "%.1f km · %d km/h máx · %d min",
                 session.distanceKm, session.maxSpeed, minutes,
             )
+            val extras = buildList {
+                session.fuelCostCop?.let { add(String.format(LOCALE_ES, "$%,.0f", it)) }
+                session.ecoScore?.let { add("Eco $it") }
+            }
+            return (listOf(base) + extras).joinToString(" · ")
         }
 
         fun shouldNotify(session: SessionEntity): Boolean =

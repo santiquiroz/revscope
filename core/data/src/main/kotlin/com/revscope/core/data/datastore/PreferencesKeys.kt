@@ -1,6 +1,7 @@
 package com.revscope.core.data.datastore
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -82,4 +83,9 @@ object PreferencesKeys {
 
     /** User-editable override of PicoYPlacaEngine.CityRules as JSON (rotation changes each semester) */
     val PICO_PLACA_RULES_JSON = stringPreferencesKey("pico_placa_rules_json")
+
+    // ── Combustible ──────────────────────────────────────────────────────────
+
+    /** Current price of a gallon of gasoline in COP, used to estimate trip cost (default 16000.0) */
+    val FUEL_PRICE_COP_PER_GALLON = doublePreferencesKey("fuel_price_cop_per_gallon")
 }

@@ -79,6 +79,7 @@ fun SettingsScreen(
     val tempMaxC by vm.tempMaxC.collectAsState()
     val voltageMin by vm.voltageMin.collectAsState()
     val redlineRpm by vm.redlineRpm.collectAsState()
+    val fuelPriceCop by vm.fuelPriceCop.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -238,6 +239,27 @@ fun SettingsScreen(
                 onClick = vm::saveAlertSettings,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) { Text("Guardar alertas", color = BgColor) }
+
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Combustible")
+            OutlinedTextField(
+                value = fuelPriceCop,
+                onValueChange = vm::updateFuelPriceCop,
+                label = { Text("Precio galón corriente (COP)", fontSize = 12.sp) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                "Se usa para estimar el costo de cada viaje en el reporte.",
+                color = TextMutedColor,
+                fontSize = 11.sp,
+            )
+            Button(
+                onClick = vm::saveFuelPriceCop,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Guardar precio", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Radares de velocidad (OpenStreetMap)")

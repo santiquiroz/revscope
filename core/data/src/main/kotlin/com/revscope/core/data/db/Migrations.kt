@@ -40,3 +40,26 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `insuranceExpiresAt` INTEGER")
     }
 }
+
+/**
+ * Adds trip cost/eco tracking: fuel cost in COP and eco-score per session, plus the
+ * odometer baseline needed to compute total vehicle km for maintenance tracking, and a
+ * new `maintenance_items` table (mirrors `health_reports`'s plain vehicleProfileId
+ * column — no FK — since maintenance items are edited independently of profile CRUD).
+ */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `odometerBaseKm` REAL NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `sessions` ADD COLUMN `fuelLiters` REAL")
+        db.execSQL("ALTER TABLE `sessions` ADD COLUMN `fuelCostCop` REAL")
+        db.execSQL("ALTER TABLE `sessions` ADD COLUMN `ecoScore` INTEGER")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `maintenance_items` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`vehicleProfileId` INTEGER NOT NULL, " +
+                "`nombre` TEXT NOT NULL, " +
+                "`intervaloKm` REAL NOT NULL, " +
+                "`ultimoServicioKm` REAL NOT NULL)"
+        )
+    }
+}

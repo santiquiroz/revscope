@@ -22,6 +22,7 @@ import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.telemetry.TripStatsCalculator
+import com.revscope.core.obd.trip.EcoScoreCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,6 +85,8 @@ class SessionDetailViewModel @Inject constructor(
         val hrSeries: List<Float>,
         val avgBpm: Int?,
         val maxBpm: Int?,
+        /** Recalculated from this trip's raw IMU/RPM — null when there's no telemetry to derive it from */
+        val ecoDesglose: EcoScoreCalculator.Desglose?,
     )
 
     data class LapStat(val maxAbsG: Float?, val maxAbsLean: Float?, val maxBpm: Float?)
@@ -145,6 +148,8 @@ class SessionDetailViewModel @Inject constructor(
 
             val hrPoints = hrDao.pointsForSession(sessionId)
 
+            val ecoDesglose = ecoDesglose(session, rpmPoints, imuPoints)
+
             _state.value = UiState.Ready(
                 TripReport(
                     session = session,
@@ -171,6 +176,7 @@ class SessionDetailViewModel @Inject constructor(
                     hrSeries = downsampleList(hrPoints.map { it.bpm }, CHART_MAX_POINTS),
                     avgBpm = hrDao.avgBpm(sessionId)?.roundToInt(),
                     maxBpm = hrDao.maxBpm(sessionId)?.roundToInt(),
+                    ecoDesglose = ecoDesglose,
                 )
             )
         } catch (e: CancellationException) {
@@ -190,6 +196,25 @@ class SessionDetailViewModel @Inject constructor(
                 .onSuccess { _state.value = UiState.Ready(ready.report.copy(session = updatedSession)) }
                 .onFailure { Timber.w(it, "SessionDetail: failed to assign vehicle to session $sessionId") }
         }
+    }
+
+    /**
+     * Recalculates the eco-driving breakdown from this trip's raw IMU/RPM points — the
+     * persisted [SessionEntity.ecoScore] only stores the final number, not the desglose.
+     * Null when there's no telemetry to derive it from (mirrors ObdSessionManager's guard).
+     */
+    private suspend fun ecoDesglose(
+        session: SessionEntity,
+        rpmPoints: List<TelemetryPointEntity>,
+        imuPoints: List<com.revscope.core.data.db.entities.ImuPointEntity>,
+    ): EcoScoreCalculator.Desglose? {
+        if (rpmPoints.isEmpty() && imuPoints.isEmpty()) return null
+        val redlineRpm = profileDao.getById(session.vehicleProfileId)?.redlineRpm ?: DEFAULT_REDLINE_RPM
+        return EcoScoreCalculator.calculate(
+            accelLongitudinal = imuPoints.map { it.gLong.toDouble() * EARTH_GRAVITY_MS2 },
+            rpmPoints = rpmPoints.map { it.timestamp to it.value.toDouble() },
+            redlineRpm = redlineRpm,
+        )
     }
 
     /** Charts don't need thousands of points — keep every Nth so Vico stays fluid. */
@@ -306,5 +331,7 @@ class SessionDetailViewModel @Inject constructor(
         const val BRAKING_G_THRESHOLD = -0.25f
         const val BRAKING_WINDOW_MS = 600L
         const val NEAREST_IMU_WINDOW_MS = 300L
+        const val DEFAULT_REDLINE_RPM = 10_500
+        const val EARTH_GRAVITY_MS2 = 9.80665
     }
 }

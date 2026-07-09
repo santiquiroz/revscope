@@ -7,6 +7,7 @@ import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
+import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.dao.TelemetryDao
@@ -16,6 +17,7 @@ import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.data.db.entities.HrPointEntity
 import com.revscope.core.data.db.entities.ImuPointEntity
 import com.revscope.core.data.db.entities.LapEntity
+import com.revscope.core.data.db.entities.MaintenanceItemEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
@@ -32,8 +34,9 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         HrPointEntity::class,
         SpeedCameraEntity::class,
         HealthReportEntity::class,
+        MaintenanceItemEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,4 +49,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun hrDao(): HrDao
     abstract fun speedCameraDao(): SpeedCameraDao
     abstract fun healthReportDao(): HealthReportDao
+    abstract fun maintenanceDao(): MaintenanceDao
 }

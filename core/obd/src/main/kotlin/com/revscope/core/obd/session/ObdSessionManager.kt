@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
@@ -33,6 +34,8 @@ import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
 import com.revscope.core.obd.telemetry.TripStatsCalculator
+import com.revscope.core.obd.trip.EcoScoreCalculator
+import com.revscope.core.obd.trip.FuelCostCalculator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -73,6 +76,7 @@ class ObdSessionManager @Inject constructor(
     private val telemetryDao: TelemetryDao,
     private val profileDao: VehicleProfileDao,
     private val lapDao: LapDao,
+    private val imuDao: ImuDao,
     private val settings: DataStore<Preferences>,
     private val alertsEngine: AlertsEngine,
     private val trackModeEngine: TrackModeEngine,
@@ -634,14 +638,56 @@ class ObdSessionManager @Inject constructor(
         val maxRpm = telemetryDao.maxValue(sessionId, "0C") ?: 0f
         val maxSpeed = telemetryDao.maxValue(sessionId, "0D") ?: 0f
         val speedPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0D")
+        val aggregates = computeTripAggregates(sessionId)
         sessionDao.update(
             session.copy(
                 endedAt = System.currentTimeMillis(),
                 maxRpm = maxRpm.roundToInt(),
                 maxSpeed = maxSpeed.roundToInt(),
                 distanceKm = TripStatsCalculator.distanceKm(speedPoints).toFloat(),
+                fuelLiters = aggregates?.fuelLiters,
+                fuelCostCop = aggregates?.fuelCostCop,
+                ecoScore = aggregates?.ecoScore,
             )
         )
+    }
+
+    private data class TripAggregates(val fuelLiters: Double?, val fuelCostCop: Double?, val ecoScore: Int?)
+
+    /**
+     * Fuel cost (COP) and eco-score for the trip just ended — never lets a calculation
+     * error block closing the session, since these are report-only extras.
+     */
+    private suspend fun computeTripAggregates(sessionId: Long): TripAggregates? = runCatching {
+        val fuel = computeFuelResult(sessionId)
+        TripAggregates(
+            fuelLiters = fuel?.liters,
+            fuelCostCop = fuel?.costCop,
+            ecoScore = computeEcoScore(sessionId),
+        )
+    }.onFailure { Timber.w(it, "ObdSessionManager: failed to compute trip aggregates") }
+        .getOrNull()
+
+    private suspend fun computeFuelResult(sessionId: Long): FuelCostCalculator.FuelResult? {
+        val precioGalonCop = settings.data.first()[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON]
+            ?: DEFAULT_FUEL_PRICE_COP_PER_GALLON
+        val fuelRatePoints = telemetryDao.pointsForSessionAndPid(sessionId, PID_FUEL_RATE)
+            .map { it.timestamp to it.value.toDouble() }
+        FuelCostCalculator.fromFuelRate(fuelRatePoints, precioGalonCop)?.let { return it }
+        val mafPoints = telemetryDao.pointsForSessionAndPid(sessionId, PID_MAF)
+            .map { it.timestamp to it.value.toDouble() }
+        return FuelCostCalculator.fromMaf(mafPoints, precioGalonCop)
+    }
+
+    private suspend fun computeEcoScore(sessionId: Long): Int? {
+        // ImuPointEntity.gLong is in G — EcoScoreCalculator's thresholds are m/s².
+        val accelLongitudinal = imuDao.pointsForSession(sessionId)
+            .map { it.gLong.toDouble() * EARTH_GRAVITY_MS2 }
+        val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
+            .map { it.timestamp to it.value.toDouble() }
+        if (accelLongitudinal.isEmpty() && rpmPoints.isEmpty()) return null
+        val redlineRpm = _activeProfile.value?.redlineRpm ?: DEFAULT_REDLINE_RPM
+        return EcoScoreCalculator.calculate(accelLongitudinal, rpmPoints, redlineRpm).score
     }
 
     companion object {
@@ -658,6 +704,12 @@ class ObdSessionManager @Inject constructor(
         private val AUTO_RECONNECT_BACKOFF_MS = listOf(15_000L, 30_000L, 60_000L, 60_000L)
         private const val RECONNECT_FINAL_GRACE_MS = 15_000L
         private const val PROBE_TIMEOUT_MS = 3_000L
+
+        private const val PID_FUEL_RATE = "5E"
+        private const val PID_MAF = "10"
+        private const val DEFAULT_FUEL_PRICE_COP_PER_GALLON = 16_000.0
+        private const val DEFAULT_REDLINE_RPM = 10_500
+        private const val EARTH_GRAVITY_MS2 = 9.80665
 
         private val DTC_PREFIX = mapOf(0 to 'P', 1 to 'C', 2 to 'B', 3 to 'U')
         private val VOLTAGE_REGEX = Regex("""(\d{1,2}(?:\.\d{1,2})?)V""")

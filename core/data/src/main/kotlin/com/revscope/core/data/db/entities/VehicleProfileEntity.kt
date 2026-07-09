@@ -1,5 +1,6 @@
 package com.revscope.core.data.db.entities
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -31,4 +32,12 @@ data class VehicleProfileEntity(
     val rtmExpiresAt: Long? = null,
     /** Todo riesgo insurance expiration, epoch ms; null = not configured */
     val insuranceExpiresAt: Long? = null,
+    /**
+     * Odometer reading, in km, at the moment this profile started tracking sessions —
+     * total km = this + SUM(sessions.distanceKm) for the profile. Drives "Mantenimiento".
+     * `defaultValue` must match MIGRATION_12_13's `DEFAULT 0` — Room validates both at
+     * startup and throws if the additive-migration default doesn't match the entity's.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val odometerBaseKm: Double = 0.0,
 )
