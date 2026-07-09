@@ -19,6 +19,9 @@ object PreferencesKeys {
     /** ID of the currently selected VehicleProfileEntity */
     val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
 
+    /** Show the vehicle picker sheet on app start (default true) */
+    val ASK_VEHICLE_ON_START = booleanPreferencesKey("ask_vehicle_on_start")
+
     /** Polling interval for high-priority PIDs in milliseconds (default 200) */
     val POLLING_INTERVAL_MS = intPreferencesKey("polling_interval_ms")
 

@@ -10,10 +10,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.LocationManager
 import com.revscope.core.data.db.dao.SpeedCameraDao
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.cameras.SpeedCameraUpdater
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,7 @@ class SettingsViewModel @Inject constructor(
     private val secureKeyStore: SecureKeyStore,
     private val cameraUpdater: SpeedCameraUpdater,
     private val cameraDao: SpeedCameraDao,
+    private val sessionManager: ObdSessionManager,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -64,6 +67,11 @@ class SettingsViewModel @Inject constructor(
     private val _lastSaveResult = MutableStateFlow<SaveResult?>(null)
     val lastSaveResult: StateFlow<SaveResult?> = _lastSaveResult.asStateFlow()
 
+    private val _askVehicleOnStart = MutableStateFlow(true)
+    val askVehicleOnStart: StateFlow<Boolean> = _askVehicleOnStart.asStateFlow()
+
+    val activeVehicleProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
+
     init {
         viewModelScope.launch {
             runCatching {
@@ -75,7 +83,16 @@ class SettingsViewModel @Inject constructor(
                 _tempMaxC.value = (prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: 105).toString()
                 _voltageMin.value = (prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: 11.8f).toString()
                 _redlineRpm.value = (prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: 10_500).toString()
+                _askVehicleOnStart.value = prefs[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
+        }
+    }
+
+    fun updateAskVehicleOnStart(value: Boolean) {
+        _askVehicleOnStart.value = value
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.ASK_VEHICLE_ON_START] = value } }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist ask-on-start") }
         }
     }
 

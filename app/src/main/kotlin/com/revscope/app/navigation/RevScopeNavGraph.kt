@@ -21,6 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -89,11 +92,25 @@ fun RevScopeNavGraph(
     // adapter screen would clear its ViewModel and drop the Bluetooth socket.
     val connectionVm: ConnectionViewModel =
         hiltViewModel(LocalContext.current as ComponentActivity)
+    val vehiclePickerVm: VehiclePickerViewModel =
+        hiltViewModel(LocalContext.current as ComponentActivity)
 
     LaunchedEffect(initialSessionId) {
         initialSessionId?.let {
             navController.navigate(Screen.SessionDetail.withId(it))
             onInitialSessionConsumed()
+        }
+    }
+
+    var showVehiclePicker by remember { mutableStateOf(false) }
+    var hasOfferedVehiclePicker by remember { mutableStateOf(false) }
+    val vehicleProfiles by vehiclePickerVm.profiles.collectAsState()
+    val askVehicleOnStart by vehiclePickerVm.askOnStart.collectAsState()
+
+    LaunchedEffect(vehicleProfiles, askVehicleOnStart) {
+        if (!hasOfferedVehiclePicker && askVehicleOnStart && vehicleProfiles.isNotEmpty()) {
+            showVehiclePicker = true
+            hasOfferedVehiclePicker = true
         }
     }
 
@@ -238,6 +255,16 @@ fun RevScopeNavGraph(
                         navController.navigate(Screen.AdapterScan.route)
                     }
                 }
+            }
+            if (showVehiclePicker) {
+                VehiclePickerSheet(
+                    vm = vehiclePickerVm,
+                    onDismiss = { showVehiclePicker = false },
+                    onManageVehicles = {
+                        showVehiclePicker = false
+                        navController.navigate(Screen.VehicleProfile.route)
+                    },
+                )
             }
         }
     }

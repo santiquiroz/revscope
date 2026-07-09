@@ -64,6 +64,8 @@ fun SettingsScreen(
 ) {
     val apiKey by vm.apiKey.collectAsState()
     val customPidsJson by vm.customPidsJson.collectAsState()
+    val activeVehicleProfile by vm.activeVehicleProfile.collectAsState()
+    val askVehicleOnStart by vm.askVehicleOnStart.collectAsState()
     val alertsEnabled by vm.alertsEnabled.collectAsState()
     val ttsEnabled by vm.ttsEnabled.collectAsState()
     val tempMaxC by vm.tempMaxC.collectAsState()
@@ -99,6 +101,32 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            SectionTitle("Vehículo")
+            NavRow(
+                "Vehículo activo: ${activeVehicleProfile?.name ?: "Ninguno"}",
+                onNavigateToVehicleProfiles,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Preguntar vehículo al inicio",
+                    color = TextPrimaryColor,
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = askVehicleOnStart,
+                    onCheckedChange = vm::updateAskVehicleOnStart,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = BgColor,
+                        checkedTrackColor = AccentColor,
+                    ),
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
             SectionTitle("Herramientas")
             NavRow("Perfiles de vehículo", onNavigateToVehicleProfiles)
 
