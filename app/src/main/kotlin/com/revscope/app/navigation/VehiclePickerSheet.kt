@@ -14,13 +14,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -41,16 +42,23 @@ private val TextPrimaryColor = Color(0xFFE6E8F0)
 private val AccentColor = Color(0xFFE8FF00)
 private val TextMutedColor = Color(0xFF6B7089)
 
-/** Startup vehicle picker — shown once per process when there are saved profiles. */
+/**
+ * Vehicle picker sheet — R5-style "Selecciona". Opened either as the once-per-process
+ * startup prompt ([isStartupPrompt] = true, shows the "no volver a preguntar" checkbox)
+ * or as a hot-swap from the [VehicleSwitcherPill] ([isStartupPrompt] = false).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VehiclePickerSheet(
     vm: VehiclePickerViewModel,
+    isStartupPrompt: Boolean,
     onDismiss: () -> Unit,
-    onManageVehicles: () -> Unit,
+    onAddVehicle: () -> Unit,
+    onManageAdapter: () -> Unit,
 ) {
     val profiles by vm.profiles.collectAsState()
     val activeProfile by vm.activeProfile.collectAsState()
+    val connectionState by vm.connectionState.collectAsState()
     var dontAskAgain by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
@@ -61,7 +69,7 @@ fun VehiclePickerSheet(
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             Text(
-                "¿Qué vehículo vas a usar?",
+                "Selecciona",
                 color = TextPrimaryColor,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -74,32 +82,57 @@ fun VehiclePickerSheet(
                     isActive = activeProfile?.id == profile.id,
                     onClick = {
                         vm.select(profile)
-                        if (dontAskAgain) vm.disableAsking()
+                        if (isStartupPrompt && dontAskAgain) vm.disableAsking()
                         onDismiss()
                     },
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            if (isStartupPrompt) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { dontAskAgain = !dontAskAgain },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = dontAskAgain,
+                        onCheckedChange = { dontAskAgain = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = AccentColor,
+                            checkmarkColor = SurfaceColor,
+                        ),
+                    )
+                    Text("No volver a preguntar al inicio", color = TextMutedColor, fontSize = 13.sp)
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = onAddVehicle,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentColor,
+                    contentColor = SurfaceColor,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Agregar otro vehículo", fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { dontAskAgain = !dontAskAgain },
-                verticalAlignment = Alignment.CenterVertically,
+                    .clickable(onClick = onManageAdapter)
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center,
             ) {
-                Checkbox(
-                    checked = dontAskAgain,
-                    onCheckedChange = { dontAskAgain = it },
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = AccentColor,
-                        checkmarkColor = SurfaceColor,
-                    ),
+                Text(
+                    "Adaptador: ${connectionStatusLabel(connectionState)} · Administrar",
+                    color = TextMutedColor,
+                    fontSize = 13.sp,
                 )
-                Text("No volver a preguntar al inicio", color = TextMutedColor, fontSize = 13.sp)
-            }
-
-            TextButton(onClick = onManageVehicles) {
-                Text("Administrar vehículos", color = AccentColor)
             }
         }
     }
@@ -125,13 +158,17 @@ private fun VehiclePickerRow(
             modifier = Modifier.size(22.dp),
         )
         Spacer(Modifier.width(14.dp))
-        Text(
-            profile.name,
-            color = TextPrimaryColor,
-            fontSize = 15.sp,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                profile.name,
+                color = TextPrimaryColor,
+                fontSize = 15.sp,
+                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+            )
+            profile.plate?.takeIf { it.isNotBlank() }?.let { plate ->
+                Text(plate, color = TextMutedColor, fontSize = 12.sp)
+            }
+        }
         if (isActive) {
             Icon(
                 imageVector = Icons.Default.Check,

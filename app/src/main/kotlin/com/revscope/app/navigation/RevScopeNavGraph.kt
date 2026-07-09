@@ -114,13 +114,16 @@ fun RevScopeNavGraph(
     }
 
     var showVehiclePicker by rememberSaveable { mutableStateOf(false) }
+    var vehiclePickerIsStartupPrompt by rememberSaveable { mutableStateOf(false) }
     var hasOfferedVehiclePicker by rememberSaveable { mutableStateOf(false) }
     val vehicleProfiles by vehiclePickerVm.profiles.collectAsState()
     val askVehicleOnStart by vehiclePickerVm.askOnStart.collectAsState()
+    val activeVehicleProfile by vehiclePickerVm.activeProfile.collectAsState()
 
     LaunchedEffect(vehicleProfiles, askVehicleOnStart) {
         if (!hasOfferedVehiclePicker && askVehicleOnStart && vehicleProfiles.isNotEmpty()) {
             showVehiclePicker = true
+            vehiclePickerIsStartupPrompt = true
             hasOfferedVehiclePicker = true
         }
     }
@@ -270,18 +273,24 @@ fun RevScopeNavGraph(
                         .statusBarsPadding()
                         .padding(top = 4.dp),
                 ) {
-                    ConnectionChip(state = connState) {
-                        navController.navigate(Screen.AdapterScan.route)
+                    VehicleSwitcherPill(connectionState = connState, activeProfile = activeVehicleProfile) {
+                        vehiclePickerIsStartupPrompt = false
+                        showVehiclePicker = true
                     }
                 }
             }
             if (showVehiclePicker) {
                 VehiclePickerSheet(
                     vm = vehiclePickerVm,
+                    isStartupPrompt = vehiclePickerIsStartupPrompt,
                     onDismiss = { showVehiclePicker = false },
-                    onManageVehicles = {
+                    onAddVehicle = {
                         showVehiclePicker = false
                         navController.navigate(Screen.VehicleProfile.route)
+                    },
+                    onManageAdapter = {
+                        showVehiclePicker = false
+                        navController.navigate(Screen.AdapterScan.route)
                     },
                 )
             }

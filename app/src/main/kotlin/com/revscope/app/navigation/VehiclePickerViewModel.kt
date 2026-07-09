@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,8 @@ class VehiclePickerViewModel @Inject constructor(
     val askOnStart: StateFlow<Boolean> = _askOnStart.asStateFlow()
 
     val activeProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
+
+    val connectionState: StateFlow<ConnectionState> = sessionManager.connectionState
 
     init {
         viewModelScope.launch {
