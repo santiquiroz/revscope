@@ -91,8 +91,19 @@ class BackupManager @Inject constructor(
 
     private fun writeDatabaseEntry(zip: ZipOutputStream) {
         zip.putNextEntry(ZipEntry(DB_ENTRY_NAME))
-        context.getDatabasePath(DB_FILE_NAME).inputStream().use { it.copyTo(zip) }
+        copyDatabaseFileLocked(zip)
         zip.closeEntry()
+    }
+
+    /** Sostiene una transacción exclusiva mientras copia el archivo para evitar una copia a medio escribir. */
+    private fun copyDatabaseFileLocked(zip: ZipOutputStream) {
+        val sdb = db.openHelper.writableDatabase
+        sdb.beginTransaction()
+        try {
+            context.getDatabasePath(DB_FILE_NAME).inputStream().use { it.copyTo(zip) }
+        } finally {
+            sdb.endTransaction()
+        }
     }
 
     private suspend fun writePreferencesEntry(zip: ZipOutputStream) {
@@ -140,10 +151,19 @@ class BackupManager @Inject constructor(
     private fun replaceDatabaseFile(newDbFile: File) {
         db.close()
         val target = context.getDatabasePath(DB_FILE_NAME)
-        deleteIfExists(target)
+        val backupAside = File(target.path + ".restore-bak")
+        deleteIfExists(backupAside)
+        if (target.exists()) target.renameTo(backupAside)
         deleteIfExists(File(target.path + "-wal"))
         deleteIfExists(File(target.path + "-shm"))
-        newDbFile.copyTo(target, overwrite = true)
+        try {
+            newDbFile.copyTo(target, overwrite = true)
+            deleteIfExists(backupAside)
+        } catch (e: Exception) {
+            deleteIfExists(target)
+            backupAside.renameTo(target)
+            throw e
+        }
     }
 
     private fun deleteIfExists(file: File) {

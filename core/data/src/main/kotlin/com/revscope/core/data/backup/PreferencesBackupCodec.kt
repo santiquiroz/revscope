@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.revscope.core.data.datastore.PreferencesKeys
 import org.json.JSONObject
 
 /**
@@ -29,6 +30,7 @@ object PreferencesBackupCodec {
     fun encode(preferences: Preferences): String {
         val root = JSONObject()
         preferences.asMap().forEach { (key, value) ->
+            if (key.name == PreferencesKeys.CLAUDE_API_KEY.name) return@forEach
             encodeEntry(value)?.let { root.put(key.name, it) }
         }
         return root.toString()
@@ -38,7 +40,10 @@ object PreferencesBackupCodec {
         val root = JSONObject(json)
         settings.edit { mutablePrefs ->
             mutablePrefs.clear()
-            root.keys().forEach { keyName -> applyEntry(mutablePrefs, keyName, root.getJSONObject(keyName)) }
+            root.keys().forEach { keyName ->
+                if (keyName == PreferencesKeys.CLAUDE_API_KEY.name) return@forEach
+                applyEntry(mutablePrefs, keyName, root.getJSONObject(keyName))
+            }
         }
     }
 
