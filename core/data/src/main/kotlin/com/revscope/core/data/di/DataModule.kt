@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.revscope.core.data.db.AppDatabase
+import com.revscope.core.data.db.MIGRATION_9_10
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
@@ -38,8 +40,8 @@ object DataModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "revscope.db")
-            // Pre-1.0: schema changes wipe local telemetry instead of crashing.
-            // Replace with real Migrations before first public release.
+            .addMigrations(MIGRATION_9_10)
+            // Pre-1.0: unknown jumps still wipe; 9→10 preserves real user data.
             .fallbackToDestructiveMigration()
             .build()
 
@@ -66,4 +68,7 @@ object DataModule {
 
     @Provides
     fun provideSpeedCameraDao(db: AppDatabase): SpeedCameraDao = db.speedCameraDao()
+
+    @Provides
+    fun provideHealthReportDao(db: AppDatabase): HealthReportDao = db.healthReportDao()
 }

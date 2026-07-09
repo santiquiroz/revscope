@@ -3,6 +3,7 @@ package com.revscope.core.data.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
@@ -11,6 +12,7 @@ import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.GpsPointEntity
+import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.data.db.entities.HrPointEntity
 import com.revscope.core.data.db.entities.ImuPointEntity
 import com.revscope.core.data.db.entities.LapEntity
@@ -29,8 +31,9 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         ImuPointEntity::class,
         HrPointEntity::class,
         SpeedCameraEntity::class,
+        HealthReportEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,4 +45,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun imuDao(): ImuDao
     abstract fun hrDao(): HrDao
     abstract fun speedCameraDao(): SpeedCameraDao
+    abstract fun healthReportDao(): HealthReportDao
 }
