@@ -51,6 +51,7 @@ import com.revscope.feature.session.SessionHistoryScreen
 import com.revscope.feature.settings.Mode22ScannerScreen
 import com.revscope.feature.settings.SettingsScreen
 import com.revscope.feature.vehicle.VehicleProfileScreen
+import com.revscope.feature.workshop.WorkshopScreen
 
 private val BgColor = Color(0xFF0A0A0F)
 private val SurfaceColor = Color(0xFF12121A)
@@ -156,9 +157,14 @@ fun RevScopeNavGraph(
                 )
             }
             composable(Screen.Workshop.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("En construcción")
-                }
+                WorkshopScreen(
+                    connectionVm = connectionVm,
+                    onOpenDtc = { navController.navigate(Screen.Dtc.route) },
+                    onOpenSensors = { navController.navigate(Screen.Sensors.route) },
+                    onOpenScanner = { navController.navigate(Screen.Mode22Scanner.route) },
+                    onOpenGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
+                    onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
+                )
             }
             composable(Screen.LiveMap.route) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
