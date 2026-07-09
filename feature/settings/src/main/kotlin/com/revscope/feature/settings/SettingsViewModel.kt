@@ -9,6 +9,8 @@ import com.revscope.core.data.datastore.PreferencesKeys
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.LocationManager
+import android.net.Uri
+import com.revscope.core.data.backup.BackupManager
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
@@ -19,6 +21,7 @@ import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,9 +44,12 @@ class SettingsViewModel @Inject constructor(
     private val cameraUpdater: SpeedCameraUpdater,
     private val cameraDao: SpeedCameraDao,
     private val sessionManager: ObdSessionManager,
+    private val backupManager: BackupManager,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
+
+    enum class BackupState { IDLE, EXPORTING, IMPORTING, RESTARTING_AFTER_IMPORT }
 
     private val _apiKey = MutableStateFlow("")
     val apiKey: StateFlow<String> = _apiKey.asStateFlow()
@@ -237,6 +243,55 @@ class SettingsViewModel @Inject constructor(
 
     fun dismissSaveResult() {
         _lastSaveResult.value = null
+    }
+
+    // ── Backup / restore ─────────────────────────────────────────────────────
+
+    private val _backupState = MutableStateFlow(BackupState.IDLE)
+    val backupState: StateFlow<BackupState> = _backupState.asStateFlow()
+
+    fun exportBackup(uri: Uri) {
+        viewModelScope.launch {
+            _backupState.value = BackupState.EXPORTING
+            val error = runBackupOperation {
+                appContext.contentResolver.openOutputStream(uri)?.use { out ->
+                    backupManager.export(out).getOrThrow()
+                } ?: error("No se pudo abrir el destino elegido")
+            }
+            _backupState.value = BackupState.IDLE
+            _lastSaveResult.value = if (error == null) {
+                SaveResult(true, "Copia de seguridad exportada")
+            } else {
+                SaveResult(false, "Error exportando copia: ${error.message ?: "desconocido"}")
+            }
+        }
+    }
+
+    fun importBackup(uri: Uri) {
+        viewModelScope.launch {
+            _backupState.value = BackupState.IMPORTING
+            val error = runBackupOperation {
+                appContext.contentResolver.openInputStream(uri)?.use { input ->
+                    backupManager.import(input).getOrThrow()
+                } ?: error("No se pudo abrir el archivo seleccionado")
+            }
+            if (error == null) {
+                _backupState.value = BackupState.RESTARTING_AFTER_IMPORT
+            } else {
+                _backupState.value = BackupState.IDLE
+                _lastSaveResult.value = SaveResult(false, "Error importando copia: ${error.message ?: "desconocido"}")
+            }
+        }
+    }
+
+    private suspend fun runBackupOperation(block: suspend () -> Unit): Throwable? = try {
+        withContext(Dispatchers.IO) { block() }
+        null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.e(e, "SettingsViewModel: backup operation failed")
+        e
     }
 
     // ── Speed cameras ────────────────────────────────────────────────────────

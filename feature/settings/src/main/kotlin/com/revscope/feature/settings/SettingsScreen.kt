@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,16 +29,20 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
@@ -48,6 +53,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import java.time.LocalDate
+import kotlinx.coroutines.delay
 
 private val BgColor = Color(0xFF0A0A0F)
 private val SurfaceColor = Color(0xFF12121A)
@@ -73,14 +80,33 @@ fun SettingsScreen(
     val voltageMin by vm.voltageMin.collectAsState()
     val redlineRpm by vm.redlineRpm.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
+    val backupState by vm.backupState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
             snackbarHostState.showSnackbar(it.message)
             vm.dismissSaveResult()
         }
+    }
+
+    LaunchedEffect(backupState) {
+        if (backupState == SettingsViewModel.BackupState.RESTARTING_AFTER_IMPORT) {
+            delay(900)
+            restartApp(context)
+        }
+    }
+
+    pendingImportUri?.let { uri ->
+        BackupRestoreConfirmDialog(
+            onConfirm = {
+                pendingImportUri = null
+                vm.importBackup(uri)
+            },
+            onDismiss = { pendingImportUri = null },
+        )
     }
 
     Scaffold(
@@ -229,6 +255,50 @@ fun SettingsScreen(
             ) { Text("Descargar radares de mi zona", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
+            SectionTitle("Copia de seguridad")
+            Text(
+                "Incluye viajes, perfiles, informes y ajustes. La API key NO se incluye " +
+                    "(queda cifrada en este dispositivo) — guárdala de nuevo después de restaurar.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            if (backupState == SettingsViewModel.BackupState.RESTARTING_AFTER_IMPORT) {
+                Text("Copia restaurada — reiniciando…", color = AccentColor, fontSize = 12.sp)
+            }
+            val exportBackupLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.CreateDocument("application/zip"),
+            ) { uri -> uri?.let(vm::exportBackup) }
+            val importBackupLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocument(),
+            ) { uri -> uri?.let { pendingImportUri = it } }
+            val backupBusy = backupState != SettingsViewModel.BackupState.IDLE
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = { exportBackupLauncher.launch(defaultBackupFileName()) },
+                    enabled = !backupBusy,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+                ) {
+                    Text(
+                        if (backupState == SettingsViewModel.BackupState.EXPORTING) "Exportando…" else "Exportar copia",
+                        color = BgColor,
+                    )
+                }
+                Button(
+                    onClick = { importBackupLauncher.launch(arrayOf("application/zip", "application/octet-stream")) },
+                    enabled = !backupBusy,
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+                ) {
+                    Text(
+                        if (backupState == SettingsViewModel.BackupState.IMPORTING) "Importando…" else "Importar copia",
+                        color = TextPrimaryColor,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
             SectionTitle("IA — Explicación de códigos DTC")
             Text(
                 "API key de Anthropic (opcional). Sin ella, los DTC se muestran sin explicación de IA.",
@@ -345,6 +415,31 @@ private fun SectionTitle(text: String) {
         color = AccentColor,
         fontSize = 13.sp,
         fontWeight = FontWeight.Bold,
+    )
+}
+
+private fun defaultBackupFileName(): String = "revscope-backup-${LocalDate.now()}.zip"
+
+@Composable
+private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceColor,
+        title = { Text("Restaurar copia de seguridad", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+        text = {
+            Text(
+                "Reemplaza TODOS los datos actuales (viajes, perfiles, informes y ajustes) por los " +
+                    "de la copia elegida. Esta acción no se puede deshacer.",
+                color = TextMutedColor,
+                fontSize = 13.sp,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("Reemplazar", color = AccentColor) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMutedColor) }
+        },
     )
 }
 
