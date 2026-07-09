@@ -54,6 +54,7 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * App-wide owner of the OBD connection and telemetry pipeline.
@@ -107,6 +108,7 @@ class ObdSessionManager @Inject constructor(
     private val derivedEngine = DerivedMetricsEngine()
     private val engineOffDetector = EngineOffDetector()
     private var activeScheduler: PidScheduler? = null
+    private val workshopModeDesired = AtomicBoolean(false)
 
     private val launchTimer = LaunchTimerEngine()
     val launchResults = launchTimer.results
@@ -211,6 +213,7 @@ class ObdSessionManager @Inject constructor(
     fun setGearTable(table: List<Pair<Int, Double>>) = derivedEngine.setGearTable(table)
 
     fun setWorkshopMode(enabled: Boolean) {
+        workshopModeDesired.set(enabled)
         activeScheduler?.setWorkshopMode(enabled)
     }
 
@@ -447,6 +450,7 @@ class ObdSessionManager @Inject constructor(
             try {
                 coroutineScope {
                     val scheduler = PidScheduler(bt, registry).also { activeScheduler = it }
+                    scheduler.setWorkshopMode(workshopModeDesired.get())
                     val rawFlow = scheduler
                         .observeReadings()
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
