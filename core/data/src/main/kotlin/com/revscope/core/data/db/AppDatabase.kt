@@ -7,6 +7,7 @@ import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
+import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.GpsPointEntity
@@ -14,6 +15,7 @@ import com.revscope.core.data.db.entities.HrPointEntity
 import com.revscope.core.data.db.entities.ImuPointEntity
 import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
+import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 
@@ -26,8 +28,9 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         LapEntity::class,
         ImuPointEntity::class,
         HrPointEntity::class,
+        SpeedCameraEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,4 +41,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun lapDao(): LapDao
     abstract fun imuDao(): ImuDao
     abstract fun hrDao(): HrDao
+    abstract fun speedCameraDao(): SpeedCameraDao
 }

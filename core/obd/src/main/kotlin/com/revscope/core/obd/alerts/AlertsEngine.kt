@@ -42,7 +42,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA }
 
     data class ObdAlert(
         val type: AlertType,
@@ -152,6 +152,21 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(type, message, value))
         playTone(tonePattern, toneDurationMs)
         vibrate(vibrationMs)
+        speak(message)
+    }
+
+    /** Spoken speed-camera proximity warning. Per-camera cooldown lives in the alerter. */
+    fun announceSpeedCamera(distanceM: Int, limitKmh: Int?) {
+        if (!enabled) return
+        val rounded = (distanceM / 50) * 50
+        val message = buildString {
+            append("Radar a $rounded metros")
+            limitKmh?.let { append(", límite $it") }
+        }
+        Timber.i("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.SPEED_CAMERA, message, distanceM.toDouble()))
+        playTone(ToneGenerator.TONE_PROP_ACK, 300)
+        vibrate(longArrayOf(0, 200, 100, 200))
         speak(message)
     }
 

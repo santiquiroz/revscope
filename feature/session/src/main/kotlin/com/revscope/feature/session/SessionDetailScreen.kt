@@ -79,6 +79,20 @@ fun SessionDetailScreen(
                 actions = {
                     IconButton(onClick = {
                         scope.launch {
+                            vm.shareCardUri()?.let { uri ->
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "image/png"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Compartir imagen del viaje"))
+                            }
+                        }
+                    }) {
+                        Text("📷", fontSize = 18.sp)
+                    }
+                    IconButton(onClick = {
+                        scope.launch {
                             vm.exportCsv()?.let { uri ->
                                 val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/csv"
@@ -192,16 +206,28 @@ private fun ReportContent(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
+            RealTrackMap(
+                track = report.gpsTrack,
+                speeds = report.gpsTrackSpeeds,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp),
+            )
+            Text(
+                "azul = lento · amarillo = medio · rojo = rápido",
+                color = TextMutedColor,
+                fontSize = 10.sp,
+            )
             TrackMap(
                 track = report.gpsTrack,
                 speeds = report.gpsTrackSpeeds,
                 brakingMask = report.brakingMask,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp),
+                    .height(200.dp),
             )
             Text(
-                "azul = lento · amarillo = medio · rojo = rápido · puntos rojos = frenadas fuertes",
+                "racing line — puntos rojos = frenadas fuertes",
                 color = TextMutedColor,
                 fontSize = 10.sp,
             )

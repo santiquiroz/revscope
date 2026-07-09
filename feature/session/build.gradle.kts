@@ -29,6 +29,7 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.vico.compose.m3)
+    implementation(libs.osmdroid)
     implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)
 }

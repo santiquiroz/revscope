@@ -240,6 +240,31 @@ class SessionDetailViewModel @Inject constructor(
         return minG
     }
 
+    /** Renders the current report as a shareable PNG card. */
+    suspend fun shareCardUri(): Uri? = withContext(Dispatchers.IO) {
+        val ready = (_state.value as? UiState.Ready) ?: return@withContext null
+        val r = ready.report
+        val s = r.session
+        TripShareCard.render(
+            appContext,
+            TripShareCard.CardData(
+                startedAt = s.startedAt,
+                durationMs = (s.endedAt ?: s.startedAt) - s.startedAt,
+                distanceKm = s.distanceKm,
+                maxSpeed = s.maxSpeed,
+                avgSpeedKmh = r.avgSpeedKmh,
+                maxRpm = s.maxRpm,
+                best0to100Ms = s.best0to100Ms,
+                maxLateralG = r.maxLateralG,
+                maxLeanDeg = r.maxLeanDeg,
+                maxBpm = r.maxBpm,
+                lapCount = r.laps.size,
+                bestLapMs = r.laps.minOfOrNull { it.timeMs },
+                track = r.gpsTrack,
+            ),
+        )
+    }
+
     /** Longitudinal G of the IMU sample closest to [targetMs], or null if too far. */
     private fun nearestGLong(
         imu: List<com.revscope.core.data.db.entities.ImuPointEntity>,

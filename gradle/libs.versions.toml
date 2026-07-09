@@ -24,6 +24,7 @@ wearCompose = "1.4.0"
 healthServices = "1.0.0"
 playServicesWearable = "18.2.0"
 guava = "33.0.0-android"
+osmdroid = "6.1.20"
 
 [libraries]
 # Compose BOM
@@ -61,6 +62,9 @@ wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-fou
 health-services = { group = "androidx.health", name = "health-services-client", version.ref = "healthServices" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 guava-android = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+
+# Real map tiles (OpenStreetMap)
+osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 # Coroutines

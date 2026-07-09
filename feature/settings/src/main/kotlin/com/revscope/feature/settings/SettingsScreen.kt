@@ -187,6 +187,21 @@ fun SettingsScreen(
             ) { Text("Guardar alertas", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
+            SectionTitle("Radares de velocidad (OpenStreetMap)")
+            Text(
+                "Descarga los radares fijos mapeados en 50 km a tu alrededor. " +
+                    "Al conducir, la app avisa por voz al acercarte (funciona offline tras descargar).",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            val cameraStatus by vm.cameraStatus.collectAsState()
+            cameraStatus?.let { Text(it, color = AccentColor, fontSize = 12.sp) }
+            Button(
+                onClick = vm::downloadSpeedCameras,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Descargar radares de mi zona", color = BgColor) }
+
+            Spacer(Modifier.height(8.dp))
             SectionTitle("IA — Explicación de códigos DTC")
             Text(
                 "API key de Anthropic (opcional). Sin ella, los DTC se muestran sin explicación de IA.",

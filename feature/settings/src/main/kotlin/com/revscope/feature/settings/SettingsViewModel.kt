@@ -6,9 +6,15 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
+import android.annotation.SuppressLint
+import android.content.Context
+import android.location.LocationManager
+import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.cameras.SpeedCameraUpdater
 import com.revscope.core.obd.pid.PidRegistry
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,10 +29,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val settings: DataStore<Preferences>,
     private val registry: PidRegistry,
     private val alertsEngine: AlertsEngine,
     private val secureKeyStore: SecureKeyStore,
+    private val cameraUpdater: SpeedCameraUpdater,
+    private val cameraDao: SpeedCameraDao,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -181,6 +190,44 @@ class SettingsViewModel @Inject constructor(
 
     fun dismissSaveResult() {
         _lastSaveResult.value = null
+    }
+
+    // ── Speed cameras ────────────────────────────────────────────────────────
+
+    private val _cameraStatus = MutableStateFlow<String?>(null)
+    val cameraStatus: StateFlow<String?> = _cameraStatus.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            runCatching { cameraDao.count() }.getOrNull()?.let { count ->
+                if (count > 0) _cameraStatus.value = "$count radares guardados"
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun downloadSpeedCameras() {
+        viewModelScope.launch {
+            _cameraStatus.value = "Buscando tu ubicación…"
+            val location = runCatching {
+                val lm = appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            }.getOrNull()
+            if (location == null) {
+                _cameraStatus.value = "Sin ubicación — conecta el GPS o abre Maps un momento"
+                return@launch
+            }
+            _cameraStatus.value = "Descargando radares de OpenStreetMap…"
+            runCatching { cameraUpdater.downloadAround(location.latitude, location.longitude) }
+                .onSuccess { count ->
+                    _cameraStatus.value =
+                        "$count radares en 50 km — avisos por voz activos al conducir"
+                }
+                .onFailure {
+                    _cameraStatus.value = "Error descargando (¿internet?) — intenta de nuevo"
+                }
+        }
     }
 
     private fun isValidPidJson(json: String): Boolean = try {

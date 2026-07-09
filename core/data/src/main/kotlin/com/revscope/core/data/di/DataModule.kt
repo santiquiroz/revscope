@@ -11,6 +11,7 @@ import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
+import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import dagger.Module
@@ -62,4 +63,7 @@ object DataModule {
 
     @Provides
     fun provideHrDao(db: AppDatabase): HrDao = db.hrDao()
+
+    @Provides
+    fun provideSpeedCameraDao(db: AppDatabase): SpeedCameraDao = db.speedCameraDao()
 }
