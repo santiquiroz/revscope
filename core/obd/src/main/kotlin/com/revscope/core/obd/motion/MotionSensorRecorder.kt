@@ -14,7 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import kotlin.math.atan2
+import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -26,6 +26,7 @@ private const val EMA_ALPHA = 0.25f                  // low-pass vs engine vibra
 private const val G = 9.80665f
 private const val STATIONARY_G_THRESHOLD = 0.06f     // ~0.6 m/s² of filtered movement
 private const val CALIBRATION_HOLD_MS = 2_000L
+private const val MAX_PLAUSIBLE_LEAN_DEG = 70f       // past this the phone was handled, not leaned
 
 /**
  * Phone-IMU telemetry in vehicle frame:
@@ -35,7 +36,10 @@ private const val CALIBRATION_HOLD_MS = 2_000L
  *   then projected onto the GPS travel bearing — longitudinal (+accel/−braking)
  *   and lateral (+right/−left) regardless of how the phone is mounted.
  * - Lean angle DOES need a mount baseline: auto-calibrated after the vehicle sits
- *   still for 2 s (reference rotation matrix); lean = roll of the relative rotation.
+ *   still for 2 s (reference gravity vector); lean = angle between the current and
+ *   calibrated gravity directions in device frame. Field data showed the earlier
+ *   rotation-matrix roll flipping ±180° with real mounts — the gravity-angle method
+ *   is bounded and flip-free.
  */
 class MotionSensorRecorder(
     private val context: Context,
@@ -52,12 +56,14 @@ class MotionSensorRecorder(
     private val rotationMatrix = FloatArray(9)
     private var hasRotation = false
     private val filteredAccel = FloatArray(3)       // device frame, EMA-filtered
+    private val filteredGravity = FloatArray(3)     // device frame, EMA-filtered
+    private var hasGravity = false
 
     // Vehicle frame inputs
     @Volatile private var gpsBearingDeg: Float? = null
 
-    // Lean calibration
-    private var baselineRotation: FloatArray? = null
+    // Lean calibration — reference gravity direction with the vehicle upright
+    private var baselineGravity: FloatArray? = null
     private var stationarySinceMs = -1L
     @Volatile private var lastStoreMs = 0L
 
@@ -70,12 +76,14 @@ class MotionSensorRecorder(
 
         val linear = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
         val rotation = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-        if (linear == null || rotation == null) {
+        val gravity = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
+        if (linear == null || rotation == null || gravity == null) {
             Timber.w("MotionSensorRecorder: required sensors missing — IMU disabled")
             return
         }
         sensorManager.registerListener(this, linear, SAMPLING_PERIOD_US)
         sensorManager.registerListener(this, rotation, SAMPLING_PERIOD_US)
+        sensorManager.registerListener(this, gravity, SAMPLING_PERIOD_US)
         registered = true
         Timber.i("MotionSensorRecorder: recording IMU for session $newSessionId")
 
@@ -99,7 +107,7 @@ class MotionSensorRecorder(
         }
         flushJob?.cancel()
         flushJob = null
-        baselineRotation = null
+        baselineGravity = null
         stationarySinceMs = -1L
     }
 
@@ -114,11 +122,17 @@ class MotionSensorRecorder(
                 SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
                 hasRotation = true
             }
+            Sensor.TYPE_GRAVITY -> {
+                for (i in 0..2) {
+                    filteredGravity[i] += EMA_ALPHA * (event.values[i] - filteredGravity[i])
+                }
+                hasGravity = true
+            }
             Sensor.TYPE_LINEAR_ACCELERATION -> {
                 for (i in 0..2) {
                     filteredAccel[i] += EMA_ALPHA * (event.values[i] - filteredAccel[i])
                 }
-                if (hasRotation) processSample()
+                if (hasRotation && hasGravity) processSample()
             }
         }
     }
@@ -148,7 +162,7 @@ class MotionSensorRecorder(
         }
 
         val lean = computeLeanDeg()
-        hub.update(gLat, gLong, lean, calibrated = baselineRotation != null)
+        hub.update(gLat, gLong, lean, calibrated = baselineGravity != null)
 
         if (now - lastStoreMs >= STORE_INTERVAL_MS) {
             lastStoreMs = now
@@ -169,7 +183,7 @@ class MotionSensorRecorder(
         if (horizontalG < STATIONARY_G_THRESHOLD) {
             if (stationarySinceMs < 0) stationarySinceMs = now
             if (now - stationarySinceMs >= CALIBRATION_HOLD_MS) {
-                baselineRotation = rotationMatrix.copyOf()
+                baselineGravity = filteredGravity.copyOf()
                 stationarySinceMs = now // keep refining while still
             }
         } else {
@@ -178,17 +192,20 @@ class MotionSensorRecorder(
     }
 
     /**
-     * Roll of the current orientation relative to the calibrated mount:
-     * R_rel = R₀ᵀ·R, roll extracted from the relative matrix.
+     * Unsigned tilt of the vehicle vs the calibrated upright pose: angle between
+     * the current and baseline gravity directions in device frame. Bounded and
+     * mount-independent; values past [MAX_PLAUSIBLE_LEAN_DEG] (phone handled,
+     * pocket) are discarded as 0.
      */
     private fun computeLeanDeg(): Float {
-        val base = baselineRotation ?: return 0f
-        val r = rotationMatrix
-        // rel = baseᵀ · current (row-major 3×3)
-        val rel7 = base[1] * r[6] + base[4] * r[7] + base[7] * r[8]
-        val rel8 = base[2] * r[6] + base[5] * r[7] + base[8] * r[8]
-        val roll = atan2(rel7.toDouble(), rel8.toDouble())
-        return Math.toDegrees(roll).toFloat()
+        val base = baselineGravity ?: return 0f
+        val g = filteredGravity
+        val magBase = sqrt(base[0] * base[0] + base[1] * base[1] + base[2] * base[2])
+        val magNow = sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2])
+        if (magBase < 1f || magNow < 1f) return 0f
+        val dot = (base[0] * g[0] + base[1] * g[1] + base[2] * g[2]) / (magBase * magNow)
+        val angle = Math.toDegrees(acos(dot.coerceIn(-1f, 1f).toDouble())).toFloat()
+        return if (angle <= MAX_PLAUSIBLE_LEAN_DEG) angle else 0f
     }
 
     private suspend fun flush() {

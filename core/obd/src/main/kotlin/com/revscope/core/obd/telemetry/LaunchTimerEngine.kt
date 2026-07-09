@@ -14,6 +14,11 @@ private const val ARM_AFTER_STANDSTILL_MS = 700L
 private const val TARGET_60 = 60.0
 private const val TARGET_100 = 100.0
 
+// A real launch reaches 60 in seconds. Crawling through traffic and touching
+// 60 km/h five minutes later is NOT a run — field data showed "0-60" of 53-98 s.
+private const val MAX_RUN_TO_60_MS = 15_000L
+private const val MAX_RUN_TOTAL_MS = 35_000L
+
 /**
  * Automatic 0–60 / 0–100 km/h timer. Feed it speed readings (PID 0D); it arms
  * itself at standstill, starts on launch, and interpolates the crossing instant
@@ -64,6 +69,15 @@ class LaunchTimerEngine {
             }
 
             State.RUNNING -> {
+                val elapsed = now - launchStartMs
+                if (to60Ms == null && elapsed > MAX_RUN_TO_60_MS) {
+                    reset() // too slow to 60 — traffic crawl, not a launch
+                    return storePrev(speed, now)
+                }
+                if (elapsed > MAX_RUN_TOTAL_MS) {
+                    if (to60Ms != null) finish(LaunchResult(to60Ms, null)) else reset()
+                    return storePrev(speed, now)
+                }
                 if (to60Ms == null && speed >= TARGET_60) {
                     to60Ms = interpolateCrossing(TARGET_60, now, speed)
                 }
@@ -76,6 +90,10 @@ class LaunchTimerEngine {
             }
         }
 
+        storePrev(speed, now)
+    }
+
+    private fun storePrev(speed: Double, now: Long) {
         prevSpeed = speed
         prevTimestamp = now
     }

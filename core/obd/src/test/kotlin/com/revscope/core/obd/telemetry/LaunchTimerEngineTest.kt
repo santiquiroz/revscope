@@ -71,6 +71,18 @@ class LaunchTimerEngineTest {
     }
 
     @Test
+    fun `traffic crawl that reaches 60 much later is not a launch`() = runTest {
+        // Field bug: "0-60 in 53-98 s" recorded when creeping through traffic
+        val engine = LaunchTimerEngine()
+        var t = engine.feedStandstill(0L)
+        // Creep at 15 km/h for 20 s, then finally hit 60
+        repeat(20) { t += 1_000; engine.process(speed(15.0, t)) }
+        engine.process(speed(60.0, t + 1_000))
+
+        assertEquals(LaunchTimerEngine.State.IDLE, engine.state.value)
+    }
+
+    @Test
     fun `does not arm while moving`() {
         val engine = LaunchTimerEngine()
         engine.process(speed(50.0, 0))

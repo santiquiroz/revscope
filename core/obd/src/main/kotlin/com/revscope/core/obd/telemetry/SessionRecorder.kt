@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 private const val FLUSH_INTERVAL_MS = 500L
+private const val DEDUPE_KEEPALIVE_MS = 4_000L
 
 /**
  * Persists [ObdReading] items to Room in batches every [FLUSH_INTERVAL_MS].
@@ -21,10 +22,22 @@ class SessionRecorder(private val telemetryDao: TelemetryDao) {
 
     suspend fun record(sessionId: Long, readings: Flow<ObdReading>) {
         val buffer = mutableListOf<TelemetryPointEntity>()
+        val lastValueByPid = mutableMapOf<String, Double>()
+        val lastStoredMsByPid = mutableMapOf<String, Long>()
         var lastFlushMs = System.currentTimeMillis()
 
         try {
             readings.collect { reading ->
+                // Derived PIDs (GEAR) re-emit on every raw update — field data showed
+                // 111k GEAR rows (2× the raw PIDs). Skip identical consecutive values,
+                // but keep a heartbeat row every 4 s so time-integration (distance uses
+                // a 5 s max gap) never sees artificial holes during constant cruising.
+                val unchanged = lastValueByPid[reading.pid] == reading.value
+                val freshEnough =
+                    reading.timestamp - (lastStoredMsByPid[reading.pid] ?: 0L) < DEDUPE_KEEPALIVE_MS
+                if (unchanged && freshEnough) return@collect
+                lastValueByPid[reading.pid] = reading.value
+                lastStoredMsByPid[reading.pid] = reading.timestamp
                 buffer += reading.toEntity(sessionId)
                 val now = System.currentTimeMillis()
                 if (now - lastFlushMs >= FLUSH_INTERVAL_MS) {
