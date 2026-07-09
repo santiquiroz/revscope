@@ -169,16 +169,37 @@ class ObdSessionManager @Inject constructor(
 
     /** Manual profile activation from the profiles screen. Persisted across restarts. */
     fun setActiveProfile(profile: VehicleProfileEntity?) {
-        _activeProfile.value = profile
-        alertsEngine.setRedlineOverride(profile?.redlineRpm)
+        val resolvedProfile = withCurrentAdapterLinked(profile)
+        _activeProfile.value = resolvedProfile
+        alertsEngine.setRedlineOverride(resolvedProfile?.redlineRpm)
         scope.launch {
+            persistAdapterLinkIfChanged(profile, resolvedProfile)
             runCatching {
                 settings.edit { prefs ->
-                    if (profile != null) prefs[PreferencesKeys.ACTIVE_PROFILE_ID] = profile.id
+                    if (resolvedProfile != null) prefs[PreferencesKeys.ACTIVE_PROFILE_ID] = resolvedProfile.id
                     else prefs.remove(PreferencesKeys.ACTIVE_PROFILE_ID)
                 }
             }
         }
+    }
+
+    /** Stamps the profile with the currently connected adapter, if one is live. */
+    private fun withCurrentAdapterLinked(profile: VehicleProfileEntity?): VehicleProfileEntity? {
+        if (profile == null || !hasActiveConnection()) return profile
+        if (profile.adapterAddress == currentDeviceAddress) return profile
+        return profile.copy(adapterAddress = currentDeviceAddress)
+    }
+
+    private fun hasActiveConnection(): Boolean =
+        currentDeviceAddress != null && _connectionState.value is ConnectionState.Connected
+
+    private suspend fun persistAdapterLinkIfChanged(
+        original: VehicleProfileEntity?,
+        resolved: VehicleProfileEntity?,
+    ) {
+        if (resolved == null || resolved.adapterAddress == original?.adapterAddress) return
+        runCatching { profileDao.update(resolved) }
+            .onFailure { Timber.w(it, "ObdSessionManager: failed to persist profile adapter link") }
     }
 
     private suspend fun loadSavedActiveProfile() {
@@ -208,6 +229,19 @@ class ObdSessionManager @Inject constructor(
         val match = runCatching { profileDao.getByVin(vin) }.getOrNull() ?: return
         Timber.i("ObdSessionManager: auto-activating profile '${match.name}' by VIN")
         setActiveProfile(match)
+    }
+
+    /** Falls back to the adapter's last-linked profile when VIN resolution found none. */
+    private suspend fun activateProfileByAdapter() {
+        val address = currentDeviceAddress ?: return
+        runCatching { profileDao.getByAdapter(address) }
+            .onSuccess { match ->
+                if (match != null) {
+                    Timber.i("ObdSessionManager: auto-activating profile '${match.name}' by adapter")
+                    setActiveProfile(match)
+                }
+            }
+            .onFailure { Timber.w(it, "ObdSessionManager: failed to auto-activate profile by adapter") }
     }
 
     fun setGearTable(table: List<Pair<Int, Double>>) = derivedEngine.setGearTable(table)
@@ -437,6 +471,7 @@ class ObdSessionManager @Inject constructor(
         registry.setSupportedPids(negotiationResult.supportedPids)
         alertsEngine.reloadThresholds()
         resolveProfileByVin(bt)
+        if (_activeProfile.value == null) activateProfileByAdapter()
 
         val sessionId = createSession(deviceName)
         _currentSessionIdFlow.value = sessionId
@@ -541,7 +576,7 @@ class ObdSessionManager @Inject constructor(
     private suspend fun createSession(deviceName: String): Long =
         sessionDao.insert(
             SessionEntity(
-                vehicleProfileId = 0L,
+                vehicleProfileId = _activeProfile.value?.id ?: 0L,
                 startedAt = System.currentTimeMillis(),
                 endedAt = null,
                 adapterName = deviceName,

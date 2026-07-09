@@ -26,6 +26,9 @@ interface VehicleProfileDao {
     @Query("SELECT * FROM vehicle_profiles WHERE vin = :vin LIMIT 1")
     suspend fun getByVin(vin: String): VehicleProfileEntity?
 
+    @Query("SELECT * FROM vehicle_profiles WHERE adapterAddress = :address LIMIT 1")
+    suspend fun getByAdapter(address: String): VehicleProfileEntity?
+
     @Query("DELETE FROM vehicle_profiles WHERE id = :id")
     suspend fun deleteById(id: Long)
 }

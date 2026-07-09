@@ -19,4 +19,6 @@ data class VehicleProfileEntity(
     val maxRpm: Int = 8_000,
     /** Redline — drives the shift light and the RPM audio alert */
     val redlineRpm: Int = 6_500,
+    /** Bluetooth MAC of the adapter last linked to this vehicle — drives auto-activation on connect */
+    val adapterAddress: String? = null,
 )

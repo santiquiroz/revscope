@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.revscope.core.data.db.AppDatabase
+import com.revscope.core.data.db.MIGRATION_10_11
 import com.revscope.core.data.db.MIGRATION_9_10
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.HealthReportDao
@@ -40,8 +41,8 @@ object DataModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "revscope.db")
-            .addMigrations(MIGRATION_9_10)
-            // Pre-1.0: unknown jumps still wipe; 9→10 preserves real user data.
+            .addMigrations(MIGRATION_9_10, MIGRATION_10_11)
+            // Pre-1.0: unknown jumps still wipe; 9→10 and 10→11 preserve real user data.
             .fallbackToDestructiveMigration()
             .build()
 

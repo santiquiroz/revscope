@@ -33,7 +33,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         SpeedCameraEntity::class,
         HealthReportEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

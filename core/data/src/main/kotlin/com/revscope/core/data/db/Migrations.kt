@@ -14,3 +14,14 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         )
     }
 }
+
+/**
+ * `vehicle_profiles` already had a `type` column ("CAR" | "MOTORCYCLE") since v1 — only
+ * the adapter link is new. Adding a second, redundant vehicle-type column here would
+ * duplicate that field, so this migration only appends `adapterAddress`.
+ */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `adapterAddress` TEXT")
+    }
+}
