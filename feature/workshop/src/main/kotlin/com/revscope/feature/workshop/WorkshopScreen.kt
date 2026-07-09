@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timeline
@@ -51,6 +52,7 @@ private data class WorkshopTool(
 @Composable
 fun WorkshopScreen(
     connectionVm: ConnectionViewModel,
+    onOpenHealthCheck: () -> Unit,
     onOpenDtc: () -> Unit,
     onOpenSensors: () -> Unit,
     onOpenScanner: () -> Unit,
@@ -61,6 +63,8 @@ fun WorkshopScreen(
     val isConnected = connState is ConnectionState.Connected
 
     val tools = listOf(
+        WorkshopTool(Icons.Default.MonitorHeart, "Chequeo de salud",
+            "Escaneo completo con diagnóstico en español — DTCs, readiness, mezcla, batería", false, onOpenHealthCheck),
         WorkshopTool(Icons.Default.BugReport, "Códigos de falla (DTC)",
             "Leer, explicar con IA y borrar códigos de error", true, onOpenDtc),
         WorkshopTool(Icons.Default.Timeline, "Gráficas de sensores",
