@@ -35,6 +35,7 @@ class GpsTrackRecorder(
     private val trackModeEngine: TrackModeEngine? = null,
     private val onBearing: ((Float) -> Unit)? = null,
     private val cameraAlerter: SpeedCameraAlerter? = null,
+    private val routeHolder: LiveRouteHolder? = null,
 ) {
 
     private val buffer = mutableListOf<GpsPointEntity>()
@@ -109,6 +110,7 @@ class GpsTrackRecorder(
         synchronized(buffer) { buffer += point }
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
         cameraAlerter?.onGpsFix(location.latitude, location.longitude)
+        routeHolder?.append(location.latitude, location.longitude)
         if (location.hasBearing()) onBearing?.invoke(location.bearing)
     }
 

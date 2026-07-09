@@ -50,6 +50,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var trackModeEngine: TrackModeEngine
     @Inject lateinit var cameraAlerter: SpeedCameraAlerter
     @Inject lateinit var motionHub: MotionMetricsHub
+    @Inject lateinit var routeHolder: LiveRouteHolder
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var gpsRecorder: GpsTrackRecorder? = null
@@ -96,6 +97,7 @@ class ObdForegroundService : Service() {
                 gpsRecorder = null
                 motionRecorder?.stop()
                 motionRecorder = null
+                routeHolder.clear()
                 if (sessionId != null) {
                     val imu = MotionSensorRecorder(applicationContext, imuDao, motionHub).also {
                         it.start(scope, sessionId)
@@ -107,6 +109,7 @@ class ObdForegroundService : Service() {
                         trackModeEngine,
                         onBearing = imu::updateGpsBearing,
                         cameraAlerter = cameraAlerter,
+                        routeHolder = routeHolder,
                     ).also { it.start(scope, sessionId) }
                 }
             }
