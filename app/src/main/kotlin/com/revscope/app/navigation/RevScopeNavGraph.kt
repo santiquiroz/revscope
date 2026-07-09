@@ -121,7 +121,7 @@ fun RevScopeNavGraph(
     val activeVehicleProfile by vehiclePickerVm.activeProfile.collectAsState()
 
     LaunchedEffect(vehicleProfiles, askVehicleOnStart) {
-        if (!hasOfferedVehiclePicker && askVehicleOnStart && vehicleProfiles.isNotEmpty()) {
+        if (!hasOfferedVehiclePicker && askVehicleOnStart && vehicleProfiles.isNotEmpty() && !showVehiclePicker) {
             showVehiclePicker = true
             vehiclePickerIsStartupPrompt = true
             hasOfferedVehiclePicker = true
@@ -274,6 +274,7 @@ fun RevScopeNavGraph(
                         .padding(top = 4.dp),
                 ) {
                     VehicleSwitcherPill(connectionState = connState, activeProfile = activeVehicleProfile) {
+                        hasOfferedVehiclePicker = true
                         vehiclePickerIsStartupPrompt = false
                         showVehiclePicker = true
                     }
