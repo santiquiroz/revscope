@@ -137,6 +137,7 @@ fun DashboardScreen(
 
     Scaffold(
         modifier = shiftLightColor?.let { Modifier.border(6.dp, it) } ?: Modifier,
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             TopAppBar(
                 title = {

@@ -81,6 +81,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
             TopAppBar(
                 title = { Text("Ajustes", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
