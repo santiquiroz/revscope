@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        pendingSessionId.value = sessionIdFrom(intent)
+        pendingSessionId.value = consumeSessionId(intent)
         setContent {
             val openSessionId by pendingSessionId.collectAsState()
             RevScopeTheme {
@@ -35,9 +35,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        pendingSessionId.value = sessionIdFrom(intent)
+        setIntent(intent)
+        pendingSessionId.value = consumeSessionId(intent)
     }
 
-    private fun sessionIdFrom(intent: Intent): Long? =
-        intent.getLongExtra(TripSummaryNotifier.EXTRA_SESSION_ID, -1L).takeIf { it > 0 }
+    private fun consumeSessionId(intent: Intent?): Long? {
+        val id = intent?.getLongExtra(TripSummaryNotifier.EXTRA_SESSION_ID, -1L)?.takeIf { it > 0 }
+        intent?.removeExtra(TripSummaryNotifier.EXTRA_SESSION_ID)
+        return id
+    }
 }
