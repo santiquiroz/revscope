@@ -21,4 +21,14 @@ data class VehicleProfileEntity(
     val redlineRpm: Int = 6_500,
     /** Bluetooth MAC of the adapter last linked to this vehicle — drives auto-activation on connect */
     val adapterAddress: String? = null,
+    /** License plate, e.g. "ABC123" or moto "NZO28H" — drives PicoYPlacaEngine */
+    val plate: String? = null,
+    /** Pico y placa city rules id (e.g. "medellin"); null = no pico y placa tracking */
+    val picoPlacaCity: String? = null,
+    /** SOAT expiration, epoch ms; null = not configured */
+    val soatExpiresAt: Long? = null,
+    /** Tecnomecánica (RTM) expiration, epoch ms; null = not configured */
+    val rtmExpiresAt: Long? = null,
+    /** Todo riesgo insurance expiration, epoch ms; null = not configured */
+    val insuranceExpiresAt: Long? = null,
 )

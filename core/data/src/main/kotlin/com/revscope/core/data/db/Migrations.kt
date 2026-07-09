@@ -25,3 +25,18 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `adapterAddress` TEXT")
     }
 }
+
+/**
+ * Adds "Vehículo al día" document tracking fields: plate, pico y placa city, and three
+ * expiration dates (SOAT, tecnomecánica, todo riesgo). All nullable, no default — purely
+ * additive so existing rows on the owner's device keep their data intact.
+ */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `plate` TEXT")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `picoPlacaCity` TEXT")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `soatExpiresAt` INTEGER")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `rtmExpiresAt` INTEGER")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `insuranceExpiresAt` INTEGER")
+    }
+}

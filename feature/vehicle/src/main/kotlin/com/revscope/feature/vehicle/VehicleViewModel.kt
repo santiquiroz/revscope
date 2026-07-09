@@ -54,11 +54,32 @@ class VehicleViewModel @Inject constructor(
     private val _vinStatus = MutableStateFlow<String?>(null)
     val vinStatus: StateFlow<String?> = _vinStatus.asStateFlow()
 
+    private val _formPlate = MutableStateFlow("")
+    val formPlate: StateFlow<String> = _formPlate.asStateFlow()
+
+    /** null = sin pico y placa; "medellin" = ciudad soportada por ahora */
+    private val _formPicoPlacaCity = MutableStateFlow<String?>(null)
+    val formPicoPlacaCity: StateFlow<String?> = _formPicoPlacaCity.asStateFlow()
+
+    private val _formSoatExpiresAt = MutableStateFlow<Long?>(null)
+    val formSoatExpiresAt: StateFlow<Long?> = _formSoatExpiresAt.asStateFlow()
+
+    private val _formRtmExpiresAt = MutableStateFlow<Long?>(null)
+    val formRtmExpiresAt: StateFlow<Long?> = _formRtmExpiresAt.asStateFlow()
+
+    private val _formInsuranceExpiresAt = MutableStateFlow<Long?>(null)
+    val formInsuranceExpiresAt: StateFlow<Long?> = _formInsuranceExpiresAt.asStateFlow()
+
     fun setName(v: String) { _formName.value = v }
     fun setType(v: String) { _formType.value = v }
     fun setVin(v: String) { _formVin.value = v }
     fun setMaxRpm(v: String) { _formMaxRpm.value = v }
     fun setRedlineRpm(v: String) { _formRedlineRpm.value = v }
+    fun setPlate(v: String) { _formPlate.value = v.uppercase() }
+    fun setPicoPlacaCity(v: String?) { _formPicoPlacaCity.value = v }
+    fun setSoatExpiresAt(v: Long?) { _formSoatExpiresAt.value = v }
+    fun setRtmExpiresAt(v: Long?) { _formRtmExpiresAt.value = v }
+    fun setInsuranceExpiresAt(v: Long?) { _formInsuranceExpiresAt.value = v }
 
     /** Reads the VIN from the connected vehicle (Mode 09 02) into the form. */
     fun readVinFromVehicle(connectionVm: ConnectionViewModel) {
@@ -85,6 +106,11 @@ class VehicleViewModel @Inject constructor(
         _formEnabledPids.value = parseEnabledPids(profile.enabledPids)
         _formMaxRpm.value = profile.maxRpm.toString()
         _formRedlineRpm.value = profile.redlineRpm.toString()
+        _formPlate.value = profile.plate.orEmpty()
+        _formPicoPlacaCity.value = profile.picoPlacaCity
+        _formSoatExpiresAt.value = profile.soatExpiresAt
+        _formRtmExpiresAt.value = profile.rtmExpiresAt
+        _formInsuranceExpiresAt.value = profile.insuranceExpiresAt
     }
 
     fun cancelEditing() = resetForm()
@@ -112,6 +138,7 @@ class VehicleViewModel @Inject constructor(
         val redline = (_formRedlineRpm.value.toIntOrNull() ?: 6_500).coerceIn(2_000, maxRpm)
         viewModelScope.launch {
             val editing = _editingProfile.value
+            val plate = _formPlate.value.trim().ifEmpty { null }
             if (editing != null) {
                 profileDao.update(
                     editing.copy(
@@ -121,6 +148,11 @@ class VehicleViewModel @Inject constructor(
                         enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
                         maxRpm = maxRpm,
                         redlineRpm = redline,
+                        plate = plate,
+                        picoPlacaCity = _formPicoPlacaCity.value,
+                        soatExpiresAt = _formSoatExpiresAt.value,
+                        rtmExpiresAt = _formRtmExpiresAt.value,
+                        insuranceExpiresAt = _formInsuranceExpiresAt.value,
                     )
                 )
             } else {
@@ -134,6 +166,11 @@ class VehicleViewModel @Inject constructor(
                         createdAt = System.currentTimeMillis(),
                         maxRpm = maxRpm,
                         redlineRpm = redline,
+                        plate = plate,
+                        picoPlacaCity = _formPicoPlacaCity.value,
+                        soatExpiresAt = _formSoatExpiresAt.value,
+                        rtmExpiresAt = _formRtmExpiresAt.value,
+                        insuranceExpiresAt = _formInsuranceExpiresAt.value,
                     )
                 )
             }
@@ -157,6 +194,11 @@ class VehicleViewModel @Inject constructor(
         _formMaxRpm.value = "8000"
         _formRedlineRpm.value = "6500"
         _vinStatus.value = null
+        _formPlate.value = ""
+        _formPicoPlacaCity.value = null
+        _formSoatExpiresAt.value = null
+        _formRtmExpiresAt.value = null
+        _formInsuranceExpiresAt.value = null
     }
 
     private companion object {
