@@ -14,4 +14,7 @@ sealed class Screen(val route: String) {
     object SessionDetail : Screen("session_detail/{sessionId}") {
         fun withId(sessionId: Long) = "session_detail/$sessionId"
     }
+    object SessionCompare : Screen("session_compare/{sessionA}/{sessionB}") {
+        fun withIds(a: Long, b: Long) = "session_compare/$a/$b"
+    }
 }

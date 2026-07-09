@@ -281,6 +281,26 @@ private fun ReportContent(
             }
         }
 
+        if (report.throttleGPoints.size >= 10) {
+            Text(
+                "Acelerador vs fuerza G (tuning)",
+                color = AccentColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            ThrottleGScatter(
+                points = report.throttleGPoints,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp),
+            )
+            Text(
+                "x: % acelerador · y: G (+acelera / −frena) · banda diagonal sana = entrega pareja",
+                color = TextMutedColor,
+                fontSize = 10.sp,
+            )
+        }
+
         if (report.rpmSeries.size >= 2) {
             ChartSection("RPM durante el viaje", report.rpmSeries)
         }

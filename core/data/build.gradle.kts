@@ -36,6 +36,7 @@ dependencies {
     kapt(libs.room.compiler)
 
     api(libs.datastore.preferences)
+    implementation(libs.security.crypto)
     implementation(libs.coroutines.android)
 
     implementation(libs.hilt.android)

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.intelligence.IntelligenceCapability
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.intelligence.dtc.DtcExplainer
@@ -26,13 +27,18 @@ object IntelligenceModule {
     fun provideIntelligenceOrchestrator(
         @ApplicationContext context: Context,
         settings: DataStore<Preferences>,
+        secureKeyStore: SecureKeyStore,
     ): IntelligenceOrchestrator {
         val tier = IntelligenceCapability.deviceTier(context)
 
         val apiKeyProvider: suspend () -> String? = {
             try {
-                settings.data.first()[PreferencesKeys.CLAUDE_API_KEY]
-                    ?.takeIf { it.isNotBlank() }
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // Encrypted store first; plaintext DataStore only as pre-migration fallback
+                    secureKeyStore.getClaudeApiKey()?.takeIf { it.isNotBlank() }
+                        ?: settings.data.first()[PreferencesKeys.CLAUDE_API_KEY]
+                            ?.takeIf { it.isNotBlank() }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -6,9 +6,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.pid.PidRegistry
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +26,7 @@ class SettingsViewModel @Inject constructor(
     private val settings: DataStore<Preferences>,
     private val registry: PidRegistry,
     private val alertsEngine: AlertsEngine,
+    private val secureKeyStore: SecureKeyStore,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -55,7 +59,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 val prefs = settings.data.first()
-                _apiKey.value = prefs[PreferencesKeys.CLAUDE_API_KEY].orEmpty()
+                _apiKey.value = withContext(Dispatchers.IO) { loadApiKeyMigrating(prefs[PreferencesKeys.CLAUDE_API_KEY]) }
                 _customPidsJson.value = prefs[PreferencesKeys.CUSTOM_PIDS_JSON].orEmpty()
                 _alertsEnabled.value = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
                 _ttsEnabled.value = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
@@ -128,14 +132,28 @@ class SettingsViewModel @Inject constructor(
     fun saveApiKey() {
         viewModelScope.launch {
             val result = runCatching {
-                settings.edit { it[PreferencesKeys.CLAUDE_API_KEY] = _apiKey.value.trim() }
+                withContext(Dispatchers.IO) { secureKeyStore.setClaudeApiKey(_apiKey.value.trim()) }
+                // Wipe any plaintext copy left from before encryption existed
+                settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) }
             }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "API key guardada")
+                SaveResult(true, "API key guardada (cifrada)")
             } else {
                 SaveResult(false, "Error guardando API key")
             }
         }
+    }
+
+    /** Reads the key from encrypted storage, migrating a plaintext DataStore copy if found. */
+    private suspend fun loadApiKeyMigrating(plaintextLegacy: String?): String {
+        val secure = secureKeyStore.getClaudeApiKey()
+        if (secure != null) return secure
+        if (!plaintextLegacy.isNullOrBlank()) {
+            secureKeyStore.setClaudeApiKey(plaintextLegacy)
+            runCatching { settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) } }
+            return plaintextLegacy
+        }
+        return ""
     }
 
     fun saveCustomPids() {

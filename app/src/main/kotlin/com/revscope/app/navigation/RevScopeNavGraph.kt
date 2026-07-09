@@ -35,6 +35,7 @@ import com.revscope.feature.dtc.DtcScreen
 import com.revscope.feature.gear.GearAnalyzerScreen
 import com.revscope.feature.sensors.SensorGraphScreen
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
+import com.revscope.feature.session.SessionCompareScreen
 import com.revscope.feature.session.SessionDetailScreen
 import com.revscope.feature.session.SessionHistoryScreen
 import com.revscope.feature.settings.Mode22ScannerScreen
@@ -138,6 +139,20 @@ fun RevScopeNavGraph(
                     onOpenSession = { sessionId ->
                         navController.navigate(Screen.SessionDetail.withId(sessionId))
                     },
+                    onCompareSessions = { a, b ->
+                        navController.navigate(Screen.SessionCompare.withIds(a, b))
+                    },
+                )
+            }
+            composable(
+                route = Screen.SessionCompare.route,
+                arguments = listOf(
+                    navArgument("sessionA") { type = NavType.LongType },
+                    navArgument("sessionB") { type = NavType.LongType },
+                ),
+            ) {
+                SessionCompareScreen(
+                    onNavigateBack = { navController.popBackStack() },
                 )
             }
             composable(

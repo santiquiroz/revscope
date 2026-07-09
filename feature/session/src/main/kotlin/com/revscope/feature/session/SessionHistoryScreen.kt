@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit
 
 private val BgColor = Color(0xFF0A0A0F)
 private val SurfaceColor = Color(0xFF12121A)
+private val SurfaceHighColor = Color(0xFF1C1C28)
 private val AccentColor = Color(0xFFE8FF00)
 private val DangerColor = Color(0xFFFF3040)
 private val TextPrimaryColor = Color(0xFFF0F0F8)
@@ -52,8 +53,10 @@ private val dateFormat = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale("es"))
 @Composable
 fun SessionHistoryScreen(
     onOpenSession: (Long) -> Unit = {},
+    onCompareSessions: (Long, Long) -> Unit = { _, _ -> },
     vm: SessionViewModel = hiltViewModel(),
 ) {
+    val compareCandidate by vm.compareCandidate.collectAsState()
     val sessions by vm.sessions.collectAsState()
 
     Column(
@@ -78,10 +81,22 @@ fun SessionHistoryScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (compareCandidate != null) {
+                    item(key = "compare_hint") {
+                        Text(
+                            "⚖ Viaje A elegido — toca ⚖ en otro viaje para comparar",
+                            color = AccentColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
                 items(sessions, key = { it.id }) { session ->
                     SessionItem(
                         session = session,
+                        isCompareCandidate = compareCandidate == session.id,
                         onClick = { onOpenSession(session.id) },
+                        onCompare = { vm.toggleCompare(session.id, onCompareSessions) },
                         onDelete = { vm.deleteSession(session.id) },
                     )
                 }
@@ -91,7 +106,13 @@ fun SessionHistoryScreen(
 }
 
 @Composable
-private fun SessionItem(session: SessionEntity, onClick: () -> Unit, onDelete: () -> Unit) {
+private fun SessionItem(
+    session: SessionEntity,
+    isCompareCandidate: Boolean,
+    onClick: () -> Unit,
+    onCompare: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val durationMs = (session.endedAt ?: System.currentTimeMillis()) - session.startedAt
     val durationMin = TimeUnit.MILLISECONDS.toMinutes(durationMs)
     val durationSec = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60
@@ -99,7 +120,10 @@ private fun SessionItem(session: SessionEntity, onClick: () -> Unit, onDelete: (
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(
+                if (isCompareCandidate) SurfaceHighColor else SurfaceColor,
+                RoundedCornerShape(8.dp),
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
@@ -126,6 +150,13 @@ private fun SessionItem(session: SessionEntity, onClick: () -> Unit, onDelete: (
             }
         }
         Spacer(Modifier.width(8.dp))
+        IconButton(onClick = onCompare) {
+            Text(
+                "⚖",
+                fontSize = 18.sp,
+                color = if (isCompareCandidate) AccentColor else TextMutedColor,
+            )
+        }
         IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, contentDescription = "Borrar sesión", tint = DangerColor)
         }

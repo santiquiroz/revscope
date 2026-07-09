@@ -28,6 +28,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -244,6 +246,20 @@ fun SettingsScreen(
                     enabled = customPidsJson.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
                 ) { Text("Compartir pack", color = TextPrimaryColor) }
+                val importLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocument()
+                ) { uri ->
+                    uri?.let {
+                        runCatching {
+                            context.contentResolver.openInputStream(it)
+                                ?.bufferedReader()?.use { r -> r.readText() }
+                        }.getOrNull()?.let(vm::updateCustomPidsJson)
+                    }
+                }
+                Button(
+                    onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+                ) { Text("Importar", color = TextPrimaryColor) }
             }
 
             Spacer(Modifier.height(24.dp))

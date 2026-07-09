@@ -68,6 +68,8 @@ class SessionDetailViewModel @Inject constructor(
         val brakingMask: List<Boolean>,
         /** per-lap peaks, same order as [laps] */
         val lapStats: List<LapStat>,
+        /** (throttle %, longitudinal G) pairs matched by timestamp — tuning view */
+        val throttleGPoints: List<Pair<Float, Float>>,
     )
 
     data class LapStat(val maxAbsG: Float?, val maxAbsLean: Float?)
@@ -108,6 +110,15 @@ class SessionDetailViewModel @Inject constructor(
                 minGLongAround(imuPoints, imuTimestamps, gps.timestamp) < BRAKING_G_THRESHOLD
             }
 
+            val throttlePoints = downsampleList(
+                telemetryDao.pointsForSessionAndPid(sessionId, "11"),
+                THROTTLE_G_MAX_POINTS,
+            )
+            val throttleGPoints = throttlePoints.mapNotNull { t ->
+                nearestGLong(imuPoints, imuTimestamps, t.timestamp)
+                    ?.let { g -> t.value to g }
+            }
+
             val laps = lapDao.lapsForSession(sessionId)
             val lapStats = laps.map { lap ->
                 val from = lap.completedAt - lap.timeMs
@@ -139,6 +150,7 @@ class SessionDetailViewModel @Inject constructor(
                     frictionPoints = frictionPoints,
                     brakingMask = brakingMask,
                     lapStats = lapStats,
+                    throttleGPoints = throttleGPoints,
                 )
             )
         } catch (e: CancellationException) {
@@ -213,10 +225,27 @@ class SessionDetailViewModel @Inject constructor(
         return minG
     }
 
+    /** Longitudinal G of the IMU sample closest to [targetMs], or null if too far. */
+    private fun nearestGLong(
+        imu: List<com.revscope.core.data.db.entities.ImuPointEntity>,
+        timestamps: List<Long>,
+        targetMs: Long,
+    ): Float? {
+        if (imu.isEmpty()) return null
+        val index = timestamps.binarySearch(targetMs).let { if (it < 0) -it - 1 else it }
+        val candidates = listOfNotNull(imu.getOrNull(index - 1), imu.getOrNull(index))
+        return candidates
+            .minByOrNull { kotlin.math.abs(it.timestamp - targetMs) }
+            ?.takeIf { kotlin.math.abs(it.timestamp - targetMs) <= NEAREST_IMU_WINDOW_MS }
+            ?.gLong
+    }
+
     private companion object {
         const val TRACK_MAX_POINTS = 600
         const val FRICTION_MAX_POINTS = 1_500
+        const val THROTTLE_G_MAX_POINTS = 800
         const val BRAKING_G_THRESHOLD = -0.25f
         const val BRAKING_WINDOW_MS = 600L
+        const val NEAREST_IMU_WINDOW_MS = 300L
     }
 }
