@@ -28,6 +28,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.service.LiveRouteHolder
+import kotlinx.coroutines.flow.StateFlow
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -45,7 +46,6 @@ private val AttributionColor = Color(0xFF6B7089)
 fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val route by viewModel.route.collectAsState()
     val cameras by viewModel.cameras.collectAsState()
-    val speed by viewModel.speedKmh.collectAsState()
     val context = LocalContext.current
 
     // Evita recentrar el mapa (y pelear con el usuario si lo está paneando) en cada
@@ -53,6 +53,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     // de puntos de la ruta, y usa la ubicación inicial una única vez sin viaje activo.
     var lastCenteredRouteSize by remember { mutableStateOf(-1) }
     var hasCenteredInitial by remember { mutableStateOf(false) }
+
+    // Evita limpiar y reconstruir los overlays (hasta 18.000 puntos de ruta) en cada
+    // recomposición; solo reconstruye cuando cambia la cantidad de puntos o de cámaras.
+    var lastOverlayRouteSize by remember { mutableStateOf(-1) }
+    var lastOverlayCameraCount by remember { mutableStateOf(-1) }
 
     Box(Modifier.fillMaxSize()) {
         AndroidView(
@@ -69,23 +74,15 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 }
             },
             update = { map ->
-                map.overlays.clear()
-                cameras.forEach { cam ->
-                    map.overlays.add(speedCameraAlertCircle(map, cam))
-                    map.overlays.add(speedCameraMarker(map, cam))
+                val overlaysStale = route.size != lastOverlayRouteSize ||
+                    cameras.size != lastOverlayCameraCount
+                if (overlaysStale) {
+                    rebuildMapOverlays(map, route, cameras)
+                    lastOverlayRouteSize = route.size
+                    lastOverlayCameraCount = cameras.size
                 }
                 if (route.isNotEmpty()) {
                     val last = route.last()
-                    map.overlays.add(Polyline(map).apply {
-                        setPoints(route.map { GeoPoint(it.lat, it.lon) })
-                        outlinePaint.color = 0xFFE8FF00.toInt()
-                        outlinePaint.strokeWidth = 8f
-                    })
-                    map.overlays.add(Marker(map).apply {
-                        position = GeoPoint(last.lat, last.lon)
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                        title = "Tú"
-                    })
                     if (route.size != lastCenteredRouteSize) {
                         lastCenteredRouteSize = route.size
                         map.controller.setCenter(GeoPoint(last.lat, last.lon))
@@ -99,6 +96,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 }
                 map.invalidate()
             },
+            onRelease = { it.onDetach() },
         )
 
         Text(
@@ -108,7 +106,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
 
-        speed?.let { CurrentSpeedBadge(it, Modifier.align(Alignment.BottomStart).padding(16.dp)) }
+        SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
 
         FloatingActionButton(
             onClick = { openExternalNavigation(context, route.lastOrNull()) },
@@ -117,6 +115,12 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps")
         }
     }
+}
+
+@Composable
+private fun SpeedOverlay(speedFlow: StateFlow<Int?>, modifier: Modifier = Modifier) {
+    val speed by speedFlow.collectAsState()
+    speed?.let { CurrentSpeedBadge(it, modifier) }
 }
 
 @Composable
@@ -129,6 +133,30 @@ private fun CurrentSpeedBadge(speedKmh: Int, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
+}
+
+private fun rebuildMapOverlays(
+    map: MapView,
+    route: List<LiveRouteHolder.RoutePoint>,
+    cameras: List<SpeedCameraEntity>,
+) {
+    map.overlays.clear()
+    cameras.forEach { cam ->
+        map.overlays.add(speedCameraAlertCircle(map, cam))
+        map.overlays.add(speedCameraMarker(map, cam))
+    }
+    if (route.isEmpty()) return
+    val last = route.last()
+    map.overlays.add(Polyline(map).apply {
+        setPoints(route.map { GeoPoint(it.lat, it.lon) })
+        outlinePaint.color = 0xFFE8FF00.toInt()
+        outlinePaint.strokeWidth = 8f
+    })
+    map.overlays.add(Marker(map).apply {
+        position = GeoPoint(last.lat, last.lon)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        title = "Tú"
+    })
 }
 
 private fun speedCameraAlertCircle(
