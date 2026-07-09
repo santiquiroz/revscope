@@ -106,6 +106,7 @@ class ObdSessionManager @Inject constructor(
     private var currentDeviceAddress: String? = null
     private val derivedEngine = DerivedMetricsEngine()
     private val engineOffDetector = EngineOffDetector()
+    private var activeScheduler: PidScheduler? = null
 
     private val launchTimer = LaunchTimerEngine()
     val launchResults = launchTimer.results
@@ -208,6 +209,10 @@ class ObdSessionManager @Inject constructor(
     }
 
     fun setGearTable(table: List<Pair<Int, Double>>) = derivedEngine.setGearTable(table)
+
+    fun setWorkshopMode(enabled: Boolean) {
+        activeScheduler?.setWorkshopMode(enabled)
+    }
 
     fun connectToDevice(deviceAddress: String) {
         reconnectJob?.cancel()
@@ -404,6 +409,7 @@ class ObdSessionManager @Inject constructor(
         voltageJob?.cancel()
         runCatching { transport?.disconnect() }
         transport = null
+        activeScheduler = null
         ObdForegroundService.stop(appContext)
         _connectionState.value = ConnectionState.Disconnected
         _readings.value = emptyMap()
@@ -440,7 +446,8 @@ class ObdSessionManager @Inject constructor(
         telemetryJob = scope.launch {
             try {
                 coroutineScope {
-                    val rawFlow = PidScheduler(bt, registry)
+                    val scheduler = PidScheduler(bt, registry).also { activeScheduler = it }
+                    val rawFlow = scheduler
                         .observeReadings()
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
 
@@ -521,6 +528,7 @@ class ObdSessionManager @Inject constructor(
         // before updateSessionEnd computes the trip aggregates.
         telemetryJob?.cancelAndJoin()
         telemetryJob = null
+        activeScheduler = null
         _currentSessionIdFlow.value?.let { id -> updateSessionEnd(id) }
         _currentSessionIdFlow.value = null
     }

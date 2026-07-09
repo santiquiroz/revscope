@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
 private const val PID_READ_TIMEOUT_MS = 2_000L
 private const val MAX_INTERVAL_MULTIPLIER = 8.0
 private const val MAX_CONSECUTIVE_LINK_FAILURES = 3
+private const val WORKSHOP_PRIORITY = 4
 
 // One CAN frame carries 7 usable payload bytes: "41" header + PID+data pairs.
 // Batches are packed to fit so the ELM never needs ISO-TP multi-frame responses.
@@ -32,6 +33,7 @@ private const val SINGLE_FRAME_PAYLOAD_BYTES = 7
  * Priority 1 → every 100 ms
  * Priority 2 → every 500 ms
  * Priority 3 → every 2 000 ms
+ * Priority 4 → every 1 000 ms, polled only while [setWorkshopMode] is enabled
  *
  * ELM327 is half-duplex — [Transport.exchange] serializes all send/receive pairs
  * at the transport level, so the three coroutine groups (and any external caller,
@@ -50,12 +52,20 @@ class PidScheduler(
     // Flips to false on the first response that doesn't parse as a batch.
     private val batchingSupported = AtomicBoolean(true)
 
+    // Priority-4 diagnostics only poll while a workshop screen is on screen
+    private val workshopMode = AtomicBoolean(false)
+
+    fun setWorkshopMode(enabled: Boolean) {
+        workshopMode.set(enabled)
+    }
+
     fun observeReadings(): Flow<ObdReading> = channelFlow {
         val producer = this
         coroutineScope {
             launch { pollGroup(1, 100L) { producer.trySend(it) } }
             launch { pollGroup(2, 500L) { producer.trySend(it) } }
             launch { pollGroup(3, 2_000L) { producer.trySend(it) } }
+            launch { pollGroup(WORKSHOP_PRIORITY, 1_000L) { producer.trySend(it) } }
         }
     }
 
@@ -65,6 +75,10 @@ class PidScheduler(
         emit: (ObdReading) -> Unit,
     ) {
         while (true) {
+            if (priority == WORKSHOP_PRIORITY && !workshopMode.get()) {
+                delay(baseIntervalMs)
+                continue
+            }
             val intervalMs = (baseIntervalMs * intervalMultiplier.get()).toLong()
             val defs = registry.definitionsForPriority(priority)
                 .filterNot { it.pid in excludedPids }
