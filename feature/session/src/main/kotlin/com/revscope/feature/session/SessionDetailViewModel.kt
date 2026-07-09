@@ -16,15 +16,19 @@ import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
+import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -41,8 +45,12 @@ class SessionDetailViewModel @Inject constructor(
     private val lapDao: LapDao,
     private val imuDao: ImuDao,
     private val hrDao: HrDao,
+    private val profileDao: VehicleProfileDao,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+    val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     data class TripReport(
         val session: SessionEntity,
@@ -170,6 +178,17 @@ class SessionDetailViewModel @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "SessionDetail: failed to load report for session $sessionId")
             _state.value = UiState.NotFound("Error cargando el reporte")
+        }
+    }
+
+    /** Reassigns this trip to a different vehicle profile and refreshes the report header. */
+    fun assignVehicle(profileId: Long) {
+        val ready = _state.value as? UiState.Ready ?: return
+        val updatedSession = ready.report.session.copy(vehicleProfileId = profileId)
+        viewModelScope.launch {
+            runCatching { sessionDao.update(updatedSession) }
+                .onSuccess { _state.value = UiState.Ready(ready.report.copy(session = updatedSession)) }
+                .onFailure { Timber.w(it, "SessionDetail: failed to assign vehicle to session $sessionId") }
         }
     }
 

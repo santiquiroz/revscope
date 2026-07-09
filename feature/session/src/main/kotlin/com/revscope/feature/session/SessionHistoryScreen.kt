@@ -9,15 +9,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -29,11 +36,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.SessionEntity
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -58,6 +67,8 @@ fun SessionHistoryScreen(
 ) {
     val compareCandidate by vm.compareCandidate.collectAsState()
     val sessions by vm.sessions.collectAsState()
+    val profiles by vm.profiles.collectAsState()
+    val filter by vm.filter.collectAsState()
 
     Column(
         modifier = Modifier
@@ -68,6 +79,14 @@ fun SessionHistoryScreen(
             title = { Text("Historial", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
         )
+
+        if (profiles.isNotEmpty()) {
+            VehicleFilterRow(
+                profiles = profiles,
+                selected = filter,
+                onSelect = vm::setFilter,
+            )
+        }
 
         if (sessions.isEmpty()) {
             Box(
@@ -169,4 +188,75 @@ private fun StatChip(label: String, value: String) {
         Text(value, color = AccentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         Text(label, color = TextMutedColor, fontSize = 10.sp)
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VehicleFilterRow(
+    profiles: List<VehicleProfileEntity>,
+    selected: Long?,
+    onSelect: (Long?) -> Unit,
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item(key = "filter_all") {
+            VehicleFilterChip(
+                label = "Todos",
+                icon = null,
+                selected = selected == null,
+                onClick = { onSelect(null) },
+            )
+        }
+        items(profiles, key = { it.id }) { profile ->
+            VehicleFilterChip(
+                label = profile.name,
+                icon = if (profile.type == "MOTORCYCLE") Icons.Default.TwoWheeler else Icons.Default.DirectionsCar,
+                selected = selected == profile.id,
+                onClick = { onSelect(profile.id) },
+            )
+        }
+        item(key = "filter_none") {
+            VehicleFilterChip(
+                label = "Sin vehículo",
+                icon = null,
+                selected = selected == SessionViewModel.NO_VEHICLE_FILTER,
+                onClick = { onSelect(SessionViewModel.NO_VEHICLE_FILTER) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VehicleFilterChip(
+    label: String,
+    icon: ImageVector?,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, fontSize = 12.sp) },
+        leadingIcon = icon?.let {
+            { Icon(it, contentDescription = null, modifier = Modifier.size(16.dp)) }
+        },
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = SurfaceColor,
+            labelColor = TextMutedColor,
+            iconColor = TextMutedColor,
+            selectedContainerColor = AccentColor,
+            selectedLabelColor = BgColor,
+            selectedLeadingIconColor = BgColor,
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = selected,
+            borderColor = SurfaceHighColor,
+            selectedBorderColor = AccentColor,
+        ),
+    )
 }

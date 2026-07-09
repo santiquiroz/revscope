@@ -1,6 +1,7 @@
 package com.revscope.feature.session
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,26 +11,34 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.data.db.entities.VehicleProfileEntity
 import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -65,8 +75,21 @@ fun SessionDetailScreen(
     vm: SessionDetailViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
+    val profiles by vm.profiles.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var showVehicleDialog by remember { mutableStateOf(false) }
+
+    if (showVehicleDialog) {
+        VehiclePickerDialog(
+            profiles = profiles,
+            onSelect = { profile ->
+                vm.assignVehicle(profile.id)
+                showVehicleDialog = false
+            },
+            onDismiss = { showVehicleDialog = false },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -78,6 +101,9 @@ fun SessionDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showVehicleDialog = true }) {
+                        Icon(Icons.Default.DirectionsCar, contentDescription = "Asignar vehículo", tint = AccentColor)
+                    }
                     IconButton(onClick = {
                         scope.launch {
                             vm.shareCardUri()?.let { uri ->
@@ -125,6 +151,7 @@ fun SessionDetailScreen(
 
             is SessionDetailViewModel.UiState.Ready -> ReportContent(
                 report = s.report,
+                profiles = profiles,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -134,12 +161,14 @@ fun SessionDetailScreen(
 @Composable
 private fun ReportContent(
     report: SessionDetailViewModel.TripReport,
+    profiles: List<VehicleProfileEntity>,
     modifier: Modifier = Modifier,
 ) {
     val session = report.session
     val durationMs = (session.endedAt ?: System.currentTimeMillis()) - session.startedAt
     val durationMin = TimeUnit.MILLISECONDS.toMinutes(durationMs)
     val durationSec = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60
+    val assignedVehicleName = profiles.find { it.id == session.vehicleProfileId }?.name ?: "Sin vehículo"
 
     Column(
         modifier = modifier
@@ -154,6 +183,7 @@ private fun ReportContent(
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
         )
+        Text(assignedVehicleName, color = AccentColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         Text(session.adapterName, color = TextMutedColor, fontSize = 12.sp)
 
         Row(
@@ -389,4 +419,48 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
         Text(value, color = AccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Text(label, color = TextMutedColor, fontSize = 11.sp)
     }
+}
+
+@Composable
+private fun VehiclePickerDialog(
+    profiles: List<VehicleProfileEntity>,
+    onSelect: (VehicleProfileEntity) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceColor,
+        title = { Text("Asignar vehículo", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+        text = {
+            if (profiles.isEmpty()) {
+                Text("No hay vehículos guardados", color = TextMutedColor, fontSize = 13.sp)
+            } else {
+                Column {
+                    profiles.forEach { profile ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(profile) }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = if (profile.type == "MOTORCYCLE") Icons.Default.TwoWheeler else Icons.Default.DirectionsCar,
+                                contentDescription = null,
+                                tint = AccentColor,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(profile.name, color = TextPrimaryColor, fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar", color = TextMutedColor, fontSize = 13.sp)
+            }
+        },
+    )
 }
