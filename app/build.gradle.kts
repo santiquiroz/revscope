@@ -61,6 +61,7 @@ dependencies {
     implementation(project(":feature:settings"))
     implementation(project(":feature:auto"))
     implementation(project(":feature:workshop"))
+    implementation(project(":feature:map"))
 
     // Compose BOM
     implementation(platform(libs.compose.bom))
