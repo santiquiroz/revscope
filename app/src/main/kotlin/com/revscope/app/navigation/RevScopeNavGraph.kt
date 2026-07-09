@@ -50,6 +50,7 @@ import com.revscope.feature.settings.Mode22ScannerScreen
 import com.revscope.feature.settings.SettingsScreen
 import com.revscope.feature.vehicle.VehicleProfileScreen
 import com.revscope.feature.workshop.HealthCheckScreen
+import com.revscope.feature.workshop.LiveMixtureScreen
 import com.revscope.feature.workshop.WorkshopScreen
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -160,6 +161,7 @@ fun RevScopeNavGraph(
                     connectionVm = connectionVm,
                     onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
                     onOpenDtc = { navController.navigate(Screen.Dtc.route) },
+                    onOpenLiveMixture = { navController.navigate(Screen.LiveMixture.route) },
                     onOpenSensors = { navController.navigate(Screen.Sensors.route) },
                     onOpenScanner = { navController.navigate(Screen.Mode22Scanner.route) },
                     onOpenGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
@@ -168,6 +170,9 @@ fun RevScopeNavGraph(
             }
             composable(Screen.HealthCheck.route) {
                 HealthCheckScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(Screen.LiveMixture.route) {
+                LiveMixtureScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(Screen.LiveMap.route) { LiveMapScreen() }
             composable(Screen.AdapterScan.route) {

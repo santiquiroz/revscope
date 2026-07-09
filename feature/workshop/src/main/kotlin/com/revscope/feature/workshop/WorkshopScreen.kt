@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timeline
@@ -54,6 +55,7 @@ fun WorkshopScreen(
     connectionVm: ConnectionViewModel,
     onOpenHealthCheck: () -> Unit,
     onOpenDtc: () -> Unit,
+    onOpenLiveMixture: () -> Unit,
     onOpenSensors: () -> Unit,
     onOpenScanner: () -> Unit,
     onOpenGearAnalyzer: () -> Unit,
@@ -67,6 +69,8 @@ fun WorkshopScreen(
             "Escaneo completo con diagnóstico en español — DTCs, readiness, mezcla, batería", false, onOpenHealthCheck),
         WorkshopTool(Icons.Default.BugReport, "Códigos de falla (DTC)",
             "Leer, explicar con IA y borrar códigos de error", true, onOpenDtc),
+        WorkshopTool(Icons.Default.Science, "Mezcla y combustión",
+            "Trims, O2, lambda y MAF interpretados en vivo", true, onOpenLiveMixture),
         WorkshopTool(Icons.Default.Timeline, "Gráficas de sensores",
             "Curvas en tiempo real de cualquier PID", true, onOpenSensors),
         WorkshopTool(Icons.Default.Search, "Escáner avanzado (Mode 22)",
