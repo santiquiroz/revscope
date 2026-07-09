@@ -13,8 +13,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,6 +33,8 @@ class SessionViewModel @Inject constructor(
     private val _filter = MutableStateFlow(sessionManager.activeProfile.value?.id)
     val filter: StateFlow<Long?> = _filter.asStateFlow()
 
+    private var userTouchedFilter = false
+
     private val allSessions: StateFlow<List<SessionEntity>> = sessionDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -37,7 +42,21 @@ class SessionViewModel @Inject constructor(
         filterSessions(all, selectedFilter)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    init {
+        if (_filter.value == null) {
+            viewModelScope.launch {
+                val restored = withTimeoutOrNull(2_000) {
+                    sessionManager.activeProfile.filterNotNull().first()
+                }
+                if (restored != null && !userTouchedFilter && _filter.value == null) {
+                    _filter.value = restored.id
+                }
+            }
+        }
+    }
+
     fun setFilter(profileId: Long?) {
+        userTouchedFilter = true
         _filter.value = profileId
     }
 
