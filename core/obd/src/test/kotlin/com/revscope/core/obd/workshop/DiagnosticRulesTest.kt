@@ -107,4 +107,39 @@ class DiagnosticRulesTest {
         val ds = DiagnosticRules.evaluarReadiness(status)
         assertTrue(ds.all { it.nivel == DiagnosticRules.Nivel.OK })
     }
+
+    @Test
+    fun `ltft exactamente en 25 es atencion no falla`() {
+        assertEquals(DiagnosticRules.Nivel.ATENCION, DiagnosticRules.evaluarFuelTrimLargo(25.0).nivel)
+        assertEquals(DiagnosticRules.Nivel.ATENCION, DiagnosticRules.evaluarFuelTrimLargo(-25.0).nivel)
+    }
+
+    @Test
+    fun `ltft exactamente en 10 es ok`() {
+        assertEquals(DiagnosticRules.Nivel.OK, DiagnosticRules.evaluarFuelTrimLargo(10.0).nivel)
+        assertEquals(DiagnosticRules.Nivel.OK, DiagnosticRules.evaluarFuelTrimLargo(-10.0).nivel)
+    }
+
+    @Test
+    fun `bateria baja con motor apagado`() {
+        val d = DiagnosticRules.evaluarVoltaje(11.5, motorEncendido = false)
+        assertEquals(DiagnosticRules.Nivel.ATENCION, d.nivel)
+        assertTrue(d.causaProbable.contains("Batería", ignoreCase = true) || d.titulo.contains("Batería", ignoreCase = true))
+    }
+
+    @Test
+    fun `correccion combinada dentro de rango es ok`() {
+        assertEquals(DiagnosticRules.Nivel.OK, DiagnosticRules.evaluarTrimCombinado(5.0, 5.0).nivel)
+        assertEquals(DiagnosticRules.Nivel.OK, DiagnosticRules.evaluarTrimCombinado(-7.5, -7.5).nivel)
+    }
+
+    @Test
+    fun `monitor no soportado se excluye del reporte`() {
+        val status = ReadinessParser.ReadinessStatus(
+            milOn = false, dtcCount = 0, isDiesel = false,
+            monitors = listOf(ReadinessParser.MonitorResult("Sistema EVAP", false, false)),
+        )
+        val ds = DiagnosticRules.evaluarReadiness(status)
+        assertTrue(ds.none { it.titulo.contains("EVAP") })
+    }
 }
