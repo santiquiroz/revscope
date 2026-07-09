@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -211,7 +212,8 @@ private fun ReportContent(
                 speeds = report.gpsTrackSpeeds,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp),
+                    .height(300.dp)
+                    .clip(RoundedCornerShape(12.dp)),
             )
             Text(
                 "azul = lento · amarillo = medio · rojo = rápido",

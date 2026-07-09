@@ -41,6 +41,10 @@ fun RealTrackMap(
                 MapView(context).apply {
                     setTileSource(TileSourceFactory.MAPNIK)
                     setMultiTouchControls(true)
+                    setOnTouchListener { v, _ ->
+                        v.parent?.requestDisallowInterceptTouchEvent(true)
+                        false
+                    }
                 }
             },
             update = { map ->
@@ -74,6 +78,14 @@ private fun addSpeedGradedRoute(
     val hasSpeeds = speeds.size == track.size && speeds.isNotEmpty()
     val maxSpeed = if (hasSpeeds) speeds.max().coerceAtLeast(1f) else 1f
 
+    map.overlays.add(
+        Polyline(map).apply {
+            setPoints(track.map { GeoPoint(it.first, it.second) })
+            outlinePaint.color = 0xCCFFFFFF.toInt()
+            outlinePaint.strokeWidth = 16f
+        }
+    )
+
     var index = 0
     while (index < track.size - 1) {
         val end = minOf(index + SEGMENT_SIZE, track.size - 1)
@@ -88,7 +100,7 @@ private fun addSpeedGradedRoute(
             Polyline(map).apply {
                 setPoints(segment)
                 outlinePaint.color = color
-                outlinePaint.strokeWidth = 9f
+                outlinePaint.strokeWidth = 12f
             }
         )
         index = end
