@@ -76,7 +76,6 @@ class HealthCheckViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "HealthCheck failed")
-                sessionManager.setWorkshopMode(false)
                 _state.value = UiState.Error("Falló el chequeo: ${e.message}")
             }
         }
@@ -102,31 +101,35 @@ class HealthCheckViewModel @Inject constructor(
 
     private suspend fun sampleMixtureDiagnoses(): List<DiagnosticRules.Diagnosis> {
         sessionManager.setWorkshopMode(true)
-        val o2Samples = collectO2Samples()
-        val readings = sessionManager.readings.value
-        sessionManager.setWorkshopMode(false)
+        try {
+            val o2Samples = collectO2Samples()
+            val readings = sessionManager.readings.value
 
-        return buildList {
-            readings[LONG_TRIM_B1_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
-            readings[LONG_TRIM_B2_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
-            val shortTrimB1 = readings[SHORT_TRIM_B1_PID]
-            val longTrimB1 = readings[LONG_TRIM_B1_PID]
-            if (shortTrimB1 != null && longTrimB1 != null) {
-                add(DiagnosticRules.evaluarTrimCombinado(shortTrimB1.value, longTrimB1.value))
+            return buildList {
+                readings[LONG_TRIM_B1_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
+                readings[LONG_TRIM_B2_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
+                val shortTrimB1 = readings[SHORT_TRIM_B1_PID]
+                val longTrimB1 = readings[LONG_TRIM_B1_PID]
+                if (shortTrimB1 != null && longTrimB1 != null) {
+                    add(DiagnosticRules.evaluarTrimCombinado(shortTrimB1.value, longTrimB1.value))
+                }
+                add(DiagnosticRules.evaluarO2(o2Samples))
+                readings[ObdSessionManager.VBAT_PID]?.let {
+                    val encendido = (readings[RPM_PID]?.value ?: 0.0) > ENGINE_RUNNING_RPM
+                    add(DiagnosticRules.evaluarVoltaje(it.value, encendido))
+                }
+                readings[COOLANT_TEMP_PID]?.let { add(DiagnosticRules.evaluarTemperatura(it.value)) }
             }
-            add(DiagnosticRules.evaluarO2(o2Samples))
-            readings[ObdSessionManager.VBAT_PID]?.let {
-                val encendido = (readings[RPM_PID]?.value ?: 0.0) > ENGINE_RUNNING_RPM
-                add(DiagnosticRules.evaluarVoltaje(it.value, encendido))
-            }
-            readings[COOLANT_TEMP_PID]?.let { add(DiagnosticRules.evaluarTemperatura(it.value)) }
+        } finally {
+            sessionManager.setWorkshopMode(false)
         }
     }
 
     private suspend fun collectO2Samples(): List<Double> {
         val samples = mutableListOf<Double>()
-        repeat(SAMPLE_SECONDS) {
-            delay(SAMPLE_INTERVAL_MS)
+        // 10 s window at 250 ms/sample = 40 samples, clears DiagnosticRules.O2_MIN_MUESTRAS (30)
+        repeat(O2_SAMPLE_COUNT) {
+            delay(O2_SAMPLE_INTERVAL_MS)
             sessionManager.readings.value[O2_SENSOR_B1S1_PID]?.let { samples += it.value }
         }
         return samples
@@ -191,7 +194,8 @@ class HealthCheckViewModel @Inject constructor(
 
     companion object {
         private const val SAMPLE_SECONDS = 10
-        private const val SAMPLE_INTERVAL_MS = 1_000L
+        private const val O2_SAMPLE_INTERVAL_MS = 250L
+        private const val O2_SAMPLE_COUNT = 40
         private const val ENGINE_RUNNING_RPM = 400.0
 
         private const val ACTIVE_DTC_COMMAND = "03\r"
