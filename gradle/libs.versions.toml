@@ -20,6 +20,10 @@ orgJson = "20231013"
 lifecycleViewmodel = "2.8.7"
 carApp = "1.4.0"
 securityCrypto = "1.1.0-alpha06"
+wearCompose = "1.4.0"
+healthServices = "1.0.0"
+playServicesWearable = "18.2.0"
+guava = "33.0.0-android"
 
 [libraries]
 # Compose BOM
@@ -50,6 +54,14 @@ datastore-preferences = { group = "androidx.datastore", name = "datastore-prefer
 
 # Encrypted storage (API keys)
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+
+# Wear OS
+wear-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "wearCompose" }
+wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation", version.ref = "wearCompose" }
+health-services = { group = "androidx.health", name = "health-services-client", version.ref = "healthServices" }
+play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
+guava-android = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 # Coroutines
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.revscope.core.data.db.AppDatabase
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -58,4 +59,7 @@ object DataModule {
 
     @Provides
     fun provideImuDao(db: AppDatabase): ImuDao = db.imuDao()
+
+    @Provides
+    fun provideHrDao(db: AppDatabase): HrDao = db.hrDao()
 }

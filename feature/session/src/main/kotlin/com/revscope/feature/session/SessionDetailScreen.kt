@@ -237,6 +237,15 @@ private fun ReportContent(
                 StatCard("Lean máx", report.maxLeanDeg?.let { "%.0f°".format(it) } ?: "—", Modifier.weight(1f))
             }
         }
+        if (report.avgBpm != null || report.maxBpm != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                StatCard("♥ prom", report.avgBpm?.toString() ?: "—", Modifier.weight(1f))
+                StatCard("♥ máx", report.maxBpm?.toString() ?: "—", Modifier.weight(1f))
+            }
+        }
 
         if (report.laps.isNotEmpty()) {
             val bestMs = report.laps.minOf { it.timeMs }
@@ -256,11 +265,12 @@ private fun ReportContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Vuelta ${lap.lapNumber}", color = TextPrimaryColor, fontSize = 13.sp)
-                        if (stat?.maxAbsG != null || stat?.maxAbsLean != null) {
+                        if (stat?.maxAbsG != null || stat?.maxAbsLean != null || stat?.maxBpm != null) {
                             Text(
                                 buildList {
                                     stat.maxAbsG?.let { add("%.2fG".format(it)) }
                                     stat.maxAbsLean?.let { add("%.0f° lean".format(it)) }
+                                    stat.maxBpm?.let { add("♥%.0f".format(it)) }
                                 }.joinToString(" · "),
                                 color = TextMutedColor,
                                 fontSize = 11.sp,
@@ -306,6 +316,9 @@ private fun ReportContent(
         }
         if (report.speedSeries.size >= 2) {
             ChartSection("Velocidad durante el viaje (km/h)", report.speedSeries)
+        }
+        if (report.hrSeries.size >= 2) {
+            ChartSection("♥ Pulso del piloto (bpm)", report.hrSeries)
         }
         Spacer(Modifier.height(16.dp))
     }

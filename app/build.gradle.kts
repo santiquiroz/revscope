@@ -79,6 +79,9 @@ dependencies {
     // DataStore — settingsDataStore in IntelligenceModule
     implementation(libs.datastore.preferences)
 
+    // Galaxy Watch heart-rate stream (Data Layer)
+    implementation(libs.play.services.wearable)
+
     // Timber
     implementation(libs.timber)
 

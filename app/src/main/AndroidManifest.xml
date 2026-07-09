@@ -58,6 +58,16 @@
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 
+        <!-- Galaxy Watch: receives heart-rate stream from the Wear companion app -->
+        <service
+            android:name=".wear.HrListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/revscope" />
+            </intent-filter>
+        </service>
+
         <!-- CSV trip export sharing -->
         <provider
             android:name="androidx.core.content.FileProvider"

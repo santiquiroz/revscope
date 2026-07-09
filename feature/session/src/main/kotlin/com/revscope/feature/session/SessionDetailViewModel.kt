@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -39,6 +40,7 @@ class SessionDetailViewModel @Inject constructor(
     private val gpsDao: GpsDao,
     private val lapDao: LapDao,
     private val imuDao: ImuDao,
+    private val hrDao: HrDao,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -70,9 +72,13 @@ class SessionDetailViewModel @Inject constructor(
         val lapStats: List<LapStat>,
         /** (throttle %, longitudinal G) pairs matched by timestamp — tuning view */
         val throttleGPoints: List<Pair<Float, Float>>,
+        /** Rider heart rate from the paired watch — empty if none streamed */
+        val hrSeries: List<Float>,
+        val avgBpm: Int?,
+        val maxBpm: Int?,
     )
 
-    data class LapStat(val maxAbsG: Float?, val maxAbsLean: Float?)
+    data class LapStat(val maxAbsG: Float?, val maxAbsLean: Float?, val maxBpm: Float?)
 
     sealed class UiState {
         object Loading : UiState()
@@ -125,8 +131,11 @@ class SessionDetailViewModel @Inject constructor(
                 LapStat(
                     maxAbsG = imuDao.maxAbsLateralGBetween(sessionId, from, lap.completedAt),
                     maxAbsLean = imuDao.maxAbsLeanBetween(sessionId, from, lap.completedAt),
+                    maxBpm = hrDao.maxBpmBetween(sessionId, from, lap.completedAt),
                 )
             }
+
+            val hrPoints = hrDao.pointsForSession(sessionId)
 
             _state.value = UiState.Ready(
                 TripReport(
@@ -151,6 +160,9 @@ class SessionDetailViewModel @Inject constructor(
                     brakingMask = brakingMask,
                     lapStats = lapStats,
                     throttleGPoints = throttleGPoints,
+                    hrSeries = downsampleList(hrPoints.map { it.bpm }, CHART_MAX_POINTS),
+                    avgBpm = hrDao.avgBpm(sessionId)?.roundToInt(),
+                    maxBpm = hrDao.maxBpm(sessionId)?.roundToInt(),
                 )
             )
         } catch (e: CancellationException) {
@@ -188,6 +200,9 @@ class SessionDetailViewModel @Inject constructor(
                 }
                 imuDao.pointsForSession(sessionId).forEach { p ->
                     out.appendLine("imu,${p.timestamp},${p.gLat},${p.gLong},${p.leanDeg}")
+                }
+                hrDao.pointsForSession(sessionId).forEach { p ->
+                    out.appendLine("hr,${p.timestamp},${p.bpm},,")
                 }
             }
             FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
