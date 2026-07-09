@@ -56,10 +56,7 @@ private val TextMutedColor = Color(0xFF6B7089)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateToScanner: () -> Unit = {},
-    onNavigateToGearAnalyzer: () -> Unit = {},
     onNavigateToVehicleProfiles: () -> Unit = {},
-    onNavigateToTrackMode: () -> Unit = {},
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val apiKey by vm.apiKey.collectAsState()
@@ -99,9 +96,6 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SectionTitle("Herramientas")
-            NavRow("🏁 Modo Pista (lap timer GPS)", onNavigateToTrackMode)
-            NavRow("Escáner Modo 22 (descubrir PIDs del fabricante)", onNavigateToScanner)
-            NavRow("Analizador de marchas", onNavigateToGearAnalyzer)
             NavRow("Perfiles de vehículo", onNavigateToVehicleProfiles)
 
             Spacer(Modifier.height(8.dp))

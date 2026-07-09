@@ -1,11 +1,17 @@
 package com.revscope.app.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -14,11 +20,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -54,10 +64,11 @@ private data class BottomNavItem(
 )
 
 private val bottomNavItems = listOf(
-    BottomNavItem(Screen.Dashboard, "Dashboard", Icons.Default.Speed),
-    BottomNavItem(Screen.Sensors, "Sensores", Icons.Default.Timeline),
-    BottomNavItem(Screen.Dtc, "DTC", Icons.Default.BugReport),
-    BottomNavItem(Screen.Sessions, "Historial", Icons.Default.History),
+    BottomNavItem(Screen.Dashboard, "Conducir", Icons.Default.Speed),
+    BottomNavItem(Screen.LiveMap, "Mapa", Icons.Default.Map),
+    BottomNavItem(Screen.Workshop, "Taller", Icons.Default.Build),
+    BottomNavItem(Screen.Sessions, "Viajes", Icons.Default.History),
+    BottomNavItem(Screen.Settings, "Ajustes", Icons.Default.Settings),
 )
 
 private val bottomNavRoutes = bottomNavItems.map { it.screen.route }.toSet()
@@ -65,6 +76,7 @@ private val bottomNavRoutes = bottomNavItems.map { it.screen.route }.toSet()
 @Composable
 fun RevScopeNavGraph(
     navController: NavHostController = rememberNavController(),
+    initialSessionId: Long? = null,
 ) {
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
@@ -75,8 +87,27 @@ fun RevScopeNavGraph(
     val connectionVm: ConnectionViewModel =
         hiltViewModel(LocalContext.current as ComponentActivity)
 
+    LaunchedEffect(initialSessionId) {
+        initialSessionId?.let { navController.navigate(Screen.SessionDetail.withId(it)) }
+    }
+
     Scaffold(
         containerColor = BgColor,
+        topBar = {
+            if (currentRoute in bottomNavRoutes) {
+                val connState by connectionVm.connectionState.collectAsState()
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    ConnectionChip(state = connState) {
+                        navController.navigate(Screen.AdapterScan.route)
+                    }
+                }
+            }
+        },
         bottomBar = {
             if (currentRoute in bottomNavRoutes) {
                 NavigationBar(containerColor = SurfaceColor) {
@@ -116,8 +147,19 @@ fun RevScopeNavGraph(
                 DashboardScreen(
                     onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
                     connectionVm = connectionVm,
                 )
+            }
+            composable(Screen.Workshop.route) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("En construcción")
+                }
+            }
+            composable(Screen.LiveMap.route) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("En construcción")
+                }
             }
             composable(Screen.AdapterScan.route) {
                 AdapterScanScreen(
@@ -168,10 +210,7 @@ fun RevScopeNavGraph(
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(
-                    onNavigateToScanner = { navController.navigate(Screen.Mode22Scanner.route) },
-                    onNavigateToGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
                     onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
-                    onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
                 )
             }
             composable(Screen.TrackMode.route) {

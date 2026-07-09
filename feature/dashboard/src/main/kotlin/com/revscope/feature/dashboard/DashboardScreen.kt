@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -55,6 +56,7 @@ import kotlinx.coroutines.flow.channelFlow
 fun DashboardScreen(
     onNavigateToAdapterScan: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToTrackMode: () -> Unit = {},
     connectionVm: ConnectionViewModel = hiltViewModel(),
     dashboardVm: DashboardViewModel = hiltViewModel(),
 ) {
@@ -167,6 +169,13 @@ fun DashboardScreen(
                         )
                     }
                     ConnectionStatusBadge(connectionState)
+                    IconButton(onClick = onNavigateToTrackMode) {
+                        Icon(
+                            imageVector = Icons.Default.Flag,
+                            contentDescription = "Modo Pista",
+                            tint = RevScopeColors.TextMuted,
+                        )
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
