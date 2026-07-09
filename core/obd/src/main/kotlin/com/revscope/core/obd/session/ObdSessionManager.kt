@@ -198,7 +198,12 @@ class ObdSessionManager @Inject constructor(
         resolved: VehicleProfileEntity?,
     ) {
         if (resolved == null || resolved.adapterAddress == original?.adapterAddress) return
-        runCatching { profileDao.update(resolved) }
+        runCatching {
+            resolved.adapterAddress?.let {
+                profileDao.clearAdapterLinkExcept(it, resolved.id)
+            }
+            profileDao.update(resolved)
+        }
             .onFailure { Timber.w(it, "ObdSessionManager: failed to persist profile adapter link") }
     }
 
