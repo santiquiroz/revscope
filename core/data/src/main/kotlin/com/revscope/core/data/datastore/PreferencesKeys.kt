@@ -76,6 +76,33 @@ object PreferencesKeys {
      */
     val CUSTOM_ALERTS_JSON = stringPreferencesKey("custom_alerts_json")
 
+    // ── Alertas de voz por categoría (gates only the spoken/TTS output; tone, ─
+    // vibration and the visual banner keep firing per ALERTS_ENABLED) ────────
+
+    /** Spoken coolant-temperature alert (default true) */
+    val VOICE_TEMPERATURE = booleanPreferencesKey("voice_temperature")
+
+    /** Spoken low-voltage/battery alert (default true) */
+    val VOICE_VOLTAGE = booleanPreferencesKey("voice_voltage")
+
+    /** Spoken speed-camera proximity warning (default true) */
+    val VOICE_SPEED_CAMERAS = booleanPreferencesKey("voice_speed_cameras")
+
+    /** Spoken AnomalyDetector alert (default false — noisy, field feedback) */
+    val VOICE_ANOMALIES = booleanPreferencesKey("voice_anomalies")
+
+    /** Spoken check-engine-light (MIL) warning (default false) */
+    val VOICE_MIL = booleanPreferencesKey("voice_mil")
+
+    /** Spoken redline/shift-point warning (default false) */
+    val VOICE_REDLINE = booleanPreferencesKey("voice_redline")
+
+    /** Spoken user-defined per-PID threshold alert (default true — opt-in by nature) */
+    val VOICE_CUSTOM_THRESHOLDS = booleanPreferencesKey("voice_custom_thresholds")
+
+    /** Spoken 0-100 launch and lap-time announcements (default true) */
+    val VOICE_SPORT = booleanPreferencesKey("voice_sport")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */

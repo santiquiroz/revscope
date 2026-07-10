@@ -70,6 +70,16 @@ class AlertsEngine @Inject constructor(
     @Volatile private var customRules: List<CustomAlertRules.Rule> = emptyList()
     @Volatile private var milAnnouncedThisSession = false
 
+    // ── Voice-alert categories — gate only the spoken output, not tone/vibration/banner ──
+    @Volatile private var voiceTemperature = true
+    @Volatile private var voiceVoltage = true
+    @Volatile private var voiceSpeedCameras = true
+    @Volatile private var voiceAnomalies = false
+    @Volatile private var voiceMil = false
+    @Volatile private var voiceRedline = false
+    @Volatile private var voiceCustomThresholds = true
+    @Volatile private var voiceSport = true
+
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
@@ -98,10 +108,20 @@ class AlertsEngine @Inject constructor(
             redlineRpm = prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: DEFAULT_REDLINE_RPM
             ttsEnabled = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
             customRules = CustomAlertRules.parse(prefs[PreferencesKeys.CUSTOM_ALERTS_JSON].orEmpty())
+            voiceTemperature = prefs[PreferencesKeys.VOICE_TEMPERATURE] ?: true
+            voiceVoltage = prefs[PreferencesKeys.VOICE_VOLTAGE] ?: true
+            voiceSpeedCameras = prefs[PreferencesKeys.VOICE_SPEED_CAMERAS] ?: true
+            voiceAnomalies = prefs[PreferencesKeys.VOICE_ANOMALIES] ?: false
+            voiceMil = prefs[PreferencesKeys.VOICE_MIL] ?: false
+            voiceRedline = prefs[PreferencesKeys.VOICE_REDLINE] ?: false
+            voiceCustomThresholds = prefs[PreferencesKeys.VOICE_CUSTOM_THRESHOLDS] ?: true
+            voiceSport = prefs[PreferencesKeys.VOICE_SPORT] ?: true
             if (ttsEnabled) tts // touch the lazy so the engine warms up early
             Timber.i(
                 "AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm " +
-                    "customRules=${customRules.size}"
+                    "customRules=${customRules.size} voice[temp=$voiceTemperature volt=$voiceVoltage " +
+                    "cam=$voiceSpeedCameras anom=$voiceAnomalies mil=$voiceMil redline=$voiceRedline " +
+                    "custom=$voiceCustomThresholds sport=$voiceSport]"
             )
         }.onFailure { Timber.w(it, "AlertsEngine: failed to load thresholds") }
     }
@@ -118,6 +138,7 @@ class AlertsEngine @Inject constructor(
                     toneDurationMs = 800,
                     vibrationMs = longArrayOf(0, 400, 150, 400),
                     cooldownMs = ALERT_COOLDOWN_MS,
+                    voiceEnabled = voiceTemperature,
                 )
             }
             "0C" -> if (reading.value >= currentRedlineRpm) {
@@ -129,6 +150,7 @@ class AlertsEngine @Inject constructor(
                     toneDurationMs = 250,
                     vibrationMs = longArrayOf(0, 150),
                     cooldownMs = REDLINE_COOLDOWN_MS,
+                    voiceEnabled = voiceRedline,
                 )
             }
             "VBAT" -> if (reading.value > 0 && reading.value < voltageMin) {
@@ -140,6 +162,7 @@ class AlertsEngine @Inject constructor(
                     toneDurationMs = 600,
                     vibrationMs = longArrayOf(0, 300, 200, 300),
                     cooldownMs = ALERT_COOLDOWN_MS,
+                    voiceEnabled = voiceVoltage,
                 )
             }
         }
@@ -159,7 +182,7 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(AlertType.CUSTOM, message, reading.value))
         playTone(ToneGenerator.TONE_SUP_ERROR, 500)
         vibrate(longArrayOf(0, 250, 150, 250))
-        speak(message)
+        if (voiceCustomThresholds) speak(message)
     }
 
     private fun fire(
@@ -170,6 +193,7 @@ class AlertsEngine @Inject constructor(
         toneDurationMs: Int,
         vibrationMs: LongArray,
         cooldownMs: Long,
+        voiceEnabled: Boolean,
     ) {
         val now = System.currentTimeMillis()
         synchronized(lastFired) {
@@ -180,7 +204,7 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(type, message, value))
         playTone(tonePattern, toneDurationMs)
         vibrate(vibrationMs)
-        speak(message)
+        if (voiceEnabled) speak(message)
     }
 
     /** Spoken speed-camera proximity warning. Per-camera cooldown lives in the alerter. */
@@ -195,7 +219,7 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(AlertType.SPEED_CAMERA, message, distanceM.toDouble()))
         playTone(ToneGenerator.TONE_PROP_ACK, 300)
         vibrate(longArrayOf(0, 200, 100, 200))
-        speak(message)
+        if (voiceSpeedCameras) speak(message)
     }
 
     /** Spoken statistical-anomaly alert from AnomalyDetector — cooldown per stable alert [key]. */
@@ -210,7 +234,7 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(AlertType.ANOMALY, mensaje, 0.0))
         playTone(ToneGenerator.TONE_PROP_BEEP2, 300)
         vibrate(longArrayOf(0, 200))
-        speak(mensaje)
+        if (voiceAnomalies) speak(mensaje)
     }
 
     /** Spoken check-engine-light warning — fires once per session, until [resetSessionFlags]. */
@@ -222,7 +246,7 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(AlertType.MIL_ON, message, 1.0))
         playTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 800)
         vibrate(longArrayOf(0, 400, 150, 400))
-        speak(message)
+        if (voiceMil) speak(message)
     }
 
     /** Resets per-session flags (e.g. MIL-on). Call where a new telemetry session starts. */
@@ -232,6 +256,7 @@ class AlertsEngine @Inject constructor(
 
     /** Spoken lap time — "Vuelta 3: 1 minuto 42.5" over the helmet intercom. */
     fun announceLap(lapNumber: Int, timeMs: Long) {
+        if (!voiceSport) return
         val minutes = timeMs / 60_000
         val seconds = (timeMs % 60_000) / 1000.0
         val phrase = if (minutes > 0) {
@@ -245,6 +270,7 @@ class AlertsEngine @Inject constructor(
 
     /** Spoken 0-100 result — reaches the helmet intercom over the media stream. */
     fun announceLaunch(to60Ms: Long?, to100Ms: Long?) {
+        if (!voiceSport) return
         val phrase = when {
             to100Ms != null -> "Cero a cien en %.1f segundos".format(Locale("es"), to100Ms / 1000.0)
             to60Ms != null -> "Cero a sesenta en %.1f segundos".format(Locale("es"), to60Ms / 1000.0)

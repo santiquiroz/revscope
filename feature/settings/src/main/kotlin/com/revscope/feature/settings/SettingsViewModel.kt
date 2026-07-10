@@ -84,6 +84,30 @@ class SettingsViewModel @Inject constructor(
     private val _askVehicleOnStart = MutableStateFlow(true)
     val askVehicleOnStart: StateFlow<Boolean> = _askVehicleOnStart.asStateFlow()
 
+    private val _voiceTemperature = MutableStateFlow(true)
+    val voiceTemperature: StateFlow<Boolean> = _voiceTemperature.asStateFlow()
+
+    private val _voiceVoltage = MutableStateFlow(true)
+    val voiceVoltage: StateFlow<Boolean> = _voiceVoltage.asStateFlow()
+
+    private val _voiceSpeedCameras = MutableStateFlow(true)
+    val voiceSpeedCameras: StateFlow<Boolean> = _voiceSpeedCameras.asStateFlow()
+
+    private val _voiceAnomalies = MutableStateFlow(false)
+    val voiceAnomalies: StateFlow<Boolean> = _voiceAnomalies.asStateFlow()
+
+    private val _voiceMil = MutableStateFlow(false)
+    val voiceMil: StateFlow<Boolean> = _voiceMil.asStateFlow()
+
+    private val _voiceRedline = MutableStateFlow(false)
+    val voiceRedline: StateFlow<Boolean> = _voiceRedline.asStateFlow()
+
+    private val _voiceCustomThresholds = MutableStateFlow(true)
+    val voiceCustomThresholds: StateFlow<Boolean> = _voiceCustomThresholds.asStateFlow()
+
+    private val _voiceSport = MutableStateFlow(true)
+    val voiceSport: StateFlow<Boolean> = _voiceSport.asStateFlow()
+
     val activeVehicleProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
 
     init {
@@ -101,6 +125,14 @@ class SettingsViewModel @Inject constructor(
                 _askVehicleOnStart.value = prefs[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true
                 _fuelPriceCop.value =
                     (prefs[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON] ?: 16_000.0).toLong().toString()
+                _voiceTemperature.value = prefs[PreferencesKeys.VOICE_TEMPERATURE] ?: true
+                _voiceVoltage.value = prefs[PreferencesKeys.VOICE_VOLTAGE] ?: true
+                _voiceSpeedCameras.value = prefs[PreferencesKeys.VOICE_SPEED_CAMERAS] ?: true
+                _voiceAnomalies.value = prefs[PreferencesKeys.VOICE_ANOMALIES] ?: false
+                _voiceMil.value = prefs[PreferencesKeys.VOICE_MIL] ?: false
+                _voiceRedline.value = prefs[PreferencesKeys.VOICE_REDLINE] ?: false
+                _voiceCustomThresholds.value = prefs[PreferencesKeys.VOICE_CUSTOM_THRESHOLDS] ?: true
+                _voiceSport.value = prefs[PreferencesKeys.VOICE_SPORT] ?: true
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
         }
     }
@@ -110,6 +142,44 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { settings.edit { it[PreferencesKeys.ASK_VEHICLE_ON_START] = value } }
                 .onFailure { Timber.w(it, "SettingsViewModel: failed to persist ask-on-start") }
+        }
+    }
+
+    fun updateVoiceTemperature(value: Boolean) =
+        updateVoiceCategory(_voiceTemperature, PreferencesKeys.VOICE_TEMPERATURE, value)
+
+    fun updateVoiceVoltage(value: Boolean) =
+        updateVoiceCategory(_voiceVoltage, PreferencesKeys.VOICE_VOLTAGE, value)
+
+    fun updateVoiceSpeedCameras(value: Boolean) =
+        updateVoiceCategory(_voiceSpeedCameras, PreferencesKeys.VOICE_SPEED_CAMERAS, value)
+
+    fun updateVoiceAnomalies(value: Boolean) =
+        updateVoiceCategory(_voiceAnomalies, PreferencesKeys.VOICE_ANOMALIES, value)
+
+    fun updateVoiceMil(value: Boolean) =
+        updateVoiceCategory(_voiceMil, PreferencesKeys.VOICE_MIL, value)
+
+    fun updateVoiceRedline(value: Boolean) =
+        updateVoiceCategory(_voiceRedline, PreferencesKeys.VOICE_REDLINE, value)
+
+    fun updateVoiceCustomThresholds(value: Boolean) =
+        updateVoiceCategory(_voiceCustomThresholds, PreferencesKeys.VOICE_CUSTOM_THRESHOLDS, value)
+
+    fun updateVoiceSport(value: Boolean) =
+        updateVoiceCategory(_voiceSport, PreferencesKeys.VOICE_SPORT, value)
+
+    /** Persists a voice-alert category toggle immediately and reloads AlertsEngine's cache. */
+    private fun updateVoiceCategory(
+        state: MutableStateFlow<Boolean>,
+        key: Preferences.Key<Boolean>,
+        value: Boolean,
+    ) {
+        state.value = value
+        viewModelScope.launch {
+            runCatching { settings.edit { it[key] = value } }
+                .onSuccess { alertsEngine.reloadThresholds() }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist voice category ${key.name}") }
         }
     }
 

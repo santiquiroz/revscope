@@ -80,6 +80,14 @@ fun SettingsScreen(
     val voltageMin by vm.voltageMin.collectAsState()
     val redlineRpm by vm.redlineRpm.collectAsState()
     val fuelPriceCop by vm.fuelPriceCop.collectAsState()
+    val voiceTemperature by vm.voiceTemperature.collectAsState()
+    val voiceVoltage by vm.voiceVoltage.collectAsState()
+    val voiceSpeedCameras by vm.voiceSpeedCameras.collectAsState()
+    val voiceAnomalies by vm.voiceAnomalies.collectAsState()
+    val voiceMil by vm.voiceMil.collectAsState()
+    val voiceRedline by vm.voiceRedline.collectAsState()
+    val voiceCustomThresholds by vm.voiceCustomThresholds.collectAsState()
+    val voiceSport by vm.voiceSport.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -198,6 +206,23 @@ fun SettingsScreen(
                     ),
                 )
             }
+
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Alertas de voz por categoría",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            VoiceCategoryRow("Temperatura", voiceTemperature, vm::updateVoiceTemperature)
+            VoiceCategoryRow("Batería y carga", voiceVoltage, vm::updateVoiceVoltage)
+            VoiceCategoryRow("Radares de velocidad", voiceSpeedCameras, vm::updateVoiceSpeedCameras)
+            VoiceCategoryRow("Anomalías inteligentes", voiceAnomalies, vm::updateVoiceAnomalies)
+            VoiceCategoryRow("Testigo del motor (MIL)", voiceMil, vm::updateVoiceMil)
+            VoiceCategoryRow("Zona roja", voiceRedline, vm::updateVoiceRedline)
+            VoiceCategoryRow("Umbrales personalizados", voiceCustomThresholds, vm::updateVoiceCustomThresholds)
+            VoiceCategoryRow("Tiempos 0-100 y vueltas", voiceSport, vm::updateVoiceSport)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -463,6 +488,24 @@ private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> U
             TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMutedColor) }
         },
     )
+}
+
+@Composable
+private fun VoiceCategoryRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(label, color = TextPrimaryColor, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = BgColor,
+                checkedTrackColor = AccentColor,
+            ),
+        )
+    }
 }
 
 @Composable
