@@ -2,7 +2,9 @@ package com.revscope.core.obd.cameras
 
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.telemetry.TripStatsCalculator
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
+import timber.log.Timber
 
 /** Only sites the registry marks as actually operating are worth alerting on. */
 private const val OPERATIONAL_STATUS = "Operando"
@@ -20,10 +22,25 @@ object AnsvCameraParser {
             for (i in 0 until results.length()) {
                 val ubicaciones = results.getJSONObject(i).optJSONArray("ubicaciones") ?: continue
                 for (j in 0 until ubicaciones.length()) {
-                    parseUbicacion(ubicaciones.getJSONObject(j), centerLat, centerLon, radiusM)?.let(::add)
+                    parseUbicacionSafely(ubicaciones.getJSONObject(j), centerLat, centerLon, radiusM)?.let(::add)
                 }
             }
         }
+    }
+
+    /** Isolates one malformed record so it can't abort parsing of the rest of the feed. */
+    private fun parseUbicacionSafely(
+        ubicacion: JSONObject,
+        centerLat: Double,
+        centerLon: Double,
+        radiusM: Double,
+    ): SpeedCameraEntity? = try {
+        parseUbicacion(ubicacion, centerLat, centerLon, radiusM)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.w(e, "AnsvCameraParser: skipping malformed record")
+        null
     }
 
     private fun parseUbicacion(

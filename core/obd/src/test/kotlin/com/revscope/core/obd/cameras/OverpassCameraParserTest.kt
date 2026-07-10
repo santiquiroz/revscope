@@ -80,6 +80,22 @@ class OverpassCameraParserTest {
     }
 
     @Test
+    fun `skips an element missing coordinates without aborting the rest of the batch`() {
+        val json = """
+            {"elements":[
+                {"type":"node","id":1,"lat":6.25,"lon":-75.58,"tags":{"maxspeed":"50"}},
+                {"type":"way","id":2,"tags":{}},
+                {"type":"node","id":3,"lat":6.30,"lon":-75.60,"tags":{}}
+            ]}
+        """.trimIndent()
+
+        val cameras = OverpassCameraParser.parse(json)
+
+        assertEquals(2, cameras.size)
+        assertEquals(setOf(4L, 12L), cameras.map { it.osmId }.toSet())
+    }
+
+    @Test
     fun `non numeric maxspeed tag is ignored`() {
         val json = """
             {"elements":[

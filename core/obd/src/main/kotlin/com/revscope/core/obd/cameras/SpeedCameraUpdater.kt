@@ -23,7 +23,16 @@ class SpeedCameraUpdater @Inject constructor(
     private val alerter: SpeedCameraAlerter,
 ) {
 
-    /** Returns the number of cameras stored, or throws if every source fails. */
+    /**
+     * Returns the number of cameras stored, or throws if every source fails.
+     *
+     * The local table is only replaced when the merged result is trustworthy:
+     * either both sources succeeded (a true empty area is a legitimate result),
+     * or at least one source succeeded and produced cameras. A single source
+     * failing while the other returns zero in-radius results does NOT wipe the
+     * previously-downloaded table — the stale data stays until a download can
+     * confirm the area is actually empty.
+     */
     suspend fun downloadAround(latitude: Double, longitude: Double): Int =
         withContext(Dispatchers.IO) {
             val osmCameras = fetchSource("OSM") {
@@ -35,6 +44,16 @@ class SpeedCameraUpdater @Inject constructor(
             if (osmCameras == null && ansvCameras == null) error("No se pudo descargar de ninguna fuente")
 
             val cameras = CameraDedupe.merge(osmCameras.orEmpty() + ansvCameras.orEmpty())
+            val bothSourcesSucceeded = osmCameras != null && ansvCameras != null
+            if (!bothSourcesSucceeded && cameras.isEmpty()) {
+                Timber.w(
+                    "SpeedCameraUpdater: partial failure with no cameras from the surviving source " +
+                        "(OSM=${osmCameras?.size ?: "failed"}, ANSV=${ansvCameras?.size ?: "failed"}) " +
+                        "— keeping existing table untouched",
+                )
+                return@withContext dao.count()
+            }
+
             dao.replaceAll(cameras)
             alerter.invalidateCache()
             Timber.i(

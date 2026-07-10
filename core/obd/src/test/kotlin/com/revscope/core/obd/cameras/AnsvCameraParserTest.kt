@@ -70,6 +70,23 @@ class AnsvCameraParserTest {
     }
 
     @Test
+    fun `skips a record with a malformed latitud without aborting the rest of the batch`() {
+        val json = """
+            {"results":[{"ubicaciones":[
+                {"id":1,"latitud":"None","longitud":$MEDELLIN_LON,
+                 "estado_operacion":"Operando","velocidad_maxima_permitida":"50"},
+                {"id":2,"latitud":$MEDELLIN_LAT,"longitud":$MEDELLIN_LON,
+                 "estado_operacion":"Operando","velocidad_maxima_permitida":"40"}
+            ]}]}
+        """.trimIndent()
+
+        val cameras = AnsvCameraParser.parse(json, MEDELLIN_LAT, MEDELLIN_LON, 50_000.0)
+
+        assertEquals(1, cameras.size)
+        assertEquals(-2L, cameras[0].osmId)
+    }
+
+    @Test
     fun `flattens multiple solicitudes and multiple ubicaciones each`() {
         val json = """
             {"results":[

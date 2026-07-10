@@ -1,7 +1,9 @@
 package com.revscope.core.obd.cameras
 
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
+import timber.log.Timber
 
 private const val WAY_TYPE_TAG = 1L
 private const val RELATION_TYPE_TAG = 2L
@@ -17,9 +19,19 @@ object OverpassCameraParser {
         val elements = JSONObject(responseJson).getJSONArray("elements")
         return buildList {
             for (i in 0 until elements.length()) {
-                parseElement(elements.getJSONObject(i))?.let(::add)
+                parseElementSafely(elements.getJSONObject(i))?.let(::add)
             }
         }
+    }
+
+    /** Isolates one malformed element so it can't abort parsing of the rest of the response. */
+    private fun parseElementSafely(element: JSONObject): SpeedCameraEntity? = try {
+        parseElement(element)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.w(e, "OverpassCameraParser: skipping malformed element")
+        null
     }
 
     private fun parseElement(element: JSONObject): SpeedCameraEntity? {
