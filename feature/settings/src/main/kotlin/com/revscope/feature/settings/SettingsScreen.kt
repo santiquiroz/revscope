@@ -20,7 +20,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -57,6 +61,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
 import java.time.LocalDate
 import kotlinx.coroutines.delay
 
@@ -73,7 +78,11 @@ fun SettingsScreen(
     onNavigateToVehicleProfiles: () -> Unit = {},
     vm: SettingsViewModel = hiltViewModel(),
 ) {
-    val apiKey by vm.apiKey.collectAsState()
+    val aiProvider by vm.aiProvider.collectAsState()
+    val aiApiKey by vm.aiApiKey.collectAsState()
+    val aiModel by vm.aiModel.collectAsState()
+    val aiCustomBaseUrl by vm.aiCustomBaseUrl.collectAsState()
+    val aiTesting by vm.aiTesting.collectAsState()
     val customPidsJson by vm.customPidsJson.collectAsState()
     val customAlertsJson by vm.customAlertsJson.collectAsState()
     val activeVehicleProfile by vm.activeVehicleProfile.collectAsState()
@@ -244,7 +253,11 @@ fun SettingsScreen(
                 "Información local al cambiar de ciudad",
                 voiceLocalInfo,
                 vm::updateVoiceLocalInfo,
-                subtitle = "Usa tu API key de Claude con búsqueda web (~$0.02 por ciudad)",
+                subtitle = if (aiProviderSupportsWebSearch(aiProvider)) {
+                    "Usa tu proveedor de IA con búsqueda web (~$0.02 por ciudad)"
+                } else {
+                    "Requiere Claude, OpenAI o Gemini (no disponible con Compatible OpenAI)"
+                },
             )
 
             Row(
@@ -459,26 +472,56 @@ fun SettingsScreen(
             ) { Text("Probar (sin enviar SMS real)", color = TextPrimaryColor) }
 
             Spacer(Modifier.height(8.dp))
-            SectionTitle("IA — Explicación de códigos DTC")
+            SectionTitle("Inteligencia artificial")
             Text(
-                "API key de Anthropic (opcional). Sin ella, los DTC se muestran sin explicación de IA.",
+                "Proveedor usado para explicar códigos DTC e información local. Sin API key, " +
+                    "esas funciones se muestran sin explicación de IA.",
                 color = TextMutedColor,
                 fontSize = 12.sp,
             )
+            AiProviderDropdown(selected = aiProvider, onSelected = vm::updateAiProvider)
             OutlinedTextField(
-                value = apiKey,
-                onValueChange = vm::updateApiKey,
-                label = { Text("Claude API key", fontSize = 12.sp) },
+                value = aiApiKey,
+                onValueChange = vm::updateAiApiKey,
+                label = { Text("API key de ${aiProviderLabel(aiProvider)}", fontSize = 12.sp) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 colors = settingsFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(
-                onClick = vm::saveApiKey,
-                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            ) { Text("Guardar API key", color = BgColor) }
+            OutlinedTextField(
+                value = aiModel,
+                onValueChange = vm::updateAiModel,
+                label = { Text("Modelo (vacío = ${aiModelHint(aiProvider)})", fontSize = 12.sp) },
+                singleLine = true,
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (aiProvider == AI_PROVIDER_CUSTOM) {
+                OutlinedTextField(
+                    value = aiCustomBaseUrl,
+                    onValueChange = vm::updateAiCustomBaseUrl,
+                    label = { Text("Base URL (LM Studio, DeepSeek, Groq, OpenRouter…)", fontSize = 12.sp) },
+                    singleLine = true,
+                    colors = settingsFieldColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = vm::saveAiSettings,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+                ) { Text("Guardar configuración de IA", color = BgColor) }
+                Button(
+                    onClick = vm::testAiConnection,
+                    enabled = !aiTesting,
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+                ) { Text(if (aiTesting) "Probando…" else "Probar conexión", color = TextPrimaryColor) }
+            }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("PIDs personalizados")
@@ -576,6 +619,65 @@ private fun SectionTitle(text: String) {
         fontSize = 13.sp,
         fontWeight = FontWeight.Bold,
     )
+}
+
+private val AiProviderOptions = listOf(
+    "anthropic" to "Claude (Anthropic)",
+    "openai" to "OpenAI",
+    "gemini" to "Gemini (Google)",
+    AI_PROVIDER_CUSTOM to "Compatible OpenAI (LM Studio, DeepSeek, Groq, OpenRouter…)",
+)
+
+private val AiModelHints = mapOf(
+    "anthropic" to "claude-haiku-4-5-20251001",
+    "openai" to "gpt-5-mini",
+    "gemini" to "gemini-2.5-flash",
+    AI_PROVIDER_CUSTOM to "según tu servidor",
+)
+
+private fun aiProviderLabel(provider: String): String =
+    AiProviderOptions.firstOrNull { it.first == provider }?.second ?: provider
+
+private fun aiModelHint(provider: String): String = AiModelHints[provider].orEmpty()
+
+/** Only the generic Compatible-OpenAI endpoint lacks a server-side web search tool. */
+private fun aiProviderSupportsWebSearch(provider: String): Boolean = provider != AI_PROVIDER_CUSTOM
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AiProviderDropdown(selected: String, onSelected: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = aiProviderLabel(selected),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Proveedor de IA", fontSize = 12.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
+            colors = settingsFieldColors(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            AiProviderOptions.forEach { (id, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSelected(id)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
 }
 
 private fun defaultBackupFileName(): String = "revscope-backup-${LocalDate.now()}.zip"

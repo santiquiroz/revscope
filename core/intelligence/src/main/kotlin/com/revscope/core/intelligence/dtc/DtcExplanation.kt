@@ -5,7 +5,8 @@ package com.revscope.core.intelligence.dtc
  *
  * @property code        DTC code string (e.g. "P0300")
  * @property explanation Human-readable description
- * @property source      Origin: "claude" | "cache" | "fallback" | "no_key" | "offline"
+ * @property source      Origin: an AiProvider.providerId ("anthropic" | "openai" | "gemini" |
+ *                        "custom") on success, or "cache" | "fallback" | "no_key" | "offline"
  */
 data class DtcExplanation(
     val code: String,
@@ -15,7 +16,7 @@ data class DtcExplanation(
     companion object {
         fun noApiKey(code: String) = DtcExplanation(
             code = code,
-            explanation = "Para obtener explicaciones con IA, configura tu Claude API key en Ajustes.",
+            explanation = "Para obtener explicaciones con IA, configura un proveedor en Ajustes → Inteligencia artificial.",
             source = "no_key",
         )
 

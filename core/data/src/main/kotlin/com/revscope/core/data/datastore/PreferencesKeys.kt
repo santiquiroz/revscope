@@ -53,6 +53,26 @@ object PreferencesKeys {
      */
     val CUSTOM_PIDS_JSON = stringPreferencesKey("custom_pids_json")
 
+    // ── Proveedor de IA (multi-proveedor: Claude, OpenAI, Gemini, compatible-OpenAI) ──
+
+    /** Proveedor de IA activo: "anthropic" | "openai" | "gemini" | "custom" (default anthropic) */
+    val AI_PROVIDER = stringPreferencesKey("ai_provider")
+
+    /** Override de modelo para Claude/Anthropic (vacío = usa el default del proveedor) */
+    val AI_MODEL_ANTHROPIC = stringPreferencesKey("ai_model_anthropic")
+
+    /** Override de modelo para OpenAI (vacío = usa el default del proveedor) */
+    val AI_MODEL_OPENAI = stringPreferencesKey("ai_model_openai")
+
+    /** Override de modelo para Gemini (vacío = usa el default del proveedor) */
+    val AI_MODEL_GEMINI = stringPreferencesKey("ai_model_gemini")
+
+    /** Override de modelo para el endpoint compatible OpenAI */
+    val AI_MODEL_CUSTOM = stringPreferencesKey("ai_model_custom")
+
+    /** Base URL del endpoint compatible OpenAI (LM Studio/DeepSeek/Groq/OpenRouter…) */
+    val AI_CUSTOM_BASE_URL = stringPreferencesKey("ai_custom_base_url")
+
     // ── Alerts ───────────────────────────────────────────────────────────────
 
     /** Master switch for audio/haptic alerts (default true) */

@@ -17,6 +17,13 @@ import androidx.core.content.ContextCompat
 import com.revscope.core.data.backup.BackupManager
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
+import com.revscope.core.intelligence.provider.AI_PROVIDER_ANTHROPIC
+import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
+import com.revscope.core.intelligence.provider.AI_PROVIDER_GEMINI
+import com.revscope.core.intelligence.provider.AI_PROVIDER_OPENAI
+import com.revscope.core.intelligence.provider.AiProviderFactory
+import com.revscope.core.intelligence.provider.AiProviderSelection
+import com.revscope.core.intelligence.provider.AiRequest
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.alerts.CustomAlertRules
 import com.revscope.core.obd.cameras.CameraDownloadResult
@@ -56,8 +63,20 @@ class SettingsViewModel @Inject constructor(
 
     enum class BackupState { IDLE, EXPORTING, IMPORTING, RESTARTING_AFTER_IMPORT }
 
-    private val _apiKey = MutableStateFlow("")
-    val apiKey: StateFlow<String> = _apiKey.asStateFlow()
+    private val _aiProvider = MutableStateFlow(AI_PROVIDER_ANTHROPIC)
+    val aiProvider: StateFlow<String> = _aiProvider.asStateFlow()
+
+    private val _aiApiKey = MutableStateFlow("")
+    val aiApiKey: StateFlow<String> = _aiApiKey.asStateFlow()
+
+    private val _aiModel = MutableStateFlow("")
+    val aiModel: StateFlow<String> = _aiModel.asStateFlow()
+
+    private val _aiCustomBaseUrl = MutableStateFlow("")
+    val aiCustomBaseUrl: StateFlow<String> = _aiCustomBaseUrl.asStateFlow()
+
+    private val _aiTesting = MutableStateFlow(false)
+    val aiTesting: StateFlow<Boolean> = _aiTesting.asStateFlow()
 
     private val _customPidsJson = MutableStateFlow("")
     val customPidsJson: StateFlow<String> = _customPidsJson.asStateFlow()
@@ -131,7 +150,9 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 val prefs = settings.data.first()
-                _apiKey.value = withContext(Dispatchers.IO) { loadApiKeyMigrating(prefs[PreferencesKeys.CLAUDE_API_KEY]) }
+                val provider = prefs[PreferencesKeys.AI_PROVIDER]?.takeIf { it.isNotBlank() } ?: AI_PROVIDER_ANTHROPIC
+                _aiProvider.value = provider
+                withContext(Dispatchers.IO) { loadAiProviderFields(provider, prefs) }
                 _customPidsJson.value = prefs[PreferencesKeys.CUSTOM_PIDS_JSON].orEmpty()
                 _customAlertsJson.value = prefs[PreferencesKeys.CUSTOM_ALERTS_JSON].orEmpty()
                 _alertsEnabled.value = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
@@ -210,8 +231,25 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateApiKey(value: String) {
-        _apiKey.value = value
+    /** Switches the active AI provider and reloads that provider's own key/model into the fields. */
+    fun updateAiProvider(value: String) {
+        _aiProvider.value = value
+        viewModelScope.launch {
+            runCatching { withContext(Dispatchers.IO) { loadAiProviderFields(value, settings.data.first()) } }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to load fields for AI provider $value") }
+        }
+    }
+
+    fun updateAiApiKey(value: String) {
+        _aiApiKey.value = value
+    }
+
+    fun updateAiModel(value: String) {
+        _aiModel.value = value
+    }
+
+    fun updateAiCustomBaseUrl(value: String) {
+        _aiCustomBaseUrl.value = value
     }
 
     fun updateCustomPidsJson(value: String) {
@@ -311,31 +349,85 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun saveApiKey() {
+    /** Persists provider + its model override/base URL to DataStore and its key to SecureKeyStore. */
+    fun saveAiSettings() {
         viewModelScope.launch {
+            val provider = _aiProvider.value
             val result = runCatching {
-                withContext(Dispatchers.IO) { secureKeyStore.setClaudeApiKey(_apiKey.value.trim()) }
-                // Wipe any plaintext copy left from before encryption existed
-                settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) }
+                withContext(Dispatchers.IO) {
+                    secureKeyStore.setApiKey(provider, _aiApiKey.value.trim())
+                    // Wipe any plaintext Claude key left from before encryption existed
+                    if (provider == AI_PROVIDER_ANTHROPIC) settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) }
+                }
+                settings.edit {
+                    it[PreferencesKeys.AI_PROVIDER] = provider
+                    it[modelKeyFor(provider)] = _aiModel.value.trim()
+                    if (provider == AI_PROVIDER_CUSTOM) it[PreferencesKeys.AI_CUSTOM_BASE_URL] = _aiCustomBaseUrl.value.trim()
+                }
             }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "API key guardada (cifrada)")
+                SaveResult(true, "Configuración de IA guardada")
             } else {
-                SaveResult(false, "Error guardando API key")
+                SaveResult(false, "Error guardando la configuración de IA")
             }
         }
     }
 
-    /** Reads the key from encrypted storage, migrating a plaintext DataStore copy if found. */
-    private suspend fun loadApiKeyMigrating(plaintextLegacy: String?): String {
-        val secure = secureKeyStore.getClaudeApiKey()
+    /** Builds a provider from the fields as currently edited (not necessarily saved yet) and pings it. */
+    fun testAiConnection() {
+        viewModelScope.launch {
+            _aiTesting.value = true
+            val selection = AiProviderSelection(
+                provider = _aiProvider.value,
+                apiKey = _aiApiKey.value.trim(),
+                model = _aiModel.value.trim(),
+                customBaseUrl = _aiCustomBaseUrl.value.trim(),
+            )
+            val provider = AiProviderFactory { selection }.current()
+            _lastSaveResult.value = if (provider == null) {
+                SaveResult(false, "Falta la API key" + if (selection.provider == AI_PROVIDER_CUSTOM) " o la base URL" else "")
+            } else {
+                val result = withContext(Dispatchers.IO) {
+                    provider.complete(AiRequest(user = "di OK", maxTokens = 10))
+                }
+                result.fold(
+                    onSuccess = { SaveResult(true, "Conexión OK — ${provider.displayName}") },
+                    onFailure = { e -> SaveResult(false, "Error de conexión: ${e.message ?: "desconocido"}") },
+                )
+            }
+            _aiTesting.value = false
+        }
+    }
+
+    /** Loads [provider]'s own key/model/base-URL into the editable fields — called on init and provider switch. */
+    private suspend fun loadAiProviderFields(provider: String, prefs: Preferences) {
+        val key = if (provider == AI_PROVIDER_ANTHROPIC) {
+            loadAnthropicKeyMigrating(prefs[PreferencesKeys.CLAUDE_API_KEY])
+        } else {
+            secureKeyStore.getApiKey(provider).orEmpty()
+        }
+        _aiApiKey.value = key
+        _aiModel.value = prefs[modelKeyFor(provider)].orEmpty()
+        _aiCustomBaseUrl.value = prefs[PreferencesKeys.AI_CUSTOM_BASE_URL].orEmpty()
+    }
+
+    /** Reads the Claude key from encrypted storage, migrating a plaintext DataStore copy if found. */
+    private suspend fun loadAnthropicKeyMigrating(plaintextLegacy: String?): String {
+        val secure = secureKeyStore.getApiKey(AI_PROVIDER_ANTHROPIC)
         if (secure != null) return secure
         if (!plaintextLegacy.isNullOrBlank()) {
-            secureKeyStore.setClaudeApiKey(plaintextLegacy)
+            secureKeyStore.setApiKey(AI_PROVIDER_ANTHROPIC, plaintextLegacy)
             runCatching { settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) } }
             return plaintextLegacy
         }
         return ""
+    }
+
+    private fun modelKeyFor(provider: String) = when (provider) {
+        AI_PROVIDER_OPENAI -> PreferencesKeys.AI_MODEL_OPENAI
+        AI_PROVIDER_GEMINI -> PreferencesKeys.AI_MODEL_GEMINI
+        AI_PROVIDER_CUSTOM -> PreferencesKeys.AI_MODEL_CUSTOM
+        else -> PreferencesKeys.AI_MODEL_ANTHROPIC
     }
 
     fun saveCustomPids() {

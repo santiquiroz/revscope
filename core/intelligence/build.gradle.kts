@@ -39,4 +39,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockk)
+    // org.json available on Android runtime; add for JVM unit tests (AiResponseParsersTest)
+    testImplementation(libs.org.json)
 }

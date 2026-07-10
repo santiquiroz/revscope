@@ -26,7 +26,7 @@ import timber.log.Timber
  * GpsInfoSink → CityInfoAlerter binding is resolved in :app's Hilt module, the only
  * module that sees :core:data (SecureKeyStore/DataStore), :core:obd and
  * :core:intelligence at once. [gateProvider] arrives as a lambda for the same reason
- * DtcExplainer takes an `apiKeyProvider` lambda instead of injecting SecureKeyStore
+ * DtcExplainer takes a `providerProvider` lambda instead of injecting AiProviderFactory
  * directly — :core:intelligence has no compile-time visibility into :core:data.
  */
 class CityInfoAlerter(

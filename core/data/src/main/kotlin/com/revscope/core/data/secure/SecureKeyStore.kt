@@ -11,11 +11,16 @@ import javax.inject.Singleton
 
 private const val PREFS_FILE = "revscope_secure"
 private const val KEY_CLAUDE_API = "claude_api_key"
+private const val KEY_PREFIX_PROVIDER_API = "provider_api_key_"
+
+/** Provider id constants — must match the literal values AiProviderFactory (:core:intelligence) uses. */
+const val AI_PROVIDER_ANTHROPIC = "anthropic"
 
 /**
  * Hardware-backed encrypted storage for secrets (Android Keystore via Jetpack
- * Security). The Claude API key lived in plain DataStore before — reads fall
- * back there is handled by callers during migration.
+ * Security). Multi-provider API keys (Task 7, Plan 5): the pre-existing Claude key
+ * keeps living under [KEY_CLAUDE_API] — that slot IS the "anthropic" provider, no data
+ * migration needed — while every other provider gets its own `provider_api_key_<id>` entry.
  *
  * All methods do disk/keystore I/O — call from Dispatchers.IO.
  */
@@ -43,11 +48,20 @@ class SecureKeyStore @Inject constructor(
         }
     }
 
-    fun getClaudeApiKey(): String? = prefs?.getString(KEY_CLAUDE_API, null)
+    fun getApiKey(provider: String): String? = prefs?.getString(prefsKeyFor(provider), null)
 
-    fun setClaudeApiKey(value: String?) {
+    fun setApiKey(provider: String, value: String?) {
+        val key = prefsKeyFor(provider)
         prefs?.edit()?.apply {
-            if (value.isNullOrBlank()) remove(KEY_CLAUDE_API) else putString(KEY_CLAUDE_API, value)
+            if (value.isNullOrBlank()) remove(key) else putString(key, value)
         }?.apply()
     }
+
+    private fun prefsKeyFor(provider: String): String =
+        if (provider == AI_PROVIDER_ANTHROPIC) KEY_CLAUDE_API else "$KEY_PREFIX_PROVIDER_API$provider"
+
+    /** Compat shim for callers that predate multi-provider support. */
+    fun getClaudeApiKey(): String? = getApiKey(AI_PROVIDER_ANTHROPIC)
+
+    fun setClaudeApiKey(value: String?) = setApiKey(AI_PROVIDER_ANTHROPIC, value)
 }

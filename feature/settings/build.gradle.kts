@@ -21,6 +21,7 @@ android {
 dependencies {
     implementation(project(":core:obd"))
     implementation(project(":core:data"))
+    implementation(project(":core:intelligence"))
     implementation(project(":core:common"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
