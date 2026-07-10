@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -71,41 +75,60 @@ fun MaintenanceScreen(
     val profile by vm.activeProfile.collectAsState()
     val estados by vm.estados.collectAsState()
     val odometroActual by vm.odometroActual.collectAsState()
+    val saveResult by vm.saveResult.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingItem by remember { mutableStateOf<MaintenanceItemEntity?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(Modifier.fillMaxSize().background(BgColor).statusBarsPadding()) {
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
-            }
-            Text("Mantenimiento", color = TextColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+    LaunchedEffect(saveResult) {
+        saveResult?.let {
+            snackbarHostState.showSnackbar(it.message)
+            vm.dismissSaveResult()
         }
+    }
 
-        if (profile == null) {
-            EmptyProfileState()
-            return@Column
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item { OdometerField(odometroActual = odometroActual, onSave = vm::actualizarOdometro) }
-            items(estados, key = { it.item.id }) { estado ->
-                MaintenanceItemCard(
-                    estado = estado,
-                    odometroActual = odometroActual,
-                    onRegistrarServicio = { vm.registrarServicio(estado.item) },
-                    onEditarIntervalo = { editingItem = estado.item },
-                )
+    Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
+        containerColor = BgColor,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { innerPadding ->
+        Column(Modifier.fillMaxSize().padding(innerPadding).background(BgColor).statusBarsPadding()) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
+                }
+                Text("Mantenimiento", color = TextColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
-            item { AddItemButton(onClick = { showAddDialog = true }) }
-            item { Spacer(Modifier.height(16.dp)) }
+
+            if (profile == null) {
+                EmptyProfileState()
+                return@Column
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item { OdometerField(odometroActual = odometroActual, onSave = vm::actualizarOdometro) }
+                if (estados.isEmpty() && odometroActual <= 0.0) {
+                    item { EmptyOdometerHint() }
+                } else {
+                    items(estados, key = { it.item.id }) { estado ->
+                        MaintenanceItemCard(
+                            estado = estado,
+                            odometroActual = odometroActual,
+                            onRegistrarServicio = { vm.registrarServicio(estado.item) },
+                            onEditarIntervalo = { editingItem = estado.item },
+                        )
+                    }
+                }
+                item { AddItemButton(onClick = { showAddDialog = true }) }
+                item { Spacer(Modifier.height(16.dp)) }
+            }
         }
     }
 
@@ -141,6 +164,18 @@ private fun EmptyProfileState() {
             "Activa un vehículo en Perfiles para configurar su mantenimiento",
             color = TextMutedColor,
             fontSize = 13.sp,
+        )
+    }
+}
+
+@Composable
+private fun EmptyOdometerHint() {
+    Surface(shape = RoundedCornerShape(14.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "Ingresa el kilometraje actual de tu vehículo para empezar",
+            color = TextMutedColor,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(14.dp),
         )
     }
 }

@@ -189,6 +189,14 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
+    /** Refreshes the in-memory active profile after an external DB update. */
+    fun notifyProfileUpdated(profile: VehicleProfileEntity) {
+        if (_activeProfile.value?.id == profile.id) {
+            _activeProfile.value = profile
+            alertsEngine.setRedlineOverride(profile.redlineRpm)
+        }
+    }
+
     /** Stamps the profile with the currently connected adapter, if one is live. */
     private fun withCurrentAdapterLinked(profile: VehicleProfileEntity?): VehicleProfileEntity? {
         if (profile == null || !hasActiveConnection()) return profile

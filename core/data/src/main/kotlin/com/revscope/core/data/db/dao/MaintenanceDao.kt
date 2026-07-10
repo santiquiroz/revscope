@@ -13,6 +13,9 @@ interface MaintenanceDao {
     @Insert
     suspend fun insert(item: MaintenanceItemEntity): Long
 
+    @Insert
+    suspend fun insertAll(items: List<MaintenanceItemEntity>)
+
     @Update
     suspend fun update(item: MaintenanceItemEntity)
 

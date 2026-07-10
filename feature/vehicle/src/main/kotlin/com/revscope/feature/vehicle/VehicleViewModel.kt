@@ -7,6 +7,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ResponseParser
+import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ import javax.inject.Inject
 class VehicleViewModel @Inject constructor(
     private val profileDao: VehicleProfileDao,
     private val registry: PidRegistry,
+    private val sessionManager: ObdSessionManager,
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
@@ -140,21 +142,21 @@ class VehicleViewModel @Inject constructor(
             val editing = _editingProfile.value
             val plate = _formPlate.value.trim().ifEmpty { null }
             if (editing != null) {
-                profileDao.update(
-                    editing.copy(
-                        name = name,
-                        type = _formType.value,
-                        vin = _formVin.value.trim().ifEmpty { null },
-                        enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
-                        maxRpm = maxRpm,
-                        redlineRpm = redline,
-                        plate = plate,
-                        picoPlacaCity = _formPicoPlacaCity.value,
-                        soatExpiresAt = _formSoatExpiresAt.value,
-                        rtmExpiresAt = _formRtmExpiresAt.value,
-                        insuranceExpiresAt = _formInsuranceExpiresAt.value,
-                    )
+                val updated = editing.copy(
+                    name = name,
+                    type = _formType.value,
+                    vin = _formVin.value.trim().ifEmpty { null },
+                    enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
+                    maxRpm = maxRpm,
+                    redlineRpm = redline,
+                    plate = plate,
+                    picoPlacaCity = _formPicoPlacaCity.value,
+                    soatExpiresAt = _formSoatExpiresAt.value,
+                    rtmExpiresAt = _formRtmExpiresAt.value,
+                    insuranceExpiresAt = _formInsuranceExpiresAt.value,
                 )
+                profileDao.update(updated)
+                sessionManager.notifyProfileUpdated(updated)
             } else {
                 profileDao.insert(
                     VehicleProfileEntity(
