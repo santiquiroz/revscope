@@ -74,3 +74,15 @@ Verificar: `$GRADLE :core:obd:testDebugUnitTest :app:assembleDebug` + verificaci
 ---
 
 ### Task 5 (inline): build + tests + install + verificar migración v14 + push (+screenshots si el celular está desbloqueado)
+
+---
+
+### Task 6: Alerta de información local al cambiar de municipio ("estás en Guarne, hay un festival hoy")
+
+1. **Detección de municipio (cualquier pueblo, no solo el registry)**: `core/obd/.../legal/LocalityDetector.kt` — usa `android.location.Geocoder.getFromLocation(lat, lon, 1)` (API 33+: variante async con listener; <33: la síncrona en Dispatchers.IO) → `locality` (o subAdminArea fallback). Throttle: evalúa máx 1 vez cada 120s y solo si el fix se movió >3km del último evaluado. Emite cambio solo cuando la localidad detectada != la anterior (y no es la primera del arranque — la primera solo fija el estado, no anuncia... PERO sí anunciar si es distinta a la ciudad del perfil, alineado con el patrón del alerter de pico y placa; decidir simple: anunciar en cada CAMBIO de localidad después de la primera fijación).
+2. **Consulta con IA + web search**: `core/intelligence/.../local/LocalInfoFetcher.kt` — usa la MISMA infra HTTP/API key de DtcExplainer (leerlo: cómo llama a la API de Anthropic). Llamada a messages API con tool `web_search` (server tool `{"type": "web_search_20250305", "name": "web_search", "max_uses": 2}` — verificar el shape contra DtcExplainer y usar modelo claude-haiku-4-5-20251001 para costo) y prompt: "Hoy es <fecha>. Acabo de llegar a <municipio>, <departamento?>, Colombia conduciendo. En UNA sola frase corta (máx 20 palabras) dime si hay hoy algún evento, festividad, cierre vial o alerta relevante en este municipio. Si no encuentras nada relevante y actual, responde exactamente: NADA". Timeout 20s. Respuesta "NADA"/vacía/error → silencio total.
+3. **Anuncio**: `AlertsEngine.announceLocalInfo(municipio, frase)` — categoría de voz nueva `VOICE_LOCAL_INFO` default **false** + switch en el menú de categorías ("Información local al cambiar de ciudad (usa IA, consume API)"). TTS: "Estás en <municipio>. <frase>". También notificación normal silenciosa con el texto (para releer).
+4. **Wiring**: `CityInfoAlerter` (@Singleton, patrón CityEnforcementAlerter): recibe onGpsFix desde GpsTrackRecorder (tercer alerter param), gate: toggle ON + API key presente (SecureKeyStore) + sesión activa. Cooldown 1 anuncio por municipio por día. runCatching todo; CancellationException se relanza.
+5. Ajustes: el switch vive en las categorías de voz + una línea de costo estimado en el subtítulo.
+
+Verificar: `$GRADLE :core:obd:testDebugUnitTest :app:assembleDebug`. Commit: `feat: aviso de información local con IA al entrar a un municipio nuevo (opcional, apagado por defecto)`.
