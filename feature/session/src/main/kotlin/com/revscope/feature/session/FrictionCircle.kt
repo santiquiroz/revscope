@@ -1,15 +1,19 @@
 package com.revscope.feature.session
 
+import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.min
 
 private val CircleBg = Color(0xFF12121A)
@@ -29,6 +33,10 @@ fun FrictionCircle(
     points: List<Pair<Float, Float>>, // (gLat, gLong)
     modifier: Modifier = Modifier,
 ) {
+    val axisTextPx = with(LocalDensity.current) { 9.sp.toPx() }
+    val leftPaint = remember(axisTextPx) { axisLabelPaint(axisTextPx, Paint.Align.LEFT) }
+    val rightPaint = remember(axisTextPx) { axisLabelPaint(axisTextPx, Paint.Align.RIGHT) }
+
     Canvas(
         modifier = modifier
             .background(CircleBg, RoundedCornerShape(12.dp))
@@ -45,10 +53,23 @@ fun FrictionCircle(
                 radius = g * pxPerG,
                 center = center,
                 style = Stroke(width = 1.dp.toPx()),
+                alpha = CANVAS_CHART_GRID_ALPHA,
             )
         }
-        drawLine(GridColor, Offset(center.x - radius, center.y), Offset(center.x + radius, center.y), 1.dp.toPx())
-        drawLine(GridColor, Offset(center.x, center.y - radius), Offset(center.x, center.y + radius), 1.dp.toPx())
+        drawLine(
+            GridColor,
+            Offset(center.x - radius, center.y),
+            Offset(center.x + radius, center.y),
+            1.dp.toPx(),
+            alpha = CANVAS_CHART_GRID_ALPHA,
+        )
+        drawLine(
+            GridColor,
+            Offset(center.x, center.y - radius),
+            Offset(center.x, center.y + radius),
+            1.dp.toPx(),
+            alpha = CANVAS_CHART_GRID_ALPHA,
+        )
 
         points.forEach { (gLat, gLong) ->
             val x = center.x + (gLat.coerceIn(-MAX_G_SCALE, MAX_G_SCALE) * pxPerG)
@@ -61,5 +82,15 @@ fun FrictionCircle(
                 alpha = 0.45f,
             )
         }
+
+        // Ring labels — G magnitude where each guide ring crosses the vertical (top) axis.
+        val labelGap = 2.dp.toPx()
+        drawAxisText("0.5G", center.x + labelGap, center.y - (0.5f * pxPerG) - labelGap, leftPaint)
+        drawAxisText("1.0G", center.x + labelGap, center.y - (1.0f * pxPerG) - labelGap, leftPaint)
+
+        // Axis names in the corners.
+        val margin = 4.dp.toPx()
+        drawAxisText("G longitudinal", margin, 10.dp.toPx(), leftPaint)
+        drawAxisText("G lateral", size.width - margin, size.height - 2.dp.toPx(), rightPaint)
     }
 }

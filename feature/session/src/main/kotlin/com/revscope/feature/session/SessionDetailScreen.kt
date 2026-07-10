@@ -52,8 +52,12 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.trip.EcoScoreCalculator
 import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import java.text.SimpleDateFormat
@@ -385,25 +389,28 @@ private fun ReportContent(
         }
 
         if (report.rpmSeries.size >= 2) {
-            ChartSection("RPM durante el viaje", report.rpmSeries)
+            ChartSection("RPM durante el viaje", report.rpmSeries, unit = "RPM", durationMs = durationMs)
         }
         if (report.speedSeries.size >= 2) {
-            ChartSection("Velocidad durante el viaje (km/h)", report.speedSeries)
+            ChartSection("Velocidad durante el viaje (km/h)", report.speedSeries, unit = "km/h", durationMs = durationMs)
         }
         if (report.hrSeries.size >= 2) {
-            ChartSection("♥ Pulso del piloto (bpm)", report.hrSeries)
+            ChartSection("♥ Pulso del piloto (bpm)", report.hrSeries, unit = "bpm", durationMs = durationMs)
         }
         Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun ChartSection(title: String, series: List<Float>) {
+private fun ChartSection(title: String, series: List<Float>, unit: String, durationMs: Long) {
     val modelProducer = remember(series) { CartesianChartModelProducer() }
     LaunchedEffect(series) {
         modelProducer.runTransaction {
             lineSeries { series(y = series.map { it }) }
         }
+    }
+    val bottomFormatter = remember(series.size, durationMs) {
+        elapsedFractionFormatter(series.size, durationMs)
     }
     Column {
         Text(
@@ -414,7 +421,14 @@ private fun ChartSection(title: String, series: List<Float>) {
             modifier = Modifier.padding(bottom = 4.dp),
         )
         CartesianChartHost(
-            chart = rememberCartesianChart(rememberLineCartesianLayer()),
+            chart = rememberCartesianChart(
+                rememberLineCartesianLayer(),
+                startAxis = VerticalAxis.rememberStart(title = unit),
+                bottomAxis = HorizontalAxis.rememberBottom(
+                    valueFormatter = bottomFormatter,
+                    title = "tiempo (mm:ss)",
+                ),
+            ),
             modelProducer = modelProducer,
             modifier = Modifier
                 .fillMaxWidth()

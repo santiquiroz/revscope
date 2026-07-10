@@ -55,9 +55,12 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var hasCenteredInitial by remember { mutableStateOf(false) }
 
     // Evita limpiar y reconstruir los overlays (hasta 18.000 puntos de ruta) en cada
-    // recomposición; solo reconstruye cuando cambia la cantidad de puntos o de cámaras.
+    // recomposición; cuando la ruta solo CRECE se agregan los puntos nuevos al Polyline
+    // existente (addPoint) — la reconstrucción completa queda solo para cuando cambian
+    // las cámaras o la ruta se encoge/reinicia (nuevo viaje).
     var lastOverlayRouteSize by remember { mutableStateOf(-1) }
     var lastOverlayCameraCount by remember { mutableStateOf(-1) }
+    var routeOverlays by remember { mutableStateOf(RouteOverlays(polyline = null, marker = null)) }
 
     Box(Modifier.fillMaxSize()) {
         AndroidView(
@@ -74,12 +77,19 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 }
             },
             update = { map ->
-                val overlaysStale = route.size != lastOverlayRouteSize ||
-                    cameras.size != lastOverlayCameraCount
-                if (overlaysStale) {
-                    rebuildMapOverlays(map, route, cameras)
+                val camerasChanged = cameras.size != lastOverlayCameraCount
+                val routeShrankOrReset = route.size < lastOverlayRouteSize
+                val routeGrew = route.size > lastOverlayRouteSize
+                val missingPolyline = route.isNotEmpty() && routeOverlays.polyline == null
+
+                if (camerasChanged || routeShrankOrReset || missingPolyline) {
+                    routeOverlays = rebuildMapOverlays(map, route, cameras)
                     lastOverlayRouteSize = route.size
                     lastOverlayCameraCount = cameras.size
+                } else if (routeGrew) {
+                    appendRoutePoints(routeOverlays.polyline, route, lastOverlayRouteSize)
+                    updateCurrentPositionMarker(routeOverlays.marker, route.last())
+                    lastOverlayRouteSize = route.size
                 }
                 if (route.isNotEmpty()) {
                     val last = route.last()
@@ -140,28 +150,50 @@ private fun CurrentSpeedBadge(speedKmh: Int, modifier: Modifier = Modifier) {
     }
 }
 
+/** Live route Polyline + "Tú" position Marker, so the update block can grow/move them incrementally. */
+private data class RouteOverlays(val polyline: Polyline?, val marker: Marker?)
+
 private fun rebuildMapOverlays(
     map: MapView,
     route: List<LiveRouteHolder.RoutePoint>,
     cameras: List<SpeedCameraEntity>,
-) {
+): RouteOverlays {
     map.overlays.clear()
     cameras.forEach { cam ->
         map.overlays.add(speedCameraAlertCircle(map, cam))
         map.overlays.add(speedCameraMarker(map, cam))
     }
-    if (route.isEmpty()) return
+    if (route.isEmpty()) return RouteOverlays(polyline = null, marker = null)
     val last = route.last()
-    map.overlays.add(Polyline(map).apply {
+    val polyline = Polyline(map).apply {
         setPoints(route.map { GeoPoint(it.lat, it.lon) })
         outlinePaint.color = 0xFFE8FF00.toInt()
         outlinePaint.strokeWidth = 8f
-    })
-    map.overlays.add(Marker(map).apply {
+    }
+    val marker = Marker(map).apply {
         position = GeoPoint(last.lat, last.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         title = "Tú"
-    })
+    }
+    map.overlays.add(polyline)
+    map.overlays.add(marker)
+    return RouteOverlays(polyline, marker)
+}
+
+/** Appends only the points added since [fromIndex] — avoids rebuilding a route of up to 18.000 points on every reading. */
+private fun appendRoutePoints(
+    polyline: Polyline?,
+    route: List<LiveRouteHolder.RoutePoint>,
+    fromIndex: Int,
+) {
+    if (polyline == null) return
+    for (i in fromIndex.coerceAtLeast(0) until route.size) {
+        polyline.addPoint(GeoPoint(route[i].lat, route[i].lon))
+    }
+}
+
+private fun updateCurrentPositionMarker(marker: Marker?, position: LiveRouteHolder.RoutePoint) {
+    marker?.position = GeoPoint(position.lat, position.lon)
 }
 
 private fun speedCameraAlertCircle(

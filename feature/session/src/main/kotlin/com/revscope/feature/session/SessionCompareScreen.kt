@@ -41,8 +41,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import java.text.SimpleDateFormat
@@ -173,8 +177,17 @@ private fun CompareContent(
                     }
                 }
             }
+            val referenceDurationMs = maxOf(runA.durationMs(), runB.durationMs())
+            val sampleCount = maxOf(runA.speedSeries.size, runB.speedSeries.size)
             CartesianChartHost(
-                chart = rememberCartesianChart(rememberLineCartesianLayer()),
+                chart = rememberCartesianChart(
+                    rememberLineCartesianLayer(),
+                    startAxis = VerticalAxis.rememberStart(title = "km/h"),
+                    bottomAxis = HorizontalAxis.rememberBottom(
+                        valueFormatter = elapsedFractionFormatter(sampleCount, referenceDurationMs),
+                        title = "tiempo (mm:ss)",
+                    ),
+                ),
                 modelProducer = producer,
                 modifier = Modifier.fillMaxWidth().height(200.dp),
             )
@@ -192,8 +205,11 @@ private fun CompareContent(
     }
 }
 
+private fun SessionCompareViewModel.RunData.durationMs(): Long =
+    (session.endedAt ?: session.startedAt) - session.startedAt
+
 private fun SessionCompareViewModel.RunData.durationLabel(): String {
-    val ms = (session.endedAt ?: session.startedAt) - session.startedAt
+    val ms = durationMs()
     return "%dm %02ds".format(
         TimeUnit.MILLISECONDS.toMinutes(ms),
         TimeUnit.MILLISECONDS.toSeconds(ms) % 60,

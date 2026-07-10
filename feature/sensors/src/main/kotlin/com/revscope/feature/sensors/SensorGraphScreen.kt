@@ -31,10 +31,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.revscope.core.common.format.formatElapsedMmSs
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -43,6 +51,15 @@ private val SurfaceHighColor = Color(0xFF1C1C28)
 private val AccentColor = Color(0xFFE8FF00)
 private val TextPrimaryColor = Color(0xFFF0F0F8)
 private val TextMutedColor = Color(0xFF6B7089)
+
+/** Bottom-axis tick label — the x value is already elapsed seconds since the first reading. */
+private val ElapsedTimeFormatter = object : CartesianValueFormatter {
+    override fun format(
+        context: CartesianMeasuringContext,
+        value: Double,
+        verticalAxisPosition: Axis.Position.Vertical?,
+    ): CharSequence = formatElapsedMmSs(value)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,8 +80,14 @@ fun SensorGraphScreen(
     LaunchedEffect(selectedPid) {
         vm.history.collect { points ->
             if (points.size >= 2) {
+                val startMs = points.first().timestamp
                 modelProducer.runTransaction {
-                    lineSeries { series(y = points.map { it.value }) }
+                    lineSeries {
+                        series(
+                            x = points.map { (it.timestamp - startMs) / 1000.0 },
+                            y = points.map { it.value },
+                        )
+                    }
                 }
             }
         }
@@ -141,6 +164,11 @@ fun SensorGraphScreen(
             CartesianChartHost(
                 chart = rememberCartesianChart(
                     rememberLineCartesianLayer(),
+                    startAxis = VerticalAxis.rememberStart(title = currentDef?.unit),
+                    bottomAxis = HorizontalAxis.rememberBottom(
+                        valueFormatter = ElapsedTimeFormatter,
+                        title = "tiempo (mm:ss)",
+                    ),
                 ),
                 modelProducer = modelProducer,
                 modifier = Modifier

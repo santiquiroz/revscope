@@ -60,6 +60,9 @@ private val ROWS = listOf(
     MixtureRow("3C", "Temp catalizador"),
 )
 
+/** PIDs this screen displays — used by the ViewModel to filter out unrelated dashboard traffic. */
+internal val MIXTURE_ROW_PIDS: Set<String> = ROWS.map { it.pid }.toSet()
+
 @Composable
 fun LiveMixtureScreen(
     onNavigateBack: () -> Unit,
