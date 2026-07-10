@@ -58,14 +58,10 @@ class DashboardViewModel @Inject constructor(
     val alDiaBanner: StateFlow<String?> = combine(
         sessionManager.activeProfile,
         settings.data.map { it[PreferencesKeys.LICENSE_EXPIRES_AT] },
-        settings.data.map { prefs ->
-            prefs[PreferencesKeys.PICO_PLACA_RULES_JSON]
-                ?.let(PicoYPlacaEngine::parseRulesJson)
-                ?: PicoYPlacaEngine.MEDELLIN_2026_S1
-        },
+        settings.data.map { prefs -> prefs[PreferencesKeys.PICO_PLACA_RULES_JSON]?.let(PicoYPlacaEngine::parseRulesJson) },
         minuteTicker,
-    ) { profile, licenseExpiresAt, rules, _ ->
-        computeAlDiaBanner(profile, licenseExpiresAt, rules)
+    ) { profile, licenseExpiresAt, overrideRules, _ ->
+        computeAlDiaBanner(profile, licenseExpiresAt, overrideRules)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var gearTableJob: Job? = null
@@ -95,11 +91,11 @@ class DashboardViewModel @Inject constructor(
     private fun computeAlDiaBanner(
         profile: VehicleProfileEntity?,
         licenseExpiresAt: Long?,
-        rules: PicoYPlacaEngine.CityRules,
+        overrideRules: PicoYPlacaEngine.CityRules?,
     ): String? {
         if (profile == null) return null
         val documents = DocumentStatusCalculator.fromProfile(profile, licenseExpiresAt)
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, System.currentTimeMillis())
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, System.currentTimeMillis())
         return DocumentStatusCalculator.bannerText(statuses)
     }
 }

@@ -59,7 +59,7 @@ class VehicleViewModel @Inject constructor(
     private val _formPlate = MutableStateFlow("")
     val formPlate: StateFlow<String> = _formPlate.asStateFlow()
 
-    /** null = sin pico y placa; "medellin" = ciudad soportada por ahora */
+    /** null = sin pico y placa; ver CityRegistry.CITIES para los ids de ciudad soportados */
     private val _formPicoPlacaCity = MutableStateFlow<String?>(null)
     val formPicoPlacaCity: StateFlow<String?> = _formPicoPlacaCity.asStateFlow()
 

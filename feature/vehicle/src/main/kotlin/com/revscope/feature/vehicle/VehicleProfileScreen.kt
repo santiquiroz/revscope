@@ -27,9 +27,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -54,6 +58,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.legal.CityRegistry
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -267,19 +272,10 @@ fun VehicleProfileScreen(
                 ),
             )
 
-            Text("Pico y placa", color = TextMutedColor, fontSize = 11.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TextChip(
-                    label = "Medellín",
-                    selected = formPicoPlacaCity == "medellin",
-                    onClick = { vm.setPicoPlacaCity("medellin") },
-                )
-                TextChip(
-                    label = "Ninguna",
-                    selected = formPicoPlacaCity == null,
-                    onClick = { vm.setPicoPlacaCity(null) },
-                )
-            }
+            PicoYPlacaCityDropdown(
+                selectedCityId = formPicoPlacaCity,
+                onCitySelected = { vm.setPicoPlacaCity(it) },
+            )
 
             DateField(
                 label = "SOAT vence",
@@ -322,27 +318,57 @@ fun VehicleProfileScreen(
     }
 }
 
+/** Dropdown "Pico y placa": Ninguna + ciudades de [CityRegistry], guarda el id seleccionado. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TextChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
+private fun PicoYPlacaCityDropdown(
+    selectedCityId: String?,
+    onCitySelected: (String?) -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .background(
-                color = if (selected) AccentColor else SurfaceHighColor,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = CityRegistry.CITIES.firstOrNull { it.id == selectedCityId }?.nombre ?: "Ninguna"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
     ) {
-        Text(
-            text = label,
-            color = if (selected) BgColor else TextMutedColor,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 13.sp,
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Pico y placa", color = TextMutedColor, fontSize = 11.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = AccentColor,
+                unfocusedBorderColor = SurfaceHighColor,
+                focusedTextColor = TextPrimaryColor,
+                unfocusedTextColor = TextPrimaryColor,
+            ),
         )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Ninguna") },
+                onClick = {
+                    onCitySelected(null)
+                    expanded = false
+                },
+            )
+            CityRegistry.CITIES.forEach { city ->
+                DropdownMenuItem(
+                    text = { Text(city.nombre) },
+                    onClick = {
+                        onCitySelected(city.id)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }
 

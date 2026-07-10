@@ -36,10 +36,10 @@ class DailyStatusWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val profiles = vehicleProfileDao.observeAll().first()
         val license = readLicenseExpiresAt()
-        val rules = readPicoYPlacaRules()
+        val overrideRules = readPicoYPlacaOverrideRules()
         val nowMs = System.currentTimeMillis()
 
-        val lines = profiles.mapNotNull { profile -> notableLineFor(profile, license, rules, nowMs) }
+        val lines = profiles.mapNotNull { profile -> notableLineFor(profile, license, overrideRules, nowMs) }
         if (lines.isEmpty()) return Result.success()
 
         postSummaryNotification(lines)
@@ -49,19 +49,18 @@ class DailyStatusWorker @AssistedInject constructor(
     private suspend fun readLicenseExpiresAt(): Long? =
         settings.data.first()[PreferencesKeys.LICENSE_EXPIRES_AT]
 
-    private suspend fun readPicoYPlacaRules(): PicoYPlacaEngine.CityRules =
-        settings.data.first()[PreferencesKeys.PICO_PLACA_RULES_JSON]
-            ?.let(PicoYPlacaEngine::parseRulesJson)
-            ?: PicoYPlacaEngine.MEDELLIN_2026_S1
+    /** Edición manual del usuario; [DocumentStatusCalculator] la usa solo si su cityId coincide con el perfil. */
+    private suspend fun readPicoYPlacaOverrideRules(): PicoYPlacaEngine.CityRules? =
+        settings.data.first()[PreferencesKeys.PICO_PLACA_RULES_JSON]?.let(PicoYPlacaEngine::parseRulesJson)
 
     private fun notableLineFor(
         profile: VehicleProfileEntity,
         license: Long?,
-        rules: PicoYPlacaEngine.CityRules,
+        overrideRules: PicoYPlacaEngine.CityRules?,
         nowMs: Long,
     ): String? {
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, nowMs)
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, nowMs)
         val notable = statuses.filter(::isNotable)
         if (notable.isEmpty()) return null
         val facts = notable.joinToString(" · ") { it.detalle }

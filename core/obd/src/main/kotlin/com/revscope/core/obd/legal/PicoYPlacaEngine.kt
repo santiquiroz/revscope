@@ -5,6 +5,7 @@ import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZonedDateTime
 
 /**
  * Motor puro y offline de pico y placa: dado una placa, tipo de vehículo, reglas de ciudad
@@ -15,10 +16,16 @@ object PicoYPlacaEngine {
 
     enum class DigitSource { FIRST, LAST }
 
+    /** WEEKDAY_ROTATION: dígito restringido varía por día de semana (Medellín). DATE_PARITY: por par/impar del día del mes (Bogotá). */
+    enum class Scheme { WEEKDAY_ROTATION, DATE_PARITY }
+
+    const val ODD_DAY_KEY = "ODD_DAY"
+    const val EVEN_DAY_KEY = "EVEN_DAY"
+
     data class CityRules(
         val cityId: String,
         val displayName: String,
-        /** Calendar.DAY_OF_WEEK (2=lunes..6=viernes) → dígitos restringidos ese día */
+        /** Calendar.DAY_OF_WEEK (2=lunes..6=viernes) → dígitos restringidos ese día. Usado solo por WEEKDAY_ROTATION. */
         val rotation: Map<Int, List<Int>>,
         val startHour: Int,
         val endHour: Int,
@@ -26,6 +33,11 @@ object PicoYPlacaEngine {
         val motoDigit: DigitSource,
         val validFromMs: Long,
         val validUntilMs: Long,
+        val scheme: Scheme = Scheme.WEEKDAY_ROTATION,
+        /** "ODD_DAY"/"EVEN_DAY" → dígitos restringidos ese día del mes. Usado solo por DATE_PARITY. */
+        val dateParityRestricted: Map<String, List<Int>> = emptyMap(),
+        /** Si true, las motos nunca tienen restricción (ej. Bogotá). */
+        val motosExentas: Boolean = false,
     )
 
     enum class Status {
@@ -56,6 +68,25 @@ object PicoYPlacaEngine {
         validUntilMs = 1_785_560_399_000L, // 2026-07-31 23:59:59 America/Bogota (UTC-5)
     )
 
+    /** L-V 6:00-21:00, par/impar por último dígito de la placa, motos exentas. Vigencia amplia 2026. */
+    val BOGOTA_2026 = CityRules(
+        cityId = "bogota",
+        displayName = "Bogotá",
+        rotation = emptyMap(),
+        startHour = 6,
+        endHour = 21,
+        carDigit = DigitSource.LAST,
+        motoDigit = DigitSource.LAST,
+        validFromMs = 1_767_243_600_000L, // 2026-01-01 00:00:00 America/Bogota (UTC-5)
+        validUntilMs = 1_798_779_599_000L, // 2026-12-31 23:59:59 America/Bogota (UTC-5)
+        scheme = Scheme.DATE_PARITY,
+        dateParityRestricted = mapOf(
+            ODD_DAY_KEY to listOf(6, 7, 8, 9, 0),
+            EVEN_DAY_KEY to listOf(1, 2, 3, 4, 5),
+        ),
+        motosExentas = true,
+    )
+
     fun check(
         plate: String,
         isMotorcycle: Boolean,
@@ -66,13 +97,46 @@ object PicoYPlacaEngine {
         if (nowMs !in rules.validFromMs..rules.validUntilMs) {
             return Result(Status.REGLAS_VENCIDAS, null, emptyList())
         }
+        if (isMotorcycle && rules.motosExentas) {
+            return Result(Status.SIN_RESTRICCION, null, emptyList())
+        }
         val zonedNow = Instant.ofEpochMilli(nowMs).atZone(ZoneId.of(timeZoneId))
         if (isWeekend(zonedNow.dayOfWeek)) {
             return Result(Status.SIN_RESTRICCION, null, emptyList())
         }
+        return when (rules.scheme) {
+            Scheme.WEEKDAY_ROTATION -> checkWeekdayRotation(plate, isMotorcycle, rules, zonedNow)
+            Scheme.DATE_PARITY -> checkDateParity(plate, rules, zonedNow)
+        }
+    }
+
+    private fun checkWeekdayRotation(
+        plate: String,
+        isMotorcycle: Boolean,
+        rules: CityRules,
+        zonedNow: ZonedDateTime,
+    ): Result {
         val digit = extractDigit(plate, digitSourceFor(isMotorcycle, rules))
             ?: return Result(Status.SIN_DATOS, null, emptyList())
         val restrictedDigits = rules.rotation[zonedNow.dayOfWeek.toCalendarDayOfWeek()].orEmpty()
+        return resolveByRestrictedDigits(digit, restrictedDigits, rules, zonedNow)
+    }
+
+    /** Bogotá: el último dígito SIEMPRE define la restricción, sin importar el tipo de vehículo. */
+    private fun checkDateParity(plate: String, rules: CityRules, zonedNow: ZonedDateTime): Result {
+        val digit = extractDigit(plate, DigitSource.LAST)
+            ?: return Result(Status.SIN_DATOS, null, emptyList())
+        val parityKey = if (zonedNow.dayOfMonth % 2 == 1) ODD_DAY_KEY else EVEN_DAY_KEY
+        val restrictedDigits = rules.dateParityRestricted[parityKey].orEmpty()
+        return resolveByRestrictedDigits(digit, restrictedDigits, rules, zonedNow)
+    }
+
+    private fun resolveByRestrictedDigits(
+        digit: Int,
+        restrictedDigits: List<Int>,
+        rules: CityRules,
+        zonedNow: ZonedDateTime,
+    ): Result {
         if (digit !in restrictedDigits) {
             return Result(Status.SIN_RESTRICCION, null, restrictedDigits)
         }
@@ -89,23 +153,30 @@ object PicoYPlacaEngine {
         CityRules(
             cityId = obj.getString("cityId"),
             displayName = obj.getString("displayName"),
-            rotation = parseRotation(obj.getJSONObject("rotation")),
+            rotation = if (obj.has("rotation")) parseDigitsByKey(obj.getJSONObject("rotation")).mapKeys { it.key.toInt() } else emptyMap(),
             startHour = obj.getInt("startHour"),
             endHour = obj.getInt("endHour"),
             carDigit = DigitSource.valueOf(obj.getString("carDigit")),
             motoDigit = DigitSource.valueOf(obj.getString("motoDigit")),
             validFromMs = obj.getLong("validFromMs"),
             validUntilMs = obj.getLong("validUntilMs"),
+            scheme = if (obj.has("scheme")) Scheme.valueOf(obj.getString("scheme")) else Scheme.WEEKDAY_ROTATION,
+            dateParityRestricted = if (obj.has("dateParityRestricted")) {
+                parseDigitsByKey(obj.getJSONObject("dateParityRestricted"))
+            } else {
+                emptyMap()
+            },
+            motosExentas = obj.optBoolean("motosExentas", false),
         )
     } catch (e: Exception) {
         Timber.e(e, "PicoYPlacaEngine: failed to parse city rules JSON")
         null
     }
 
-    private fun parseRotation(rotationObj: JSONObject): Map<Int, List<Int>> = buildMap {
-        rotationObj.keys().forEach { key ->
-            val digitsJson = rotationObj.getJSONArray(key)
-            put(key.toInt(), buildList { for (i in 0 until digitsJson.length()) add(digitsJson.getInt(i)) })
+    private fun parseDigitsByKey(jsonObj: JSONObject): Map<String, List<Int>> = buildMap {
+        jsonObj.keys().forEach { key ->
+            val digitsJson = jsonObj.getJSONArray(key)
+            put(key, buildList { for (i in 0 until digitsJson.length()) add(digitsJson.getInt(i)) })
         }
     }
 

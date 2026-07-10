@@ -108,6 +108,62 @@ class DocumentStatusCalculatorTest {
         assertNull(DocumentStatusCalculator.bannerText(statuses))
     }
 
+    @Test
+    fun `pico y placa en bogota dia impar restringido marca nivel vencido`() {
+        val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "bogota", isMotorcycle = false)
+
+        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS)
+
+        val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
+        assertEquals(DocumentStatusCalculator.Nivel.VENCIDO, picoYPlaca.nivel)
+        assertEquals(21, picoYPlaca.horaLimite)
+    }
+
+    @Test
+    fun `moto en bogota no tiene restriccion de pico y placa`() {
+        val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "bogota", isMotorcycle = true)
+
+        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS)
+
+        val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
+        assertEquals(DocumentStatusCalculator.Nivel.OK, picoYPlaca.nivel)
+        assertEquals("Motos exentas en Bogotá", picoYPlaca.detalle)
+    }
+
+    @Test
+    fun `cali sin reglas configuradas marca sin_configurar con detalle de rotacion pendiente`() {
+        val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "cali", isMotorcycle = false)
+
+        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS)
+
+        val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
+        assertEquals(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR, picoYPlaca.nivel)
+        assertEquals("Configura la rotación vigente de Cali en Ajustes (JSON)", picoYPlaca.detalle)
+    }
+
+    @Test
+    fun `override de otra ciudad no aplica a cali y sigue sin configurar`() {
+        val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "cali", isMotorcycle = false)
+        val overrideParaMedellin = PicoYPlacaEngine.MEDELLIN_2026_S1
+
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideParaMedellin, FRIDAY_10AM_MS)
+
+        val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
+        assertEquals(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR, picoYPlaca.nivel)
+        assertEquals("Configura la rotación vigente de Cali en Ajustes (JSON)", picoYPlaca.detalle)
+    }
+
+    @Test
+    fun `override que coincide con la ciudad del perfil reemplaza las reglas del registro`() {
+        val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
+        val overrideSinRestricciones = PicoYPlacaEngine.MEDELLIN_2026_S1.copy(rotation = emptyMap())
+
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideSinRestricciones, FRIDAY_10AM_MS)
+
+        val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
+        assertEquals(DocumentStatusCalculator.Nivel.OK, picoYPlaca.nivel)
+    }
+
     /** Stored expiry dates are UTC-midnight of the picked calendar day. */
     private fun utcMs(year: Int, month: Int, day: Int): Long =
         LocalDate.of(year, month, day).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
@@ -137,6 +193,9 @@ class DocumentStatusCalculatorTest {
     private companion object {
         // 2026-06-05 10:00:00 America/Bogota (UTC-5) = 2026-06-05 15:00:00 UTC — viernes
         const val FRIDAY_10AM_MS = 1_780_671_600_000L
+
+        // 2026-08-05 10:00:00 America/Bogota — miércoles, día 5 (impar), dentro de la vigencia Bogotá
+        const val ODD_WEEKDAY_10AM_MS = 1_785_942_000_000L
 
         // 2026-06-10 21:00:00 America/Bogota (UTC-5) = 2026-06-11 02:00:00 UTC.
         // Regression for the timezone bug: the old UTC-only calculation would read the

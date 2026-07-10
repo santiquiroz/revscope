@@ -86,6 +86,77 @@ class PicoYPlacaEngineTest {
         assertNull(PicoYPlacaEngine.parseRulesJson("no es json"))
     }
 
+    // ── Bogotá — esquema DATE_PARITY (par/impar calendario), motos exentas ──────
+
+    private val bogotaRules = PicoYPlacaEngine.BOGOTA_2026
+
+    @Test
+    fun `bogota dia impar carro con placa terminada en 7 en horario esta restringido ahora`() {
+        val result = PicoYPlacaEngine.check("ABC127", isMotorcycle = false, bogotaRules, ODD_WEEKDAY_10AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_AHORA, result.status)
+        assertEquals(21, result.endHour)
+    }
+
+    @Test
+    fun `bogota dia impar carro con placa terminada en 7 fuera de horario a las 10pm`() {
+        val result = PicoYPlacaEngine.check("ABC127", isMotorcycle = false, bogotaRules, ODD_WEEKDAY_22H_MS)
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_HOY_FUERA_DE_HORARIO, result.status)
+        assertEquals(21, result.endHour)
+    }
+
+    @Test
+    fun `bogota dia par carro con placa terminada en 7 esta sin restriccion`() {
+        val result = PicoYPlacaEngine.check("ABC127", isMotorcycle = false, bogotaRules, EVEN_WEEKDAY_10AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.SIN_RESTRICCION, result.status)
+    }
+
+    @Test
+    fun `bogota dia impar placa terminada en 7 justo a las 6am inicia restringida`() {
+        val result = PicoYPlacaEngine.check("ABC127", isMotorcycle = false, bogotaRules, ODD_WEEKDAY_6AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_AHORA, result.status)
+    }
+
+    @Test
+    fun `bogota dia impar placa terminada en 7 justo a las 9pm ya no esta restringida`() {
+        val result = PicoYPlacaEngine.check("ABC127", isMotorcycle = false, bogotaRules, ODD_WEEKDAY_21H_MS)
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_HOY_FUERA_DE_HORARIO, result.status)
+    }
+
+    @Test
+    fun `bogota moto esta exenta sin importar el digito ni el dia`() {
+        val result = PicoYPlacaEngine.check("ABC127", isMotorcycle = true, bogotaRules, ODD_WEEKDAY_10AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.SIN_RESTRICCION, result.status)
+    }
+
+    @Test
+    fun `bogota fin de semana esta sin restriccion aunque el digito rote`() {
+        val result = PicoYPlacaEngine.check("ABC127", isMotorcycle = false, bogotaRules, WEEKEND_10AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.SIN_RESTRICCION, result.status)
+    }
+
+    @Test
+    fun `parseRulesJson reconstruye reglas de bogota con date parity y motos exentas`() {
+        val json = """
+            {
+              "cityId": "bogota",
+              "displayName": "Bogotá",
+              "startHour": 6,
+              "endHour": 21,
+              "carDigit": "LAST",
+              "motoDigit": "LAST",
+              "validFromMs": ${bogotaRules.validFromMs},
+              "validUntilMs": ${bogotaRules.validUntilMs},
+              "scheme": "DATE_PARITY",
+              "dateParityRestricted": {"ODD_DAY": [6,7,8,9,0], "EVEN_DAY": [1,2,3,4,5]},
+              "motosExentas": true
+            }
+        """.trimIndent()
+
+        val parsed = PicoYPlacaEngine.parseRulesJson(json)
+
+        assertEquals(bogotaRules, parsed)
+    }
+
     private companion object {
         // 2026-06-01 10:00:00 America/Bogota (UTC-5) = 2026-06-01 15:00:00 UTC — lunes
         const val MONDAY_10AM_MS = 1_780_326_000_000L
@@ -104,5 +175,23 @@ class PicoYPlacaEngineTest {
 
         // 2026-09-01 10:00:00 America/Bogota (UTC-5) = 2026-09-01 15:00:00 UTC — fuera del semestre
         const val SEPT_1_10AM_MS = 1_788_274_800_000L
+
+        // 2026-08-05 10:00:00 America/Bogota — miércoles, día 5 (impar)
+        const val ODD_WEEKDAY_10AM_MS = 1_785_942_000_000L
+
+        // 2026-08-05 22:00:00 America/Bogota — mismo día impar, fuera de horario (termina 21h)
+        const val ODD_WEEKDAY_22H_MS = 1_785_985_200_000L
+
+        // 2026-08-04 10:00:00 America/Bogota — martes, día 4 (par)
+        const val EVEN_WEEKDAY_10AM_MS = 1_785_855_600_000L
+
+        // 2026-08-01 10:00:00 America/Bogota — sábado, día 1 (impar mas fin de semana)
+        const val WEEKEND_10AM_MS = 1_785_596_400_000L
+
+        // 2026-08-05 06:00:00 America/Bogota — mismo día impar, límite inferior del horario (inclusive)
+        const val ODD_WEEKDAY_6AM_MS = 1_785_927_600_000L
+
+        // 2026-08-05 21:00:00 America/Bogota — mismo día impar, límite superior del horario (exclusive)
+        const val ODD_WEEKDAY_21H_MS = 1_785_981_600_000L
     }
 }

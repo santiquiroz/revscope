@@ -41,15 +41,20 @@ object DocumentStatusCalculator {
 
     private const val WARNING_THRESHOLD_DAYS = 30L
 
+    /**
+     * [overrideRules] es la edición manual del usuario (Ajustes → JSON de reglas). Solo se usa
+     * cuando su `cityId` coincide con `documents.picoPlacaCity`; de lo contrario se resuelven
+     * las reglas vigentes de esa ciudad desde [CityRegistry].
+     */
     fun calculate(
         documents: VehicleDocuments,
-        rules: PicoYPlacaEngine.CityRules,
+        overrideRules: PicoYPlacaEngine.CityRules?,
         nowMs: Long,
         timeZoneId: String = "America/Bogota",
     ): List<DocStatus> = listOf(
         expiryStatus(DocType.SOAT, "SOAT", documents.soatExpiresAt, nowMs, timeZoneId),
         expiryStatus(DocType.RTM, "Tecnomecánica", documents.rtmExpiresAt, nowMs, timeZoneId),
-        picoYPlacaStatus(documents, rules, nowMs, timeZoneId),
+        picoYPlacaStatus(documents, overrideRules, nowMs, timeZoneId),
         expiryStatus(DocType.TODO_RIESGO, "Todo riesgo", documents.insuranceExpiresAt, nowMs, timeZoneId),
         expiryStatus(DocType.LICENCIA, "Licencia", documents.licenseExpiresAt, nowMs, timeZoneId),
     )
@@ -113,19 +118,22 @@ object DocumentStatusCalculator {
 
     private fun picoYPlacaStatus(
         documents: VehicleDocuments,
-        rules: PicoYPlacaEngine.CityRules,
+        overrideRules: PicoYPlacaEngine.CityRules?,
         nowMs: Long,
         timeZoneId: String,
     ): DocStatus {
         val titulo = "Pico y placa"
         val plate = documents.plate?.trim()
-        if (documents.picoPlacaCity == null || plate.isNullOrEmpty()) {
+        val cityId = documents.picoPlacaCity
+        if (cityId == null || plate.isNullOrEmpty()) {
             return DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
         }
+        val rules = resolveCityRules(cityId, overrideRules)
+            ?: return DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, rulesPendientesDetalle(cityId))
         val result = PicoYPlacaEngine.check(plate, documents.isMotorcycle, rules, nowMs, timeZoneId)
         return when (result.status) {
             PicoYPlacaEngine.Status.SIN_RESTRICCION ->
-                DocStatus(DocType.PICO_Y_PLACA, Nivel.OK, titulo, "Puedes salir")
+                DocStatus(DocType.PICO_Y_PLACA, Nivel.OK, titulo, sinRestriccionDetalle(documents, rules))
             PicoYPlacaEngine.Status.RESTRINGIDO_HOY_FUERA_DE_HORARIO ->
                 DocStatus(DocType.PICO_Y_PLACA, Nivel.ATENCION, titulo, "No salgas hasta las ${result.endHour}:00", result.endHour)
             PicoYPlacaEngine.Status.RESTRINGIDO_AHORA ->
@@ -135,5 +143,19 @@ object DocumentStatusCalculator {
             PicoYPlacaEngine.Status.SIN_DATOS ->
                 DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
         }
+    }
+
+    private fun sinRestriccionDetalle(documents: VehicleDocuments, rules: PicoYPlacaEngine.CityRules): String =
+        if (documents.isMotorcycle && rules.motosExentas) "Motos exentas en ${rules.displayName}" else "Puedes salir"
+
+    /** El override del usuario solo aplica si edita la misma ciudad activa en el perfil. */
+    private fun resolveCityRules(cityId: String, overrideRules: PicoYPlacaEngine.CityRules?): PicoYPlacaEngine.CityRules? {
+        if (overrideRules != null && overrideRules.cityId == cityId) return overrideRules
+        return CityRegistry.CITIES.firstOrNull { it.id == cityId }?.rules
+    }
+
+    private fun rulesPendientesDetalle(cityId: String): String {
+        val nombre = CityRegistry.CITIES.firstOrNull { it.id == cityId }?.nombre ?: cityId
+        return "Configura la rotación vigente de $nombre en Ajustes (JSON)"
     }
 }

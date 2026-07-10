@@ -62,10 +62,9 @@ class AlDiaViewModel @Inject constructor(
     private val licenseExpiresAtFlow: Flow<Long?> =
         settings.data.map { it[PreferencesKeys.LICENSE_EXPIRES_AT] }
 
-    private val rulesFlow: Flow<PicoYPlacaEngine.CityRules> = settings.data.map { prefs ->
-        prefs[PreferencesKeys.PICO_PLACA_RULES_JSON]
-            ?.let(PicoYPlacaEngine::parseRulesJson)
-            ?: PicoYPlacaEngine.MEDELLIN_2026_S1
+    /** Edición manual del usuario (Ajustes → JSON); [DocumentStatusCalculator] la usa solo si su cityId coincide con el perfil activo. */
+    private val overrideRulesFlow: Flow<PicoYPlacaEngine.CityRules?> = settings.data.map { prefs ->
+        prefs[PreferencesKeys.PICO_PLACA_RULES_JSON]?.let(PicoYPlacaEngine::parseRulesJson)
     }
 
     val licenseExpiresAt: StateFlow<Long?> =
@@ -80,18 +79,18 @@ class AlDiaViewModel @Inject constructor(
     }
 
     val docStatuses: StateFlow<List<DocumentStatusCalculator.DocStatus>> =
-        combine(activeProfile, licenseExpiresAtFlow, rulesFlow, minuteTicker) { profile, license, rules, _ ->
-            calculateStatuses(profile, license, rules)
+        combine(activeProfile, licenseExpiresAtFlow, overrideRulesFlow, minuteTicker) { profile, license, overrideRules, _ ->
+            calculateStatuses(profile, license, overrideRules)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private fun calculateStatuses(
         profile: VehicleProfileEntity?,
         license: Long?,
-        rules: PicoYPlacaEngine.CityRules,
+        overrideRules: PicoYPlacaEngine.CityRules?,
     ): List<DocumentStatusCalculator.DocStatus> {
         if (profile == null) return emptyList()
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
-        return DocumentStatusCalculator.calculate(documents, rules, System.currentTimeMillis())
+        return DocumentStatusCalculator.calculate(documents, overrideRules, System.currentTimeMillis())
     }
 
     fun setLicenseExpiresAt(value: Long?) {
