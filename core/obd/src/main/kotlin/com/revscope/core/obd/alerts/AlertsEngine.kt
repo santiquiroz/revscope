@@ -129,41 +129,50 @@ class AlertsEngine @Inject constructor(
     fun process(reading: ObdReading) {
         if (!enabled) return
         when (reading.pid) {
-            "05" -> if (reading.value >= tempMaxC) {
-                fire(
-                    AlertType.OVERHEAT,
-                    "Temperatura de motor ${reading.value.toInt()}°C",
-                    reading.value,
-                    tonePattern = ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK,
-                    toneDurationMs = 800,
-                    vibrationMs = longArrayOf(0, 400, 150, 400),
-                    cooldownMs = ALERT_COOLDOWN_MS,
-                    voiceEnabled = voiceTemperature,
-                )
+            "05" -> {
+                if (!voiceTemperature) return
+                if (reading.value >= tempMaxC) {
+                    fire(
+                        AlertType.OVERHEAT,
+                        "Temperatura de motor ${reading.value.toInt()}°C",
+                        reading.value,
+                        tonePattern = ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK,
+                        toneDurationMs = 800,
+                        vibrationMs = longArrayOf(0, 400, 150, 400),
+                        cooldownMs = ALERT_COOLDOWN_MS,
+                        voiceEnabled = true,
+                    )
+                }
             }
-            "0C" -> if (reading.value >= currentRedlineRpm) {
-                fire(
-                    AlertType.REDLINE,
-                    "RPM en zona roja: ${reading.value.toInt()}",
-                    reading.value,
-                    tonePattern = ToneGenerator.TONE_PROP_BEEP2,
-                    toneDurationMs = 250,
-                    vibrationMs = longArrayOf(0, 150),
-                    cooldownMs = REDLINE_COOLDOWN_MS,
-                    voiceEnabled = voiceRedline,
-                )
+            "0C" -> {
+                if (!voiceRedline) return
+                if (reading.value >= currentRedlineRpm) {
+                    fire(
+                        AlertType.REDLINE,
+                        "RPM en zona roja: ${reading.value.toInt()}",
+                        reading.value,
+                        tonePattern = ToneGenerator.TONE_PROP_BEEP2,
+                        toneDurationMs = 250,
+                        vibrationMs = longArrayOf(0, 150),
+                        cooldownMs = REDLINE_COOLDOWN_MS,
+                        voiceEnabled = true,
+                    )
+                }
             }
-            "VBAT" -> if (reading.value > 0 && reading.value < voltageMin) {
-                fire(
-                    AlertType.LOW_VOLTAGE,
-                    "Batería baja: %.1fV".format(reading.value),
-                    reading.value,
-                    tonePattern = ToneGenerator.TONE_SUP_ERROR,
-                    toneDurationMs = 600,
-                    vibrationMs = longArrayOf(0, 300, 200, 300),
-                    cooldownMs = ALERT_COOLDOWN_MS,
-                    voiceEnabled = voiceVoltage,
-                )
+            "VBAT" -> {
+                if (!voiceVoltage) return
+                if (reading.value > 0 && reading.value < voltageMin) {
+                    fire(
+                        AlertType.LOW_VOLTAGE,
+                        "Batería baja: %.1fV".format(reading.value),
+                        reading.value,
+                        tonePattern = ToneGenerator.TONE_SUP_ERROR,
+                        toneDurationMs = 600,
+                        vibrationMs = longArrayOf(0, 300, 200, 300),
+                        cooldownMs = ALERT_COOLDOWN_MS,
+                        voiceEnabled = true,
+                    )
+                }
             }
         }
         evaluateCustomAlert(reading)
@@ -171,6 +180,7 @@ class AlertsEngine @Inject constructor(
 
     /** User-defined per-PID threshold from Settings' custom-alerts JSON, 120s cooldown per PID. */
     private fun evaluateCustomAlert(reading: ObdReading) {
+        if (!voiceCustomThresholds) return
         if (customRules.isEmpty()) return
         val message = CustomAlertRules.evaluate(reading, customRules) ?: return
         val now = System.currentTimeMillis()
@@ -182,7 +192,7 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(AlertType.CUSTOM, message, reading.value))
         playTone(ToneGenerator.TONE_SUP_ERROR, 500)
         vibrate(longArrayOf(0, 250, 150, 250))
-        if (voiceCustomThresholds) speak(message)
+        speak(message)
     }
 
     private fun fire(
@@ -210,6 +220,7 @@ class AlertsEngine @Inject constructor(
     /** Spoken speed-camera proximity warning. Per-camera cooldown lives in the alerter. */
     fun announceSpeedCamera(distanceM: Int, limitKmh: Int?) {
         if (!enabled) return
+        if (!voiceSpeedCameras) return
         val rounded = (distanceM / 50) * 50
         val message = buildString {
             append("Radar a $rounded metros")
@@ -219,12 +230,13 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(AlertType.SPEED_CAMERA, message, distanceM.toDouble()))
         playTone(ToneGenerator.TONE_PROP_ACK, 300)
         vibrate(longArrayOf(0, 200, 100, 200))
-        if (voiceSpeedCameras) speak(message)
+        speak(message)
     }
 
     /** Spoken statistical-anomaly alert from AnomalyDetector — cooldown per stable alert [key]. */
     fun announceAnomaly(key: String, mensaje: String) {
         if (!enabled) return
+        if (!voiceAnomalies) return
         val now = System.currentTimeMillis()
         synchronized(lastAnomalyAnnounced) {
             if (now - (lastAnomalyAnnounced[key] ?: 0L) < ANOMALY_COOLDOWN_MS) return
@@ -234,19 +246,21 @@ class AlertsEngine @Inject constructor(
         _alerts.tryEmit(ObdAlert(AlertType.ANOMALY, mensaje, 0.0))
         playTone(ToneGenerator.TONE_PROP_BEEP2, 300)
         vibrate(longArrayOf(0, 200))
-        if (voiceAnomalies) speak(mensaje)
+        speak(mensaje)
     }
 
     /** Spoken check-engine-light warning — fires once per session, until [resetSessionFlags]. */
     fun announceMilOn() {
-        if (!enabled || milAnnouncedThisSession) return
+        if (!enabled) return
+        if (!voiceMil) return
+        if (milAnnouncedThisSession) return
         milAnnouncedThisSession = true
         val message = "Se encendió el testigo del motor. Revisa los códigos de falla."
         Timber.w("AlertsEngine: $message")
         _alerts.tryEmit(ObdAlert(AlertType.MIL_ON, message, 1.0))
         playTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 800)
         vibrate(longArrayOf(0, 400, 150, 400))
-        if (voiceMil) speak(message)
+        speak(message)
     }
 
     /** Resets per-session flags (e.g. MIL-on). Call where a new telemetry session starts. */
