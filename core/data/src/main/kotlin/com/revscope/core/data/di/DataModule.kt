@@ -45,8 +45,7 @@ object DataModule {
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "revscope.db")
             .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
-            // Pre-1.0: unknown jumps still wipe; 9→10 through 12→13 preserve real user data.
-            .fallbackToDestructiveMigration()
+            // Sin fallback destructivo: toda migración debe ser explícita (incidente 2026-07-08).
             .build()
 
     @Provides

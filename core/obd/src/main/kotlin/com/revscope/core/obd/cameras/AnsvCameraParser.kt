@@ -9,12 +9,23 @@ import timber.log.Timber
 /** Only sites the registry marks as actually operating are worth alerting on. */
 private const val OPERATIONAL_STATUS = "Operando"
 
+/** Larger than any two points on Earth can be apart — effectively "no radius filter". */
+private const val NATIONWIDE_RADIUS_M = 20_040_000.0
+
 /**
  * Pure parsing of the ANSV `sast.json` registry feed into [SpeedCameraEntity]
  * rows, filtered to operational sites within range of a center point — no I/O,
  * fully unit-testable.
  */
 object AnsvCameraParser {
+
+    /**
+     * Nationwide count of operational, coordinate-valid entries, ignoring any
+     * particular search radius — used as a format-regression guard: distinguishes
+     * "no cameras near this point" (legitimate) from "the feed's schema changed
+     * and nothing parses anymore" (a bug), which a radius-scoped count can't tell apart.
+     */
+    fun countAllOperational(json: String): Int = parse(json, 0.0, 0.0, NATIONWIDE_RADIUS_M).size
 
     fun parse(json: String, centerLat: Double, centerLon: Double, radiusM: Double): List<SpeedCameraEntity> {
         val results = JSONObject(json).optJSONArray("results") ?: return emptyList()

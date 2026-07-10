@@ -11,11 +11,11 @@ import android.content.Context
 import android.location.LocationManager
 import android.net.Uri
 import com.revscope.core.data.backup.BackupManager
-import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.alerts.CustomAlertRules
+import com.revscope.core.obd.cameras.CameraDownloadResult
 import com.revscope.core.obd.cameras.SpeedCameraUpdater
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
@@ -42,7 +42,6 @@ class SettingsViewModel @Inject constructor(
     private val alertsEngine: AlertsEngine,
     private val secureKeyStore: SecureKeyStore,
     private val cameraUpdater: SpeedCameraUpdater,
-    private val cameraDao: SpeedCameraDao,
     private val sessionManager: ObdSessionManager,
     private val backupManager: BackupManager,
 ) : ViewModel() {
@@ -398,8 +397,8 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            runCatching { cameraDao.count() }.getOrNull()?.let { count ->
-                if (count > 0) _cameraStatus.value = "$count radares guardados"
+            runCatching { cameraUpdater.storedCounts() }.getOrNull()?.let { stored ->
+                if (stored.total > 0) _cameraStatus.value = "${stored.total} radares guardados (${sourceBreakdown(stored)})"
             }
         }
     }
@@ -419,9 +418,9 @@ class SettingsViewModel @Inject constructor(
             }
             _cameraStatus.value = "Descargando radares (OpenStreetMap + ANSV)…"
             runCatching { cameraUpdater.downloadAround(location.latitude, location.longitude) }
-                .onSuccess { count ->
+                .onSuccess { result ->
                     _cameraStatus.value =
-                        "$count radares en 50 km — avisos por voz activos al conducir"
+                        "${result.total} radares en 50 km (${sourceBreakdown(result)}) — avisos por voz activos al conducir"
                     persistLastCameraCenter(location.latitude, location.longitude)
                 }
                 .onFailure {
@@ -429,6 +428,9 @@ class SettingsViewModel @Inject constructor(
                 }
         }
     }
+
+    private fun sourceBreakdown(result: CameraDownloadResult): String =
+        "OSM: ${result.osmCount} · ANSV: ${result.ansvCount}"
 
     /** Guarda el centro de la última descarga exitosa para el refresco semanal automático. */
     private suspend fun persistLastCameraCenter(latitude: Double, longitude: Double) {

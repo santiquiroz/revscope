@@ -107,4 +107,28 @@ class AnsvCameraParserTest {
 
         assertEquals(3, cameras.size)
     }
+
+    @Test
+    fun `countAllOperational counts operational entries regardless of distance from the caller`() {
+        val farLat = MEDELLIN_LAT + 5.0 // several hundred km away — outside any reasonable search radius
+        val json = """
+            {"results":[{"ubicaciones":[
+                {"id":1,"latitud":$MEDELLIN_LAT,"longitud":$MEDELLIN_LON,
+                 "estado_operacion":"Operando","velocidad_maxima_permitida":"50"},
+                {"id":2,"latitud":$farLat,"longitud":$MEDELLIN_LON,
+                 "estado_operacion":"Operando","velocidad_maxima_permitida":"40"},
+                {"id":3,"latitud":$MEDELLIN_LAT,"longitud":$MEDELLIN_LON,
+                 "estado_operacion":"Vencida","velocidad_maxima_permitida":"40"}
+            ]}]}
+        """.trimIndent()
+
+        assertEquals(2, AnsvCameraParser.countAllOperational(json))
+    }
+
+    @Test
+    fun `countAllOperational is zero when the feed schema no longer matches`() {
+        val json = """{"data":[{"locations":[{"id":1}]}]}"""
+
+        assertEquals(0, AnsvCameraParser.countAllOperational(json))
+    }
 }

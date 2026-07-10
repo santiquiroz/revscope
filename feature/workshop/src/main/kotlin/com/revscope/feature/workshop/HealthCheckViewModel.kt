@@ -64,8 +64,8 @@ class HealthCheckViewModel @Inject constructor(
                 val items = mutableListOf<DiagnosticRules.Diagnosis>()
 
                 _state.value = UiState.Running("Leyendo códigos de falla…")
-                val dtcCodes = readAllDtcs()
-                items += buildDtcDiagnosis(dtcCodes)
+                val dtcScan = readAllDtcs()
+                items += buildDtcDiagnosis(dtcScan)
 
                 _state.value = UiState.Running("Consultando monitores de readiness…")
                 items += readReadinessDiagnoses()
@@ -75,7 +75,7 @@ class HealthCheckViewModel @Inject constructor(
 
                 val now = System.currentTimeMillis()
                 persist(items, now)
-                _state.value = UiState.Done(items, dtcCodes, now)
+                _state.value = UiState.Done(items, dtcScan.codes, now)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -103,23 +103,33 @@ class HealthCheckViewModel @Inject constructor(
         }
     }
 
-    private fun buildDtcDiagnosis(dtcCodes: List<String>): DiagnosticRules.Diagnosis = if (dtcCodes.isEmpty()) {
-        DiagnosticRules.Diagnosis(
+    /** Distinguishes a genuinely clean scan from one where a mode failed to answer mid-scan. */
+    private data class DtcScanResult(val codes: List<String>, val readFailed: Boolean)
+
+    private fun buildDtcDiagnosis(scan: DtcScanResult): DiagnosticRules.Diagnosis = when {
+        scan.readFailed -> DiagnosticRules.Diagnosis(
+            DiagnosticRules.Nivel.ATENCION, "DTC", "Lectura de códigos incompleta",
+            "Se perdió el enlace durante el escaneo — repite el chequeo",
+        )
+        scan.codes.isEmpty() -> DiagnosticRules.Diagnosis(
             DiagnosticRules.Nivel.OK, "DTC", "Sin códigos de falla", "Memoria de fallas limpia",
         )
-    } else {
-        DiagnosticRules.Diagnosis(
+        else -> DiagnosticRules.Diagnosis(
             DiagnosticRules.Nivel.FALLA, "DTC",
-            "${dtcCodes.size} códigos: ${dtcCodes.joinToString()}",
+            "${scan.codes.size} códigos: ${scan.codes.joinToString()}",
             "Ábrelos en Códigos de falla para explicación con IA",
         )
     }
 
-    private suspend fun readReadinessDiagnoses(): List<DiagnosticRules.Diagnosis> =
-        sessionManager.rawExchange("01 01\r").getOrNull()
-            ?.let { ReadinessParser.parse(it) }
-            ?.let { DiagnosticRules.evaluarReadiness(it) }
-            .orEmpty()
+    private suspend fun readReadinessDiagnoses(): List<DiagnosticRules.Diagnosis> {
+        val status = sessionManager.rawExchange("01 01\r").getOrNull()?.let { ReadinessParser.parse(it) }
+        return status?.let { DiagnosticRules.evaluarReadiness(it) } ?: listOf(readinessUnavailableDiagnosis())
+    }
+
+    private fun readinessUnavailableDiagnosis(): DiagnosticRules.Diagnosis = DiagnosticRules.Diagnosis(
+        DiagnosticRules.Nivel.ATENCION, "Readiness", "Readiness no disponible",
+        "Se perdió el enlace durante el escaneo — repite el chequeo",
+    )
 
     private suspend fun sampleMixtureDiagnoses(): List<DiagnosticRules.Diagnosis> {
         sessionManager.setWorkshopMode(true)
@@ -164,17 +174,20 @@ class HealthCheckViewModel @Inject constructor(
      * companion function, which is hardcoded to prefix "43") already generalizes across the
      * 43/47/4A prefixes for Modes 03/07/0A, so it is reused directly here instead.
      */
-    private suspend fun readAllDtcs(): List<String> {
+    private suspend fun readAllDtcs(): DtcScanResult {
         val active = readDtcMode(ACTIVE_DTC_COMMAND)
-        val pending = readDtcMode(PENDING_DTC_COMMAND).map { "$it (pendiente)" }
-        val permanent = readDtcMode(PERMANENT_DTC_COMMAND).map { "$it (permanente)" }
-        return active + pending + permanent
+        val pending = readDtcMode(PENDING_DTC_COMMAND)
+        val permanent = readDtcMode(PERMANENT_DTC_COMMAND)
+        val codes = active.orEmpty() +
+            pending.orEmpty().map { "$it (pendiente)" } +
+            permanent.orEmpty().map { "$it (permanente)" }
+        val readFailed = active == null || pending == null || permanent == null
+        return DtcScanResult(codes, readFailed)
     }
 
-    private suspend fun readDtcMode(command: String): List<String> =
-        sessionManager.rawExchange(command).getOrNull()
-            ?.let { ResponseParser.parseDtcResponse(it) }
-            .orEmpty()
+    /** Null means the read itself failed (lost link) — distinct from an empty-but-successful read. */
+    private suspend fun readDtcMode(command: String): List<String>? =
+        sessionManager.rawExchange(command).getOrNull()?.let { ResponseParser.parseDtcResponse(it) }
 
     private suspend fun persist(items: List<DiagnosticRules.Diagnosis>, timestamp: Long) {
         val json = JSONArray().apply {

@@ -19,6 +19,14 @@ interface SpeedCameraDao {
     @Query("SELECT COUNT(*) FROM speed_cameras")
     suspend fun count(): Int
 
+    /** OSM ids are positive — see [com.revscope.core.data.db.entities.SpeedCameraEntity]. */
+    @Query("SELECT COUNT(*) FROM speed_cameras WHERE osmId > 0")
+    suspend fun countOsm(): Int
+
+    /** ANSV ids are negated to keep them out of OSM's positive id space (see AnsvCameraParser). */
+    @Query("SELECT COUNT(*) FROM speed_cameras WHERE osmId < 0")
+    suspend fun countAnsv(): Int
+
     @Query("DELETE FROM speed_cameras")
     suspend fun deleteAll()
 
