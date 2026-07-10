@@ -42,7 +42,10 @@ private const val NOTIFICATION_UPDATE_MS = 5_000L
 // C1: a real crash severs the OBD link too (adapter jarred loose, tip-over cuts ignition),
 // so losing the session is not proof the ride is over — give crash detection a grace window
 // fed by GPS + IMU alone before tearing the subsystem down.
-private const val CRASH_GRACE_PERIOD_MS = 180_000L
+// NEW-3: 90s, not 3 min — CrashDetector's immobility window (IMMOBILITY_DURATION_MS) is only
+// 30s and the impact necessarily precedes the link loss, so 90s covers TRIGGERED with margin
+// at half the battery cost of the previous 180s window.
+private const val CRASH_GRACE_PERIOD_MS = 90_000L
 private const val CRASH_GRACE_MOTION_LOOKBACK_MS = 60_000L
 
 /**
@@ -100,6 +103,10 @@ class ObdForegroundService : Service() {
         graceJob?.cancel()
         gpsRecorder?.stop()
         motionRecorder?.stop()
+        // NEW-2: if the service dies mid-real-countdown (e.g. manual disconnect while an
+        // alarm is counting down), cancel it here too — otherwise the looping alarm sound
+        // and notification outlive the service with nothing left to stop them.
+        crashResponder.cancelAlarm()
         scope.cancel()
         Timber.i("ObdForegroundService: destroyed")
         super.onDestroy()
@@ -175,6 +182,12 @@ class ObdForegroundService : Service() {
     private fun handleSessionLost() {
         if (shouldEnterCrashGrace()) {
             Timber.i("ObdForegroundService: link lost with recent motion — entering ${CRASH_GRACE_PERIOD_MS}ms crash-detection grace")
+            // NEW-1: the closed session must not keep growing — recorders stay alive to feed
+            // MotionMetricsHub/LiveRouteHolder/cameraAlerter/trackModeEngine (and thus
+            // CrashResponder) but stop writing rows against a sessionId that already has its
+            // aggregates computed.
+            motionRecorder?.setPersistenceEnabled(false)
+            gpsRecorder?.setPersistenceEnabled(false)
             graceJob = scope.launch { runCrashGrace() }
         } else {
             stopCrashSubsystemAndRecorders()
@@ -277,7 +290,13 @@ class ObdForegroundService : Service() {
         fun requestShutdown(context: Context) {
             runCatching {
                 context.startService(Intent(context, ObdForegroundService::class.java).setAction(ACTION_SHUTDOWN))
-            }.onFailure { Timber.w(it, "ObdForegroundService: could not request shutdown") }
+            }.onFailure { e ->
+                Timber.w(e, "ObdForegroundService: could not request shutdown")
+                // NEW-6: startService threw (e.g. background-start restriction) — the ACTION_SHUTDOWN
+                // intent never reached the service, so fall back to an unconditional stop instead of
+                // silently leaving it running forever.
+                runCatching { context.stopService(Intent(context, ObdForegroundService::class.java)) }
+            }
         }
     }
 }

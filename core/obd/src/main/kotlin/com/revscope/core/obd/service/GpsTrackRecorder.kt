@@ -41,6 +41,12 @@ class GpsTrackRecorder(
     private val buffer = mutableListOf<GpsPointEntity>()
     private var listener: LocationListener? = null
     private var flushJob: Job? = null
+    private var recorderScope: CoroutineScope? = null
+
+    // NEW-1: lets the foreground service silence DB writes during crash-detection grace
+    // (closed session already has its aggregates computed) while GPS keeps running and
+    // still feeds trackModeEngine/cameraAlerter/routeHolder (and thus CrashResponder).
+    @Volatile private var persistenceEnabled = true
 
     fun hasPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
@@ -72,6 +78,8 @@ class GpsTrackRecorder(
             return
         }
         listener = newListener
+        recorderScope = scope
+        persistenceEnabled = true
         Timber.i("GpsTrackRecorder: recording track for session $sessionId")
 
         flushJob = scope.launch {
@@ -96,6 +104,20 @@ class GpsTrackRecorder(
         listener = null
         flushJob?.cancel()
         flushJob = null
+        recorderScope = null
+        persistenceEnabled = true
+    }
+
+    /**
+     * NEW-1: GPS keeps registering fixes and keeps feeding trackModeEngine/cameraAlerter/
+     * routeHolder either way — only the buffer append + DB flush path is gated. Flushes
+     * whatever is already buffered once before turning persistence off so no in-flight
+     * points are silently dropped.
+     */
+    fun setPersistenceEnabled(enabled: Boolean) {
+        if (persistenceEnabled == enabled) return
+        persistenceEnabled = enabled
+        if (!enabled) recorderScope?.launch { flush() }
     }
 
     private fun onLocation(sessionId: Long, location: Location) {
@@ -107,7 +129,9 @@ class GpsTrackRecorder(
             longitude = location.longitude,
             speedKmh = if (location.hasSpeed()) location.speed * MPS_TO_KMH else 0f,
         )
-        synchronized(buffer) { buffer += point }
+        if (persistenceEnabled) {
+            synchronized(buffer) { buffer += point }
+        }
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
         cameraAlerter?.onGpsFix(location.latitude, location.longitude)
         routeHolder?.append(location.latitude, location.longitude)

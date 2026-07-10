@@ -152,12 +152,14 @@ class CrashResponder @Inject constructor(
     }
 
     private fun handleTriggered(scope: CoroutineScope) {
-        if (countdownJob != null) return
-        Timber.w("CrashResponder: crash detected — starting emergency countdown")
         startAlarm(scope, simulated = false)
     }
 
+    /** NEW-8: refuses to stomp an already-running countdown — covers both a real re-trigger
+     * and [simulateTrigger] firing while a real alarm is already counting down. */
     private fun startAlarm(scope: CoroutineScope, simulated: Boolean) {
+        if (countdownJob != null) return
+        if (!simulated) Timber.w("CrashResponder: crash detected — starting emergency countdown")
         createAlarmChannel()
         postAlarmNotification(COUNTDOWN_TOTAL_MS)
         startLoopingAlarmSound()
@@ -195,7 +197,13 @@ class CrashResponder @Inject constructor(
             )
             player.setDataSource(context, uri)
             player.isLooping = true
-            player.setOnPreparedListener { it.start() }
+            // NEW-4: prepareAsync() callback can land after cancelAlarm()/onDestroy() already
+            // released this player (e.g. "ESTOY BIEN" tapped during preparation) — starting a
+            // released MediaPlayer throws. Only start if this is still the live player, and
+            // never let a stray IllegalStateException escape the callback.
+            player.setOnPreparedListener { mp ->
+                if (mp === alarmPlayer) runCatching { mp.start() }
+            }
             player.prepareAsync()
             alarmPlayer = player
         }.onFailure { Timber.w(it, "CrashResponder: failed to start alarm sound") }

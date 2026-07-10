@@ -102,7 +102,10 @@ fun SettingsScreen(
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
     val crashPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
-    ) { grants -> if (grants[Manifest.permission.SEND_SMS] == true) vm.updateCrashDetectionEnabled(true) }
+        // NEW-7: re-check actual permission state instead of trusting the grants map alone —
+        // when only POST_NOTIFICATIONS was missing (SMS already granted), SEND_SMS is absent
+        // from `grants` entirely and would otherwise be misread as denied.
+    ) { _ -> if (hasSmsPermission(context)) vm.updateCrashDetectionEnabled(true) }
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
@@ -401,8 +404,9 @@ fun SettingsScreen(
                 Switch(
                     checked = crashDetectionEnabled,
                     onCheckedChange = { checked ->
-                        if (checked && !hasSmsPermission(context)) {
-                            crashPermissionLauncher.launch(crashDetectionPermissions())
+                        val missing = if (checked) missingCrashDetectionPermissions(context) else emptyArray()
+                        if (missing.isNotEmpty()) {
+                            crashPermissionLauncher.launch(missing)
                         } else {
                             vm.updateCrashDetectionEnabled(checked)
                         }
@@ -551,12 +555,19 @@ private fun hasSmsPermission(context: android.content.Context): Boolean =
 
 /** M4: SMS is the hard requirement, but notifications must also be requested on API 33+ —
  * without them the alarm can't post while the app is backgrounded. */
-private fun crashDetectionPermissions(): Array<String> =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        arrayOf(Manifest.permission.SEND_SMS, Manifest.permission.POST_NOTIFICATIONS)
-    } else {
-        arrayOf(Manifest.permission.SEND_SMS)
-    }
+private fun hasNotificationPermission(context: android.content.Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+
+/** NEW-7: requests whichever of SEND_SMS/POST_NOTIFICATIONS is actually missing — previously
+ * POST_NOTIFICATIONS was only requested alongside SEND_SMS, so a user who already granted SMS
+ * but later revoked notifications was never re-prompted. */
+private fun missingCrashDetectionPermissions(context: android.content.Context): Array<String> =
+    buildList {
+        if (!hasSmsPermission(context)) add(Manifest.permission.SEND_SMS)
+        if (!hasNotificationPermission(context)) add(Manifest.permission.POST_NOTIFICATIONS)
+    }.toTypedArray()
 
 @Composable
 private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {

@@ -50,8 +50,14 @@ class MotionSensorRecorder(
 
     private val buffer = mutableListOf<ImuPointEntity>()
     private var flushJob: Job? = null
+    private var recorderScope: CoroutineScope? = null
     private var sessionId = 0L
     private var registered = false
+
+    // NEW-1: lets the foreground service silence DB writes during crash-detection grace
+    // (closed session already has its aggregates computed) while sensors keep running and
+    // still feed MotionMetricsHub for CrashResponder.
+    @Volatile private var persistenceEnabled = true
 
     // Sensor fusion state
     private val rotationMatrix = FloatArray(9)
@@ -76,6 +82,8 @@ class MotionSensorRecorder(
     fun start(scope: CoroutineScope, newSessionId: Long) {
         if (registered) return
         sessionId = newSessionId
+        recorderScope = scope
+        persistenceEnabled = true
         hub.resetSession()
         val sensorManager =
             context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
@@ -113,6 +121,8 @@ class MotionSensorRecorder(
         }
         flushJob?.cancel()
         flushJob = null
+        recorderScope = null
+        persistenceEnabled = true
         baselineGravity = null
         stationarySinceMs = -1L
         rawPeakSamples.clear()
@@ -121,6 +131,17 @@ class MotionSensorRecorder(
     /** Fed from GPS fixes — defines the vehicle's forward axis in world frame. */
     fun updateGpsBearing(bearingDeg: Float) {
         gpsBearingDeg = bearingDeg
+    }
+
+    /**
+     * NEW-1: sensors keep registering and keep feeding [hub] either way — only the buffer
+     * append + DB flush path is gated. Flushes whatever is already buffered once before
+     * turning persistence off so no in-flight points are silently dropped.
+     */
+    fun setPersistenceEnabled(enabled: Boolean) {
+        if (persistenceEnabled == enabled) return
+        persistenceEnabled = enabled
+        if (!enabled) recorderScope?.launch { flush() }
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -194,14 +215,16 @@ class MotionSensorRecorder(
 
         if (now - lastStoreMs >= STORE_INTERVAL_MS) {
             lastStoreMs = now
-            val point = ImuPointEntity(
-                sessionId = sessionId,
-                timestamp = now,
-                gLat = gLat,
-                gLong = gLong,
-                leanDeg = lean,
-            )
-            synchronized(buffer) { buffer += point }
+            if (persistenceEnabled) {
+                val point = ImuPointEntity(
+                    sessionId = sessionId,
+                    timestamp = now,
+                    gLat = gLat,
+                    gLong = gLong,
+                    leanDeg = lean,
+                )
+                synchronized(buffer) { buffer += point }
+            }
         }
     }
 
