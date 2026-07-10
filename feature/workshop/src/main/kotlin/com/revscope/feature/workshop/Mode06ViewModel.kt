@@ -31,9 +31,14 @@ class Mode06ViewModel @Inject constructor(
     sealed interface UiState {
         data object Idle : UiState
         data class Scanning(val current: Int, val total: Int) : UiState
-        data class Done(val groups: List<MidGroup>) : UiState
+
+        /** [incomplete] is true when a per-MID read failed mid-scan — [groups] is a partial result. */
+        data class Done(val groups: List<MidGroup>, val incomplete: Boolean = false) : UiState
         data class Error(val message: String) : UiState
     }
+
+    /** Mirrors [HealthCheckViewModel]'s DtcScanResult honesty pattern for a partial Mode 06 scan. */
+    private data class FetchGroupsResult(val groups: List<MidGroup>, val incomplete: Boolean)
 
     val connectionState: StateFlow<ConnectionState> = sessionManager.connectionState
 
@@ -53,7 +58,8 @@ class Mode06ViewModel @Inject constructor(
                     _state.value = UiState.Error("El vehículo no reporta resultados Mode 06 soportados")
                     return@launch
                 }
-                _state.value = UiState.Done(fetchGroups(mids))
+                val result = fetchGroups(mids)
+                _state.value = UiState.Done(result.groups, result.incomplete)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -69,20 +75,24 @@ class Mode06ViewModel @Inject constructor(
         return Mode06Parser.parseSupportedMids(response).sorted()
     }
 
-    private suspend fun fetchGroups(mids: List<String>): List<MidGroup> {
+    private suspend fun fetchGroups(mids: List<String>): FetchGroupsResult {
         val groups = mutableListOf<MidGroup>()
+        var incomplete = false
         mids.forEachIndexed { index, mid ->
             _state.value = UiState.Scanning(index + 1, mids.size)
             val results = fetchResultsForMid(mid)
-            if (results.isNotEmpty()) {
+            if (results == null) {
+                incomplete = true
+            } else if (results.isNotEmpty()) {
                 groups += MidGroup(mid, Mode06MidNames.nameFor(mid), results)
             }
         }
-        return groups
+        return FetchGroupsResult(groups, incomplete)
     }
 
-    private suspend fun fetchResultsForMid(mid: String): List<Mode06Parser.TestResult> {
-        val response = sessionManager.rawExchange("06 $mid\r", MODE06_TIMEOUT_MS).getOrNull() ?: return emptyList()
+    /** Null means the read itself failed (lost link) — distinct from an empty-but-successful read. */
+    private suspend fun fetchResultsForMid(mid: String): List<Mode06Parser.TestResult>? {
+        val response = sessionManager.rawExchange("06 $mid\r", MODE06_TIMEOUT_MS).getOrNull() ?: return null
         return Mode06Parser.parseTestResults(response)
     }
 }

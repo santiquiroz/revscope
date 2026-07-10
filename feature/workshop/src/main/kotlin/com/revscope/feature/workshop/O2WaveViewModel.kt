@@ -3,9 +3,13 @@ package com.revscope.feature.workshop
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.workshop.O2SwitchCounter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,13 +18,24 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 private const val READINGS_SUBSCRIPTION_TIMEOUT_MS = 5_000L
 
 /** Sliding window: last 60 s of samples, hard-capped so a stalled clock can't grow it unbounded. */
 private const val WINDOW_MS = 60_000L
-private const val MAX_SAMPLES = 240
+
+// A healthy narrowband O2 sensor switches ~1 Hz — the shared scheduler's priority-3 slot
+// (PID 14, every 2000 ms) aliases that into a false flatline. This screen runs its own
+// fast sampler instead; the transport mutex serializes it with the normal scheduler so
+// the two never interleave on the wire.
+private const val FAST_SAMPLE_INTERVAL_MS = 180L
+private const val FAST_SAMPLE_TIMEOUT_MS = 1_500L
+
+// 60 s window / 180 ms cadence = ~334 samples, rounded up so normal operation never trims
+// below the advertised 60 s — this is purely the stalled-clock safety cap, not the steady-state size.
+private const val MAX_SAMPLES = 334
 
 internal const val DEFAULT_O2_PID = "14"
 
@@ -30,6 +45,7 @@ internal val O2_SENSOR_PIDS = listOf("14", "15", "18", "19")
 @HiltViewModel
 class O2WaveViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
+    private val registry: PidRegistry,
 ) : ViewModel() {
 
     private val _selectedPid = MutableStateFlow(DEFAULT_O2_PID)
@@ -38,6 +54,8 @@ class O2WaveViewModel @Inject constructor(
     private val _samples = MutableStateFlow<List<ObdReading>>(emptyList())
     val samples: StateFlow<List<ObdReading>> = _samples.asStateFlow()
 
+    // Sensor discovery for the selector still rides the shared scheduler: PID 15/18/19
+    // only ever populate `readings` while workshop mode is on (see setWorkshopMode below).
     val availableSensors: StateFlow<List<String>> = sessionManager.readings
         .map { readings -> O2_SENSOR_PIDS.filter { readings.containsKey(it) } }
         .distinctUntilChanged()
@@ -47,13 +65,10 @@ class O2WaveViewModel @Inject constructor(
             listOf(DEFAULT_O2_PID),
         )
 
+    private var fastSamplerJob: Job? = null
+
     init {
-        viewModelScope.launch {
-            sessionManager.readings
-                .map { it[_selectedPid.value] }
-                .distinctUntilChanged()
-                .collect { reading -> reading?.let(::appendSample) }
-        }
+        restartFastSampler(_selectedPid.value)
     }
 
     fun setWorkshopMode(enabled: Boolean) = sessionManager.setWorkshopMode(enabled)
@@ -62,10 +77,39 @@ class O2WaveViewModel @Inject constructor(
         if (pid == _selectedPid.value) return
         _selectedPid.value = pid
         _samples.value = emptyList()
+        restartFastSampler(pid)
     }
 
     fun crossingsPerMinute(): Double =
         O2SwitchCounter.perMinute(_samples.value.map { it.timestamp to it.value })
+
+    override fun onCleared() {
+        fastSamplerJob?.cancel()
+        super.onCleared()
+    }
+
+    private fun restartFastSampler(pid: String) {
+        fastSamplerJob?.cancel()
+        fastSamplerJob = viewModelScope.launch { runFastSampler(pid) }
+    }
+
+    private suspend fun runFastSampler(pid: String) {
+        while (true) {
+            sampleOnce(pid)
+            delay(FAST_SAMPLE_INTERVAL_MS)
+        }
+    }
+
+    private suspend fun sampleOnce(pid: String) {
+        try {
+            val raw = sessionManager.rawExchange("01 $pid\r", FAST_SAMPLE_TIMEOUT_MS).getOrNull() ?: return
+            registry.parseAndEvaluate(pid, raw)?.let(::appendSample)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "O2WaveViewModel: fast sample failed for PID $pid")
+        }
+    }
 
     private fun appendSample(reading: ObdReading) {
         val current = _samples.value

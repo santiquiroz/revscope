@@ -17,6 +17,13 @@ class Mode06ParserTest {
     }
 
     @Test
+    fun `parseSupportedMids strips SEARCHING banner glued to payload`() {
+        // Same bitmap as the plain-header test, but preceded by the ELM's first-command banner
+        val mids = Mode06Parser.parseSupportedMids("SEARCHING...\r4600 80 00 00 01")
+        assertEquals(setOf("01", "20"), mids)
+    }
+
+    @Test
     fun `parseSupportedMids returns empty set for error response`() {
         assertTrue(Mode06Parser.parseSupportedMids("NO DATA").isEmpty())
     }
@@ -36,7 +43,7 @@ class Mode06ParserTest {
     @Test
     fun `parseTestResults decodes two records with pass and fail`() {
         // Record 1: MID 01, TID 01, UAS 01 (count x1), value 5 in [0,10] -> pass
-        // Record 2: MID 01, TID 02, UAS 0B (kPa x1), value 20 not in [0,16] -> fail
+        // Record 2: MID 01, TID 02, UAS 0B (0.001 V per count), value 20 not in [0,16] -> fail
         val raw = "46" + "01010100050000000A" + "01020B001400000010"
         val results = Mode06Parser.parseTestResults(raw)
 
@@ -69,6 +76,24 @@ class Mode06ParserTest {
         val result = Mode06Parser.parseTestResults(raw).single()
         assertEquals("cuentas", result.unit)
         assertEquals(42.0, result.value, 0.001)
+    }
+
+    @Test
+    fun `parseTestResults applies UAS 0B millivolt scale`() {
+        // MID 21, TID 02, UAS 0B (0.001 V per count) raw value 500 -> 0.5 V
+        val raw = "46" + "2102" + "0B" + "01F4" + "0000" + "0000"
+        val result = Mode06Parser.parseTestResults(raw).single()
+        assertEquals("V", result.unit)
+        assertEquals(0.5, result.value, 0.0001)
+    }
+
+    @Test
+    fun `parseTestResults passes when max limit is zero-filled and value clears the min`() {
+        // MID 01, TID 03, UAS 01, value 50, min 10, max 0 (not applicable) -> pass
+        val raw = "46" + "0103010032000A0000"
+        val result = Mode06Parser.parseTestResults(raw).single()
+        assertEquals(0, result.rawMax)
+        assertTrue(result.pass)
     }
 
     @Test

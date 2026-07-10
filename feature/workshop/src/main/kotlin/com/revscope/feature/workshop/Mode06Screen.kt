@@ -93,7 +93,7 @@ private fun Mode06Body(state: Mode06ViewModel.UiState, onRetry: () -> Unit) {
     when (state) {
         Mode06ViewModel.UiState.Idle -> Text("Preparando…", color = TextMutedColor, fontSize = 13.sp)
         is Mode06ViewModel.UiState.Scanning -> ScanningProgress(state)
-        is Mode06ViewModel.UiState.Done -> ResultsList(state.groups, onRetry)
+        is Mode06ViewModel.UiState.Done -> ResultsList(state.groups, state.incomplete, onRetry)
         is Mode06ViewModel.UiState.Error -> ErrorState(state.message, onRetry)
     }
 }
@@ -128,13 +128,33 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ResultsList(groups: List<Mode06ViewModel.MidGroup>, onRetry: () -> Unit) {
-    if (groups.isEmpty()) {
-        ErrorState("El vehículo no devolvió resultados Mode 06 legibles.", onRetry)
-        return
+private fun ResultsList(groups: List<Mode06ViewModel.MidGroup>, incomplete: Boolean, onRetry: () -> Unit) {
+    Column {
+        if (incomplete) IncompleteScanBanner()
+        if (groups.isEmpty()) {
+            ErrorState("El vehículo no devolvió resultados Mode 06 legibles.", onRetry)
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(groups, key = { it.mid }) { group -> MidGroupCard(group) }
+            }
+        }
     }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(groups, key = { it.mid }) { group -> MidGroupCard(group) }
+}
+
+@Composable
+private fun IncompleteScanBanner() {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = DangerColor.copy(alpha = 0.15f),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+    ) {
+        Text(
+            "Escaneo incompleto — se perdió el enlace; repite el escaneo",
+            color = DangerColor,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(10.dp),
+        )
     }
 }
 

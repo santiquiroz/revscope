@@ -32,7 +32,7 @@ object Mode06Parser {
      * Decodes the "06 00" supported-MID bitmap (identical bit layout to [ResponseParser.parseSupportedPids]).
      */
     fun parseSupportedMids(raw: String): Set<String> {
-        val clean = ResponseParser.cleanResponse(raw)
+        val clean = ResponseParser.stripTransientPrefixes(ResponseParser.cleanResponse(raw))
         if (clean.length < 4 || !clean.startsWith(RESPONSE_HEADER)) return emptySet()
 
         val requestMid = clean.substring(2, 4).toIntOrNull(16) ?: return emptySet()
@@ -91,14 +91,18 @@ object Mode06Parser {
             min = scale.toPhysical(rawMin),
             max = scale.toPhysical(rawMax),
             unit = scale.unit,
-            pass = rawValue in rawMin..rawMax,
+            // Mode 06 zero-fills whichever limit doesn't apply to a given test — a 0 max
+            // must not fail a value that only has a floor (and vice versa for a 0 min).
+            pass = rawValue >= rawMin && (rawMax == 0 || rawValue <= rawMax),
         )
     }
 
     /**
-     * Physical scaling for a handful of commonly seen SAE J1979 Unit-and-Scaling IDs.
-     * Manufacturer-specific test values are not standardized beyond this — unknown IDs
-     * fall back to the raw count, which is always shown alongside the scaled value in the UI.
+     * Physical scaling for a handful of commonly seen SAE J1979 Unit-and-Scaling IDs,
+     * sourced from python-OBD's UnitsAndScaling table and cross-checked against the
+     * GM Mode $06 reference — not the full ISO 15031-5 Table B1. Manufacturer-specific
+     * test values are not standardized beyond this — unknown IDs fall back to the raw
+     * count, which is always shown alongside the scaled value in the UI.
      */
     private data class UasScale(val factor: Double, val unit: String) {
         fun toPhysical(raw: Int): Double = raw * factor
@@ -108,11 +112,11 @@ object Mode06Parser {
 
             private val KNOWN: Map<Int, UasScale> = mapOf(
                 0x01 to UasScale(1.0, "cuentas"),
-                0x02 to UasScale(0.001, "ratio"),
-                0x04 to UasScale(0.001, "V"),
-                0x05 to UasScale(0.005, "V"),
-                0x09 to UasScale(0.01, "mA"),
-                0x0B to UasScale(1.0, "kPa"),
+                0x02 to UasScale(0.1, "cuentas"),
+                0x04 to UasScale(0.001, ""),
+                0x05 to UasScale(0.0000305, ""),
+                0x09 to UasScale(1.0, "km/h"),
+                0x0B to UasScale(0.001, "V"),
             )
 
             fun forId(uasId: Int): UasScale = KNOWN[uasId] ?: RAW

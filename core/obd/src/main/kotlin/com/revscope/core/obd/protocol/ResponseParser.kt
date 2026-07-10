@@ -50,8 +50,9 @@ object ResponseParser {
      * Removes transient status banners glued in front of a payload so a valid
      * response like "SEARCHING...4100BE3F9011" parses as "4100BE3F9011".
      * A banner with no payload after it still reads as an error downstream.
+     * Visible to [Mode06Parser], which strips the same banners before its "46" header check.
      */
-    private fun stripTransientPrefixes(clean: String): String {
+    internal fun stripTransientPrefixes(clean: String): String {
         var result = clean
         var stripped = true
         while (stripped) {

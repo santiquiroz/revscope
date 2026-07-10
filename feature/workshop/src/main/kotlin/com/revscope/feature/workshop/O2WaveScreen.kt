@@ -60,7 +60,8 @@ private val SENSOR_LABELS = mapOf(
     "19" to "B2S2",
 )
 
-private const val O2_MAX_VOLTS = 1.0
+// PID 14/15/18/19 formula is A/200 with A up to 255 -> max physical value is 1.275 V.
+private const val O2_MAX_VOLTS = 1.3
 private const val O2_MIN_VOLTS = 0.0
 private const val O2_TICK_STEP = 0.2
 private const val HEALTHY_CROSSINGS_PER_MIN = 8
