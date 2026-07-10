@@ -37,10 +37,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -62,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
+import com.revscope.core.obd.mcp.McpServerState
 import java.time.LocalDate
 import kotlinx.coroutines.delay
 
@@ -110,6 +114,9 @@ fun SettingsScreen(
     val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
     val crashDetectionEnabled by vm.crashDetectionEnabled.collectAsState()
     val emergencyPhone by vm.emergencyPhone.collectAsState()
+    val mcpServerEnabled by vm.mcpServerEnabled.collectAsState()
+    val mcpToken by vm.mcpToken.collectAsState()
+    val mcpServerState by vm.mcpServerState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
@@ -606,6 +613,44 @@ fun SettingsScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) { Text("Validar y aplicar", color = BgColor) }
 
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Servidor MCP (red local)")
+            Text(
+                "Expone el estado de tu vehículo a asistentes de IA en tu red WiFi (Claude Desktop, " +
+                    "LM Studio…): conexión, viajes, chequeos, DTCs, mantenimiento y documentos. " +
+                    "Apagado por defecto — actívalo solo en redes de confianza.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Servidor MCP activo",
+                    color = TextPrimaryColor,
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = mcpServerEnabled,
+                    onCheckedChange = vm::updateMcpServerEnabled,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = BgColor,
+                        checkedTrackColor = AccentColor,
+                    ),
+                )
+            }
+            McpServerStatusText(mcpServerEnabled, mcpServerState)
+            if (mcpServerEnabled) {
+                McpConnectionDetails(
+                    mcpServerState = mcpServerState,
+                    mcpToken = mcpToken,
+                    onCopyUrl = { url -> copyToClipboard(context, "URL MCP", url) },
+                    onCopyToken = { copyToClipboard(context, "Token MCP", mcpToken) },
+                )
+            }
+
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -678,6 +723,59 @@ private fun AiProviderDropdown(selected: String, onSelected: (String) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun McpServerStatusText(enabled: Boolean, state: McpServerState) {
+    if (!enabled) return
+    val text = when (state) {
+        is McpServerState.Running -> null // shown by McpConnectionDetails instead
+        McpServerState.NoWifi -> "Sin WiFi — conecta a una red para activar el servidor"
+        McpServerState.Stopped -> "Iniciando servidor…"
+    }
+    text?.let { Text(it, color = TextMutedColor, fontSize = 12.sp) }
+}
+
+@Composable
+private fun McpConnectionDetails(
+    mcpServerState: McpServerState,
+    mcpToken: String,
+    onCopyUrl: (String) -> Unit,
+    onCopyToken: () -> Unit,
+) {
+    if (mcpServerState is McpServerState.Running) {
+        McpDetailRow(label = "URL", value = mcpServerState.url, onCopy = { onCopyUrl(mcpServerState.url) })
+    }
+    if (mcpToken.isNotBlank()) {
+        McpDetailRow(label = "Token", value = mcpToken, onCopy = onCopyToken)
+    }
+    Text(
+        "En Claude Desktop u otro cliente MCP: agrega un servidor tipo streamable-http con esta " +
+            "URL y el header Authorization: Bearer <token>.",
+        color = TextMutedColor,
+        fontSize = 11.sp,
+    )
+}
+
+@Composable
+private fun McpDetailRow(label: String, value: String, onCopy: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = TextMutedColor, fontSize = 11.sp)
+            Text(value, color = AccentColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        }
+        TextButton(onClick = onCopy) { Text("Copiar", color = AccentColor) }
+    }
+}
+
+private fun copyToClipboard(context: android.content.Context, label: String, text: String) {
+    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+    Toast.makeText(context, "$label copiado", Toast.LENGTH_SHORT).show()
 }
 
 private fun defaultBackupFileName(): String = "revscope-backup-${LocalDate.now()}.zip"

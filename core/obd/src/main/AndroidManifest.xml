@@ -7,6 +7,11 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
+        <service
+            android:name="com.revscope.core.obd.mcp.McpServerService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <receiver
             android:name="com.revscope.core.obd.safety.CrashCancelReceiver"
             android:exported="false" />

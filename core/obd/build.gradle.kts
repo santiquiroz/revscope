@@ -53,6 +53,9 @@ dependencies {
     implementation(libs.exp4j)
     implementation(libs.timber)
 
+    // Embedded MCP server over local WiFi (Plan 6 Task 4)
+    implementation(libs.nanohttpd)
+
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockk)

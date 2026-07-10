@@ -202,4 +202,12 @@ object PreferencesKeys {
      * adaptador, donde la fuente siempre es GPS.
      */
     val SPEED_SOURCE_GPS = booleanPreferencesKey("speed_source_gps")
+
+    // ── Servidor MCP (red local) ────────────────────────────────────────────
+
+    /** Apagado por defecto — expone el estado del vehículo a clientes MCP del PC (default false) */
+    val MCP_SERVER_ENABLED = booleanPreferencesKey("mcp_server_enabled")
+
+    /** Token Bearer generado una sola vez (UUID) — requerido en Authorization para /mcp */
+    val MCP_TOKEN = stringPreferencesKey("mcp_token")
 }

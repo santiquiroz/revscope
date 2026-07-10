@@ -28,6 +28,7 @@ playServicesWearable = "18.2.0"
 guava = "33.0.0-android"
 osmdroid = "6.1.20"
 androidxCoreKtx = "1.13.1"
+nanohttpd = "2.3.1"
 
 [libraries]
 # Compose BOM
@@ -107,6 +108,9 @@ car-app = { group = "androidx.car.app", name = "app", version.ref = "carApp" }
 
 # AndroidX Core (FileProvider for CSV export sharing)
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCoreKtx" }
+
+# Embedded HTTP server (local-network MCP server)
+nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

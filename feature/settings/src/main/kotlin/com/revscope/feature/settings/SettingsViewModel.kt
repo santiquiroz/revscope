@@ -28,6 +28,10 @@ import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.alerts.CustomAlertRules
 import com.revscope.core.obd.cameras.CameraDownloadResult
 import com.revscope.core.obd.cameras.SpeedCameraUpdater
+import com.revscope.core.obd.mcp.McpServerController
+import com.revscope.core.obd.mcp.McpServerService
+import com.revscope.core.obd.mcp.McpServerState
+import com.revscope.core.obd.mcp.McpTokenStore
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.safety.CrashResponder
 import com.revscope.core.obd.session.ObdSessionManager
@@ -57,6 +61,8 @@ class SettingsViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val backupManager: BackupManager,
     private val crashResponder: CrashResponder,
+    private val mcpTokenStore: McpTokenStore,
+    private val mcpServerController: McpServerController,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -145,6 +151,36 @@ class SettingsViewModel @Inject constructor(
     val voiceLocalInfo: StateFlow<Boolean> = _voiceLocalInfo.asStateFlow()
 
     val activeVehicleProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
+
+    // ── Servidor MCP (red local) ─────────────────────────────────────────────
+
+    private val _mcpServerEnabled = MutableStateFlow(false)
+    val mcpServerEnabled: StateFlow<Boolean> = _mcpServerEnabled.asStateFlow()
+
+    private val _mcpToken = MutableStateFlow("")
+    val mcpToken: StateFlow<String> = _mcpToken.asStateFlow()
+
+    /** Source of truth for whether the server is actually bound right now — see [McpServerController]. */
+    val mcpServerState: StateFlow<McpServerState> = mcpServerController.state
+
+    init {
+        viewModelScope.launch {
+            runCatching {
+                _mcpServerEnabled.value = mcpTokenStore.enabled.first()
+                _mcpToken.value = mcpTokenStore.tokenOrGenerate()
+            }.onFailure { Timber.w(it, "SettingsViewModel: failed to load MCP server settings") }
+        }
+    }
+
+    /** Persists the toggle and starts/stops the foreground MCP server immediately (session-scoped only). */
+    fun updateMcpServerEnabled(value: Boolean) {
+        _mcpServerEnabled.value = value
+        viewModelScope.launch {
+            runCatching { mcpTokenStore.setEnabled(value) }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist MCP server toggle") }
+        }
+        if (value) McpServerService.start(appContext) else McpServerService.stop(appContext)
+    }
 
     init {
         viewModelScope.launch {
