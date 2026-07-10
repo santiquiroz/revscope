@@ -86,3 +86,19 @@ Verificar: `$GRADLE :core:obd:testDebugUnitTest :app:assembleDebug` + verificaci
 5. Ajustes: el switch vive en las categorías de voz + una línea de costo estimado en el subtítulo.
 
 Verificar: `$GRADLE :core:obd:testDebugUnitTest :app:assembleDebug`. Commit: `feat: aviso de información local con IA al entrar a un municipio nuevo (opcional, apagado por defecto)`.
+
+---
+
+### Task 7: Multi-proveedor de IA (Claude, OpenAI, Gemini, compatible-OpenAI genérico)
+
+1. **Interfaz** `core/intelligence/.../provider/AiProvider.kt`: `suspend fun complete(request: AiRequest): Result<String>` con `AiRequest(system: String?, user: String, maxTokens: Int, needsWebSearch: Boolean)` + `val supportsWebSearch: Boolean` + `val displayName: String`. Extraer el HTTP/JSON de DtcExplainer a `AnthropicProvider` (mismo comportamiento: headers, timeout, web_search tool cuando needsWebSearch).
+2. **Implementaciones** (mismo patrón HttpURLConnection existente, sin deps nuevas):
+   - `OpenAiProvider`: POST https://api.openai.com/v1/chat/completions, Bearer key, body {model, messages[{role:system},{role:user}], max_completion_tokens}; needsWebSearch → usar la Responses API (https://api.openai.com/v1/responses con tools:[{type:"web_search"}]) — implementar responses para búsqueda y chat/completions para lo normal, o solo responses si simplifica (documentar). Default model editable: "gpt-5-mini".
+   - `GeminiProvider`: POST https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent?key=<KEY>, body {system_instruction, contents, tools:[{google_search:{}}] cuando needsWebSearch}. Default: "gemini-2.5-flash". Parse candidates[0].content.parts[].text.
+   - `OpenAiCompatibleProvider(baseUrl)`: chat/completions contra baseUrl editable (cubre LM Studio/DeepSeek/Groq/OpenRouter); supportsWebSearch=false.
+3. **Selección y llaves**: DataStore `AI_PROVIDER` (anthropic|openai|gemini|custom, default anthropic), `AI_MODEL_OVERRIDE` por proveedor (string, default por proveedor), `AI_CUSTOM_BASE_URL`. SecureKeyStore: generalizar a multi-llave (`getApiKey(provider)/setApiKey(provider)` — la llave Claude existente migra como provider anthropic, mantener compat con getClaudeApiKey delegando). Factory @Singleton `AiProviderFactory.current(): AiProvider?` que lee la selección + llave.
+4. **Consumidores**: DtcExplainer y LocalInfoFetcher consumen AiProvider vía factory (LocalInfoFetcher: si el proveedor actual no soporta web search → devolver null y en Ajustes mostrar sub-texto "requiere Claude/OpenAI/Gemini" bajo el toggle de info local). El botón "Explicar con IA" no cambia de UX.
+5. **Ajustes sección "Inteligencia artificial"**: dropdown proveedor, campo API key (password, cifrada, por proveedor — al cambiar proveedor muestra la llave de ESE proveedor), campo modelo (con hint del default), campo base URL (visible solo con "Compatible OpenAI"), botón "Probar conexión" (complete("di OK") → snackbar OK/error). La sección reemplaza el campo único de API key actual.
+6. Tests puros donde aplique: parseo de respuestas de cada proveedor (JSON fixtures sintéticos → texto extraído; errores → Result.failure) — TDD `AiResponseParsersTest`.
+
+Verificar: `$GRADLE :core:obd:testDebugUnitTest :app:assembleDebug`. Commit: `feat: soporte multi-proveedor de IA — Claude, OpenAI, Gemini y endpoints compatibles OpenAI`.
