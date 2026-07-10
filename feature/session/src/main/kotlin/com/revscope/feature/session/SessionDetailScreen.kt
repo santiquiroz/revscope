@@ -248,7 +248,11 @@ private fun ReportContent(
             fontWeight = FontWeight.SemiBold,
         )
         Text(assignedVehicleName, color = AccentColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-        Text(session.adapterName, color = TextMutedColor, fontSize = 12.sp)
+        Text(
+            if (session.adapterName == "GPS") "Fuente: GPS" else session.adapterName,
+            color = TextMutedColor,
+            fontSize = 12.sp,
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),

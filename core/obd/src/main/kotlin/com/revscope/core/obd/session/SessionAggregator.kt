@@ -3,9 +3,12 @@ package com.revscope.core.obd.session
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.FuelPricePrefs
+import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
+import com.revscope.core.data.db.entities.GpsPointEntity
+import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.obd.trip.EcoScoreCalculator
@@ -19,6 +22,7 @@ class SessionAggregator(
     private val telemetryDao: TelemetryDao,
     private val imuDao: ImuDao,
     private val settings: DataStore<Preferences>,
+    private val gpsDao: GpsDao,
 ) {
 
     /**
@@ -29,20 +33,40 @@ class SessionAggregator(
     suspend fun close(sessionId: Long, activeProfileProvider: () -> VehicleProfileEntity?) {
         val session = sessionDao.getById(sessionId) ?: return
         val maxRpm = telemetryDao.maxValue(sessionId, "0C") ?: 0f
-        val maxSpeed = telemetryDao.maxValue(sessionId, "0D") ?: 0f
+        val obdMaxSpeed = telemetryDao.maxValue(sessionId, "0D") ?: 0f
         val speedPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0D")
+        val motion = resolveTripMotion(sessionId, obdMaxSpeed, speedPoints)
         val aggregates = computeTripAggregates(sessionId, activeProfileProvider)
         sessionDao.update(
             session.copy(
                 endedAt = System.currentTimeMillis(),
                 maxRpm = maxRpm.roundToInt(),
-                maxSpeed = maxSpeed.roundToInt(),
-                distanceKm = TripStatsCalculator.distanceKm(speedPoints).toFloat(),
+                maxSpeed = motion.maxSpeed.roundToInt(),
+                distanceKm = motion.distanceKm,
                 fuelLiters = aggregates?.fuelLiters,
                 fuelCostCop = aggregates?.fuelCostCop,
                 ecoScore = aggregates?.ecoScore,
             )
         )
+    }
+
+    /**
+     * GPS-only trips have no "0D" telemetry — falls back to the recorded GPS track
+     * (haversine distance + max GPS speed) ONLY when no OBD speed points exist at all,
+     * so a session with an adapter is never touched by this branch.
+     */
+    private suspend fun resolveTripMotion(
+        sessionId: Long,
+        obdMaxSpeed: Float,
+        obdSpeedPoints: List<TelemetryPointEntity>,
+    ): TripMotion {
+        if (obdSpeedPoints.isNotEmpty()) {
+            return TripMotion(
+                maxSpeed = obdMaxSpeed,
+                distanceKm = TripStatsCalculator.distanceKm(obdSpeedPoints).toFloat(),
+            )
+        }
+        return gpsFallbackMotion(gpsDao.pointsForSession(sessionId))
     }
 
     private data class TripAggregates(val fuelLiters: Double?, val fuelCostCop: Double?, val ecoScore: Int?)
@@ -91,5 +115,14 @@ class SessionAggregator(
         private const val PID_MAF = "10"
         private const val DEFAULT_REDLINE_RPM = 10_500
         private const val EARTH_GRAVITY_MS2 = 9.80665
+
+        /** Pure GPS-track fallback for [resolveTripMotion] — no I/O, unit-testable directly. */
+        internal fun gpsFallbackMotion(gpsPoints: List<GpsPointEntity>): TripMotion =
+            TripMotion(
+                maxSpeed = gpsPoints.maxOfOrNull { it.speedKmh } ?: 0f,
+                distanceKm = TripStatsCalculator.gpsDistanceKm(gpsPoints).toFloat(),
+            )
     }
 }
+
+internal data class TripMotion(val maxSpeed: Float, val distanceKm: Float)

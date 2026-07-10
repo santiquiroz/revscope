@@ -14,8 +14,11 @@ class EngineOffDetector(private val clock: () -> Long = System::currentTimeMilli
         if (kmh >= MOVING_THRESHOLD_KMH) lastMovementTs = clock()
     }
 
-    fun movedRecently(): Boolean =
-        lastMovementTs?.let { clock() - it <= RECENT_MOVEMENT_WINDOW_MS } ?: false
+    fun movedRecently(windowMs: Long = RECENT_MOVEMENT_WINDOW_MS): Boolean =
+        lastMovementTs?.let { clock() - it <= windowMs } ?: false
+
+    /** Epoch ms of the last movement above [MOVING_THRESHOLD_KMH], or null if never moved. */
+    fun lastMovementTimestamp(): Long? = lastMovementTs
 
     fun reset() {
         lastMovementTs = null

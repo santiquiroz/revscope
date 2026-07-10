@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -72,6 +73,7 @@ class ObdSessionManager @Inject constructor(
     private val profileDao: VehicleProfileDao,
     private val lapDao: LapDao,
     private val imuDao: ImuDao,
+    private val gpsDao: GpsDao,
     private val settings: DataStore<Preferences>,
     private val alertsEngine: AlertsEngine,
     private val trackModeEngine: TrackModeEngine,
@@ -99,16 +101,22 @@ class ObdSessionManager @Inject constructor(
     private val _currentSessionIdFlow = MutableStateFlow<Long?>(null)
     val currentSessionId: StateFlow<Long?> = _currentSessionIdFlow.asStateFlow()
 
+    /** True while a GPS-only trip (no adapter) is recording — see [startGpsSession]. */
+    private val _gpsSessionActive = MutableStateFlow(false)
+    val isGpsSessionActive: StateFlow<Boolean> = _gpsSessionActive.asStateFlow()
+
     private var transport: ClassicBtTransport? = null
     private var telemetryJob: Job? = null
     private var stateJob: Job? = null
     private var reconnectJob: Job? = null
+    private var gpsInactivityJob: Job? = null
+    private var gpsSessionStartedAt: Long = 0L
     private var currentDeviceAddress: String? = null
     private val derivedEngine = DerivedMetricsEngine()
     private val engineOffDetector = EngineOffDetector()
     private val voltagePoller = VoltagePoller()
     private val milWatcher = MilWatcher(alertsEngine)
-    private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings)
+    private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private var activeScheduler: PidScheduler? = null
     private val workshopClients = AtomicInteger(0)
 
@@ -269,7 +277,97 @@ class ObdSessionManager @Inject constructor(
 
     fun connectToDevice(deviceAddress: String) {
         reconnectJob?.cancel()
+        // A live GPS trip must not keep "owning" currentSessionId once an adapter shows up —
+        // close its bookkeeping here; connect()'s own stopTelemetry() below is then a no-op
+        // for it (currentSessionId already null) and starts the OBD session cleanly.
+        if (_gpsSessionActive.value) stopGpsSessionInternal(alsoStopService = false)
         connect(deviceAddress, ConnectMode.NORMAL)
+    }
+
+    /**
+     * Starts a GPS-only recording session (no adapter) — a path parallel to [connect]/
+     * [startTelemetry] that never touches them. Setting [_currentSessionIdFlow] is what
+     * already makes [ObdForegroundService] start GPS+IMU recording, road alerters and
+     * crash detection for any session, OBD or GPS alike.
+     */
+    fun startGpsSession() {
+        if (_currentSessionIdFlow.value != null) return
+        if (_gpsSessionActive.value) return
+        if (_connectionState.value is ConnectionState.Connecting) return
+        _gpsSessionActive.value = true
+        engineOffDetector.reset()
+        gpsSessionStartedAt = System.currentTimeMillis()
+        scope.launch {
+            val sessionId = createSession(GPS_ADAPTER_NAME)
+            _currentSessionIdFlow.value = sessionId
+            ObdForegroundService.start(appContext)
+            startGpsInactivityWatcher()
+        }
+    }
+
+    /** Ends the active GPS trip — user-initiated close, wired to the Dashboard button. */
+    fun stopGpsSession() = stopGpsSessionInternal(alsoStopService = true)
+
+    /**
+     * [alsoStopService] is false when called from [connectToDevice]: the service must stay
+     * up because [connect] is about to restart it for the incoming OBD session — issuing a
+     * shutdown request here would race with that restart.
+     */
+    private fun stopGpsSessionInternal(alsoStopService: Boolean) {
+        if (!_gpsSessionActive.value) return
+        _gpsSessionActive.value = false
+        stopGpsInactivityWatcher()
+        val sessionId = _currentSessionIdFlow.value
+        _readings.value = _readings.value - GPS_SPEED_PID
+        _currentSessionIdFlow.value = null
+        if (alsoStopService) ObdForegroundService.requestShutdown(appContext)
+        scope.launch {
+            sessionId?.let { id ->
+                // GpsTrackRecorder's final flush runs off this same currentSessionId
+                // transition inside the service — give that Room write a moment to land
+                // before aggregating (the manager has no join handle into it).
+                delay(GPS_STOP_FLUSH_GRACE_MS)
+                updateSessionEnd(id)
+                runCatching { sessionDao.getById(id) }.getOrNull()?.let { tripSummaryNotifier.post(it) }
+            }
+        }
+    }
+
+    /**
+     * Feeds the live GPS_SPEED pseudo-reading — wired by the service only in GPS mode.
+     * Deliberately does NOT feed [launchTimer] or [alertsEngine]: 1 Hz GPS fixes are too
+     * coarse for a 0-100 timer, and custom-PID alert rules are scoped to real OBD PIDs —
+     * launch timing stays OBD-only in v1.
+     */
+    fun publishGpsSpeed(kmh: Float) {
+        if (!_gpsSessionActive.value) return
+        val reading = ObdReading(GPS_SPEED_PID, kmh.toDouble(), "km/h")
+        _readings.value = _readings.value + (GPS_SPEED_PID to reading)
+        engineOffDetector.onSpeed(kmh.toDouble())
+    }
+
+    private fun startGpsInactivityWatcher() {
+        gpsInactivityJob?.cancel()
+        gpsInactivityJob = scope.launch {
+            while (true) {
+                delay(GPS_INACTIVITY_CHECK_INTERVAL_MS)
+                if (isGpsTripIdle()) {
+                    Timber.i("ObdSessionManager: no GPS movement for ${GPS_INACTIVITY_WINDOW_MS}ms — auto-closing trip")
+                    stopGpsSession()
+                    break
+                }
+            }
+        }
+    }
+
+    private fun stopGpsInactivityWatcher() {
+        gpsInactivityJob?.cancel()
+        gpsInactivityJob = null
+    }
+
+    private fun isGpsTripIdle(): Boolean {
+        val referenceTs = engineOffDetector.lastMovementTimestamp() ?: gpsSessionStartedAt
+        return System.currentTimeMillis() - referenceTs >= GPS_INACTIVITY_WINDOW_MS
     }
 
     /** Retries the current (or last persisted) adapter — wired to the error screen's button. */
@@ -597,12 +695,19 @@ class ObdSessionManager @Inject constructor(
         const val VBAT_PID = "VBAT"
         const val MIL_PID = "MIL"
 
+        /** Pseudo-PID for the GPS-only trip mode's live speed reading. */
+        const val GPS_SPEED_PID = "GPS_SPEED"
+        const val GPS_ADAPTER_NAME = "GPS"
+
         private const val DTC_TIMEOUT_MS = 5_000L
         private const val VIN_TIMEOUT_MS = 4_000L
         private const val VOLTAGE_TIMEOUT_MS = 2_000L
         // 15 s > 12 s connect watchdog, so attempts never overlap; total ≈ 3 min
         private val AUTO_RECONNECT_BACKOFF_MS = listOf(15_000L, 30_000L, 60_000L, 60_000L)
         private const val RECONNECT_FINAL_GRACE_MS = 15_000L
+        private const val GPS_INACTIVITY_WINDOW_MS = 4 * 60_000L
+        private const val GPS_INACTIVITY_CHECK_INTERVAL_MS = 30_000L
+        private const val GPS_STOP_FLUSH_GRACE_MS = 600L
         private const val PROBE_TIMEOUT_MS = 3_000L
 
         private val DTC_PREFIX = mapOf(0 to 'P', 1 to 'C', 2 to 'B', 3 to 'U')

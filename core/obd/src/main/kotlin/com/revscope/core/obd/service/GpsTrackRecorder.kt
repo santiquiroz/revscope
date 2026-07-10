@@ -39,6 +39,8 @@ class GpsTrackRecorder(
     private val cityAlerter: CityEnforcementAlerter? = null,
     private val localInfoSink: GpsInfoSink? = null,
     private val routeHolder: LiveRouteHolder? = null,
+    /** Wired by the service ONLY in GPS-only trip mode, to drive the GPS_SPEED pseudo-reading. */
+    private val onSpeed: ((Float) -> Unit)? = null,
 ) {
 
     private val buffer = mutableListOf<GpsPointEntity>()
@@ -141,6 +143,7 @@ class GpsTrackRecorder(
         localInfoSink?.onGpsFix(location.latitude, location.longitude)
         routeHolder?.append(location.latitude, location.longitude)
         routeHolder?.updateSpeed(point.speedKmh)
+        onSpeed?.invoke(point.speedKmh)
         if (location.hasBearing()) onBearing?.invoke(location.bearing)
     }
 

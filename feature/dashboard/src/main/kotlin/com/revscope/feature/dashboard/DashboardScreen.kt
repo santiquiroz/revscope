@@ -20,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +49,7 @@ import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import com.revscope.feature.dashboard.gauges.BoostBar
 import com.revscope.feature.dashboard.gauges.GearDisplay
@@ -70,6 +74,12 @@ fun DashboardScreen(
     val tripScore by dashboardVm.tripScore.collectAsState()
     val gearCalibrated by dashboardVm.gearCalibrated.collectAsState()
     val alDiaBanner by dashboardVm.alDiaBanner.collectAsState()
+    val isGpsTrip by connectionVm.isGpsTripActive.collectAsState()
+
+    // "Viaje sin adaptador": only offered while there's no live/incoming BT link, so it
+    // can never race connectToDevice()'s own GPS-session handover.
+    val showGpsTripButton = connectionState is ConnectionState.Disconnected ||
+        connectionState is ConnectionState.Error
 
     // Start intelligence once connected; restart on reconnect
     LaunchedEffect(connectionState) {
@@ -86,7 +96,12 @@ fun DashboardScreen(
     // derivedStateOf: the readings map mutates ~20×/s, but each gauge only recomposes
     // when ITS value actually changes — not on every unrelated PID update.
     val rpm by remember { derivedStateOf { (readingsState.value["0C"]?.value ?: 0.0).toFloat() } }
-    val speed by remember { derivedStateOf { (readingsState.value["0D"]?.value ?: 0.0).toFloat() } }
+    val speed by remember {
+        derivedStateOf {
+            val speedPid = if (isGpsTrip) ObdSessionManager.GPS_SPEED_PID else "0D"
+            (readingsState.value[speedPid]?.value ?: 0.0).toFloat()
+        }
+    }
     val temp by remember { derivedStateOf { (readingsState.value["05"]?.value ?: 0.0).toFloat() } }
     val boost by remember { derivedStateOf { (readingsState.value["BOOST"]?.value ?: 0.0).toFloat() } }
     val gear by remember { derivedStateOf { readingsState.value["GEAR"]?.value?.toInt() ?: 0 } }
@@ -232,11 +247,30 @@ fun DashboardScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
+            if (showGpsTripButton) {
+                GpsTripButton(
+                    isActive = isGpsTrip,
+                    onStart = connectionVm::startGpsTrip,
+                    onStop = connectionVm::stopGpsTrip,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             RpmGauge(
                 rpm = rpm,
                 maxRpm = gaugeMaxRpm,
-                modifier = Modifier.padding(vertical = 8.dp),
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .then(dimmedIfGpsTrip(isGpsTrip)),
             )
+
+            if (isGpsTrip) {
+                Text(
+                    "RPM · temperatura · marcha · boost — requieren adaptador",
+                    color = RevScopeColors.TextMuted,
+                    fontSize = 11.sp,
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -252,11 +286,11 @@ fun DashboardScreen(
                 GearDisplay(
                     gear = gear,
                     isCalibrated = gearCalibrated,
-                    modifier = Modifier.weight(0.6f),
+                    modifier = Modifier.weight(0.6f).then(dimmedIfGpsTrip(isGpsTrip)),
                 )
                 TempGauge(
                     tempCelsius = temp,
-                    modifier = Modifier.weight(0.6f),
+                    modifier = Modifier.weight(0.6f).then(dimmedIfGpsTrip(isGpsTrip)),
                 )
             }
 
@@ -266,13 +300,41 @@ fun DashboardScreen(
                 boostKpa = boost,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 8.dp)
+                    .then(dimmedIfGpsTrip(isGpsTrip)),
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             TripScoreBar(tripScore = tripScore)
         }
+    }
+}
+
+private const val DIMMED_GAUGE_ALPHA = 0.35f
+
+/** No-op when [isGpsTrip] is false, so the connected/OBD path never gains an extra modifier. */
+private fun dimmedIfGpsTrip(isGpsTrip: Boolean): Modifier =
+    if (isGpsTrip) Modifier.alpha(DIMMED_GAUGE_ALPHA) else Modifier
+
+@Composable
+private fun GpsTripButton(
+    isActive: Boolean,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Button(
+        onClick = if (isActive) onStop else onStart,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isActive) RevScopeColors.Danger else RevScopeColors.Accent,
+        ),
+    ) {
+        Text(
+            text = if (isActive) "Finalizar viaje GPS" else "Iniciar viaje GPS",
+            color = RevScopeColors.Background,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

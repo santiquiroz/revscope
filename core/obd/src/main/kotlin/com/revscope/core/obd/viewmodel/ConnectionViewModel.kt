@@ -30,6 +30,7 @@ class ConnectionViewModel @Inject constructor(
     val lastReadVin: StateFlow<String?> = manager.lastReadVin
     val alerts: SharedFlow<AlertsEngine.ObdAlert> = alertsEngine.alerts
     val launchResults = manager.launchResults
+    val isGpsTripActive: StateFlow<Boolean> = manager.isGpsSessionActive
 
     fun setActiveProfile(profile: VehicleProfileEntity?) = manager.setActiveProfile(profile)
 
@@ -40,6 +41,11 @@ class ConnectionViewModel @Inject constructor(
     fun reconnectToLast() = manager.reconnectToLast()
 
     fun disconnect() = manager.disconnect()
+
+    /** Starts a GPS-only trip ("viaje sin adaptador") — no Bluetooth link required. */
+    fun startGpsTrip() = manager.startGpsSession()
+
+    fun stopGpsTrip() = manager.stopGpsSession()
 
     suspend fun readActiveDtc(): Result<List<DtcCode>> = manager.readActiveDtc()
 
