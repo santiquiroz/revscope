@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 
 @Dao
@@ -20,4 +21,15 @@ interface SpeedCameraDao {
 
     @Query("DELETE FROM speed_cameras")
     suspend fun deleteAll()
+
+    /**
+     * Replaces the whole table atomically. Downloads re-encode OSM element ids
+     * (node/way/relation share one numeric namespace) so a plain upsert could
+     * leave stale rows behind from a previous encoding — wipe first instead.
+     */
+    @Transaction
+    suspend fun replaceAll(cameras: List<SpeedCameraEntity>) {
+        deleteAll()
+        insertAll(cameras)
+    }
 }

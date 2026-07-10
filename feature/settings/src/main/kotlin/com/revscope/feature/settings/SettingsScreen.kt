@@ -287,9 +287,10 @@ fun SettingsScreen(
             ) { Text("Guardar precio", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
-            SectionTitle("Radares de velocidad (OpenStreetMap)")
+            SectionTitle("Radares de velocidad")
             Text(
-                "Descarga los radares fijos mapeados en 50 km a tu alrededor. " +
+                "Descarga los radares en 50 km a tu alrededor. " +
+                    "Fuentes: OpenStreetMap + registro oficial ANSV · se actualiza cada semana automáticamente. " +
                     "Al conducir, la app avisa por voz al acercarte (funciona offline tras descargar).",
                 color = TextMutedColor,
                 fontSize = 12.sp,

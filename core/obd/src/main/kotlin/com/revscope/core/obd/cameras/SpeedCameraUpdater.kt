@@ -1,26 +1,21 @@
 package com.revscope.core.obd.cameras
 
 import com.revscope.core.data.db.dao.SpeedCameraDao
-import com.revscope.core.data.db.entities.SpeedCameraEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import timber.log.Timber
-import java.net.URL
-import java.net.URLEncoder
-import javax.net.ssl.HttpsURLConnection
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 private const val RADIUS_M = 50_000
-private const val CONNECT_TIMEOUT_MS = 15_000
-private const val READ_TIMEOUT_MS = 60_000
 
 /**
- * Downloads fixed speed cameras (OSM `highway=speed_camera` nodes) within 50 km
- * of a location via the Overpass API and stores them locally — alerts then work
- * fully offline. Coverage depends on what the OSM community has mapped.
+ * Downloads speed cameras within 50 km of a location, combining OpenStreetMap
+ * (community-mapped, see [OsmCameraSource]) and Colombia's official ANSV
+ * registry (see [AnsvCameraSource]), deduplicates entries within 100 m of each
+ * other via [CameraDedupe], and stores the merged result locally — alerts then
+ * work fully offline.
  */
 @Singleton
 class SpeedCameraUpdater @Inject constructor(
@@ -28,44 +23,34 @@ class SpeedCameraUpdater @Inject constructor(
     private val alerter: SpeedCameraAlerter,
 ) {
 
-    /** Returns the number of cameras stored, or throws on network/parse failure. */
+    /** Returns the number of cameras stored, or throws if every source fails. */
     suspend fun downloadAround(latitude: Double, longitude: Double): Int =
         withContext(Dispatchers.IO) {
-            val query =
-                "[out:json][timeout:50];node[\"highway\"=\"speed_camera\"]" +
-                    "(around:$RADIUS_M,$latitude,$longitude);out;"
-            val body = "data=" + URLEncoder.encode(query, "UTF-8")
-
-            val connection = (URL(OVERPASS_URL).openConnection() as HttpsURLConnection).apply {
-                requestMethod = "POST"
-                setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-                connectTimeout = CONNECT_TIMEOUT_MS
-                readTimeout = READ_TIMEOUT_MS
-                doOutput = true
+            val osmCameras = fetchSource("OSM") {
+                OsmCameraSource.fetchWithinRadius(latitude, longitude, RADIUS_M)
             }
-            connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-            val response = connection.inputStream.bufferedReader().readText()
-
-            val elements = JSONObject(response).getJSONArray("elements")
-            val cameras = buildList {
-                for (i in 0 until elements.length()) {
-                    val node = elements.getJSONObject(i)
-                    add(
-                        SpeedCameraEntity(
-                            osmId = node.getLong("id"),
-                            latitude = node.getDouble("lat"),
-                            longitude = node.getDouble("lon"),
-                            maxSpeedKmh = node.optJSONObject("tags")
-                                ?.optString("maxspeed")
-                                ?.filter { it.isDigit() }
-                                ?.toIntOrNull(),
-                        )
-                    )
-                }
+            val ansvCameras = fetchSource("ANSV") {
+                AnsvCameraSource.fetchWithinRadius(latitude, longitude, RADIUS_M.toDouble())
             }
-            dao.insertAll(cameras)
+            if (osmCameras == null && ansvCameras == null) error("No se pudo descargar de ninguna fuente")
+
+            val cameras = CameraDedupe.merge(osmCameras.orEmpty() + ansvCameras.orEmpty())
+            dao.replaceAll(cameras)
             alerter.invalidateCache()
-            Timber.i("SpeedCameraUpdater: stored ${cameras.size} cameras")
+            Timber.i(
+                "SpeedCameraUpdater: stored ${cameras.size} cameras " +
+                    "(OSM=${osmCameras?.size ?: "failed"}, ANSV=${ansvCameras?.size ?: "failed"})",
+            )
             cameras.size
         }
+
+    /** Isolates one source's failure so the other can still populate the database. */
+    private suspend fun <T> fetchSource(label: String, block: suspend () -> T): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.w(e, "SpeedCameraUpdater: $label fetch failed")
+        null
+    }
 }

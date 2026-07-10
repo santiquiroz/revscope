@@ -417,16 +417,27 @@ class SettingsViewModel @Inject constructor(
                 _cameraStatus.value = "Sin ubicación — conecta el GPS o abre Maps un momento"
                 return@launch
             }
-            _cameraStatus.value = "Descargando radares de OpenStreetMap…"
+            _cameraStatus.value = "Descargando radares (OpenStreetMap + ANSV)…"
             runCatching { cameraUpdater.downloadAround(location.latitude, location.longitude) }
                 .onSuccess { count ->
                     _cameraStatus.value =
                         "$count radares en 50 km — avisos por voz activos al conducir"
+                    persistLastCameraCenter(location.latitude, location.longitude)
                 }
                 .onFailure {
                     _cameraStatus.value = "Error descargando (¿internet?) — intenta de nuevo"
                 }
         }
+    }
+
+    /** Guarda el centro de la última descarga exitosa para el refresco semanal automático. */
+    private suspend fun persistLastCameraCenter(latitude: Double, longitude: Double) {
+        runCatching {
+            settings.edit {
+                it[PreferencesKeys.LAST_CAMERA_LAT] = latitude
+                it[PreferencesKeys.LAST_CAMERA_LON] = longitude
+            }
+        }.onFailure { Timber.w(it, "SettingsViewModel: failed to persist camera center") }
     }
 
     private fun isValidPidJson(json: String): Boolean = try {

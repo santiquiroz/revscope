@@ -115,4 +115,12 @@ object PreferencesKeys {
 
     /** Current price of a gallon of gasoline in COP, used to estimate trip cost (default 16000.0) */
     val FUEL_PRICE_COP_PER_GALLON = doublePreferencesKey("fuel_price_cop_per_gallon")
+
+    // ── Radares de velocidad ─────────────────────────────────────────────────
+
+    /** Latitud del último centro de descarga manual de radares (refresco semanal automático) */
+    val LAST_CAMERA_LAT = doublePreferencesKey("last_camera_lat")
+
+    /** Longitud del último centro de descarga manual de radares (refresco semanal automático) */
+    val LAST_CAMERA_LON = doublePreferencesKey("last_camera_lon")
 }
