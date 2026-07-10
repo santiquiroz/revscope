@@ -159,7 +159,8 @@ object ResponseParser {
      * (3-digit length prefix, then "N:"-indexed segments; each part before a colon
      * carries the next segment's index as its final character).
      */
-    private fun stripIsoTpFraming(clean: String): String {
+    /** Visible to [Mode06Parser], which reuses ISO-TP multi-frame unwrapping for Mode 06 records. */
+    internal fun stripIsoTpFraming(clean: String): String {
         if (!clean.contains(':')) return clean
         val parts = clean.split(':')
         if (parts.size < 2) return clean

@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FactCheck
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -70,6 +72,8 @@ fun WorkshopScreen(
     onOpenGearAnalyzer: () -> Unit,
     onOpenProfiles: () -> Unit,
     onOpenMaintenance: () -> Unit,
+    onOpenO2Wave: () -> Unit,
+    onOpenMode06: () -> Unit,
 ) {
     val connState by connectionVm.connectionState.collectAsState()
     val isConnected = connState is ConnectionState.Connected
@@ -77,6 +81,7 @@ fun WorkshopScreen(
     val sections = buildWorkshopSections(
         onOpenAlDia, onOpenHealthCheck, onOpenDtc, onOpenLiveMixture,
         onOpenSensors, onOpenScanner, onOpenGearAnalyzer, onOpenProfiles, onOpenMaintenance,
+        onOpenO2Wave, onOpenMode06,
     )
 
     LazyColumn(
@@ -113,6 +118,8 @@ private fun buildWorkshopSections(
     onOpenGearAnalyzer: () -> Unit,
     onOpenProfiles: () -> Unit,
     onOpenMaintenance: () -> Unit,
+    onOpenO2Wave: () -> Unit,
+    onOpenMode06: () -> Unit,
 ): List<WorkshopSection> = listOf(
     WorkshopSection(
         "Estado",
@@ -134,6 +141,10 @@ private fun buildWorkshopSections(
                 "Curvas en tiempo real de cualquier PID", true, onOpenSensors),
             WorkshopTool(Icons.Default.Search, "Escáner avanzado (Mode 22)",
                 "Descubrir PIDs propietarios del fabricante", true, onOpenScanner),
+            WorkshopTool(Icons.AutoMirrored.Filled.ShowChart, "Onda sensor O2",
+                "Gráfica en vivo del voltaje del sensor de oxígeno", true, onOpenO2Wave),
+            WorkshopTool(Icons.AutoMirrored.Filled.FactCheck, "Resultados a bordo (Mode 06)",
+                "Pruebas de monitoreo internas del fabricante", true, onOpenMode06),
         ),
     ),
     WorkshopSection(

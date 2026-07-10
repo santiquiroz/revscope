@@ -151,8 +151,9 @@ private fun MixtureRowCard(
     }
 }
 
+/** Also reused by O2WaveScreen — file-private visibility would hide it outside this file. */
 @Composable
-private fun DiagnosisChip(diagnosis: DiagnosticRules.Diagnosis) {
+internal fun DiagnosisChip(diagnosis: DiagnosticRules.Diagnosis) {
     val color = when (diagnosis.nivel) {
         DiagnosticRules.Nivel.OK -> Color(0xFF4CAF50)
         DiagnosticRules.Nivel.ATENCION -> Color(0xFFFFC107)

@@ -62,6 +62,8 @@ import com.revscope.feature.workshop.AlDiaScreen
 import com.revscope.feature.workshop.HealthCheckScreen
 import com.revscope.feature.workshop.LiveMixtureScreen
 import com.revscope.feature.workshop.MaintenanceScreen
+import com.revscope.feature.workshop.Mode06Screen
+import com.revscope.feature.workshop.O2WaveScreen
 import com.revscope.feature.workshop.WorkshopScreen
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -214,6 +216,8 @@ fun RevScopeNavGraph(
                         onOpenGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
                         onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
                         onOpenMaintenance = { navController.navigate(Screen.Maintenance.route) },
+                        onOpenO2Wave = { navController.navigate(Screen.O2Wave.route) },
+                        onOpenMode06 = { navController.navigate(Screen.Mode06.route) },
                     )
                 }
                 composable(Screen.AlDia.route) {
@@ -231,6 +235,12 @@ fun RevScopeNavGraph(
                 }
                 composable(Screen.LiveMixture.route) {
                     LiveMixtureScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(Screen.O2Wave.route) {
+                    O2WaveScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(Screen.Mode06.route) {
+                    Mode06Screen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(Screen.LiveMap.route) { LiveMapScreen() }
                 composable(Screen.AdapterScan.route) {

@@ -7,6 +7,8 @@ sealed class Screen(val route: String) {
     object AlDia : Screen("al_dia")
     object HealthCheck : Screen("health_check")
     object LiveMixture : Screen("live_mixture")
+    object O2Wave : Screen("o2_wave")
+    object Mode06 : Screen("mode06")
     object LiveMap : Screen("map")
     object GearAnalyzer : Screen("gear")
     object Sensors : Screen("sensors")
