@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ResponseParser
@@ -60,6 +61,9 @@ class VehicleViewModel @Inject constructor(
     private val _vinStatus = MutableStateFlow<String?>(null)
     val vinStatus: StateFlow<String?> = _vinStatus.asStateFlow()
 
+    private val _adapterLinkStatus = MutableStateFlow<String?>(null)
+    val adapterLinkStatus: StateFlow<String?> = _adapterLinkStatus.asStateFlow()
+
     private val _formPlate = MutableStateFlow("")
     val formPlate: StateFlow<String> = _formPlate.asStateFlow()
 
@@ -104,8 +108,37 @@ class VehicleViewModel @Inject constructor(
         }
     }
 
+    /** Links the currently connected adapter to the profile being edited (one-adapter-one-profile). */
+    fun linkConnectedAdapter() {
+        val profile = _editingProfile.value ?: return
+        if (sessionManager.connectionState.value !is ConnectionState.Connected) return
+        val address = sessionManager.lastAdapterAddress.value ?: return
+        viewModelScope.launch {
+            profileDao.clearAdapterLinkExcept(address, profile.id)
+            val updated = profile.copy(adapterAddress = address)
+            profileDao.update(updated)
+            sessionManager.notifyProfileUpdated(updated)
+            _editingProfile.value = updated
+            _adapterLinkStatus.value = "Adaptador vinculado a este perfil"
+        }
+    }
+
+    /** Removes the adapter link from the profile being edited. */
+    fun unlinkAdapter() {
+        val profile = _editingProfile.value ?: return
+        if (profile.adapterAddress == null) return
+        viewModelScope.launch {
+            val updated = profile.copy(adapterAddress = null)
+            profileDao.update(updated)
+            sessionManager.notifyProfileUpdated(updated)
+            _editingProfile.value = updated
+            _adapterLinkStatus.value = "Adaptador desvinculado"
+        }
+    }
+
     /** Loads an existing profile into the form; [saveProfile] then updates instead of inserting. */
     fun startEditing(profile: VehicleProfileEntity) {
+        _adapterLinkStatus.value = null
         _editingProfile.value = profile
         _formName.value = profile.name
         _formType.value = profile.type
@@ -205,6 +238,7 @@ class VehicleViewModel @Inject constructor(
         _formMaxRpm.value = "8000"
         _formRedlineRpm.value = "6500"
         _vinStatus.value = null
+        _adapterLinkStatus.value = null
         _formPlate.value = ""
         _formPicoPlacaCity.value = null
         _formSoatExpiresAt.value = null

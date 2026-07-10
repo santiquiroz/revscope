@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -96,6 +97,9 @@ fun VehicleProfileScreen(
     val formInsuranceExpiresAt by vm.formInsuranceExpiresAt.collectAsState()
     val activeProfile by connectionVm.activeProfile.collectAsState()
     val connectionState by connectionVm.connectionState.collectAsState()
+    val lastAdapterAddress by connectionVm.lastAdapterAddress.collectAsState()
+    val adapterLinkStatus by vm.adapterLinkStatus.collectAsState()
+    val connectedAdapterAddress = lastAdapterAddress.takeIf { connectionState is ConnectionState.Connected }
 
     Column(
         modifier = Modifier
@@ -127,6 +131,7 @@ fun VehicleProfileScreen(
                         profile = profile,
                         isEditing = editingProfile?.id == profile.id,
                         isActive = activeProfile?.id == profile.id,
+                        connectedAdapterAddress = connectedAdapterAddress,
                         onClick = { vm.startEditing(profile) },
                         onActivate = { connectionVm.setActiveProfile(profile) },
                         onDelete = { vm.deleteProfile(profile.id) },
@@ -217,6 +222,17 @@ fun VehicleProfileScreen(
                 }
             }
             vinStatus?.let { Text(it, color = TextMutedColor, fontSize = 11.sp) }
+
+            editingProfile?.let { profile ->
+                AdapterLinkSection(
+                    adapterAddress = profile.adapterAddress,
+                    connectedAdapterAddress = connectedAdapterAddress,
+                    isConnected = connectionState is ConnectionState.Connected,
+                    linkStatus = adapterLinkStatus,
+                    onLink = { vm.linkConnectedAdapter() },
+                    onUnlink = { vm.unlinkAdapter() },
+                )
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -455,6 +471,50 @@ private fun DateField(
     }
 }
 
+/** Muestra el adaptador vinculado al perfil en edición y permite vincular/desvincular. */
+@Composable
+private fun AdapterLinkSection(
+    adapterAddress: String?,
+    connectedAdapterAddress: String?,
+    isConnected: Boolean,
+    linkStatus: String?,
+    onLink: () -> Unit,
+    onUnlink: () -> Unit,
+) {
+    val isLinkedToConnected = adapterAddress != null && adapterAddress == connectedAdapterAddress
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceHighColor, RoundedCornerShape(8.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("Adaptador vinculado", color = TextMutedColor, fontSize = 11.sp)
+        Text(
+            text = (adapterAddress ?: "Ninguno") + if (isLinkedToConnected) " (conectado ahora)" else "",
+            color = if (isLinkedToConnected) AccentColor else TextPrimaryColor,
+            fontSize = 14.sp,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Medium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = onLink,
+                enabled = isConnected,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) {
+                Text("Vincular adaptador conectado", color = BgColor, fontSize = 12.sp)
+            }
+            if (adapterAddress != null) {
+                TextButton(onClick = onUnlink) {
+                    Text("Desvincular", color = DangerColor, fontSize = 12.sp)
+                }
+            }
+        }
+        linkStatus?.let { Text(it, color = TextMutedColor, fontSize = 11.sp) }
+    }
+}
+
 @Composable
 private fun TypeChip(
     label: String,
@@ -520,6 +580,7 @@ private fun ProfileItem(
     profile: VehicleProfileEntity,
     isEditing: Boolean,
     isActive: Boolean,
+    connectedAdapterAddress: String?,
     onClick: () -> Unit,
     onActivate: () -> Unit,
     onDelete: () -> Unit,
@@ -550,6 +611,15 @@ private fun ProfileItem(
                 color = TextMutedColor,
                 fontSize = 11.sp,
             )
+            profile.adapterAddress?.let { address ->
+                val isConnectedNow = address == connectedAdapterAddress
+                Text(
+                    text = "Adaptador: $address" + if (isConnectedNow) " (conectado ahora)" else "",
+                    color = if (isConnectedNow) AccentColor else TextMutedColor,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
         }
         if (isActive) {
             Text(
