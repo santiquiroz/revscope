@@ -20,14 +20,24 @@ class LiveRouteHolder @Inject constructor() {
     private val _revision = MutableStateFlow(0L)
     val revision: StateFlow<Long> = _revision.asStateFlow()
 
+    // Última velocidad GPS conocida — respaldo de CrashDetector cuando el enlace OBD
+    // se cae (p. ej. el adaptador se desconecta justo en el impacto de una caída).
+    private val _lastSpeedKmh = MutableStateFlow(0f)
+    val lastSpeedKmh: StateFlow<Float> = _lastSpeedKmh.asStateFlow()
+
     fun append(lat: Double, lon: Double) {
         _points.value = (_points.value + RoutePoint(lat, lon)).takeLast(MAX_POINTS)
         _revision.value += 1
     }
 
+    fun updateSpeed(speedKmh: Float) {
+        _lastSpeedKmh.value = speedKmh
+    }
+
     fun clear() {
         _points.value = emptyList()
         _revision.value = 0L
+        _lastSpeedKmh.value = 0f
     }
 
     companion object {

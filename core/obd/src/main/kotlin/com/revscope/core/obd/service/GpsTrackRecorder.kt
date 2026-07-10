@@ -111,6 +111,7 @@ class GpsTrackRecorder(
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
         cameraAlerter?.onGpsFix(location.latitude, location.longitude)
         routeHolder?.append(location.latitude, location.longitude)
+        routeHolder?.updateSpeed(point.speedKmh)
         if (location.hasBearing()) onBearing?.invoke(location.bearing)
     }
 

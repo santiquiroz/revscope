@@ -133,4 +133,12 @@ object PreferencesKeys {
 
     /** Se completó la pantalla de permisos del primer arranque (default false) */
     val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+
+    // ── Detección de caída ───────────────────────────────────────────────────
+
+    /** Detección de caída con SMS de emergencia activa (default false — SAFETY-CRITICAL) */
+    val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
+
+    /** Número de teléfono del contacto de emergencia para el SMS de caída */
+    val EMERGENCY_PHONE = stringPreferencesKey("emergency_phone")
 }

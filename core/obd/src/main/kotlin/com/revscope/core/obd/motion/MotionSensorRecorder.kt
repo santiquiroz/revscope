@@ -147,8 +147,11 @@ class MotionSensorRecorder(
         val ax = filteredAccel[0]; val ay = filteredAccel[1]; val az = filteredAccel[2]
         val east = r[0] * ax + r[1] * ay + r[2] * az
         val north = r[3] * ax + r[4] * ay + r[5] * az
+        // Horizontal magnitude before bearing projection — stays meaningful with
+        // no GPS fix yet, which crash detection cannot afford to wait for.
+        val horizontalG = sqrt(east * east + north * north) / G
 
-        autoCalibrateLean(now, east, north)
+        autoCalibrateLean(now, horizontalG)
 
         val bearing = gpsBearingDeg
         var gLat = 0f
@@ -162,7 +165,7 @@ class MotionSensorRecorder(
         }
 
         val lean = computeLeanDeg()
-        hub.update(gLat, gLong, lean, calibrated = baselineGravity != null)
+        hub.update(gLat, gLong, lean, magnitudeG = horizontalG, calibrated = baselineGravity != null)
 
         if (now - lastStoreMs >= STORE_INTERVAL_MS) {
             lastStoreMs = now
@@ -178,8 +181,7 @@ class MotionSensorRecorder(
     }
 
     /** Captures the mount baseline after 2 s of near-zero filtered acceleration. */
-    private fun autoCalibrateLean(now: Long, east: Float, north: Float) {
-        val horizontalG = sqrt(east * east + north * north) / G
+    private fun autoCalibrateLean(now: Long, horizontalG: Float) {
         if (horizontalG < STATIONARY_G_THRESHOLD) {
             if (stationarySinceMs < 0) stationarySinceMs = now
             if (now - stationarySinceMs >= CALIBRATION_HOLD_MS) {

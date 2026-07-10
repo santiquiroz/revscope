@@ -22,12 +22,15 @@ class MotionMetricsHub @Inject constructor() {
         val maxBrakingG: Float = 0f,   // most negative gLong, stored as positive magnitude
         val maxAbsLean: Float = 0f,
         val calibrated: Boolean = false,
+        // Horizontal acceleration magnitude in G, independent of GPS bearing —
+        // feeds CrashDetector, which must keep working even before a GPS fix.
+        val magnitudeG: Float = 0f,
     )
 
     private val _snapshot = MutableStateFlow(MotionSnapshot())
     val snapshot: StateFlow<MotionSnapshot> = _snapshot.asStateFlow()
 
-    fun update(gLat: Float, gLong: Float, leanDeg: Float, calibrated: Boolean) {
+    fun update(gLat: Float, gLong: Float, leanDeg: Float, magnitudeG: Float, calibrated: Boolean) {
         val current = _snapshot.value
         _snapshot.value = current.copy(
             gLat = gLat,
@@ -37,6 +40,7 @@ class MotionMetricsHub @Inject constructor() {
             maxBrakingG = maxOf(current.maxBrakingG, -gLong),
             maxAbsLean = maxOf(current.maxAbsLean, abs(leanDeg)),
             calibrated = calibrated,
+            magnitudeG = magnitudeG,
         )
     }
 

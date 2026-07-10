@@ -6,5 +6,9 @@
             android:name="com.revscope.core.obd.service.ObdForegroundService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
+
+        <receiver
+            android:name="com.revscope.core.obd.safety.CrashCancelReceiver"
+            android:exported="false" />
     </application>
 </manifest>

@@ -6,10 +6,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import com.revscope.core.data.backup.BackupManager
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
@@ -18,6 +21,7 @@ import com.revscope.core.obd.alerts.CustomAlertRules
 import com.revscope.core.obd.cameras.CameraDownloadResult
 import com.revscope.core.obd.cameras.SpeedCameraUpdater
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.safety.CrashResponder
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,6 +48,7 @@ class SettingsViewModel @Inject constructor(
     private val cameraUpdater: SpeedCameraUpdater,
     private val sessionManager: ObdSessionManager,
     private val backupManager: BackupManager,
+    private val crashResponder: CrashResponder,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -364,6 +369,67 @@ class SettingsViewModel @Inject constructor(
                 .onFailure { Timber.w(it, "SettingsViewModel: failed to persist auto-backup toggle") }
         }
     }
+
+    // ── Detección de caída (SAFETY-CRITICAL: desactivada por defecto) ───────
+
+    private val _crashDetectionEnabled = MutableStateFlow(false)
+    val crashDetectionEnabled: StateFlow<Boolean> = _crashDetectionEnabled.asStateFlow()
+
+    private val _emergencyPhone = MutableStateFlow("")
+    val emergencyPhone: StateFlow<String> = _emergencyPhone.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            runCatching {
+                val prefs = settings.data.first()
+                _crashDetectionEnabled.value = prefs[PreferencesKeys.CRASH_DETECTION_ENABLED] ?: false
+                _emergencyPhone.value = prefs[PreferencesKeys.EMERGENCY_PHONE].orEmpty()
+            }.onFailure { Timber.w(it, "SettingsViewModel: failed to load crash detection settings") }
+        }
+    }
+
+    fun updateEmergencyPhone(value: String) {
+        _emergencyPhone.value = value
+    }
+
+    fun saveEmergencyPhone() {
+        viewModelScope.launch {
+            val phone = _emergencyPhone.value.trim()
+            val result = runCatching { settings.edit { it[PreferencesKeys.EMERGENCY_PHONE] = phone } }
+            _lastSaveResult.value = if (result.isSuccess) {
+                SaveResult(true, "Teléfono de emergencia guardado")
+            } else {
+                SaveResult(false, "Error guardando teléfono de emergencia")
+            }
+        }
+    }
+
+    /** UI must request SEND_SMS and only call this with true once it's granted. */
+    fun updateCrashDetectionEnabled(value: Boolean) {
+        if (value && !canEnableCrashDetection()) {
+            _lastSaveResult.value =
+                SaveResult(false, "Agrega el teléfono de emergencia y concede el permiso de SMS antes de activar")
+            return
+        }
+        _crashDetectionEnabled.value = value
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.CRASH_DETECTION_ENABLED] = value } }
+                .onSuccess { crashResponder.reloadSettings() }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist crash detection toggle") }
+        }
+    }
+
+    /** Simulates a TRIGGERED crash alarm (countdown + notification) without sending a real SMS. */
+    fun testCrashAlert() {
+        crashResponder.simulateTrigger(viewModelScope, activeVehicleProfile.value?.name ?: "tu vehículo")
+    }
+
+    private fun canEnableCrashDetection(): Boolean =
+        _emergencyPhone.value.isNotBlank() && hasSmsPermission()
+
+    private fun hasSmsPermission(): Boolean =
+        ContextCompat.checkSelfPermission(appContext, Manifest.permission.SEND_SMS) ==
+            PackageManager.PERMISSION_GRANTED
 
     fun exportBackup(uri: Uri) {
         viewModelScope.launch {

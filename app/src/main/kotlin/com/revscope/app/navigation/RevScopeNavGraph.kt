@@ -42,6 +42,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.revscope.app.onboarding.OnboardingScreen
 import com.revscope.app.onboarding.OnboardingViewModel
+import com.revscope.app.safety.CrashAlertDialog
+import com.revscope.app.safety.CrashAlertViewModel
 import com.revscope.feature.dashboard.AdapterScanScreen
 import com.revscope.feature.dashboard.DashboardScreen
 import com.revscope.feature.dashboard.TrackModeScreen
@@ -109,6 +111,9 @@ fun RevScopeNavGraph(
         hiltViewModel(LocalContext.current as ComponentActivity)
     val vehiclePickerVm: VehiclePickerViewModel =
         hiltViewModel(LocalContext.current as ComponentActivity)
+    val crashAlertVm: CrashAlertViewModel =
+        hiltViewModel(LocalContext.current as ComponentActivity)
+    val crashAlarmState by crashAlertVm.alarmState.collectAsState()
 
     LaunchedEffect(initialSessionId) {
         initialSessionId?.let {
@@ -321,6 +326,9 @@ fun RevScopeNavGraph(
                         navController.navigate(Screen.AdapterScan.route)
                     },
                 )
+            }
+            crashAlarmState?.let { alarm ->
+                CrashAlertDialog(state = alarm, onEstoyBien = crashAlertVm::confirmSafe)
             }
         }
     }

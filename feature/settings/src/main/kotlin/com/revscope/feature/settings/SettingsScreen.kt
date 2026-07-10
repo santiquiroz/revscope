@@ -32,10 +32,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -91,9 +94,14 @@ fun SettingsScreen(
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
     val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
+    val crashDetectionEnabled by vm.crashDetectionEnabled.collectAsState()
+    val emergencyPhone by vm.emergencyPhone.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+    val smsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) vm.updateCrashDetectionEnabled(true) }
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
@@ -356,6 +364,65 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(8.dp))
+            SectionTitle("Detección de caída")
+            Text(
+                "Si detecta un posible accidente de moto, suena una alarma de pantalla completa con " +
+                    "cuenta regresiva de 60 s. Si no respondes \"ESTOY BIEN\", envía un SMS con tu última " +
+                    "ubicación al contacto de emergencia. Desactivada por defecto.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            OutlinedTextField(
+                value = emergencyPhone,
+                onValueChange = vm::updateEmergencyPhone,
+                label = { Text("Teléfono de emergencia", fontSize = 12.sp) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = vm::saveEmergencyPhone,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Guardar teléfono", color = BgColor) }
+
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Activar detección de caída",
+                    color = TextPrimaryColor,
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = crashDetectionEnabled,
+                    onCheckedChange = { checked ->
+                        if (checked && !hasSmsPermission(context)) {
+                            smsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
+                        } else {
+                            vm.updateCrashDetectionEnabled(checked)
+                        }
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = BgColor,
+                        checkedTrackColor = AccentColor,
+                    ),
+                )
+            }
+            Text(
+                "Requiere teléfono de emergencia guardado y permiso de SMS.",
+                color = TextMutedColor,
+                fontSize = 11.sp,
+            )
+            Button(
+                onClick = vm::testCrashAlert,
+                colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+            ) { Text("Probar (sin enviar SMS real)", color = TextPrimaryColor) }
+
+            Spacer(Modifier.height(8.dp))
             SectionTitle("IA — Explicación de códigos DTC")
             Text(
                 "API key de Anthropic (opcional). Sin ella, los DTC se muestran sin explicación de IA.",
@@ -476,6 +543,10 @@ private fun SectionTitle(text: String) {
 }
 
 private fun defaultBackupFileName(): String = "revscope-backup-${LocalDate.now()}.zip"
+
+private fun hasSmsPermission(context: android.content.Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) ==
+        PackageManager.PERMISSION_GRANTED
 
 @Composable
 private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
