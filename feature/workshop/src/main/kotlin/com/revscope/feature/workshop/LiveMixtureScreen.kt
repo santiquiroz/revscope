@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -21,15 +23,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.export.CsvShare
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.workshop.DiagnosticRules
+import kotlinx.coroutines.launch
 
 private val AccentColor = Color(0xFFE8FF00)
 private val SurfaceColor = Color(0xFF12121A)
@@ -75,6 +81,8 @@ fun LiveMixtureScreen(
 
     val readings by viewModel.readings.collectAsState()
     val visibleRows = ROWS.filter { readings[it.pid] != null }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -88,6 +96,12 @@ fun LiveMixtureScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(
+                onClick = { scope.launch { exportMixtureSnapshot(context, visibleRows, readings) } },
+                enabled = visibleRows.isNotEmpty(),
+            ) {
+                Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+            }
         }
         Text(
             "Los valores se interpretan en tiempo real. Motor encendido para ver la mezcla trabajar.",
@@ -172,4 +186,24 @@ internal fun DiagnosisChip(diagnosis: DiagnosticRules.Diagnosis) {
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
+}
+
+private suspend fun exportMixtureSnapshot(
+    context: Context,
+    visibleRows: List<MixtureRow>,
+    readings: Map<String, ObdReading>,
+) {
+    if (visibleRows.isEmpty()) return
+    CsvShare.shareCsv(
+        context = context,
+        tipo = "mezcla-snapshot",
+        header = listOf("pid", "nombre", "valor", "unidad", "diagnostico"),
+        rows = visibleRows.asSequence().mapNotNull { row -> mixtureSnapshotRow(row, readings) },
+    )
+}
+
+private fun mixtureSnapshotRow(row: MixtureRow, readings: Map<String, ObdReading>): List<Any?>? {
+    val reading = readings[row.pid] ?: return null
+    val diagnosis = row.diagnose?.invoke(reading.value, readings)
+    return listOf(row.pid, row.label, reading.value, reading.unit, diagnosis?.titulo ?: "")
 }

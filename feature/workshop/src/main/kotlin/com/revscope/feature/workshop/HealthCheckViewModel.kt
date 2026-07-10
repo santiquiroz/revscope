@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.export.CsvShare
 import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.obd.connection.ConnectionState
@@ -100,6 +101,22 @@ class HealthCheckViewModel @Inject constructor(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(Intent.createChooser(intent, "Compartir informe"))
+        }
+    }
+
+    fun exportCsv(context: Context) {
+        val done = _state.value as? UiState.Done ?: return
+        if (done.items.isEmpty()) return
+        val timestampIso = CsvShare.isoTimestamp(done.timestamp)
+        viewModelScope.launch {
+            CsvShare.shareCsv(
+                context = context,
+                tipo = "healthcheck",
+                header = listOf("area", "nivel", "titulo", "causa", "timestamp"),
+                rows = done.items.asSequence().map { item ->
+                    listOf(item.area, item.nivel.name, item.titulo, item.causaProbable, timestampIso)
+                },
+            )
         }
     }
 

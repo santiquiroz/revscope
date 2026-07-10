@@ -27,6 +27,7 @@ healthServices = "1.0.0"
 playServicesWearable = "18.2.0"
 guava = "33.0.0-android"
 osmdroid = "6.1.20"
+androidxCoreKtx = "1.13.1"
 
 [libraries]
 # Compose BOM
@@ -103,6 +104,9 @@ lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtim
 
 # Android Auto (Car App Library)
 car-app = { group = "androidx.car.app", name = "app", version.ref = "carApp" }
+
+# AndroidX Core (FileProvider for CSV export sharing)
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidxCoreKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

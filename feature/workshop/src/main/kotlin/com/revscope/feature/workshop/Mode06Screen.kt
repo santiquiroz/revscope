@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +52,8 @@ fun Mode06Screen(
     val connectionState by viewModel.connectionState.collectAsState()
     val state by viewModel.state.collectAsState()
     val isConnected = connectionState is ConnectionState.Connected
+    val context = LocalContext.current
+    val doneState = state as? Mode06ViewModel.UiState.Done
 
     LaunchedEffect(isConnected) {
         if (isConnected && state is Mode06ViewModel.UiState.Idle) viewModel.runScan()
@@ -67,6 +71,12 @@ fun Mode06Screen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(
+                onClick = { viewModel.exportResults(context) },
+                enabled = !doneState?.groups.isNullOrEmpty(),
+            ) {
+                Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+            }
         }
         Text(
             "Los valores dependen del fabricante — útil para comparar antes/después de una reparación.",

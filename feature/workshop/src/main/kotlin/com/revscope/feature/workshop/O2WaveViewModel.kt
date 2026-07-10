@@ -1,7 +1,9 @@
 package com.revscope.feature.workshop
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.export.CsvShare
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
@@ -82,6 +84,24 @@ class O2WaveViewModel @Inject constructor(
 
     fun crossingsPerMinute(): Double =
         O2SwitchCounter.perMinute(_samples.value.map { it.timestamp to it.value })
+
+    fun exportWindow(context: Context) {
+        val window = _samples.value
+        if (window.isEmpty()) return
+        val startMs = window.first().timestamp
+        val crossings = crossingsPerMinute()
+        viewModelScope.launch {
+            CsvShare.shareCsv(
+                context = context,
+                tipo = "o2wave-${_selectedPid.value}",
+                header = listOf("epoch_ms", "segundos_relativos", "voltios"),
+                rows = window.asSequence().map { sample ->
+                    listOf(sample.timestamp, (sample.timestamp - startMs) / 1000.0, sample.value)
+                },
+                comment = "cruces_por_minuto=%.0f".format(crossings),
+            )
+        }
+    }
 
     override fun onCleared() {
         fastSamplerJob?.cancel()

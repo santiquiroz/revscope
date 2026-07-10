@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,6 +97,7 @@ fun O2WaveScreen(
     val selectedPid by viewModel.selectedPid.collectAsState()
     val availableSensors by viewModel.availableSensors.collectAsState()
     val samples by viewModel.samples.collectAsState()
+    val context = LocalContext.current
     val modelProducer = remember(selectedPid) { CartesianChartModelProducer() }
 
     LaunchedEffect(selectedPid) {
@@ -125,6 +128,12 @@ fun O2WaveScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(
+                onClick = { viewModel.exportWindow(context) },
+                enabled = samples.size >= 2,
+            ) {
+                Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+            }
         }
         Text(
             "Últimos 60 s de voltaje del sensor — motor encendido y en marcha mínima estable.",

@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -47,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -79,6 +81,7 @@ fun MaintenanceScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingItem by remember { mutableStateOf<MaintenanceItemEntity?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
@@ -100,7 +103,19 @@ fun MaintenanceScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
                 }
-                Text("Mantenimiento", color = TextColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Mantenimiento",
+                    color = TextColor,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = { vm.exportCsv(context) },
+                    enabled = estados.isNotEmpty(),
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+                }
             }
 
             if (profile == null) {

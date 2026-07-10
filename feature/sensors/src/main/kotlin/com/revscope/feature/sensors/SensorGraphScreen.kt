@@ -14,7 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -23,13 +27,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.content.Context
+import com.revscope.core.common.export.CsvShare
+import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.pid.PidDefinition
+import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -69,6 +80,9 @@ fun SensorGraphScreen(
 ) {
     val selectedPid by vm.selectedPid.collectAsState()
     val history by vm.history.collectAsState()
+    val currentDef = vm.availablePids.find { it.pid == selectedPid }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     // Fresh producer per PID: cancelling a runTransaction mid-flight (old code keyed
     // the effect on `history`) leaves Vico with an empty partial → crash on next update.
     val modelProducer = remember(selectedPid) { CartesianChartModelProducer() }
@@ -102,6 +116,14 @@ fun SensorGraphScreen(
             title = {
                 Text("Sensores", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold)
             },
+            actions = {
+                IconButton(
+                    onClick = { scope.launch { exportSensorHistory(context, currentDef, history) } },
+                    enabled = currentDef != null && history.isNotEmpty(),
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+                }
+            },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
         )
 
@@ -133,7 +155,6 @@ fun SensorGraphScreen(
             }
         }
 
-        val currentDef = vm.availablePids.find { it.pid == selectedPid }
         val latestReading = history.lastOrNull()
         if (currentDef != null) {
             Row(
@@ -191,4 +212,27 @@ fun SensorGraphScreen(
             }
         }
     }
+}
+
+private suspend fun exportSensorHistory(
+    context: Context,
+    def: PidDefinition?,
+    history: List<ObdReading>,
+) {
+    if (def == null || history.isEmpty()) return
+    CsvShare.shareCsv(
+        context = context,
+        tipo = "sensor-${def.pid}",
+        header = listOf("timestamp_iso", "epoch_ms", "pid", "nombre", "valor", "unidad"),
+        rows = history.asSequence().map { reading ->
+            listOf(
+                CsvShare.isoTimestamp(reading.timestamp),
+                reading.timestamp,
+                def.pid,
+                def.nameEs,
+                reading.value,
+                def.unit,
+            )
+        },
+    )
 }

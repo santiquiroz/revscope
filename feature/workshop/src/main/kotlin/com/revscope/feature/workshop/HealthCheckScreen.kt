@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,6 +68,9 @@ fun HealthCheckScreen(
                 modifier = Modifier.weight(1f),
             )
             if (state is HealthCheckViewModel.UiState.Done) {
+                IconButton(onClick = { viewModel.exportCsv(context) }) {
+                    Icon(Icons.Default.Download, "Exportar CSV", tint = AccentColor)
+                }
                 IconButton(onClick = { viewModel.share(context) }) {
                     Icon(Icons.Default.PhotoCamera, "Compartir informe", tint = AccentColor)
                 }

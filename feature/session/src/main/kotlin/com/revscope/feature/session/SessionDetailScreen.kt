@@ -20,9 +20,11 @@ import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,6 +86,8 @@ fun SessionDetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showVehicleDialog by remember { mutableStateOf(false) }
+    var showExportMenu by remember { mutableStateOf(false) }
+    val report = (state as? SessionDetailViewModel.UiState.Ready)?.report
 
     if (showVehicleDialog) {
         VehiclePickerDialog(
@@ -123,20 +127,24 @@ fun SessionDetailScreen(
                     }) {
                         Text("📷", fontSize = 18.sp)
                     }
-                    IconButton(onClick = {
-                        scope.launch {
-                            vm.exportCsv()?.let { uri ->
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/csv"
-                                    putExtra(Intent.EXTRA_STREAM, uri)
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    ExportMenuButton(
+                        expanded = showExportMenu,
+                        onExpandedChange = { showExportMenu = it },
+                        report = report,
+                        onExportMetric = { metric -> vm.exportMetric(context, metric) },
+                        onExportAll = {
+                            scope.launch {
+                                vm.exportCsv()?.let { uri ->
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/csv"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Compartir viaje"))
                                 }
-                                context.startActivity(Intent.createChooser(intent, "Compartir viaje"))
                             }
-                        }
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = "Exportar CSV", tint = AccentColor)
-                    }
+                        },
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
             )
@@ -162,6 +170,57 @@ fun SessionDetailScreen(
         }
     }
 }
+
+private data class ExportMenuOption(
+    val label: String,
+    val metric: SessionDetailViewModel.ExportMetric,
+    val hasData: Boolean,
+)
+
+@Composable
+private fun ExportMenuButton(
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    report: SessionDetailViewModel.TripReport?,
+    onExportMetric: (SessionDetailViewModel.ExportMetric) -> Unit,
+    onExportAll: () -> Unit,
+) {
+    val options = exportMenuOptions(report)
+    Box {
+        IconButton(onClick = { onExpandedChange(true) }) {
+            Icon(Icons.Default.Download, contentDescription = "Exportar…", tint = AccentColor)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    enabled = option.hasData,
+                    onClick = {
+                        onExpandedChange(false)
+                        onExportMetric(option.metric)
+                    },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("Todo") },
+                enabled = report != null,
+                onClick = {
+                    onExpandedChange(false)
+                    onExportAll()
+                },
+            )
+        }
+    }
+}
+
+private fun exportMenuOptions(report: SessionDetailViewModel.TripReport?): List<ExportMenuOption> = listOf(
+    ExportMenuOption("Velocidad", SessionDetailViewModel.ExportMetric.VELOCIDAD, report?.speedSeries?.isNotEmpty() == true),
+    ExportMenuOption("RPM", SessionDetailViewModel.ExportMetric.RPM, report?.rpmSeries?.isNotEmpty() == true),
+    ExportMenuOption("Temperatura", SessionDetailViewModel.ExportMetric.TEMPERATURA, (report?.maxCoolantTemp ?: 0) > 0),
+    ExportMenuOption("Ritmo cardíaco", SessionDetailViewModel.ExportMetric.RITMO_CARDIACO, report?.hrSeries?.isNotEmpty() == true),
+    ExportMenuOption("IMU", SessionDetailViewModel.ExportMetric.IMU, report?.frictionPoints?.isNotEmpty() == true),
+    ExportMenuOption("GPS", SessionDetailViewModel.ExportMetric.GPS, report?.gpsTrack?.isNotEmpty() == true),
+)
 
 @Composable
 private fun ReportContent(

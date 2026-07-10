@@ -1,7 +1,9 @@
 package com.revscope.feature.workshop
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.export.CsvShare
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
@@ -85,6 +87,31 @@ class MaintenanceViewModel @Inject constructor(
 
     fun dismissSaveResult() {
         _saveResult.value = null
+    }
+
+    fun exportCsv(context: Context) {
+        val currentEstados = estados.value
+        if (currentEstados.isEmpty()) return
+        val odometro = odometroActual.value
+        viewModelScope.launch {
+            CsvShare.shareCsv(
+                context = context,
+                tipo = "mantenimiento",
+                header = listOf(
+                    "nombre", "intervalo_km", "ultimo_servicio_km", "km_restantes", "nivel", "odometro_actual",
+                ),
+                rows = currentEstados.asSequence().map { estado ->
+                    listOf(
+                        estado.item.nombre,
+                        estado.item.intervaloKm,
+                        estado.item.ultimoServicioKm,
+                        estado.kmRestantes,
+                        estado.nivel.name,
+                        odometro,
+                    )
+                },
+            )
+        }
     }
 
     private suspend fun ensureDefaults(profile: VehicleProfileEntity) {

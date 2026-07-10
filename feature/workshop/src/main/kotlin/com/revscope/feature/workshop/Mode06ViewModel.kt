@@ -1,7 +1,9 @@
 package com.revscope.feature.workshop
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.export.CsvShare
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.protocol.Mode06Parser
 import com.revscope.core.obd.session.ObdSessionManager
@@ -68,6 +70,37 @@ class Mode06ViewModel @Inject constructor(
             }
         }
     }
+
+    fun exportResults(context: Context) {
+        val groups = (_state.value as? UiState.Done)?.groups ?: return
+        if (groups.isEmpty()) return
+        viewModelScope.launch {
+            CsvShare.shareCsv(
+                context = context,
+                tipo = "mode06",
+                header = listOf(
+                    "mid", "mid_nombre", "tid", "uas_id", "valor_escalado", "unidad",
+                    "valor_crudo", "min_crudo", "max_crudo", "resultado",
+                ),
+                rows = groups.asSequence().flatMap { group ->
+                    group.results.asSequence().map { result -> mode06Row(group, result) }
+                },
+            )
+        }
+    }
+
+    private fun mode06Row(group: MidGroup, result: Mode06Parser.TestResult): List<Any?> = listOf(
+        group.mid,
+        group.name,
+        result.tid,
+        result.uasId,
+        result.value,
+        result.unit,
+        result.rawValue,
+        result.rawMin,
+        result.rawMax,
+        if (result.pass) "OK" else "FUERA_DE_RANGO",
+    )
 
     private suspend fun fetchSupportedMids(): List<String> {
         _state.value = UiState.Scanning(0, 1)

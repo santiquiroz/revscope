@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.revscope.core.common.export.CsvShare
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -90,6 +91,16 @@ class SessionDetailViewModel @Inject constructor(
     )
 
     data class LapStat(val maxAbsG: Float?, val maxAbsLean: Float?, val maxBpm: Float?)
+
+    /** Per-metric CSV export offered from the "Exportar…" menu — [tipo] feeds the filename. */
+    enum class ExportMetric(val tipo: String) {
+        VELOCIDAD("velocidad"),
+        RPM("rpm"),
+        TEMPERATURA("temperatura"),
+        RITMO_CARDIACO("ritmo-cardiaco"),
+        IMU("imu"),
+        GPS("gps"),
+    }
 
     sealed class UiState {
         object Loading : UiState()
@@ -254,6 +265,73 @@ class SessionDetailViewModel @Inject constructor(
             Timber.e(e, "SessionDetail: CSV export failed")
             null
         }
+    }
+
+    /** Exports one metric's full-resolution series for this session — separate from the downsampled charts. */
+    fun exportMetric(context: Context, metric: ExportMetric) {
+        viewModelScope.launch {
+            when (metric) {
+                ExportMetric.VELOCIDAD -> exportPidMetric(context, metric, "0D", "valor_kmh")
+                ExportMetric.RPM -> exportPidMetric(context, metric, "0C", "valor_rpm")
+                ExportMetric.TEMPERATURA -> exportPidMetric(context, metric, "05", "valor_c")
+                ExportMetric.RITMO_CARDIACO -> exportHr(context, metric)
+                ExportMetric.IMU -> exportImu(context, metric)
+                ExportMetric.GPS -> exportGps(context, metric)
+            }
+        }
+    }
+
+    private suspend fun exportPidMetric(
+        context: Context,
+        metric: ExportMetric,
+        pid: String,
+        valueColumn: String,
+    ) {
+        val points = telemetryDao.pointsForSessionAndPid(sessionId, pid)
+        if (points.isEmpty()) return
+        CsvShare.shareCsv(
+            context = context,
+            tipo = metric.tipo,
+            header = listOf("timestamp_iso", "epoch_ms", valueColumn),
+            rows = points.asSequence().map { p -> listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.value) },
+        )
+    }
+
+    private suspend fun exportHr(context: Context, metric: ExportMetric) {
+        val points = hrDao.pointsForSession(sessionId)
+        if (points.isEmpty()) return
+        CsvShare.shareCsv(
+            context = context,
+            tipo = metric.tipo,
+            header = listOf("timestamp_iso", "epoch_ms", "bpm"),
+            rows = points.asSequence().map { p -> listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.bpm) },
+        )
+    }
+
+    private suspend fun exportImu(context: Context, metric: ExportMetric) {
+        val points = imuDao.pointsForSession(sessionId)
+        if (points.isEmpty()) return
+        CsvShare.shareCsv(
+            context = context,
+            tipo = metric.tipo,
+            header = listOf("timestamp_iso", "epoch_ms", "g_lat", "g_long", "lean_deg"),
+            rows = points.asSequence().map { p ->
+                listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.gLat, p.gLong, p.leanDeg)
+            },
+        )
+    }
+
+    private suspend fun exportGps(context: Context, metric: ExportMetric) {
+        val points = gpsDao.pointsForSession(sessionId)
+        if (points.isEmpty()) return
+        CsvShare.shareCsv(
+            context = context,
+            tipo = metric.tipo,
+            header = listOf("timestamp_iso", "epoch_ms", "lat", "lon", "vel_kmh"),
+            rows = points.asSequence().map { p ->
+                listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.latitude, p.longitude, p.speedKmh)
+            },
+        )
     }
 
     private fun <T> downsampleList(points: List<T>, max: Int): List<T> {
