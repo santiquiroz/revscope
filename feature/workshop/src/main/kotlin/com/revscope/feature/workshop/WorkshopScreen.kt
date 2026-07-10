@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -76,6 +77,7 @@ fun WorkshopScreen(
     onOpenO2Wave: () -> Unit,
     onOpenMode06: () -> Unit,
     onOpenOdometer: () -> Unit,
+    onOpenSpeedComparison: () -> Unit,
 ) {
     val connState by connectionVm.connectionState.collectAsState()
     val isConnected = connState is ConnectionState.Connected
@@ -83,7 +85,7 @@ fun WorkshopScreen(
     val sections = buildWorkshopSections(
         onOpenAlDia, onOpenHealthCheck, onOpenDtc, onOpenLiveMixture,
         onOpenSensors, onOpenScanner, onOpenGearAnalyzer, onOpenProfiles, onOpenMaintenance,
-        onOpenO2Wave, onOpenMode06, onOpenOdometer,
+        onOpenO2Wave, onOpenMode06, onOpenOdometer, onOpenSpeedComparison,
     )
 
     LazyColumn(
@@ -123,6 +125,7 @@ private fun buildWorkshopSections(
     onOpenO2Wave: () -> Unit,
     onOpenMode06: () -> Unit,
     onOpenOdometer: () -> Unit,
+    onOpenSpeedComparison: () -> Unit,
 ): List<WorkshopSection> = listOf(
     WorkshopSection(
         "Estado",
@@ -161,6 +164,8 @@ private fun buildWorkshopSections(
                 "Aceite, llantas, batería y otros ítems por kilometraje", false, onOpenMaintenance),
             WorkshopTool(Icons.Default.Speed, "Verificación de kilometraje",
                 "Odómetro real del ECU e histórico anti-manipulación", false, onOpenOdometer),
+            WorkshopTool(Icons.AutoMirrored.Filled.CompareArrows, "Comparar velocímetros",
+                "Velocidad OBD vs GPS en vivo — qué tanto sobre-marca tu velocímetro", true, onOpenSpeedComparison),
         ),
     ),
 )

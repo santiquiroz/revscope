@@ -164,9 +164,10 @@ class ObdForegroundService : Service() {
             cityAlerter = cityAlerter,
             localInfoSink = localInfoSink,
             routeHolder = routeHolder,
-            // Only GPS-only trip mode needs a live speedometer reading — the OBD path
-            // already gets speed from PID 0D, untouched by this.
-            onSpeed = if (sessionManager.isGpsSessionActive.value) sessionManager::publishGpsSpeed else null,
+            // Wired unconditionally — the OBD dashboard's speed-source toggle and the
+            // speedometer comparison screen need GPS_SPEED too, not just GPS-only trips.
+            // publishGpsSpeed() itself decides whether to also feed engineOffDetector.
+            onSpeed = sessionManager::publishGpsSpeed,
         ).also { it.start(scope, sessionId) }
         crashResponder.start(
             scope = scope,

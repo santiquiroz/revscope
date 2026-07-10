@@ -2,6 +2,7 @@ package com.revscope.feature.dashboard
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
@@ -33,11 +34,25 @@ class DashboardViewModel @Inject constructor(
     val orchestrator: IntelligenceOrchestrator,
     private val alertsEngine: AlertsEngine,
     sessionManager: ObdSessionManager,
-    settings: DataStore<Preferences>,
+    private val settings: DataStore<Preferences>,
 ) : ViewModel() {
 
     /** Redline used by the shift light — cached in AlertsEngine from DataStore. */
     val redlineRpm: Int get() = alertsEngine.currentRedlineRpm
+
+    /**
+     * Big speedometer source while connected via OBD: true = GPS_SPEED, false = PID 0D.
+     * No effect during a GPS-only trip, which always shows GPS regardless of this flag.
+     */
+    val speedSourceGps: StateFlow<Boolean> = settings.data
+        .map { it[PreferencesKeys.SPEED_SOURCE_GPS] ?: false }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun setSpeedSourceGps(useGps: Boolean) {
+        viewModelScope.launch {
+            settings.edit { prefs -> prefs[PreferencesKeys.SPEED_SOURCE_GPS] = useGps }
+        }
+    }
 
     val anomalyAlerts = orchestrator.anomalyAlerts
     val tripScore = orchestrator.tripScore

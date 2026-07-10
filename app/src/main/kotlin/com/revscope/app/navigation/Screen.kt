@@ -17,6 +17,7 @@ sealed class Screen(val route: String) {
     object VehicleProfile : Screen("vehicle")
     object Maintenance : Screen("maintenance")
     object Odometer : Screen("odometer")
+    object SpeedComparison : Screen("speed_comparison")
     object Settings : Screen("settings")
     object AdapterScan : Screen("adapter_scan")
     object Mode22Scanner : Screen("mode22_scanner")

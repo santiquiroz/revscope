@@ -75,6 +75,7 @@ fun DashboardScreen(
     val gearCalibrated by dashboardVm.gearCalibrated.collectAsState()
     val alDiaBanner by dashboardVm.alDiaBanner.collectAsState()
     val isGpsTrip by connectionVm.isGpsTripActive.collectAsState()
+    val speedSourceGps by dashboardVm.speedSourceGps.collectAsState()
 
     // "Viaje sin adaptador": only offered while there's no live/incoming BT link, so it
     // can never race connectToDevice()'s own GPS-session handover.
@@ -98,7 +99,9 @@ fun DashboardScreen(
     val rpm by remember { derivedStateOf { (readingsState.value["0C"]?.value ?: 0.0).toFloat() } }
     val speed by remember {
         derivedStateOf {
-            val speedPid = if (isGpsTrip) ObdSessionManager.GPS_SPEED_PID else "0D"
+            val useGpsSpeed = isGpsTrip ||
+                (speedSourceGps && readingsState.value.containsKey(ObdSessionManager.GPS_SPEED_PID))
+            val speedPid = if (useGpsSpeed) ObdSessionManager.GPS_SPEED_PID else "0D"
             (readingsState.value[speedPid]?.value ?: 0.0).toFloat()
         }
     }
@@ -279,10 +282,19 @@ fun DashboardScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SpeedGauge(
-                    speed = speed,
+                Column(
                     modifier = Modifier.weight(1f),
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    SpeedGauge(speed = speed)
+                    if (connectionState is ConnectionState.Connected) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        SpeedSourceChip(
+                            useGps = speedSourceGps,
+                            onToggle = { dashboardVm.setSpeedSourceGps(!speedSourceGps) },
+                        )
+                    }
+                }
                 GearDisplay(
                     gear = gear,
                     isCalibrated = gearCalibrated,
@@ -336,6 +348,24 @@ private fun GpsTripButton(
             fontWeight = FontWeight.Bold,
         )
     }
+}
+
+/** Clickable "OBD"/"GPS" pill under the speedometer — swaps its live source. */
+@Composable
+private fun SpeedSourceChip(
+    useGps: Boolean,
+    onToggle: () -> Unit,
+) {
+    Text(
+        text = if (useGps) "GPS" else "OBD",
+        color = if (useGps) RevScopeColors.Accent else RevScopeColors.TextMuted,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .clickable(onClick = onToggle)
+            .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(20.dp))
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    )
 }
 
 @Composable

@@ -193,4 +193,13 @@ object PreferencesKeys {
      * Máx. 50 lecturas por perfil — ver OdometerVerifier.agregarAlHistorial.
      */
     val ODOMETER_HISTORY_JSON = stringPreferencesKey("odometer_history_json")
+
+    // ── Velocímetro ──────────────────────────────────────────────────────────
+
+    /**
+     * Fuente del velocímetro grande del dashboard en modo OBD conectado:
+     * true = GPS_SPEED, false = PID 0D (default). Sin efecto en viaje GPS sin
+     * adaptador, donde la fuente siempre es GPS.
+     */
+    val SPEED_SOURCE_GPS = booleanPreferencesKey("speed_source_gps")
 }

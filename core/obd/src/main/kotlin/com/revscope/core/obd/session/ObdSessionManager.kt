@@ -386,16 +386,19 @@ class ObdSessionManager @Inject constructor(
     }
 
     /**
-     * Feeds the live GPS_SPEED pseudo-reading — wired by the service only in GPS mode.
-     * Deliberately does NOT feed [launchTimer] or [alertsEngine]: 1 Hz GPS fixes are too
-     * coarse for a 0-100 timer, and custom-PID alert rules are scoped to real OBD PIDs —
-     * launch timing stays OBD-only in v1.
+     * Feeds the live GPS_SPEED pseudo-reading — wired by the service unconditionally, in
+     * both OBD and GPS-only trip modes, so the dashboard's speed-source toggle and the
+     * speedometer comparison screen can read it alongside PID 0D. Deliberately does NOT
+     * feed [launchTimer] or [alertsEngine]: 1 Hz GPS fixes are too coarse for a 0-100
+     * timer, and custom-PID alert rules are scoped to real OBD PIDs — launch timing stays
+     * OBD-only in v1. Only feeds [engineOffDetector] during a GPS-only trip — in OBD mode
+     * PID 0D already does that (see startTelemetry's allFlow.collect), so feeding both
+     * here too would double-count every tick.
      */
     fun publishGpsSpeed(kmh: Float) {
-        if (!_gpsSessionActive.value) return
         val reading = ObdReading(GPS_SPEED_PID, kmh.toDouble(), "km/h")
         _readings.value = _readings.value + (GPS_SPEED_PID to reading)
-        engineOffDetector.onSpeed(kmh.toDouble())
+        if (_gpsSessionActive.value) engineOffDetector.onSpeed(kmh.toDouble())
     }
 
     private fun startGpsInactivityWatcher() {
