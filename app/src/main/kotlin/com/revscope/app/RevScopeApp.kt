@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.revscope.core.data.backup.AutoBackupWorker
 import com.revscope.core.obd.cameras.CameraRefreshWorker
 import com.revscope.core.obd.legal.DailyStatusWorker
 import dagger.hilt.android.HiltAndroidApp
@@ -20,6 +21,7 @@ private const val DAILY_STATUS_HOUR = 5
 private const val DAILY_STATUS_MINUTE = 30
 private const val BOGOTA_ZONE_ID = "America/Bogota"
 private const val CAMERA_REFRESH_INTERVAL_DAYS = 7L
+private const val AUTO_BACKUP_INTERVAL_DAYS = 7L
 
 @HiltAndroidApp
 class RevScopeApp : Application(), Configuration.Provider {
@@ -39,6 +41,7 @@ class RevScopeApp : Application(), Configuration.Provider {
         }
         scheduleDailyStatusWorker()
         scheduleCameraRefreshWorker()
+        scheduleAutoBackupWorker()
     }
 
     private fun scheduleDailyStatusWorker() {
@@ -54,6 +57,13 @@ class RevScopeApp : Application(), Configuration.Provider {
             .build()
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork(CameraRefreshWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+    }
+
+    private fun scheduleAutoBackupWorker() {
+        val request = PeriodicWorkRequestBuilder<AutoBackupWorker>(AUTO_BACKUP_INTERVAL_DAYS, TimeUnit.DAYS)
+            .build()
+        WorkManager.getInstance(this)
+            .enqueueUniquePeriodicWork(AutoBackupWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
     }
 }
 

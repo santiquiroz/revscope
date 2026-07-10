@@ -40,6 +40,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.revscope.app.onboarding.OnboardingScreen
+import com.revscope.app.onboarding.OnboardingViewModel
 import com.revscope.feature.dashboard.AdapterScanScreen
 import com.revscope.feature.dashboard.DashboardScreen
 import com.revscope.feature.dashboard.TrackModeScreen
@@ -89,6 +91,14 @@ fun RevScopeNavGraph(
     initialOpenAlDia: Boolean = false,
     onInitialOpenAlDiaConsumed: () -> Unit = {},
 ) {
+    val onboardingVm: OnboardingViewModel =
+        hiltViewModel(LocalContext.current as ComponentActivity)
+    val onboardingDone by onboardingVm.onboardingDone.collectAsState()
+
+    // Nothing to compose until we know whether to start at Onboarding or Dashboard —
+    // composing NavHost picks its startDestination once, on first composition.
+    if (onboardingDone == null) return
+
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
@@ -121,8 +131,9 @@ fun RevScopeNavGraph(
     val askVehicleOnStart by vehiclePickerVm.askOnStart.collectAsState()
     val activeVehicleProfile by vehiclePickerVm.activeProfile.collectAsState()
 
-    LaunchedEffect(vehicleProfiles, askVehicleOnStart) {
-        if (!hasOfferedVehiclePicker && askVehicleOnStart && vehicleProfiles.isNotEmpty() && !showVehiclePicker) {
+    LaunchedEffect(vehicleProfiles, askVehicleOnStart, currentRoute) {
+        val onOnboarding = currentRoute == Screen.Onboarding.route
+        if (!onOnboarding && !hasOfferedVehiclePicker && askVehicleOnStart && vehicleProfiles.isNotEmpty() && !showVehiclePicker) {
             showVehiclePicker = true
             vehiclePickerIsStartupPrompt = true
             hasOfferedVehiclePicker = true
@@ -164,9 +175,19 @@ fun RevScopeNavGraph(
         Box(Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
-                startDestination = Screen.Dashboard.route,
+                startDestination = if (onboardingDone == true) Screen.Dashboard.route else Screen.Onboarding.route,
                 modifier = Modifier.padding(innerPadding),
             ) {
+                composable(Screen.Onboarding.route) {
+                    OnboardingScreen(
+                        vm = onboardingVm,
+                        onFinished = {
+                            navController.navigate(Screen.Dashboard.route) {
+                                popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            }
+                        },
+                    )
+                }
                 composable(Screen.Dashboard.route) {
                     DashboardScreen(
                         onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },

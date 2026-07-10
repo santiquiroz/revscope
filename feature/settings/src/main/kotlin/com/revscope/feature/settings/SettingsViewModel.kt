@@ -346,6 +346,25 @@ class SettingsViewModel @Inject constructor(
     private val _backupState = MutableStateFlow(BackupState.IDLE)
     val backupState: StateFlow<BackupState> = _backupState.asStateFlow()
 
+    private val _autoBackupEnabled = MutableStateFlow(true)
+    val autoBackupEnabled: StateFlow<Boolean> = _autoBackupEnabled.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            runCatching { settings.data.first()[PreferencesKeys.AUTO_BACKUP_ENABLED] ?: true }
+                .onSuccess { _autoBackupEnabled.value = it }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to load auto-backup toggle") }
+        }
+    }
+
+    fun updateAutoBackupEnabled(value: Boolean) {
+        _autoBackupEnabled.value = value
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.AUTO_BACKUP_ENABLED] = value } }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist auto-backup toggle") }
+        }
+    }
+
     fun exportBackup(uri: Uri) {
         viewModelScope.launch {
             _backupState.value = BackupState.EXPORTING

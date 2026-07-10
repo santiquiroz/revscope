@@ -90,6 +90,7 @@ fun SettingsScreen(
     val voiceSport by vm.voiceSport.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
+    val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
@@ -214,14 +215,14 @@ fun SettingsScreen(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            VoiceCategoryRow("Temperatura", voiceTemperature, vm::updateVoiceTemperature)
-            VoiceCategoryRow("Batería y carga", voiceVoltage, vm::updateVoiceVoltage)
-            VoiceCategoryRow("Radares de velocidad", voiceSpeedCameras, vm::updateVoiceSpeedCameras)
-            VoiceCategoryRow("Anomalías inteligentes", voiceAnomalies, vm::updateVoiceAnomalies)
-            VoiceCategoryRow("Testigo del motor (MIL)", voiceMil, vm::updateVoiceMil)
-            VoiceCategoryRow("Zona roja", voiceRedline, vm::updateVoiceRedline)
-            VoiceCategoryRow("Umbrales personalizados", voiceCustomThresholds, vm::updateVoiceCustomThresholds)
-            VoiceCategoryRow("Tiempos 0-100 y vueltas", voiceSport, vm::updateVoiceSport)
+            ToggleRow("Temperatura", voiceTemperature, vm::updateVoiceTemperature)
+            ToggleRow("Batería y carga", voiceVoltage, vm::updateVoiceVoltage)
+            ToggleRow("Radares de velocidad", voiceSpeedCameras, vm::updateVoiceSpeedCameras)
+            ToggleRow("Anomalías inteligentes", voiceAnomalies, vm::updateVoiceAnomalies)
+            ToggleRow("Testigo del motor (MIL)", voiceMil, vm::updateVoiceMil)
+            ToggleRow("Zona roja", voiceRedline, vm::updateVoiceRedline)
+            ToggleRow("Umbrales personalizados", voiceCustomThresholds, vm::updateVoiceCustomThresholds)
+            ToggleRow("Tiempos 0-100 y vueltas", voiceSport, vm::updateVoiceSport)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -345,6 +346,14 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            Spacer(Modifier.height(4.dp))
+            ToggleRow("Copia automática semanal", autoBackupEnabled, vm::updateAutoBackupEnabled)
+            Text(
+                "Cada semana guarda una copia en Descargas/RevScope (se conservan las últimas 4).",
+                color = TextMutedColor,
+                fontSize = 11.sp,
+            )
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("IA — Explicación de códigos DTC")
@@ -492,7 +501,7 @@ private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> U
 }
 
 @Composable
-private fun VoiceCategoryRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,

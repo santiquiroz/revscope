@@ -42,6 +42,11 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 
+    // WorkManager — AutoBackupWorker (copia de seguridad automática semanal)
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    kapt(libs.androidx.hilt.compiler)
+
     implementation(libs.timber)
 
     testImplementation(libs.junit)

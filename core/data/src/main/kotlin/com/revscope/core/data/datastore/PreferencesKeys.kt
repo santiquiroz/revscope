@@ -123,4 +123,14 @@ object PreferencesKeys {
 
     /** Longitud del último centro de descarga manual de radares (refresco semanal automático) */
     val LAST_CAMERA_LON = doublePreferencesKey("last_camera_lon")
+
+    // ── Copia de seguridad ───────────────────────────────────────────────────
+
+    /** Copia de seguridad automática semanal a Descargas/RevScope (default true) */
+    val AUTO_BACKUP_ENABLED = booleanPreferencesKey("auto_backup_enabled")
+
+    // ── Onboarding ───────────────────────────────────────────────────────────
+
+    /** Se completó la pantalla de permisos del primer arranque (default false) */
+    val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
 }
