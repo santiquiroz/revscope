@@ -25,8 +25,14 @@ class AnthropicProvider(
         try {
             val conn = openConnection()
             conn.outputStream.use { it.write(buildBody(request)) }
-            val responseBody = conn.inputStream.bufferedReader().readText()
-            AiResponseParsers.parseAnthropicResponse(responseBody)
+            val code = conn.responseCode
+            return@withContext if (code in 200..299) {
+                val responseBody = conn.inputStream.bufferedReader().readText()
+                AiResponseParsers.parseAnthropicResponse(responseBody)
+            } else {
+                runCatching { conn.errorStream?.bufferedReader()?.readText() }
+                Result.failure(Exception("Anthropic HTTP $code"))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

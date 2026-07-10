@@ -8,7 +8,7 @@ import org.json.JSONObject
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
-/** Google Gemini via the generateContent REST API. API key travels as a query param. */
+/** Google Gemini via the generateContent REST API. API key travels via x-goog-api-key header. */
 class GeminiProvider(
     private val apiKey: String,
     private val model: String = DEFAULT_MODEL,
@@ -22,8 +22,14 @@ class GeminiProvider(
         try {
             val conn = openConnection()
             conn.outputStream.use { it.write(buildBody(request)) }
-            val responseBody = conn.inputStream.bufferedReader().readText()
-            AiResponseParsers.parseGeminiResponse(responseBody)
+            val code = conn.responseCode
+            return@withContext if (code in 200..299) {
+                val responseBody = conn.inputStream.bufferedReader().readText()
+                AiResponseParsers.parseGeminiResponse(responseBody)
+            } else {
+                runCatching { conn.errorStream?.bufferedReader()?.readText() }
+                Result.failure(Exception("Gemini HTTP $code"))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -32,10 +38,11 @@ class GeminiProvider(
     }
 
     private fun openConnection(): HttpsURLConnection {
-        val url = "$BASE_URL/$model:generateContent?key=$apiKey"
+        val url = "$BASE_URL/$model:generateContent"
         return (URL(url).openConnection() as HttpsURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("x-goog-api-key", apiKey)
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
             doOutput = true

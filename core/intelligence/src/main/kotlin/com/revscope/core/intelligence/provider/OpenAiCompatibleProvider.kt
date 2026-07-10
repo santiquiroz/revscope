@@ -28,8 +28,14 @@ class OpenAiCompatibleProvider(
         try {
             val conn = openConnection()
             conn.outputStream.use { it.write(buildBody(request)) }
-            val responseBody = conn.inputStream.bufferedReader().readText()
-            AiResponseParsers.parseOpenAiChatResponse(responseBody)
+            val code = conn.responseCode
+            return@withContext if (code in 200..299) {
+                val responseBody = conn.inputStream.bufferedReader().readText()
+                AiResponseParsers.parseOpenAiChatResponse(responseBody)
+            } else {
+                runCatching { conn.errorStream?.bufferedReader()?.readText() }
+                Result.failure(Exception("Compatible OpenAI HTTP $code"))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
