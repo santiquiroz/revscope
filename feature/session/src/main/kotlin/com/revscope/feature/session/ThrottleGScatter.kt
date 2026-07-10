@@ -53,9 +53,15 @@ fun ThrottleGScatter(
             drawLine(GridColor, Offset(0f, y), Offset(size.width, y), 1.dp.toPx(), alpha = CANVAS_CHART_GRID_ALPHA)
         }
 
+        // Reserva un gutter para que las marcas extremas (acelerador 100 %, frenada
+        // fuerte) no queden debajo de las etiquetas de las esquinas.
+        val plotGutter = 12.dp.toPx()
+        val plotWidth = size.width - plotGutter
+        val plotHeight = size.height - plotGutter
+
         points.forEach { (throttle, gLong) ->
-            val x = size.width * (throttle.coerceIn(0f, 100f) / 100f)
-            val y = size.height / 2f - (gLong.coerceIn(-MAX_G, MAX_G) / MAX_G) * (size.height / 2f)
+            val x = plotWidth * (throttle.coerceIn(0f, 100f) / 100f)
+            val y = plotHeight / 2f - (gLong.coerceIn(-MAX_G, MAX_G) / MAX_G) * (plotHeight / 2f)
             drawCircle(
                 color = when {
                     gLong < -0.15f -> BrakeColor

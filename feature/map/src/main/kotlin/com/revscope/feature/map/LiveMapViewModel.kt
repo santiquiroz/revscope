@@ -30,6 +30,10 @@ class LiveMapViewModel @Inject constructor(
 
     val route: StateFlow<List<LiveRouteHolder.RoutePoint>> = routeHolder.points
 
+    // route.size se estanca al llegar al tope de puntos; revision avanza siempre que
+    // la ruta cambia, incluso cuando el tamaño no cambia (viajes largos).
+    val routeRevision: StateFlow<Long> = routeHolder.revision
+
     // Centro inicial cuando no hay viaje activo (mismo patrón que SettingsViewModel)
     private val _initialCenter = MutableStateFlow<LiveRouteHolder.RoutePoint?>(null)
     val initialCenter: StateFlow<LiveRouteHolder.RoutePoint?> = _initialCenter.asStateFlow()

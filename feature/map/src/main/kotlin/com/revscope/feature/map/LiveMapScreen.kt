@@ -45,20 +45,24 @@ private val AttributionColor = Color(0xFF6B7089)
 @Composable
 fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val route by viewModel.route.collectAsState()
+    val routeRevision by viewModel.routeRevision.collectAsState()
     val cameras by viewModel.cameras.collectAsState()
     val context = LocalContext.current
 
     // Evita recentrar el mapa (y pelear con el usuario si lo está paneando) en cada
-    // recomposición disparada por lecturas OBD; solo recentra cuando cambia el número
-    // de puntos de la ruta, y usa la ubicación inicial una única vez sin viaje activo.
-    var lastCenteredRouteSize by remember { mutableStateOf(-1) }
+    // recomposición disparada por lecturas OBD; solo recentra cuando cambia routeRevision
+    // (route.size se estanca en viajes de 5h+, por eso no sirve como señal de cambio),
+    // y usa la ubicación inicial una única vez sin viaje activo.
+    var lastCenteredRevision by remember { mutableStateOf(-1L) }
     var hasCenteredInitial by remember { mutableStateOf(false) }
 
     // Evita limpiar y reconstruir los overlays (hasta 18.000 puntos de ruta) en cada
-    // recomposición; cuando la ruta solo CRECE se agregan los puntos nuevos al Polyline
-    // existente (addPoint) — la reconstrucción completa queda solo para cuando cambian
-    // las cámaras o la ruta se encoge/reinicia (nuevo viaje).
-    var lastOverlayRouteSize by remember { mutableStateOf(-1) }
+    // recomposición; cuando la ruta solo CRECE (por debajo del tope) se agregan los
+    // puntos nuevos al Polyline existente (addPoint) — la reconstrucción completa queda
+    // para cuando cambian las cámaras, la ruta se encoge/reinicia (nuevo viaje), o la
+    // ruta cambió pero su tamaño se estancó (viaje en el tope de MAX_POINTS).
+    var lastOverlayRevision by remember { mutableStateOf(-1L) }
+    var lastOverlaySize by remember { mutableStateOf(-1) }
     var lastOverlayCameraCount by remember { mutableStateOf(-1) }
     var routeOverlays by remember { mutableStateOf(RouteOverlays(polyline = null, marker = null)) }
 
@@ -78,23 +82,28 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             },
             update = { map ->
                 val camerasChanged = cameras.size != lastOverlayCameraCount
-                val routeShrankOrReset = route.size < lastOverlayRouteSize
-                val routeGrew = route.size > lastOverlayRouteSize
+                val routeReset = routeRevision < lastOverlayRevision ||
+                    (route.isEmpty() && routeOverlays.polyline != null)
+                val revisionChanged = routeRevision != lastOverlayRevision
+                val routeGrew = revisionChanged && !routeReset && route.size > lastOverlaySize
                 val missingPolyline = route.isNotEmpty() && routeOverlays.polyline == null
+                val needsFullRebuild = camerasChanged || routeReset || missingPolyline ||
+                    (revisionChanged && !routeGrew)
 
-                if (camerasChanged || routeShrankOrReset || missingPolyline) {
+                if (needsFullRebuild) {
                     routeOverlays = rebuildMapOverlays(map, route, cameras)
-                    lastOverlayRouteSize = route.size
                     lastOverlayCameraCount = cameras.size
                 } else if (routeGrew) {
-                    appendRoutePoints(routeOverlays.polyline, route, lastOverlayRouteSize)
+                    appendRoutePoints(routeOverlays.polyline, route, lastOverlaySize)
                     updateCurrentPositionMarker(routeOverlays.marker, route.last())
-                    lastOverlayRouteSize = route.size
                 }
+                lastOverlayRevision = routeRevision
+                lastOverlaySize = route.size
+
                 if (route.isNotEmpty()) {
                     val last = route.last()
-                    if (route.size != lastCenteredRouteSize) {
-                        lastCenteredRouteSize = route.size
+                    if (routeRevision != lastCenteredRevision) {
+                        lastCenteredRevision = routeRevision
                         map.controller.setCenter(GeoPoint(last.lat, last.lon))
                     }
                 } else if (!hasCenteredInitial) {

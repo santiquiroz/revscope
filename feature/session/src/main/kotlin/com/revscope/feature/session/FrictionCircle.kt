@@ -23,6 +23,10 @@ private val BrakePointColor = Color(0xFFFF3D5A)
 
 private const val MAX_G_SCALE = 1.2f
 
+// cos(45°) == sin(45°): coloca las etiquetas de los anillos guía en la diagonal,
+// lejos del eje vertical donde se agrupan los puntos de frenada/aceleración.
+private const val RING_LABEL_DIAGONAL_FACTOR = 0.707f
+
 /**
  * Friction circle: every IMU sample plotted as (lateral G, longitudinal G).
  * The envelope of the cloud IS the grip you actually used — braking points
@@ -83,10 +87,18 @@ fun FrictionCircle(
             )
         }
 
-        // Ring labels — G magnitude where each guide ring crosses the vertical (top) axis.
+        // Ring labels — G magnitude where each guide ring crosses its 45° diagonal,
+        // away from the vertical axis where braking/accel points cluster.
         val labelGap = 2.dp.toPx()
-        drawAxisText("0.5G", center.x + labelGap, center.y - (0.5f * pxPerG) - labelGap, leftPaint)
-        drawAxisText("1.0G", center.x + labelGap, center.y - (1.0f * pxPerG) - labelGap, leftPaint)
+        listOf(0.5f, 1.0f).forEach { g ->
+            val ringRadius = g * pxPerG
+            drawAxisText(
+                "${g}G",
+                center.x + ringRadius * RING_LABEL_DIAGONAL_FACTOR + labelGap,
+                center.y - ringRadius * RING_LABEL_DIAGONAL_FACTOR - labelGap,
+                leftPaint,
+            )
+        }
 
         // Axis names in the corners.
         val margin = 4.dp.toPx()

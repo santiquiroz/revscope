@@ -15,12 +15,19 @@ class LiveRouteHolder @Inject constructor() {
     private val _points = MutableStateFlow<List<RoutePoint>>(emptyList())
     val points: StateFlow<List<RoutePoint>> = _points.asStateFlow()
 
+    // route.size se estanca en MAX_POINTS (takeLast) en viajes largos, así que la UI
+    // no puede detectar cambios mirando solo el tamaño; revision siempre avanza.
+    private val _revision = MutableStateFlow(0L)
+    val revision: StateFlow<Long> = _revision.asStateFlow()
+
     fun append(lat: Double, lon: Double) {
         _points.value = (_points.value + RoutePoint(lat, lon)).takeLast(MAX_POINTS)
+        _revision.value += 1
     }
 
     fun clear() {
         _points.value = emptyList()
+        _revision.value = 0L
     }
 
     companion object {

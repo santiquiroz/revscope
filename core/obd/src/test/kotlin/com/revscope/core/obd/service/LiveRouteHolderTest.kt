@@ -28,4 +28,26 @@ class LiveRouteHolderTest {
         repeat(LiveRouteHolder.MAX_POINTS + 100) { holder.append(6.0 + it * 0.0001, -75.0) }
         assertEquals(LiveRouteHolder.MAX_POINTS, holder.points.value.size)
     }
+
+    @Test
+    fun `revision avanza en cada append incluso cuando el tamano se estanca`() {
+        repeat(LiveRouteHolder.MAX_POINTS) { holder.append(6.0 + it * 0.0001, -75.0) }
+        val revisionAtCap = holder.revision.value
+        val sizeAtCap = holder.points.value.size
+
+        holder.append(6.99, -75.0)
+
+        assertEquals(sizeAtCap, holder.points.value.size)
+        assertTrue(holder.revision.value > revisionAtCap)
+    }
+
+    @Test
+    fun `clear reinicia la revision`() {
+        holder.append(6.24, -75.58)
+        val revisionBeforeClear = holder.revision.value
+
+        holder.clear()
+
+        assertTrue(holder.revision.value < revisionBeforeClear)
+    }
 }
