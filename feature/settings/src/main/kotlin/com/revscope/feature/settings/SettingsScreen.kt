@@ -92,6 +92,7 @@ fun SettingsScreen(
     val voiceRedline by vm.voiceRedline.collectAsState()
     val voiceCustomThresholds by vm.voiceCustomThresholds.collectAsState()
     val voiceSport by vm.voiceSport.collectAsState()
+    val voicePicoPlaca by vm.voicePicoPlaca.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
     val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
@@ -235,6 +236,7 @@ fun SettingsScreen(
             ToggleRow("Zona roja", voiceRedline, vm::updateVoiceRedline)
             ToggleRow("Umbrales personalizados", voiceCustomThresholds, vm::updateVoiceCustomThresholds)
             ToggleRow("Tiempos 0-100 y vueltas", voiceSport, vm::updateVoiceSport)
+            ToggleRow("Pico y placa al entrar a otra ciudad", voicePicoPlaca, vm::updateVoicePicoPlaca)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

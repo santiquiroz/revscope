@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.entities.GpsPointEntity
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
+import com.revscope.core.obd.legal.CityEnforcementAlerter
 import com.revscope.core.obd.track.TrackModeEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -35,6 +36,7 @@ class GpsTrackRecorder(
     private val trackModeEngine: TrackModeEngine? = null,
     private val onBearing: ((Float) -> Unit)? = null,
     private val cameraAlerter: SpeedCameraAlerter? = null,
+    private val cityAlerter: CityEnforcementAlerter? = null,
     private val routeHolder: LiveRouteHolder? = null,
 ) {
 
@@ -134,6 +136,7 @@ class GpsTrackRecorder(
         }
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
         cameraAlerter?.onGpsFix(location.latitude, location.longitude)
+        cityAlerter?.onGpsFix(location.latitude, location.longitude)
         routeHolder?.append(location.latitude, location.longitude)
         routeHolder?.updateSpeed(point.speedKmh)
         if (location.hasBearing()) onBearing?.invoke(location.bearing)

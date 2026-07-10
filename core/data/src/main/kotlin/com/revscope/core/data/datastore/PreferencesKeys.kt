@@ -103,6 +103,9 @@ object PreferencesKeys {
     /** Spoken 0-100 launch and lap-time announcements (default true) */
     val VOICE_SPORT = booleanPreferencesKey("voice_sport")
 
+    /** Spoken pico-y-placa warning entering a city ≠ profile's with active restriction (default true) */
+    val VOICE_PICO_PLACA = booleanPreferencesKey("voice_pico_placa")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */

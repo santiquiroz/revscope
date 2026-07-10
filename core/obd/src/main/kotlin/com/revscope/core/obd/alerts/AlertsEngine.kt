@@ -12,6 +12,7 @@ import java.util.Locale
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.model.ObdReading
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -44,7 +45,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA }
 
     data class ObdAlert(
         val type: AlertType,
@@ -79,6 +80,7 @@ class AlertsEngine @Inject constructor(
     @Volatile private var voiceRedline = false
     @Volatile private var voiceCustomThresholds = true
     @Volatile private var voiceSport = true
+    @Volatile private var voicePicoPlaca = true
 
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
@@ -116,12 +118,13 @@ class AlertsEngine @Inject constructor(
             voiceRedline = prefs[PreferencesKeys.VOICE_REDLINE] ?: false
             voiceCustomThresholds = prefs[PreferencesKeys.VOICE_CUSTOM_THRESHOLDS] ?: true
             voiceSport = prefs[PreferencesKeys.VOICE_SPORT] ?: true
+            voicePicoPlaca = prefs[PreferencesKeys.VOICE_PICO_PLACA] ?: true
             if (ttsEnabled) tts // touch the lazy so the engine warms up early
             Timber.i(
                 "AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm " +
                     "customRules=${customRules.size} voice[temp=$voiceTemperature volt=$voiceVoltage " +
                     "cam=$voiceSpeedCameras anom=$voiceAnomalies mil=$voiceMil redline=$voiceRedline " +
-                    "custom=$voiceCustomThresholds sport=$voiceSport]"
+                    "custom=$voiceCustomThresholds sport=$voiceSport picoPlaca=$voicePicoPlaca]"
             )
         }.onFailure { Timber.w(it, "AlertsEngine: failed to load thresholds") }
     }
@@ -228,6 +231,28 @@ class AlertsEngine @Inject constructor(
         }
         Timber.i("AlertsEngine: $message")
         _alerts.tryEmit(ObdAlert(AlertType.SPEED_CAMERA, message, distanceM.toDouble()))
+        playTone(ToneGenerator.TONE_PROP_ACK, 300)
+        vibrate(longArrayOf(0, 200, 100, 200))
+        speak(message)
+    }
+
+    /**
+     * Spoken pico-y-placa warning when GPS detects a city different from the active profile's
+     * with a restriction currently active for its plate. Per-city per-day cooldown lives in
+     * CityAlertPolicy/CityEnforcementAlerter — this only gates on the voice category + master switch.
+     */
+    fun announcePicoPlaca(cityName: String, status: PicoYPlacaEngine.Status, startHour: Int, endHour: Int) {
+        if (!enabled) return
+        if (!voicePicoPlaca) return
+        val message = when (status) {
+            PicoYPlacaEngine.Status.RESTRINGIDO_AHORA ->
+                "Atención: entraste a $cityName y hoy hay pico y placa para tu placa, hasta las $endHour:00"
+            PicoYPlacaEngine.Status.RESTRINGIDO_HOY_FUERA_DE_HORARIO ->
+                "Atención: en $cityName hoy aplica pico y placa para tu placa de $startHour:00 a $endHour:00"
+            else -> return
+        }
+        Timber.w("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.PICO_Y_PLACA, message, 0.0))
         playTone(ToneGenerator.TONE_PROP_ACK, 300)
         vibrate(longArrayOf(0, 200, 100, 200))
         speak(message)

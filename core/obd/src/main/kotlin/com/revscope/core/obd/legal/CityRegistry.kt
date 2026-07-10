@@ -58,6 +58,16 @@ object CityRegistry {
             .minByOrNull { (_, distanceKm) -> distanceKm }
             ?.first
 
+    /**
+     * Resuelve las reglas vigentes de [cityId]. [overrideRules] es la edición manual del
+     * usuario (Ajustes → JSON) y solo aplica si edita esa misma ciudad; de lo contrario se
+     * usan las reglas registradas en [CITIES] (null si aún no están confirmadas, ej. Cali).
+     */
+    fun resolveRules(cityId: String, overrideRules: PicoYPlacaEngine.CityRules?): PicoYPlacaEngine.CityRules? {
+        if (overrideRules != null && overrideRules.cityId == cityId) return overrideRules
+        return CITIES.firstOrNull { it.id == cityId }?.rules
+    }
+
     private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)

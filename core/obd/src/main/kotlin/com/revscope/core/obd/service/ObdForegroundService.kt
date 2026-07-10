@@ -18,6 +18,7 @@ import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
+import com.revscope.core.obd.legal.CityEnforcementAlerter
 import com.revscope.core.obd.motion.MotionMetricsHub
 import com.revscope.core.obd.motion.MotionSensorRecorder
 import com.revscope.core.obd.safety.CrashResponder
@@ -61,6 +62,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var imuDao: ImuDao
     @Inject lateinit var trackModeEngine: TrackModeEngine
     @Inject lateinit var cameraAlerter: SpeedCameraAlerter
+    @Inject lateinit var cityAlerter: CityEnforcementAlerter
     @Inject lateinit var motionHub: MotionMetricsHub
     @Inject lateinit var routeHolder: LiveRouteHolder
     @Inject lateinit var crashResponder: CrashResponder
@@ -158,6 +160,7 @@ class ObdForegroundService : Service() {
             trackModeEngine,
             onBearing = imu::updateGpsBearing,
             cameraAlerter = cameraAlerter,
+            cityAlerter = cityAlerter,
             routeHolder = routeHolder,
         ).also { it.start(scope, sessionId) }
         crashResponder.start(
