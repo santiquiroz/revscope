@@ -14,6 +14,9 @@ object OdometerVerifier {
     private const val UMBRAL_AVANCE_MINIMO = 0.8
     private const val MAX_HISTORIAL = 50
 
+    /** Ventana mínima de distancia app para que la comparación de desviación sea significativa. */
+    private const val DISTANCIA_MINIMA_COMPARACION_KM = 5.0
+
     /**
      * Compara [nueva] contra la última lectura de [historial].
      * [distanciaAppKm] es la suma de distanceKm de las sesiones del perfil entre la
@@ -27,6 +30,7 @@ object OdometerVerifier {
         val anterior = historial.lastOrNull() ?: return lineaBase(nueva)
         return when {
             nueva.km < anterior.km -> retrocedio(anterior, nueva)
+            distanciaAppKm < DISTANCIA_MINIMA_COMPARACION_KM -> ventanaInsuficiente(nueva)
             avanzaMenosQueApp(anterior, nueva, distanciaAppKm) -> avanceInsuficiente(anterior, nueva, distanciaAppKm)
             else -> normal(nueva)
         }
@@ -63,6 +67,13 @@ object OdometerVerifier {
             distanciaAppKm,
         ),
         "El odómetro avanza menos que la distancia registrada por la app — posible manipulación o lectura no confiable",
+    )
+
+    private fun ventanaInsuficiente(nueva: Reading) = DiagnosticRules.Diagnosis(
+        DiagnosticRules.Nivel.OK,
+        "Odómetro",
+        "Odómetro %.1f km".format(nueva.km),
+        "ventana insuficiente para comparar",
     )
 
     private fun normal(nueva: Reading) = DiagnosticRules.Diagnosis(

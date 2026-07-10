@@ -177,9 +177,21 @@ class HealthCheckViewModel @Inject constructor(
         }
     }
 
-    /** Empty when the ECU doesn't support PID 01 A6 — [ObdSessionManager.checkOdometerNow] returns null then. */
-    private suspend fun odometerDiagnoses(): List<DiagnosticRules.Diagnosis> =
-        sessionManager.checkOdometerNow()?.diagnosis?.let { listOf(it) } ?: emptyList()
+    /**
+     * Empty when the ECU doesn't support PID 01 A6. When it does but the read still failed
+     * (transient link issue), surfaces an ATENCION item instead of silently dropping it.
+     */
+    private suspend fun odometerDiagnoses(): List<DiagnosticRules.Diagnosis> {
+        val diagnosis = sessionManager.checkOdometerNow()?.diagnosis
+        if (diagnosis != null) return listOf(diagnosis)
+        if (sessionManager.odometerSupported.value != true) return emptyList()
+        return listOf(odometerLecturaNoDisponibleDiagnosis())
+    }
+
+    private fun odometerLecturaNoDisponibleDiagnosis(): DiagnosticRules.Diagnosis = DiagnosticRules.Diagnosis(
+        DiagnosticRules.Nivel.ATENCION, "Odómetro", "Lectura no disponible",
+        "No se pudo leer el odómetro — repite el chequeo",
+    )
 
     private suspend fun collectO2Samples(): List<Double> {
         val samples = mutableListOf<Double>()

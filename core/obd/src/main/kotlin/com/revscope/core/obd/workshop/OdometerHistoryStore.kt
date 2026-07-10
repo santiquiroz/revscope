@@ -20,29 +20,33 @@ class OdometerHistoryStore(private val settings: DataStore<Preferences>) {
 
     suspend fun historialPara(profileId: Long): List<OdometerVerifier.Reading> {
         val json = settings.data.first()[PreferencesKeys.ODOMETER_HISTORY_JSON] ?: return emptyList()
-        return parseHistorialDePerfil(json, profileId)
+        return parseHistorialDeRoot(parseRoot(json), profileId)
     }
 
-    /** Appends [nueva] (capped by [OdometerVerifier.agregarAlHistorial]) and persists it. */
+    /**
+     * Appends [nueva] (capped by [OdometerVerifier.agregarAlHistorial]) and persists it.
+     * Reads the previous history from inside the [DataStore.edit] transaction — not before it —
+     * so two concurrent calls for the same profile can't both read the same stale history and
+     * clobber each other's append (lost update).
+     */
     suspend fun agregar(profileId: Long, nueva: OdometerVerifier.Reading): List<OdometerVerifier.Reading> {
-        val actualizado = OdometerVerifier.agregarAlHistorial(historialPara(profileId), nueva)
-        guardar(profileId, actualizado)
-        return actualizado
-    }
-
-    private suspend fun guardar(profileId: Long, historial: List<OdometerVerifier.Reading>) {
+        var actualizado: List<OdometerVerifier.Reading>? = null
         runCatching {
             settings.edit { prefs ->
                 val root = parseRoot(prefs[PreferencesKeys.ODOMETER_HISTORY_JSON])
-                root.put(profileId.toString(), historialToJsonArray(historial))
+                val historialPrevio = parseHistorialDeRoot(root, profileId)
+                val nuevoHistorial = OdometerVerifier.agregarAlHistorial(historialPrevio, nueva)
+                actualizado = nuevoHistorial
+                root.put(profileId.toString(), historialToJsonArray(nuevoHistorial))
                 prefs[PreferencesKeys.ODOMETER_HISTORY_JSON] = root.toString()
             }
         }.onFailure { Timber.w(it, "OdometerHistoryStore: failed to persist history for profile $profileId") }
+        return actualizado ?: OdometerVerifier.agregarAlHistorial(historialPara(profileId), nueva)
     }
 
-    private fun parseHistorialDePerfil(rootJson: String, profileId: Long): List<OdometerVerifier.Reading> =
+    private fun parseHistorialDeRoot(root: JSONObject, profileId: Long): List<OdometerVerifier.Reading> =
         try {
-            val array = parseRoot(rootJson).optJSONArray(profileId.toString()) ?: JSONArray()
+            val array = root.optJSONArray(profileId.toString()) ?: JSONArray()
             (0 until array.length()).map { i ->
                 val o = array.getJSONObject(i)
                 OdometerVerifier.Reading(epochMs = o.getLong("epochMs"), km = o.getDouble("km"))

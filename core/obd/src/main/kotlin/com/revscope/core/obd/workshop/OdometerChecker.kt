@@ -63,8 +63,19 @@ class OdometerChecker(
         val historialPrevio = historyStore.historialPara(profileId)
         val distanciaAppKm = distanciaAppEntre(profileId, historialPrevio.lastOrNull(), nueva)
         val diagnosis = OdometerVerifier.evaluar(historialPrevio, nueva, distanciaAppKm)
-        val historialActualizado = historyStore.agregar(profileId, nueva)
+        // Same open trip as the last reading (<30 min): app-km hasn't accrued yet, so persisting
+        // a new entry would just add an inert same-trip reading — evaluate but don't store it.
+        val historialActualizado = if (esMismoViajeQueUltimaLectura(historialPrevio, nueva)) {
+            historialPrevio
+        } else {
+            historyStore.agregar(profileId, nueva)
+        }
         return Result(nueva, diagnosis, historialActualizado)
+    }
+
+    private fun esMismoViajeQueUltimaLectura(historial: List<OdometerVerifier.Reading>, nueva: OdometerVerifier.Reading): Boolean {
+        val ultima = historial.lastOrNull() ?: return false
+        return nueva.epochMs - ultima.epochMs < VENTANA_MISMO_VIAJE_MS
     }
 
     private suspend fun distanciaAppEntre(
@@ -80,5 +91,6 @@ class OdometerChecker(
     companion object {
         const val ODOMETER_PID = "A6"
         private const val TIMEOUT_MS = 5_000L
+        private const val VENTANA_MISMO_VIAJE_MS = 30 * 60 * 1_000L
     }
 }

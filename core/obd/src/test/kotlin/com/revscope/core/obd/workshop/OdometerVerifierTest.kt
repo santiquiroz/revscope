@@ -70,6 +70,39 @@ class OdometerVerifierTest {
     }
 
     @Test
+    fun `ventana menor a 5km evita falso positivo aunque el ecu avance mucho menos que la app`() {
+        val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 10_000.0)
+        // Delta ECU 1 km vs 4 km de app → 25% < 80%, dispararía ATENCION si la ventana fuera válida
+        val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_001.0)
+
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 4.0)
+
+        assertEquals(DiagnosticRules.Nivel.OK, d.nivel)
+        assertTrue(d.causaProbable.contains("ventana insuficiente", ignoreCase = true))
+    }
+
+    @Test
+    fun `ventana de exactamente 5km si aplica la regla de desviacion`() {
+        val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 10_000.0)
+        // Delta ECU 1 km vs 5 km de app → 20% < 80% → ATENCION
+        val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_001.0)
+
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 5.0)
+
+        assertEquals(DiagnosticRules.Nivel.ATENCION, d.nivel)
+    }
+
+    @Test
+    fun `odometro retrocedido es falla incluso con ventana insuficiente`() {
+        val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 50_000.0)
+        val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 49_800.0)
+
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 2.0)
+
+        assertEquals(DiagnosticRules.Nivel.FALLA, d.nivel)
+    }
+
+    @Test
     fun `odometro sin avance mientras la app registro distancia es atencion`() {
         val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 10_000.0)
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_000.0)
