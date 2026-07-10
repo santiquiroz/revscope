@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
@@ -78,6 +79,7 @@ fun WorkshopScreen(
     onOpenMode06: () -> Unit,
     onOpenOdometer: () -> Unit,
     onOpenSpeedComparison: () -> Unit,
+    onOpenMechanicChat: () -> Unit,
 ) {
     val connState by connectionVm.connectionState.collectAsState()
     val isConnected = connState is ConnectionState.Connected
@@ -85,7 +87,7 @@ fun WorkshopScreen(
     val sections = buildWorkshopSections(
         onOpenAlDia, onOpenHealthCheck, onOpenDtc, onOpenLiveMixture,
         onOpenSensors, onOpenScanner, onOpenGearAnalyzer, onOpenProfiles, onOpenMaintenance,
-        onOpenO2Wave, onOpenMode06, onOpenOdometer, onOpenSpeedComparison,
+        onOpenO2Wave, onOpenMode06, onOpenOdometer, onOpenSpeedComparison, onOpenMechanicChat,
     )
 
     LazyColumn(
@@ -126,6 +128,7 @@ private fun buildWorkshopSections(
     onOpenMode06: () -> Unit,
     onOpenOdometer: () -> Unit,
     onOpenSpeedComparison: () -> Unit,
+    onOpenMechanicChat: () -> Unit,
 ): List<WorkshopSection> = listOf(
     WorkshopSection(
         "Estado",
@@ -151,6 +154,8 @@ private fun buildWorkshopSections(
                 "Gráfica en vivo del voltaje del sensor de oxígeno", true, onOpenO2Wave),
             WorkshopTool(Icons.AutoMirrored.Filled.FactCheck, "Resultados a bordo (Mode 06)",
                 "Pruebas de monitoreo internas del fabricante", true, onOpenMode06),
+            WorkshopTool(Icons.AutoMirrored.Filled.Chat, "Mecánico IA",
+                "Preguntale al mecánico — ya conoce el estado real de tu vehículo", false, onOpenMechanicChat),
         ),
     ),
     WorkshopSection(

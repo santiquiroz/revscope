@@ -35,4 +35,11 @@ interface SessionDao {
             "WHERE vehicleProfileId = :profileId AND startedAt >= :fromEpochMs AND startedAt < :toEpochMs",
     )
     suspend fun sumDistanceKmBetween(profileId: Long, fromEpochMs: Long, toEpochMs: Long): Double
+
+    /** Most recent completed trips for a profile — feeds the Mecánico IA vehicle context. */
+    @Query(
+        "SELECT * FROM sessions WHERE vehicleProfileId = :profileId AND endedAt IS NOT NULL " +
+            "ORDER BY startedAt DESC LIMIT :limit",
+    )
+    suspend fun getRecentForProfile(profileId: Long, limit: Int): List<SessionEntity>
 }

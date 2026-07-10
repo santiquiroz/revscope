@@ -62,6 +62,7 @@ import com.revscope.feature.workshop.AlDiaScreen
 import com.revscope.feature.workshop.HealthCheckScreen
 import com.revscope.feature.workshop.LiveMixtureScreen
 import com.revscope.feature.workshop.MaintenanceScreen
+import com.revscope.feature.workshop.MechanicChatScreen
 import com.revscope.feature.workshop.Mode06Screen
 import com.revscope.feature.workshop.O2WaveScreen
 import com.revscope.feature.workshop.OdometerScreen
@@ -222,6 +223,13 @@ fun RevScopeNavGraph(
                         onOpenMode06 = { navController.navigate(Screen.Mode06.route) },
                         onOpenOdometer = { navController.navigate(Screen.Odometer.route) },
                         onOpenSpeedComparison = { navController.navigate(Screen.SpeedComparison.route) },
+                        onOpenMechanicChat = { navController.navigate(Screen.MechanicChat.route) },
+                    )
+                }
+                composable(Screen.MechanicChat.route) {
+                    MechanicChatScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                     )
                 }
                 composable(Screen.Odometer.route) {

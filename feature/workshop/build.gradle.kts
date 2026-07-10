@@ -20,6 +20,7 @@ android {
 
 dependencies {
     implementation(project(":core:obd"))
+    implementation(project(":core:intelligence"))
     implementation(project(":core:common"))
     implementation(project(":core:data"))
     implementation(platform(libs.compose.bom))
@@ -32,4 +33,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.org.json)
 }
