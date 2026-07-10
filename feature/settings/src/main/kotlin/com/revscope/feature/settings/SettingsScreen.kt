@@ -89,6 +89,7 @@ fun SettingsScreen(
     val aiTesting by vm.aiTesting.collectAsState()
     val customPidsJson by vm.customPidsJson.collectAsState()
     val customAlertsJson by vm.customAlertsJson.collectAsState()
+    val picoPlacaRulesJson by vm.picoPlacaRulesJson.collectAsState()
     val activeVehicleProfile by vm.activeVehicleProfile.collectAsState()
     val askVehicleOnStart by vm.askVehicleOnStart.collectAsState()
     val alertsEnabled by vm.alertsEnabled.collectAsState()
@@ -365,6 +366,43 @@ fun SettingsScreen(
                 onClick = vm::downloadSpeedCameras,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) { Text("Descargar radares de mi zona", color = BgColor) }
+
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Pico y placa personalizado")
+            Text(
+                "Reglas propias para tu ciudad o rotaciones nuevas — sobreescriben las integradas " +
+                    "cuando el cityId coincide.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            OutlinedTextField(
+                value = picoPlacaRulesJson,
+                onValueChange = vm::updatePicoPlacaRulesJson,
+                label = { Text("JSON de reglas de pico y placa", fontSize = 12.sp) },
+                minLines = 4,
+                maxLines = 10,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                ),
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                "Ejemplo (Medellín, rotación por día de semana):\n" +
+                    "{\"cityId\":\"medellin\",\"displayName\":\"Medellín\"," +
+                    "\"rotation\":{\"2\":[1,7],\"3\":[0,3]}," +
+                    "\"startHour\":5,\"endHour\":20," +
+                    "\"carDigit\":\"LAST\",\"motoDigit\":\"FIRST\"," +
+                    "\"validFromMs\":1770008400000,\"validUntilMs\":1785560399000}",
+                color = TextMutedColor,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+            )
+            Button(
+                onClick = vm::savePicoPlacaRules,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Validar y aplicar", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Copia de seguridad")

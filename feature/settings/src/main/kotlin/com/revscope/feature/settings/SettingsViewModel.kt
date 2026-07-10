@@ -31,6 +31,7 @@ import com.revscope.core.obd.cameras.SpeedCameraUpdater
 import com.revscope.core.obd.mcp.McpServerController
 import com.revscope.core.obd.mcp.McpServerService
 import com.revscope.core.obd.mcp.McpServerState
+import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.mcp.McpTokenStore
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.safety.CrashResponder
@@ -89,6 +90,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _customAlertsJson = MutableStateFlow("")
     val customAlertsJson: StateFlow<String> = _customAlertsJson.asStateFlow()
+
+    private val _picoPlacaRulesJson = MutableStateFlow("")
+    val picoPlacaRulesJson: StateFlow<String> = _picoPlacaRulesJson.asStateFlow()
 
     private val _alertsEnabled = MutableStateFlow(true)
     val alertsEnabled: StateFlow<Boolean> = _alertsEnabled.asStateFlow()
@@ -204,6 +208,7 @@ class SettingsViewModel @Inject constructor(
                 withContext(Dispatchers.IO) { loadAiProviderFields(provider, prefs) }
                 _customPidsJson.value = prefs[PreferencesKeys.CUSTOM_PIDS_JSON].orEmpty()
                 _customAlertsJson.value = prefs[PreferencesKeys.CUSTOM_ALERTS_JSON].orEmpty()
+                _picoPlacaRulesJson.value = prefs[PreferencesKeys.PICO_PLACA_RULES_JSON].orEmpty()
                 _alertsEnabled.value = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
                 _ttsEnabled.value = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
                 _tempMaxC.value = (prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: 105).toString()
@@ -307,6 +312,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateCustomAlertsJson(value: String) {
         _customAlertsJson.value = value
+    }
+
+    fun updatePicoPlacaRulesJson(value: String) {
+        _picoPlacaRulesJson.value = value
     }
 
     fun updateAlertsEnabled(value: Boolean) {
@@ -518,6 +527,28 @@ class SettingsViewModel @Inject constructor(
                 SaveResult(true, if (count > 0) "$count alertas personalizadas aplicadas" else "Alertas personalizadas limpiadas")
             } else {
                 SaveResult(false, "Error guardando alertas personalizadas")
+            }
+        }
+    }
+
+    /** Persists a user override of PicoYPlacaEngine.CityRules; consumers read it live via DataStore, no restart needed. */
+    fun savePicoPlacaRules() {
+        viewModelScope.launch {
+            val json = _picoPlacaRulesJson.value.trim()
+            if (json.isNotEmpty() && !isValidPicoPlacaRulesJson(json)) {
+                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                return@launch
+            }
+            val result = runCatching {
+                settings.edit { it[PreferencesKeys.PICO_PLACA_RULES_JSON] = json }
+            }
+            _lastSaveResult.value = if (result.isSuccess) {
+                SaveResult(
+                    true,
+                    if (json.isEmpty()) "Reglas de pico y placa personalizadas limpiadas" else "Reglas de pico y placa personalizadas aplicadas",
+                )
+            } else {
+                SaveResult(false, "Error guardando reglas de pico y placa")
             }
         }
     }
@@ -735,4 +766,6 @@ class SettingsViewModel @Inject constructor(
         val max = if (obj.has("max")) obj.getDouble("max") else null
         return !CustomAlertRules.isInvertedRange(min, max)
     }
+
+    private fun isValidPicoPlacaRulesJson(json: String): Boolean = PicoYPlacaEngine.parseRulesJson(json) != null
 }
