@@ -4,10 +4,31 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Aro del tacómetro: barrido de 270° (abajo-izquierda → arriba → abajo-derecha) -->
     <path
         android:fillColor="#E8FF00"
-        android:pathData="M54,22 A32,32,0,1,0,54,86 A32,32,0,1,0,54,22 Z"/>
+        android:pathData="M 35.62,72.38
+            A 26,26 0 1 1 72.38,72.38
+            L 68.14,68.14
+            A 20,20 0 1 0 39.86,68.14
+            Z"/>
+    <!-- Zona roja al final del barrido -->
+    <path
+        android:fillColor="#FF5252"
+        android:pathData="M 79.61,58.51
+            A 26,26 0 0 1 72.38,72.38
+            L 68.14,68.14
+            A 20,20 0 0 0 73.7,57.47
+            Z"/>
+    <!-- Aguja apuntando a la zona alta -->
+    <path
+        android:fillColor="#F0F0F8"
+        android:pathData="M 51.2,57.8 L 55.6,52.0 L 75.5,41.0 Z"/>
+    <!-- Cubo de la aguja -->
+    <path
+        android:fillColor="#E8FF00"
+        android:pathData="M54,48.5 A5.5,5.5 0 1 0 54,59.5 A5.5,5.5 0 1 0 54,48.5 Z"/>
     <path
         android:fillColor="#0A0A0F"
-        android:pathData="M54,38 L58,54 L72,58 L58,62 L54,78 L50,62 L36,58 L50,54 Z"/>
+        android:pathData="M54,51.5 A2.5,2.5 0 1 0 54,56.5 A2.5,2.5 0 1 0 54,51.5 Z"/>
 </vector>
