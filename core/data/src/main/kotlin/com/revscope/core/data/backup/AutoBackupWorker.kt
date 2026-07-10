@@ -80,9 +80,16 @@ class AutoBackupWorker @AssistedInject constructor(
             val resolver = applicationContext.contentResolver
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, mediaStoreValues(fileName))
                 ?: return@runCatching false
-            val exported = resolver.openOutputStream(uri)?.use { out -> backupManager.export(out).isSuccess } ?: false
-            if (!exported) resolver.delete(uri, null, null)
-            exported
+            var success = false
+            try {
+                success = resolver.openOutputStream(uri)?.use { out -> backupManager.export(out).isSuccess } ?: false
+                if (success) {
+                    resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                }
+            } finally {
+                if (!success) runCatching { resolver.delete(uri, null, null) }
+            }
+            success
         }
         result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
         return result.getOrDefault(false)
@@ -92,6 +99,7 @@ class AutoBackupWorker @AssistedInject constructor(
         put(MediaStore.Downloads.DISPLAY_NAME, fileName)
         put(MediaStore.Downloads.MIME_TYPE, BACKUP_MIME_TYPE)
         put(MediaStore.Downloads.RELATIVE_PATH, BACKUP_RELATIVE_PATH)
+        put(MediaStore.MediaColumns.IS_PENDING, 1)
     }
 
     private fun pruneMediaStoreBackups() {
