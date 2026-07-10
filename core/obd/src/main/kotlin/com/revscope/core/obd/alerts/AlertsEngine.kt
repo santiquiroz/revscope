@@ -1,5 +1,7 @@
 package com.revscope.core.obd.alerts
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioManager
 import android.media.ToneGenerator
@@ -8,10 +10,12 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.speech.tts.TextToSpeech
+import androidx.core.app.NotificationCompat
 import java.util.Locale
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.obd.R
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.model.ObdReading
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -31,6 +35,8 @@ private const val REDLINE_COOLDOWN_MS = 10_000L
 private const val TONE_VOLUME = 90
 private const val ANOMALY_COOLDOWN_MS = 60_000L
 private const val CUSTOM_ALERT_COOLDOWN_MS = 120_000L
+private const val LOCAL_INFO_CHANNEL_ID = "revscope_local_info"
+private const val LOCAL_INFO_NOTIFICATION_ID = 2001
 
 /**
  * Turns telemetry readings into audible/haptic alerts. Audio goes out on the media
@@ -45,7 +51,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO }
 
     data class ObdAlert(
         val type: AlertType,
@@ -81,6 +87,7 @@ class AlertsEngine @Inject constructor(
     @Volatile private var voiceCustomThresholds = true
     @Volatile private var voiceSport = true
     @Volatile private var voicePicoPlaca = true
+    @Volatile private var voiceLocalInfo = false
 
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
@@ -119,12 +126,14 @@ class AlertsEngine @Inject constructor(
             voiceCustomThresholds = prefs[PreferencesKeys.VOICE_CUSTOM_THRESHOLDS] ?: true
             voiceSport = prefs[PreferencesKeys.VOICE_SPORT] ?: true
             voicePicoPlaca = prefs[PreferencesKeys.VOICE_PICO_PLACA] ?: true
+            voiceLocalInfo = prefs[PreferencesKeys.VOICE_LOCAL_INFO] ?: false
             if (ttsEnabled) tts // touch the lazy so the engine warms up early
             Timber.i(
                 "AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm " +
                     "customRules=${customRules.size} voice[temp=$voiceTemperature volt=$voiceVoltage " +
                     "cam=$voiceSpeedCameras anom=$voiceAnomalies mil=$voiceMil redline=$voiceRedline " +
-                    "custom=$voiceCustomThresholds sport=$voiceSport picoPlaca=$voicePicoPlaca]"
+                    "custom=$voiceCustomThresholds sport=$voiceSport picoPlaca=$voicePicoPlaca " +
+                    "localInfo=$voiceLocalInfo]"
             )
         }.onFailure { Timber.w(it, "AlertsEngine: failed to load thresholds") }
     }
@@ -256,6 +265,48 @@ class AlertsEngine @Inject constructor(
         playTone(ToneGenerator.TONE_PROP_ACK, 300)
         vibrate(longArrayOf(0, 200, 100, 200))
         speak(message)
+    }
+
+    /**
+     * Spoken AI-generated local info (festival, road closure…) on entering a new
+     * municipality — opt-in, off by default. Per-municipio-per-day cooldown lives in
+     * LocalInfoAlertPolicy/CityInfoAlerter; this only gates on the voice category +
+     * master switch. Also posts a silent notification with the text so it can be reread.
+     */
+    fun announceLocalInfo(municipio: String, frase: String) {
+        if (!enabled) return
+        if (!voiceLocalInfo) return
+        val message = "Estás en $municipio. $frase"
+        Timber.i("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.LOCAL_INFO, message, 0.0))
+        speak(message)
+        postLocalInfoNotification(municipio, frase)
+    }
+
+    private fun postLocalInfoNotification(municipio: String, frase: String) {
+        runCatching {
+            createLocalInfoChannel()
+            val notification = NotificationCompat.Builder(context, LOCAL_INFO_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_revscope)
+                .setContentTitle("Estás en $municipio")
+                .setContentText(frase)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(frase))
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .build()
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .notify(LOCAL_INFO_NOTIFICATION_ID, notification)
+        }.onFailure { Timber.w(it, "AlertsEngine: local info notification failed") }
+    }
+
+    private fun createLocalInfoChannel() {
+        val channel = NotificationChannel(
+            LOCAL_INFO_CHANNEL_ID,
+            "Información local",
+            NotificationManager.IMPORTANCE_LOW, // silent — TTS already spoke it
+        )
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .createNotificationChannel(channel)
     }
 
     /** Spoken statistical-anomaly alert from AnomalyDetector — cooldown per stable alert [key]. */

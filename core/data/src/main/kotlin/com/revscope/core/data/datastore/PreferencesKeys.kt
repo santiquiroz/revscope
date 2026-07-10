@@ -106,6 +106,12 @@ object PreferencesKeys {
     /** Spoken pico-y-placa warning entering a city ≠ profile's with active restriction (default true) */
     val VOICE_PICO_PLACA = booleanPreferencesKey("voice_pico_placa")
 
+    /**
+     * Spoken AI-generated local info (festivals, road closures…) on entering a new
+     * municipality (default false — opt-in, uses the user's Claude API key, costs money).
+     */
+    val VOICE_LOCAL_INFO = booleanPreferencesKey("voice_local_info")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */

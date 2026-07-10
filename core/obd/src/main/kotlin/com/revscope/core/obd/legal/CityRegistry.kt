@@ -68,7 +68,8 @@ object CityRegistry {
         return CITIES.firstOrNull { it.id == cityId }?.rules
     }
 
-    private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    /** Visibility bumped to internal so [LocalityDetector]'s throttle can reuse it. */
+    internal fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
         val a = sin(dLat / 2) * sin(dLat / 2) +

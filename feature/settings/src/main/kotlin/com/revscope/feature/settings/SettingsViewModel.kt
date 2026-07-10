@@ -122,6 +122,9 @@ class SettingsViewModel @Inject constructor(
     private val _voicePicoPlaca = MutableStateFlow(true)
     val voicePicoPlaca: StateFlow<Boolean> = _voicePicoPlaca.asStateFlow()
 
+    private val _voiceLocalInfo = MutableStateFlow(false)
+    val voiceLocalInfo: StateFlow<Boolean> = _voiceLocalInfo.asStateFlow()
+
     val activeVehicleProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
 
     init {
@@ -150,6 +153,7 @@ class SettingsViewModel @Inject constructor(
                 _voiceCustomThresholds.value = prefs[PreferencesKeys.VOICE_CUSTOM_THRESHOLDS] ?: true
                 _voiceSport.value = prefs[PreferencesKeys.VOICE_SPORT] ?: true
                 _voicePicoPlaca.value = prefs[PreferencesKeys.VOICE_PICO_PLACA] ?: true
+                _voiceLocalInfo.value = prefs[PreferencesKeys.VOICE_LOCAL_INFO] ?: false
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
         }
     }
@@ -188,6 +192,9 @@ class SettingsViewModel @Inject constructor(
 
     fun updateVoicePicoPlaca(value: Boolean) =
         updateVoiceCategory(_voicePicoPlaca, PreferencesKeys.VOICE_PICO_PLACA, value)
+
+    fun updateVoiceLocalInfo(value: Boolean) =
+        updateVoiceCategory(_voiceLocalInfo, PreferencesKeys.VOICE_LOCAL_INFO, value)
 
     /** Persists a voice-alert category toggle immediately and reloads AlertsEngine's cache. */
     private fun updateVoiceCategory(

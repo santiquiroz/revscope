@@ -95,6 +95,7 @@ fun SettingsScreen(
     val voiceCustomThresholds by vm.voiceCustomThresholds.collectAsState()
     val voiceSport by vm.voiceSport.collectAsState()
     val voicePicoPlaca by vm.voicePicoPlaca.collectAsState()
+    val voiceLocalInfo by vm.voiceLocalInfo.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
     val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
@@ -239,6 +240,12 @@ fun SettingsScreen(
             ToggleRow("Umbrales personalizados", voiceCustomThresholds, vm::updateVoiceCustomThresholds)
             ToggleRow("Tiempos 0-100 y vueltas", voiceSport, vm::updateVoiceSport)
             ToggleRow("Pico y placa al entrar a otra ciudad", voicePicoPlaca, vm::updateVoicePicoPlaca)
+            ToggleRow(
+                "Información local al cambiar de ciudad",
+                voiceLocalInfo,
+                vm::updateVoiceLocalInfo,
+                subtitle = "Usa tu API key de Claude con búsqueda web (~$0.02 por ciudad)",
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -617,12 +624,22 @@ private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> U
 }
 
 @Composable
-private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
     ) {
-        Text(label, color = TextPrimaryColor, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = TextPrimaryColor, fontSize = 13.sp)
+            if (subtitle != null) {
+                Text(subtitle, color = TextMutedColor, fontSize = 11.sp)
+            }
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,

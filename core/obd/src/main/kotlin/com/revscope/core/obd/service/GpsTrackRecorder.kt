@@ -37,6 +37,7 @@ class GpsTrackRecorder(
     private val onBearing: ((Float) -> Unit)? = null,
     private val cameraAlerter: SpeedCameraAlerter? = null,
     private val cityAlerter: CityEnforcementAlerter? = null,
+    private val localInfoSink: GpsInfoSink? = null,
     private val routeHolder: LiveRouteHolder? = null,
 ) {
 
@@ -137,6 +138,7 @@ class GpsTrackRecorder(
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
         cameraAlerter?.onGpsFix(location.latitude, location.longitude)
         cityAlerter?.onGpsFix(location.latitude, location.longitude)
+        localInfoSink?.onGpsFix(location.latitude, location.longitude)
         routeHolder?.append(location.latitude, location.longitude)
         routeHolder?.updateSpeed(point.speedKmh)
         if (location.hasBearing()) onBearing?.invoke(location.bearing)

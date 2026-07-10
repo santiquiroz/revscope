@@ -63,6 +63,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var trackModeEngine: TrackModeEngine
     @Inject lateinit var cameraAlerter: SpeedCameraAlerter
     @Inject lateinit var cityAlerter: CityEnforcementAlerter
+    @Inject lateinit var localInfoSink: GpsInfoSink
     @Inject lateinit var motionHub: MotionMetricsHub
     @Inject lateinit var routeHolder: LiveRouteHolder
     @Inject lateinit var crashResponder: CrashResponder
@@ -161,6 +162,7 @@ class ObdForegroundService : Service() {
             onBearing = imu::updateGpsBearing,
             cameraAlerter = cameraAlerter,
             cityAlerter = cityAlerter,
+            localInfoSink = localInfoSink,
             routeHolder = routeHolder,
         ).also { it.start(scope, sessionId) }
         crashResponder.start(
