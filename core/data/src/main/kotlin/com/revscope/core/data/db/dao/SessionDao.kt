@@ -28,4 +28,11 @@ interface SessionDao {
 
     @Query("SELECT COALESCE(SUM(distanceKm),0) FROM sessions WHERE vehicleProfileId = :profileId")
     fun observeSumDistanceKmForProfile(profileId: Long): Flow<Double>
+
+    /** App-tracked distance (OBD or GPS session) for a profile between two odometer readings. */
+    @Query(
+        "SELECT COALESCE(SUM(distanceKm),0) FROM sessions " +
+            "WHERE vehicleProfileId = :profileId AND startedAt >= :fromEpochMs AND startedAt < :toEpochMs",
+    )
+    suspend fun sumDistanceKmBetween(profileId: Long, fromEpochMs: Long, toEpochMs: Long): Double
 }

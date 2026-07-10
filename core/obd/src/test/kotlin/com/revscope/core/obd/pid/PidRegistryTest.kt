@@ -72,6 +72,12 @@ class PidRegistryTest {
             "name": "Engine Fuel Rate", "nameEs": "Tasa Consumo Combustible",
             "bytes": 2, "formula": "((A*256)+B)*0.05",
             "unit": "L/h", "min": 0, "max": 3212.75, "priority": 3
+          },
+          {
+            "mode": "01", "pid": "A6",
+            "name": "Odometer", "nameEs": "Odómetro ECU",
+            "bytes": 4, "formula": "((A*16777216)+(B*65536)+(C*256)+D)/10",
+            "unit": "km", "min": 0, "max": 429496729.5, "priority": 4
           }
         ]
     """.trimIndent()
@@ -109,7 +115,7 @@ class PidRegistryTest {
 
     @Test
     fun `allDefinitions returns all loaded PIDs`() {
-        assertEquals(10, registry.allDefinitions().size)
+        assertEquals(11, registry.allDefinitions().size)
     }
 
     // ── definitionsForPriority ────────────────────────────────────────────────
@@ -261,6 +267,31 @@ class PidRegistryTest {
         val reading = registry.evaluate("5E", byteArrayOf(0x03, 0xE8.toByte()))
         assertNotNull(reading)
         assertEquals(50.0, reading!!.value, 0.001)
+    }
+
+    @Test
+    fun `evaluate odometer formula four bytes`() {
+        // ((A*16777216)+(B*65536)+(C*256)+D)/10 with C=0x27,D=0x10 → 10000/10 = 1000 km
+        val reading = registry.evaluate("A6", byteArrayOf(0x00, 0x00, 0x27, 0x10))
+        assertNotNull(reading)
+        assertEquals(1000.0, reading!!.value, 0.001)
+        assertEquals("km", reading.unit)
+    }
+
+    @Test
+    fun `evaluate odometer formula uses the most significant byte`() {
+        // A=1 → 16777216/10 = 1677721.6 km
+        val reading = registry.evaluate("A6", byteArrayOf(0x01, 0x00, 0x00, 0x00))
+        assertNotNull(reading)
+        assertEquals(1677721.6, reading!!.value, 0.001)
+    }
+
+    @Test
+    fun `parseAndEvaluate odometer from raw ECU response`() {
+        // Header 41 A6 + data 00 00 27 10 → 1000 km
+        val reading = registry.parseAndEvaluate("A6", "41A600002710>")
+        assertNotNull(reading)
+        assertEquals(1000.0, reading!!.value, 0.001)
     }
 
     // ── value clamping ────────────────────────────────────────────────────────

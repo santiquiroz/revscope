@@ -64,6 +64,7 @@ import com.revscope.feature.workshop.LiveMixtureScreen
 import com.revscope.feature.workshop.MaintenanceScreen
 import com.revscope.feature.workshop.Mode06Screen
 import com.revscope.feature.workshop.O2WaveScreen
+import com.revscope.feature.workshop.OdometerScreen
 import com.revscope.feature.workshop.WorkshopScreen
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -218,7 +219,11 @@ fun RevScopeNavGraph(
                         onOpenMaintenance = { navController.navigate(Screen.Maintenance.route) },
                         onOpenO2Wave = { navController.navigate(Screen.O2Wave.route) },
                         onOpenMode06 = { navController.navigate(Screen.Mode06.route) },
+                        onOpenOdometer = { navController.navigate(Screen.Odometer.route) },
                     )
+                }
+                composable(Screen.Odometer.route) {
+                    OdometerScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(Screen.AlDia.route) {
                     AlDiaScreen(

@@ -183,4 +183,14 @@ object PreferencesKeys {
 
     /** Número de teléfono del contacto de emergencia para el SMS de caída */
     val EMERGENCY_PHONE = stringPreferencesKey("emergency_phone")
+
+    // ── Verificación de kilometraje (odómetro ECU) ──────────────────────────
+
+    /**
+     * Histórico del odómetro ECU (PID 01 A6) por perfil: un único JSON objeto
+     * `{"<profileId>": [{"epochMs":..,"km":..}, ...]}` en vez de una clave por perfil —
+     * evita construir claves dinámicas y no requiere limpieza al borrar un perfil.
+     * Máx. 50 lecturas por perfil — ver OdometerVerifier.agregarAlHistorial.
+     */
+    val ODOMETER_HISTORY_JSON = stringPreferencesKey("odometer_history_json")
 }

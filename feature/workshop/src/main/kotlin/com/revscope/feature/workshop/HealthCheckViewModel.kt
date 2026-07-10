@@ -74,6 +74,9 @@ class HealthCheckViewModel @Inject constructor(
                 _state.value = UiState.Running("Muestreando mezcla y sensores ($SAMPLE_SECONDS s)…")
                 items += sampleMixtureDiagnoses()
 
+                _state.value = UiState.Running("Verificando odómetro…")
+                items += odometerDiagnoses()
+
                 val now = System.currentTimeMillis()
                 persist(items, now)
                 _state.value = UiState.Done(items, dtcScan.codes, now)
@@ -173,6 +176,10 @@ class HealthCheckViewModel @Inject constructor(
             sessionManager.setWorkshopMode(false)
         }
     }
+
+    /** Empty when the ECU doesn't support PID 01 A6 — [ObdSessionManager.checkOdometerNow] returns null then. */
+    private suspend fun odometerDiagnoses(): List<DiagnosticRules.Diagnosis> =
+        sessionManager.checkOdometerNow()?.diagnosis?.let { listOf(it) } ?: emptyList()
 
     private suspend fun collectO2Samples(): List<Double> {
         val samples = mutableListOf<Double>()

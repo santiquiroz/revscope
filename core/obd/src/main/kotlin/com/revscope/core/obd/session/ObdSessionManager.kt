@@ -33,6 +33,9 @@ import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
+import com.revscope.core.obd.workshop.OdometerChecker
+import com.revscope.core.obd.workshop.OdometerHistoryStore
+import com.revscope.core.obd.workshop.OdometerVerifier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +108,14 @@ class ObdSessionManager @Inject constructor(
     private val _gpsSessionActive = MutableStateFlow(false)
     val isGpsSessionActive: StateFlow<Boolean> = _gpsSessionActive.asStateFlow()
 
+    /**
+     * Whether the connected ECU supports PID 01 A6 (odometer) — null while unknown
+     * (not connected yet, or negotiation hasn't finished the one-shot check). See
+     * [checkOdometerOnce].
+     */
+    private val _odometerSupported = MutableStateFlow<Boolean?>(null)
+    val odometerSupported: StateFlow<Boolean?> = _odometerSupported.asStateFlow()
+
     private var transport: ClassicBtTransport? = null
     private var telemetryJob: Job? = null
     private var stateJob: Job? = null
@@ -117,6 +128,9 @@ class ObdSessionManager @Inject constructor(
     private val voltagePoller = VoltagePoller()
     private val milWatcher = MilWatcher(alertsEngine)
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
+    private val odometerHistoryStore = OdometerHistoryStore(settings)
+    private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao)
+    val odometerCheck: StateFlow<OdometerChecker.Result?> = odometerChecker.lastResult
     private var activeScheduler: PidScheduler? = null
     private val workshopClients = AtomicInteger(0)
 
@@ -252,6 +266,18 @@ class ObdSessionManager @Inject constructor(
         val match = runCatching { profileDao.getByVin(vin) }.getOrNull() ?: return
         Timber.i("ObdSessionManager: auto-activating profile '${match.name}' by VIN")
         setActiveProfile(match)
+    }
+
+    /**
+     * One-shot odometer read+compare (PID 01 A6) right after negotiation — see
+     * [OdometerChecker]. A no-op (near-instant) when the ECU doesn't support the PID;
+     * a real ~200ms-5s roundtrip only on vehicles that do.
+     */
+    private suspend fun checkOdometerOnce(bt: ClassicBtTransport) {
+        _odometerSupported.value = odometerChecker.isSupported()
+        val profileId = _activeProfile.value?.id ?: return
+        runCatching { odometerChecker.check(bt, profileId) }
+            .onFailure { Timber.w(it, "ObdSessionManager: odometer check failed") }
     }
 
     /** Falls back to the adapter's last-linked profile when VIN resolution found none. */
@@ -452,6 +478,17 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
+    /** Manual "Leer ahora" — same read+compare+persist pipeline as the automatic one-shot check. */
+    suspend fun checkOdometerNow(): OdometerChecker.Result? {
+        val bt = transport ?: return null
+        val profileId = _activeProfile.value?.id ?: return null
+        return odometerChecker.check(bt, profileId)
+    }
+
+    /** Stored odometer reading history for the given profile — feeds the history list/CSV export. */
+    suspend fun odometerHistoryFor(profileId: Long): List<OdometerVerifier.Reading> =
+        odometerHistoryStore.historialPara(profileId)
+
     // ── Connection internals ─────────────────────────────────────────────────
 
     private suspend fun loadCustomPids() {
@@ -598,6 +635,7 @@ class ObdSessionManager @Inject constructor(
         ObdForegroundService.requestShutdown(appContext)
         _connectionState.value = ConnectionState.Disconnected
         _readings.value = emptyMap()
+        _odometerSupported.value = null
         summarySessionId?.let { id ->
             runCatching { sessionDao.getById(id) }.getOrNull()?.let { tripSummaryNotifier.post(it) }
         }
@@ -606,6 +644,7 @@ class ObdSessionManager @Inject constructor(
     // ── Telemetry pipeline ───────────────────────────────────────────────────
 
     private suspend fun startTelemetry(bt: ClassicBtTransport, deviceName: String) {
+        _odometerSupported.value = null
         val negotiationResult = ProtocolNegotiator(bt).initialize().getOrElse { e ->
             Timber.e(e, "ObdSessionManager: protocol negotiation failed")
             // ECU unreachable right after a BT-level connect — never strand the socket/service
@@ -620,6 +659,7 @@ class ObdSessionManager @Inject constructor(
         alertsEngine.resetSessionFlags()
         resolveProfileByVin(bt)
         if (_activeProfile.value == null) activateProfileByAdapter()
+        checkOdometerOnce(bt)
 
         val sessionId = createSession(deviceName)
         _currentSessionIdFlow.value = sessionId

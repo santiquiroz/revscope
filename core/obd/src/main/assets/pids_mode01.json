@@ -298,5 +298,17 @@
     "min": 0,
     "max": 2,
     "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "A6",
+    "name": "Odometer",
+    "nameEs": "Odómetro ECU",
+    "bytes": 4,
+    "formula": "((A*16777216)+(B*65536)+(C*256)+D)/10",
+    "unit": "km",
+    "min": 0,
+    "max": 429496729.5,
+    "priority": 4
   }
 ]

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Icon
@@ -74,6 +75,7 @@ fun WorkshopScreen(
     onOpenMaintenance: () -> Unit,
     onOpenO2Wave: () -> Unit,
     onOpenMode06: () -> Unit,
+    onOpenOdometer: () -> Unit,
 ) {
     val connState by connectionVm.connectionState.collectAsState()
     val isConnected = connState is ConnectionState.Connected
@@ -81,7 +83,7 @@ fun WorkshopScreen(
     val sections = buildWorkshopSections(
         onOpenAlDia, onOpenHealthCheck, onOpenDtc, onOpenLiveMixture,
         onOpenSensors, onOpenScanner, onOpenGearAnalyzer, onOpenProfiles, onOpenMaintenance,
-        onOpenO2Wave, onOpenMode06,
+        onOpenO2Wave, onOpenMode06, onOpenOdometer,
     )
 
     LazyColumn(
@@ -120,6 +122,7 @@ private fun buildWorkshopSections(
     onOpenMaintenance: () -> Unit,
     onOpenO2Wave: () -> Unit,
     onOpenMode06: () -> Unit,
+    onOpenOdometer: () -> Unit,
 ): List<WorkshopSection> = listOf(
     WorkshopSection(
         "Estado",
@@ -156,6 +159,8 @@ private fun buildWorkshopSections(
                 "Vehículos guardados, línea roja y VIN", false, onOpenProfiles),
             WorkshopTool(Icons.Default.Build, "Mantenimiento",
                 "Aceite, llantas, batería y otros ítems por kilometraje", false, onOpenMaintenance),
+            WorkshopTool(Icons.Default.Speed, "Verificación de kilometraje",
+                "Odómetro real del ECU e histórico anti-manipulación", false, onOpenOdometer),
         ),
     ),
 )
