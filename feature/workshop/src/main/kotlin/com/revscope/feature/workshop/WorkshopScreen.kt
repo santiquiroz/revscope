@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Science
@@ -68,13 +69,14 @@ fun WorkshopScreen(
     onOpenScanner: () -> Unit,
     onOpenGearAnalyzer: () -> Unit,
     onOpenProfiles: () -> Unit,
+    onOpenMaintenance: () -> Unit,
 ) {
     val connState by connectionVm.connectionState.collectAsState()
     val isConnected = connState is ConnectionState.Connected
 
     val sections = buildWorkshopSections(
         onOpenAlDia, onOpenHealthCheck, onOpenDtc, onOpenLiveMixture,
-        onOpenSensors, onOpenScanner, onOpenGearAnalyzer, onOpenProfiles,
+        onOpenSensors, onOpenScanner, onOpenGearAnalyzer, onOpenProfiles, onOpenMaintenance,
     )
 
     LazyColumn(
@@ -110,6 +112,7 @@ private fun buildWorkshopSections(
     onOpenScanner: () -> Unit,
     onOpenGearAnalyzer: () -> Unit,
     onOpenProfiles: () -> Unit,
+    onOpenMaintenance: () -> Unit,
 ): List<WorkshopSection> = listOf(
     WorkshopSection(
         "Estado",
@@ -140,6 +143,8 @@ private fun buildWorkshopSections(
                 "Calibrar la relación RPM/velocidad por marcha", true, onOpenGearAnalyzer),
             WorkshopTool(Icons.Default.DirectionsCar, "Perfiles de vehículo",
                 "Vehículos guardados, línea roja y VIN", false, onOpenProfiles),
+            WorkshopTool(Icons.Default.Build, "Mantenimiento",
+                "Aceite, llantas, batería y otros ítems por kilometraje", false, onOpenMaintenance),
         ),
     ),
 )

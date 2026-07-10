@@ -12,6 +12,7 @@ sealed class Screen(val route: String) {
     object Dtc : Screen("dtc")
     object Sessions : Screen("sessions")
     object VehicleProfile : Screen("vehicle")
+    object Maintenance : Screen("maintenance")
     object Settings : Screen("settings")
     object AdapterScan : Screen("adapter_scan")
     object Mode22Scanner : Screen("mode22_scanner")

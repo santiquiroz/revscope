@@ -25,4 +25,7 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT COALESCE(SUM(distanceKm),0) FROM sessions WHERE vehicleProfileId = :profileId")
+    fun observeSumDistanceKmForProfile(profileId: Long): Flow<Double>
 }

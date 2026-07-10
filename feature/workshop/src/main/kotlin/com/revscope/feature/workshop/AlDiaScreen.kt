@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.obd.legal.DocumentStatusCalculator
+import com.revscope.core.obd.trip.MaintenanceCalculator
 
 private val BgColor = Color(0xFF0A0A0F)
 private val SurfaceColor = Color(0xFF12121A)
@@ -68,11 +69,13 @@ private const val SIMIT_URL = "https://www.fcm.org.co/simit/"
 fun AlDiaScreen(
     onOpenHealthCheck: () -> Unit,
     onOpenProfiles: () -> Unit,
+    onOpenMaintenance: () -> Unit,
     vm: AlDiaViewModel = hiltViewModel(),
 ) {
     val profile by vm.activeProfile.collectAsState()
     val statuses by vm.docStatuses.collectAsState()
     val licenseExpiresAt by vm.licenseExpiresAt.collectAsState()
+    val maintenanceEstados by vm.maintenanceEstados.collectAsState()
 
     Column(
         modifier = Modifier
@@ -121,6 +124,13 @@ fun AlDiaScreen(
             picoYPlaca?.let { item { DocCard(it, onOpenProfiles) } }
             item { MultasCard(plate = activeProfile.plate) }
             todoRiesgo?.let { item { DocCard(it, onOpenProfiles) } }
+            item {
+                MaintenanceCard(
+                    nivel = MaintenanceCalculator.peorNivel(maintenanceEstados),
+                    detalle = MaintenanceCalculator.detalleTexto(maintenanceEstados),
+                    onClick = onOpenMaintenance,
+                )
+            }
             licencia?.let {
                 item { LicenseCard(status = it, expiresAt = licenseExpiresAt, onChange = vm::setLicenseExpiresAt) }
             }
@@ -219,6 +229,25 @@ private fun MultasCard(plate: String?) {
             ) {
                 Text("Consultar en SIMIT", color = AccentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
+        }
+    }
+}
+
+@Composable
+private fun MaintenanceCard(nivel: DocumentStatusCalculator.Nivel, detalle: String, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = SurfaceColor,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NivelDot(nivel)
+                Spacer(Modifier.width(8.dp))
+                Text("Mantenimiento", color = TextColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(detalle, color = TextColor, fontSize = 12.sp)
         }
     }
 }

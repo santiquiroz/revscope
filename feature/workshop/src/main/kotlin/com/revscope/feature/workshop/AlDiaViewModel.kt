@@ -6,17 +6,24 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.dao.MaintenanceDao
+import com.revscope.core.data.db.dao.SessionDao
+import com.revscope.core.data.db.entities.MaintenanceItemEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.trip.MaintenanceCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,13 +32,32 @@ import javax.inject.Inject
 
 private const val MINUTE_MS = 60_000L
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class AlDiaViewModel @Inject constructor(
     sessionManager: ObdSessionManager,
     private val settings: DataStore<Preferences>,
+    private val maintenanceDao: MaintenanceDao,
+    private val sessionDao: SessionDao,
 ) : ViewModel() {
 
     val activeProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
+
+    private val profileIdFlow: Flow<Long?> = activeProfile.map { it?.id }
+
+    private val maintenanceItemsFlow: Flow<List<MaintenanceItemEntity>> = profileIdFlow.flatMapLatest { id ->
+        if (id == null) flowOf(emptyList()) else maintenanceDao.observeForProfile(id)
+    }
+
+    private val sumaSesionesKmFlow: Flow<Double> = profileIdFlow.flatMapLatest { id ->
+        if (id == null) flowOf(0.0) else sessionDao.observeSumDistanceKmForProfile(id)
+    }
+
+    val maintenanceEstados: StateFlow<List<MaintenanceCalculator.ItemStatus>> =
+        combine(activeProfile, sumaSesionesKmFlow, maintenanceItemsFlow) { profile, suma, items ->
+            val odometro = MaintenanceCalculator.odometroActual(profile?.odometerBaseKm ?: 0.0, suma)
+            MaintenanceCalculator.calculate(odometro, items)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val licenseExpiresAtFlow: Flow<Long?> =
         settings.data.map { it[PreferencesKeys.LICENSE_EXPIRES_AT] }
