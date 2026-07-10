@@ -83,7 +83,9 @@ fun SettingsScreen(
     val tempMaxC by vm.tempMaxC.collectAsState()
     val voltageMin by vm.voltageMin.collectAsState()
     val redlineRpm by vm.redlineRpm.collectAsState()
-    val fuelPriceCop by vm.fuelPriceCop.collectAsState()
+    val fuelPriceCorriente by vm.fuelPriceCorriente.collectAsState()
+    val fuelPriceExtra by vm.fuelPriceExtra.collectAsState()
+    val fuelPriceDiesel by vm.fuelPriceDiesel.collectAsState()
     val voiceTemperature by vm.voiceTemperature.collectAsState()
     val voiceVoltage by vm.voiceVoltage.collectAsState()
     val voiceSpeedCameras by vm.voiceSpeedCameras.collectAsState()
@@ -283,23 +285,43 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             SectionTitle("Combustible")
             OutlinedTextField(
-                value = fuelPriceCop,
-                onValueChange = vm::updateFuelPriceCop,
+                value = fuelPriceCorriente,
+                onValueChange = vm::updateFuelPriceCorriente,
                 label = { Text("Precio galón corriente (COP)", fontSize = 12.sp) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = settingsFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
+            OutlinedTextField(
+                value = fuelPriceExtra,
+                onValueChange = vm::updateFuelPriceExtra,
+                label = { Text("Precio galón extra (COP)", fontSize = 12.sp) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = fuelPriceDiesel,
+                onValueChange = vm::updateFuelPriceDiesel,
+                label = { Text("Precio galón diésel / ACPM (COP)", fontSize = 12.sp) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
             Text(
-                "Se usa para estimar el costo de cada viaje en el reporte.",
+                "Se usa el precio del tipo de combustible del vehículo activo para estimar el costo de " +
+                    "cada viaje. No hay fuente oficial en línea vigente en datos.gov.co para precios de " +
+                    "gasolina/ACPM por municipio (ver detalle en el código) — ajusta manualmente según tu estación.",
                 color = TextMutedColor,
                 fontSize = 11.sp,
             )
             Button(
-                onClick = vm::saveFuelPriceCop,
+                onClick = vm::saveFuelPrices,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            ) { Text("Guardar precio", color = BgColor) }
+            ) { Text("Guardar precios", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Radares de velocidad")

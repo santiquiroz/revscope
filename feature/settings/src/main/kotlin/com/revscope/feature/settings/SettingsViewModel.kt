@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.data.datastore.FuelPricePrefs
 import com.revscope.core.data.datastore.PreferencesKeys
 import android.Manifest
 import android.annotation.SuppressLint
@@ -79,8 +80,14 @@ class SettingsViewModel @Inject constructor(
     private val _redlineRpm = MutableStateFlow("10500")
     val redlineRpm: StateFlow<String> = _redlineRpm.asStateFlow()
 
-    private val _fuelPriceCop = MutableStateFlow("16000")
-    val fuelPriceCop: StateFlow<String> = _fuelPriceCop.asStateFlow()
+    private val _fuelPriceCorriente = MutableStateFlow(FuelPricePrefs.DEFAULT_CORRIENTE.toLong().toString())
+    val fuelPriceCorriente: StateFlow<String> = _fuelPriceCorriente.asStateFlow()
+
+    private val _fuelPriceExtra = MutableStateFlow(FuelPricePrefs.DEFAULT_EXTRA.toLong().toString())
+    val fuelPriceExtra: StateFlow<String> = _fuelPriceExtra.asStateFlow()
+
+    private val _fuelPriceDiesel = MutableStateFlow(FuelPricePrefs.DEFAULT_DIESEL.toLong().toString())
+    val fuelPriceDiesel: StateFlow<String> = _fuelPriceDiesel.asStateFlow()
 
     private val _lastSaveResult = MutableStateFlow<SaveResult?>(null)
     val lastSaveResult: StateFlow<SaveResult?> = _lastSaveResult.asStateFlow()
@@ -130,8 +137,10 @@ class SettingsViewModel @Inject constructor(
                 _voltageMin.value = (prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: 11.8f).toString()
                 _redlineRpm.value = (prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: 10_500).toString()
                 _askVehicleOnStart.value = prefs[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true
-                _fuelPriceCop.value =
-                    (prefs[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON] ?: 16_000.0).toLong().toString()
+                val fuelPrices = FuelPricePrefs.read(settings)
+                _fuelPriceCorriente.value = fuelPrices.corriente.toLong().toString()
+                _fuelPriceExtra.value = fuelPrices.extra.toLong().toString()
+                _fuelPriceDiesel.value = fuelPrices.diesel.toLong().toString()
                 _voiceTemperature.value = prefs[PreferencesKeys.VOICE_TEMPERATURE] ?: true
                 _voiceVoltage.value = prefs[PreferencesKeys.VOICE_VOLTAGE] ?: true
                 _voiceSpeedCameras.value = prefs[PreferencesKeys.VOICE_SPEED_CAMERAS] ?: true
@@ -226,27 +235,43 @@ class SettingsViewModel @Inject constructor(
         _redlineRpm.value = value
     }
 
-    fun updateFuelPriceCop(value: String) {
-        _fuelPriceCop.value = value
+    fun updateFuelPriceCorriente(value: String) {
+        _fuelPriceCorriente.value = value
     }
 
-    fun saveFuelPriceCop() {
+    fun updateFuelPriceExtra(value: String) {
+        _fuelPriceExtra.value = value
+    }
+
+    fun updateFuelPriceDiesel(value: String) {
+        _fuelPriceDiesel.value = value
+    }
+
+    fun saveFuelPrices() {
         viewModelScope.launch {
-            val price = _fuelPriceCop.value.toDoubleOrNull()
-            if (price == null || price !in 1_000.0..50_000.0) {
+            val corriente = _fuelPriceCorriente.value.toDoubleOrNull()
+            val extra = _fuelPriceExtra.value.toDoubleOrNull()
+            val diesel = _fuelPriceDiesel.value.toDoubleOrNull()
+            if (!isValidFuelPrice(corriente) || !isValidFuelPrice(extra) || !isValidFuelPrice(diesel)) {
                 _lastSaveResult.value = SaveResult(false, "Precio fuera de rango (1.000-50.000 COP)")
                 return@launch
             }
             val result = runCatching {
-                settings.edit { it[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON] = price }
+                settings.edit {
+                    it[PreferencesKeys.FUEL_PRICE_CORRIENTE] = corriente!!
+                    it[PreferencesKeys.FUEL_PRICE_EXTRA] = extra!!
+                    it[PreferencesKeys.FUEL_PRICE_DIESEL] = diesel!!
+                }
             }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Precio de combustible actualizado")
+                SaveResult(true, "Precios de combustible actualizados")
             } else {
-                SaveResult(false, "Error guardando precio de combustible")
+                SaveResult(false, "Error guardando precios de combustible")
             }
         }
     }
+
+    private fun isValidFuelPrice(price: Double?): Boolean = price != null && price in 1_000.0..50_000.0
 
     fun saveAlertSettings() {
         viewModelScope.launch {

@@ -2,7 +2,7 @@ package com.revscope.core.obd.session
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.datastore.FuelPricePrefs
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
@@ -10,7 +10,6 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.obd.trip.EcoScoreCalculator
 import com.revscope.core.obd.trip.FuelCostCalculator
-import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import kotlin.math.roundToInt
 
@@ -56,7 +55,8 @@ class SessionAggregator(
         sessionId: Long,
         activeProfileProvider: () -> VehicleProfileEntity?,
     ): TripAggregates? = runCatching {
-        val fuel = computeFuelResult(sessionId)
+        val fuelType = activeProfileProvider()?.fuelType
+        val fuel = computeFuelResult(sessionId, fuelType)
         TripAggregates(
             fuelLiters = fuel?.liters,
             fuelCostCop = fuel?.costCop,
@@ -65,9 +65,8 @@ class SessionAggregator(
     }.onFailure { Timber.w(it, "SessionAggregator: failed to compute trip aggregates") }
         .getOrNull()
 
-    private suspend fun computeFuelResult(sessionId: Long): FuelCostCalculator.FuelResult? {
-        val precioGalonCop = settings.data.first()[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON]
-            ?: DEFAULT_FUEL_PRICE_COP_PER_GALLON
+    private suspend fun computeFuelResult(sessionId: Long, fuelType: String?): FuelCostCalculator.FuelResult? {
+        val precioGalonCop = FuelPricePrefs.priceFor(FuelPricePrefs.read(settings), fuelType)
         val fuelRatePoints = telemetryDao.pointsForSessionAndPid(sessionId, PID_FUEL_RATE)
             .map { it.timestamp to it.value.toDouble() }
         FuelCostCalculator.fromFuelRate(fuelRatePoints, precioGalonCop)?.let { return it }
@@ -90,7 +89,6 @@ class SessionAggregator(
     companion object {
         private const val PID_FUEL_RATE = "5E"
         private const val PID_MAF = "10"
-        private const val DEFAULT_FUEL_PRICE_COP_PER_GALLON = 16_000.0
         private const val DEFAULT_REDLINE_RPM = 10_500
         private const val EARTH_GRAVITY_MS2 = 9.80665
     }

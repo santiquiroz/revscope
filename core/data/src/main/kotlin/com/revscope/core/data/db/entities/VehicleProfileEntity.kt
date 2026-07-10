@@ -40,4 +40,11 @@ data class VehicleProfileEntity(
      */
     @ColumnInfo(defaultValue = "0")
     val odometerBaseKm: Double = 0.0,
+    /**
+     * "CORRIENTE" | "EXTRA" | "DIESEL" — selects which FUEL_PRICE_* DataStore price
+     * estimates this vehicle's trip cost (SessionAggregator). `defaultValue` must match
+     * MIGRATION_13_14's `DEFAULT 'CORRIENTE'` (same reasoning as `odometerBaseKm` above).
+     */
+    @ColumnInfo(defaultValue = "CORRIENTE")
+    val fuelType: String = "CORRIENTE",
 )

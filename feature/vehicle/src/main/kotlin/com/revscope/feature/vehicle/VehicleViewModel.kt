@@ -38,6 +38,10 @@ class VehicleViewModel @Inject constructor(
     private val _formType = MutableStateFlow("CAR")
     val formType: StateFlow<String> = _formType.asStateFlow()
 
+    /** "CORRIENTE" | "EXTRA" | "DIESEL" — ver VehicleProfileEntity.fuelType */
+    private val _formFuelType = MutableStateFlow("CORRIENTE")
+    val formFuelType: StateFlow<String> = _formFuelType.asStateFlow()
+
     private val _formVin = MutableStateFlow("")
     val formVin: StateFlow<String> = _formVin.asStateFlow()
 
@@ -74,6 +78,7 @@ class VehicleViewModel @Inject constructor(
 
     fun setName(v: String) { _formName.value = v }
     fun setType(v: String) { _formType.value = v }
+    fun setFuelType(v: String) { _formFuelType.value = v }
     fun setVin(v: String) { _formVin.value = v }
     fun setMaxRpm(v: String) { _formMaxRpm.value = v }
     fun setRedlineRpm(v: String) { _formRedlineRpm.value = v }
@@ -104,6 +109,7 @@ class VehicleViewModel @Inject constructor(
         _editingProfile.value = profile
         _formName.value = profile.name
         _formType.value = profile.type
+        _formFuelType.value = profile.fuelType
         _formVin.value = profile.vin.orEmpty()
         _formEnabledPids.value = parseEnabledPids(profile.enabledPids)
         _formMaxRpm.value = profile.maxRpm.toString()
@@ -145,6 +151,7 @@ class VehicleViewModel @Inject constructor(
                 val updated = editing.copy(
                     name = name,
                     type = _formType.value,
+                    fuelType = _formFuelType.value,
                     vin = _formVin.value.trim().ifEmpty { null },
                     enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
                     maxRpm = maxRpm,
@@ -162,6 +169,7 @@ class VehicleViewModel @Inject constructor(
                     VehicleProfileEntity(
                         name = name,
                         type = _formType.value,
+                        fuelType = _formFuelType.value,
                         vin = _formVin.value.trim().ifEmpty { null },
                         enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
                         gearRatios = null,
@@ -191,6 +199,7 @@ class VehicleViewModel @Inject constructor(
         _editingProfile.value = null
         _formName.value = ""
         _formType.value = "CAR"
+        _formFuelType.value = "CORRIENTE"
         _formVin.value = ""
         _formEnabledPids.value = DEFAULT_PIDS
         _formMaxRpm.value = "8000"

@@ -116,8 +116,21 @@ object PreferencesKeys {
 
     // ── Combustible ──────────────────────────────────────────────────────────
 
-    /** Current price of a gallon of gasoline in COP, used to estimate trip cost (default 16000.0) */
+    /**
+     * Legada — precio único de galón (COP), pre Room v14 (tipos de combustible por
+     * vehículo). `FuelPricePrefs.read` la migra a [FUEL_PRICE_CORRIENTE] la primera vez
+     * que se lee y la elimina. No usar en código nuevo.
+     */
     val FUEL_PRICE_COP_PER_GALLON = doublePreferencesKey("fuel_price_cop_per_gallon")
+
+    /** Precio del galón de gasolina corriente en COP (default 16000.0) */
+    val FUEL_PRICE_CORRIENTE = doublePreferencesKey("fuel_price_corriente")
+
+    /** Precio del galón de gasolina extra en COP (default 20000.0) */
+    val FUEL_PRICE_EXTRA = doublePreferencesKey("fuel_price_extra")
+
+    /** Precio del galón de ACPM/diésel en COP (default 10500.0) */
+    val FUEL_PRICE_DIESEL = doublePreferencesKey("fuel_price_diesel")
 
     // ── Radares de velocidad ─────────────────────────────────────────────────
 

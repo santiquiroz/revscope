@@ -82,6 +82,7 @@ fun VehicleProfileScreen(
     val profiles by vm.profiles.collectAsState()
     val formName by vm.formName.collectAsState()
     val formType by vm.formType.collectAsState()
+    val formFuelType by vm.formFuelType.collectAsState()
     val formVin by vm.formVin.collectAsState()
     val formEnabledPids by vm.formEnabledPids.collectAsState()
     val editingProfile by vm.editingProfile.collectAsState()
@@ -168,6 +169,26 @@ fun VehicleProfileScreen(
                     icon = { Icon(Icons.Default.TwoWheeler, null, modifier = Modifier.size(16.dp)) },
                     selected = formType == "MOTORCYCLE",
                     onClick = { vm.setType("MOTORCYCLE") },
+                )
+            }
+
+            // Fuel type picker
+            Text("Combustible", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FuelTypeChip(
+                    label = "Corriente",
+                    selected = formFuelType == "CORRIENTE",
+                    onClick = { vm.setFuelType("CORRIENTE") },
+                )
+                FuelTypeChip(
+                    label = "Extra",
+                    selected = formFuelType == "EXTRA",
+                    onClick = { vm.setFuelType("EXTRA") },
+                )
+                FuelTypeChip(
+                    label = "Diésel",
+                    selected = formFuelType == "DIESEL",
+                    onClick = { vm.setFuelType("DIESEL") },
                 )
             }
 
@@ -464,6 +485,36 @@ private fun TypeChip(
     }
 }
 
+private fun fuelTypeLabel(fuelType: String): String = when (fuelType) {
+    "EXTRA" -> "Extra"
+    "DIESEL" -> "Diésel"
+    else -> "Corriente"
+}
+
+@Composable
+private fun FuelTypeChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .background(
+                color = if (selected) AccentColor else SurfaceHighColor,
+                shape = RoundedCornerShape(8.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = label,
+            color = if (selected) BgColor else TextMutedColor,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 13.sp,
+        )
+    }
+}
+
 @Composable
 private fun ProfileItem(
     profile: VehicleProfileEntity,
@@ -494,7 +545,7 @@ private fun ProfileItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(profile.name, color = TextPrimaryColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(
-                "gauge ${profile.maxRpm} · roja ${profile.redlineRpm}" +
+                "gauge ${profile.maxRpm} · roja ${profile.redlineRpm} · ${fuelTypeLabel(profile.fuelType)}" +
                     (profile.vin?.let { " · VIN ${it.takeLast(6)}" } ?: ""),
                 color = TextMutedColor,
                 fontSize = 11.sp,

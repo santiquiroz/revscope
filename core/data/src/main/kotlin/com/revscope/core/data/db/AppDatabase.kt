@@ -36,7 +36,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         HealthReportEntity::class,
         MaintenanceItemEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

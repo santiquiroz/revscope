@@ -63,3 +63,15 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
         )
     }
 }
+
+/**
+ * Adds the vehicle's fuel type ("CORRIENTE" | "EXTRA" | "DIESEL") — drives which of the
+ * three FUEL_PRICE_* DataStore prices is used to estimate trip cost. Defaults to
+ * "CORRIENTE" for every existing row (matches the owner's car; the owner's moto is
+ * edited to "EXTRA" post-migration in the profile screen).
+ */
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `fuelType` TEXT NOT NULL DEFAULT 'CORRIENTE'")
+    }
+}
