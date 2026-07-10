@@ -92,15 +92,15 @@ object CsvShare {
 
     private fun formatCell(value: Any?): String = when (value) {
         null -> ""
-        is Double -> "%.4f".format(Locale.US, value)
-        is Float -> "%.4f".format(Locale.US, value)
+        is Double -> value.toString()
+        is Float -> value.toString()
         else -> value.toString()
     }
 
     private fun toCsvLine(fields: List<String>): String = fields.joinToString(",", transform = ::escapeCsvField)
 
     private fun escapeCsvField(field: String): String =
-        if (field.any { it == ',' || it == '"' || it == '\n' }) {
+        if (field.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
             "\"" + field.replace("\"", "\"\"") + "\""
         } else {
             field
