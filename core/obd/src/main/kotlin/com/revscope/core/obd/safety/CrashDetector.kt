@@ -22,7 +22,7 @@ class CrashDetector {
     fun process(accelG: Double, speedKmh: Double, nowMs: Long): State {
         recordSpeed(nowMs, speedKmh)
         when (state) {
-            State.MONITORING -> evaluateImpact(accelG)
+            State.MONITORING -> evaluateImpact(accelG, nowMs)
             State.IMPACT_DETECTED -> evaluatePostImpact(accelG, speedKmh, nowMs)
             State.TRIGGERED -> Unit
         }
@@ -35,18 +35,26 @@ class CrashDetector {
         immobileSinceMs = null
     }
 
+    /**
+     * True if the vehicle was moving faster than [IMPACT_MIN_SPEED_KMH] within [windowMs] of
+     * [nowMs]. Used by the foreground service to decide whether a dropped OBD link deserves a
+     * grace period before tearing down crash detection — a real crash severs the link too.
+     */
+    fun hadRecentMotion(windowMs: Long, nowMs: Long): Boolean =
+        speedHistory.any { nowMs - it.timestampMs <= windowMs && it.speedKmh > IMPACT_MIN_SPEED_KMH }
+
     private fun recordSpeed(nowMs: Long, speedKmh: Double) {
         speedHistory.addLast(SpeedSample(nowMs, speedKmh))
-        while (speedHistory.isNotEmpty() && nowMs - speedHistory.first().timestampMs > SPEED_HISTORY_WINDOW_MS) {
+        while (speedHistory.isNotEmpty() && nowMs - speedHistory.first().timestampMs > SPEED_HISTORY_RETENTION_MS) {
             speedHistory.removeFirst()
         }
     }
 
-    private fun hadQualifyingSpeedRecently(): Boolean =
-        speedHistory.any { it.speedKmh > IMPACT_MIN_SPEED_KMH }
+    private fun hadQualifyingSpeedRecently(nowMs: Long): Boolean =
+        speedHistory.any { nowMs - it.timestampMs <= SPEED_HISTORY_WINDOW_MS && it.speedKmh > IMPACT_MIN_SPEED_KMH }
 
-    private fun evaluateImpact(accelG: Double) {
-        if (accelG > IMPACT_G_THRESHOLD && hadQualifyingSpeedRecently()) {
+    private fun evaluateImpact(accelG: Double, nowMs: Long) {
+        if (accelG > IMPACT_G_THRESHOLD && hadQualifyingSpeedRecently(nowMs)) {
             state = State.IMPACT_DETECTED
             immobileSinceMs = null
         }
@@ -78,6 +86,9 @@ class CrashDetector {
 
         /** Ventana hacia atrás en la que se busca la velocidad calificante antes del impacto. */
         const val SPEED_HISTORY_WINDOW_MS = 5_000L
+
+        /** Cuánto se retiene el historial de velocidad en memoria — cubre el lookback de 60 s de [hadRecentMotion]. */
+        const val SPEED_HISTORY_RETENTION_MS = 65_000L
 
         /** Velocidad por debajo de la cual se considera que el vehículo está inmóvil. */
         const val IMMOBILITY_SPEED_KMH = 3.0

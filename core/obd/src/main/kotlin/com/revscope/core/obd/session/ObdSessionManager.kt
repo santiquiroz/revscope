@@ -464,7 +464,9 @@ class ObdSessionManager @Inject constructor(
         runCatching { transport?.disconnect() }
         transport = null
         activeScheduler = null
-        ObdForegroundService.stop(appContext)
+        // Not an unconditional stop: the service may still be honoring an active
+        // crash-detection grace period (C1) — it decides whether to defer or stop now.
+        ObdForegroundService.requestShutdown(appContext)
         _connectionState.value = ConnectionState.Disconnected
         _readings.value = emptyMap()
         summarySessionId?.let { id ->

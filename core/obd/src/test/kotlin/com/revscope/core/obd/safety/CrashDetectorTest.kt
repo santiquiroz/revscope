@@ -144,6 +144,36 @@ class CrashDetectorTest {
     }
 
     @Test
+    fun `hadRecentMotion es true si hubo velocidad mayor a 20 kmh dentro de la ventana`() {
+        var now = 0L
+        detector.process(accelG = 1.0, speedKmh = 45.0, nowMs = now)
+        now += 10_000
+        assertEquals(true, detector.hadRecentMotion(windowMs = 60_000L, nowMs = now))
+    }
+
+    @Test
+    fun `hadRecentMotion es false si solo hubo velocidad lenta dentro de la ventana`() {
+        var now = 0L
+        detector.process(accelG = 1.0, speedKmh = 15.0, nowMs = now)
+        now += 10_000
+        assertEquals(false, detector.hadRecentMotion(windowMs = 60_000L, nowMs = now))
+    }
+
+    @Test
+    fun `hadRecentMotion es false sin historial de velocidad`() {
+        assertEquals(false, detector.hadRecentMotion(windowMs = 60_000L, nowMs = 0L))
+    }
+
+    @Test
+    fun `hadRecentMotion recuerda velocidad rapida de hace casi 60s`() {
+        var now = 0L
+        detector.process(accelG = 1.0, speedKmh = 45.0, nowMs = now)
+        now += 59_000
+        detector.process(accelG = 0.0, speedKmh = 0.0, nowMs = now)
+        assertEquals(true, detector.hadRecentMotion(windowMs = 60_000L, nowMs = now))
+    }
+
+    @Test
     fun `reset vuelve a MONITORING y olvida el historial de velocidad`() {
         var now = 0L
         detector.process(accelG = 1.0, speedKmh = 60.0, nowMs = now)

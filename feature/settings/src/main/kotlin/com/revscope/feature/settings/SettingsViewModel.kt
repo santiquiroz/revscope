@@ -419,9 +419,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** Simulates a TRIGGERED crash alarm (countdown + notification) without sending a real SMS. */
+    /**
+     * Simulates a TRIGGERED crash alarm (countdown + notification) without sending a real SMS.
+     * L1: uses CrashResponder's own long-lived scope, not [viewModelScope] — otherwise
+     * navigating away from Settings mid-countdown cancels it and leaves a frozen alarm dialog.
+     */
     fun testCrashAlert() {
-        crashResponder.simulateTrigger(viewModelScope, activeVehicleProfile.value?.name ?: "tu vehículo")
+        crashResponder.simulateTrigger(activeVehicleProfile.value?.name ?: "tu vehículo")
     }
 
     private fun canEnableCrashDetection(): Boolean =

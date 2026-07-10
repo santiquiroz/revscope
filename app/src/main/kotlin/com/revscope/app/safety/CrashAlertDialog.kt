@@ -1,5 +1,8 @@
 package com.revscope.app.safety
 
+import android.app.Activity
+import android.os.Build
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +15,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,6 +36,11 @@ private val TextMutedColor = Color(0xFFD0A0A0)
 /** Full-screen blocking dialog shown while a crash alarm is counting down. */
 @Composable
 fun CrashAlertDialog(state: CrashResponder.AlarmState, onEstoyBien: () -> Unit) {
+    val activity = LocalContext.current as? Activity
+    DisposableEffect(activity) {
+        activity?.let(::showOverLockScreen)
+        onDispose { activity?.let(::clearShowOverLockScreen) }
+    }
     Dialog(
         onDismissRequest = {},
         properties = DialogProperties(
@@ -86,5 +96,30 @@ fun CrashAlertDialog(state: CrashResponder.AlarmState, onEstoyBien: () -> Unit) 
                 }
             }
         }
+    }
+}
+
+/** M3/M4: the alarm must be visible even if the phone is locked or the screen is off. */
+private fun showOverLockScreen(activity: Activity) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+        activity.setShowWhenLocked(true)
+        activity.setTurnScreenOn(true)
+    } else {
+        @Suppress("DEPRECATION")
+        activity.window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+        )
+    }
+}
+
+private fun clearShowOverLockScreen(activity: Activity) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+        activity.setShowWhenLocked(false)
+        activity.setTurnScreenOn(false)
+    } else {
+        @Suppress("DEPRECATION")
+        activity.window.clearFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+        )
     }
 }

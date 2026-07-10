@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
 import android.telephony.SmsManager
@@ -26,6 +27,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,11 +65,16 @@ class CrashResponder @Inject constructor(
 
     private val detector = CrashDetector()
 
+    // Own long-lived scope for work that must outlive any single caller's lifecycle
+    // (e.g. Settings' "Probar" button must keep counting down after the user navigates away).
+    private val responderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     @Volatile private var monitorJob: Job? = null
     @Volatile private var countdownJob: Job? = null
     @Volatile private var enabled = false
     @Volatile private var emergencyPhone = ""
     @Volatile private var vehicleName = "tu vehículo"
+    @Volatile private var alarmPlayer: MediaPlayer? = null
 
     private val _alarmState = MutableStateFlow<AlarmState?>(null)
     val alarmState: StateFlow<AlarmState?> = _alarmState.asStateFlow()
@@ -88,7 +95,9 @@ class CrashResponder @Inject constructor(
             // Settings toggle mid-session takes effect without a reconnect.
             combine(motionHub.snapshot, sessionManager.readings, routeHolder.lastSpeedKmh) { motion, readings, gpsSpeed ->
                 val obdSpeed = readings[SPEED_PID]?.value ?: 0.0
-                maxOf(obdSpeed, gpsSpeed.toDouble()) to motion.magnitudeG.toDouble()
+                // Raw, pre-filter, 3-axis peak — the EMA-filtered horizontal signal used for
+                // the UI can flatten a genuine impact spike below the trigger threshold.
+                maxOf(obdSpeed, gpsSpeed.toDouble()) to motion.rawPeakG.toDouble()
             }.collect { (speedKmh, accelG) ->
                 if (!enabled) return@collect
                 val state = detector.process(accelG, speedKmh, System.currentTimeMillis())
@@ -103,19 +112,35 @@ class CrashResponder @Inject constructor(
         monitorJob = null
     }
 
+    /** Whether the Settings toggle currently allows crash monitoring. */
+    fun isMonitoringEnabled(): Boolean = enabled
+
+    /**
+     * True if the detector saw real motion (> [CrashDetector.IMPACT_MIN_SPEED_KMH]) within
+     * [windowMs]. Lets the foreground service decide whether a dropped OBD link deserves a
+     * grace period before tearing down crash detection instead of stopping instantly.
+     */
+    fun hadRecentMotion(windowMs: Long): Boolean =
+        detector.hadRecentMotion(windowMs, System.currentTimeMillis())
+
     /** "ESTOY BIEN": cancels any active countdown/alarm and rearms the detector. */
     fun cancelAlarm() {
         countdownJob?.cancel()
         countdownJob = null
         detector.reset()
         _alarmState.value = null
+        stopLoopingAlarmSound()
         runCatching { notificationManager().cancel(ALARM_NOTIFICATION_ID) }
     }
 
-    /** Settings' "Probar" button — runs the full alarm/countdown UX without sending a real SMS. */
-    fun simulateTrigger(scope: CoroutineScope, vehicleName: String) {
+    /**
+     * Settings' "Probar" button — runs the full alarm/countdown UX without sending a real SMS.
+     * Uses this responder's own long-lived [responderScope], not the caller's, so navigating
+     * away from Settings mid-countdown doesn't cancel it and leave a frozen alarm dialog.
+     */
+    fun simulateTrigger(vehicleName: String) {
         this.vehicleName = vehicleName
-        startAlarm(scope, simulated = true)
+        startAlarm(responderScope, simulated = true)
     }
 
     suspend fun reloadSettings() {
@@ -135,6 +160,7 @@ class CrashResponder @Inject constructor(
     private fun startAlarm(scope: CoroutineScope, simulated: Boolean) {
         createAlarmChannel()
         postAlarmNotification(COUNTDOWN_TOTAL_MS)
+        startLoopingAlarmSound()
         countdownJob = scope.launch {
             var remainingMs = COUNTDOWN_TOTAL_MS
             while (remainingMs > 0) {
@@ -152,6 +178,37 @@ class CrashResponder @Inject constructor(
         postFinalNotification(simulated)
         _alarmState.value = null
         detector.reset()
+        stopLoopingAlarmSound()
+    }
+
+    /** Looping alarm tone on the ALARM stream — silence-after-one-shot is unacceptable here. */
+    private fun startLoopingAlarmSound() {
+        stopLoopingAlarmSound()
+        runCatching {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            val player = MediaPlayer()
+            player.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            player.setDataSource(context, uri)
+            player.isLooping = true
+            player.setOnPreparedListener { it.start() }
+            player.prepareAsync()
+            alarmPlayer = player
+        }.onFailure { Timber.w(it, "CrashResponder: failed to start alarm sound") }
+    }
+
+    private fun stopLoopingAlarmSound() {
+        runCatching {
+            alarmPlayer?.apply {
+                if (isPlaying) stop()
+                release()
+            }
+        }.onFailure { Timber.w(it, "CrashResponder: failed to stop alarm sound") }
+        alarmPlayer = null
     }
 
     private suspend fun sendEmergencySms() {
@@ -164,10 +221,16 @@ class CrashResponder @Inject constructor(
             Timber.w("CrashResponder: SEND_SMS not granted — SMS not sent")
             return
         }
+        val manager = smsManager()
+        if (manager == null) {
+            Timber.w("CrashResponder: SmsManager unavailable — SMS not sent")
+            return
+        }
         val message = buildEmergencyMessage()
         runCatching {
             withContext(Dispatchers.IO) {
-                smsManager()?.sendTextMessage(phone, null, message, null, null)
+                val parts = manager.divideMessage(message)
+                manager.sendMultipartTextMessage(phone, null, parts, null, null)
             }
         }.onFailure { e ->
             if (e is CancellationException) throw e
@@ -182,12 +245,14 @@ class CrashResponder @Inject constructor(
         SmsManager.getDefault()
     }
 
+    // ASCII-only (GSM-7 safe): emoji or accented characters force UCS-2 encoding, which halves
+    // the per-segment length and previously truncated the location URL out of the message.
     private fun buildEmergencyMessage(): String {
         val location = routeHolder.points.value.lastOrNull()
         val locationText = location
             ?.let { "https://maps.google.com/?q=${it.lat},${it.lon}" }
-            ?: "ubicación no disponible"
-        return "⚠ RevScope: posible caída detectada de $vehicleName. Última ubicación: $locationText"
+            ?: "ubicacion no disponible"
+        return "RevScope: posible caida detectada ($vehicleName). Ubicacion: $locationText"
     }
 
     private fun hasSmsPermission(): Boolean =

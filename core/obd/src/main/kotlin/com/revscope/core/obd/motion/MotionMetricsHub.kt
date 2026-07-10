@@ -23,8 +23,11 @@ class MotionMetricsHub @Inject constructor() {
         val maxAbsLean: Float = 0f,
         val calibrated: Boolean = false,
         // Horizontal acceleration magnitude in G, independent of GPS bearing —
-        // feeds CrashDetector, which must keep working even before a GPS fix.
+        // used for the existing UI metrics (EMA-filtered, so unsuitable for crash detection).
         val magnitudeG: Float = 0f,
+        // Full 3-axis magnitude of the RAW (pre-filter) accel sample, 200ms rolling peak.
+        // Feeds CrashDetector directly — EMA smoothing can flatten a genuine impact spike.
+        val rawPeakG: Float = 0f,
     )
 
     private val _snapshot = MutableStateFlow(MotionSnapshot())
@@ -42,6 +45,11 @@ class MotionMetricsHub @Inject constructor() {
             calibrated = calibrated,
             magnitudeG = magnitudeG,
         )
+    }
+
+    /** Published on every raw accel sample, independent of [update]'s rotation/gravity gating. */
+    fun updateRawPeak(rawPeakG: Float) {
+        _snapshot.value = _snapshot.value.copy(rawPeakG = rawPeakG)
     }
 
     fun resetSession() {

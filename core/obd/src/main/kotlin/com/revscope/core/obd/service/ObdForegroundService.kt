@@ -26,9 +26,11 @@ import com.revscope.core.obd.track.TrackModeEngine
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -36,6 +38,12 @@ import javax.inject.Inject
 private const val CHANNEL_ID = "revscope_telemetry"
 private const val NOTIFICATION_ID = 1001
 private const val NOTIFICATION_UPDATE_MS = 5_000L
+
+// C1: a real crash severs the OBD link too (adapter jarred loose, tip-over cuts ignition),
+// so losing the session is not proof the ride is over — give crash detection a grace window
+// fed by GPS + IMU alone before tearing the subsystem down.
+private const val CRASH_GRACE_PERIOD_MS = 180_000L
+private const val CRASH_GRACE_MOTION_LOOKBACK_MS = 60_000L
 
 /**
  * Keeps telemetry recording and the GPS track alive when the app is backgrounded
@@ -57,6 +65,7 @@ class ObdForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var gpsRecorder: GpsTrackRecorder? = null
     private var motionRecorder: MotionSensorRecorder? = null
+    private var graceJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -68,9 +77,27 @@ class ObdForegroundService : Service() {
         Timber.i("ObdForegroundService: started")
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_SHUTDOWN) handleShutdownRequest()
+        return START_STICKY
+    }
+
+    /**
+     * Graceful stop request from [ObdSessionManager.finalShutdown]. Unlike [stop], this defers
+     * to an in-progress crash-detection grace period instead of killing it — the grace job
+     * itself calls [stopSelf] once it's done (see [runCrashGrace]).
+     */
+    private fun handleShutdownRequest() {
+        if (graceJob?.isActive == true) {
+            Timber.i("ObdForegroundService: shutdown requested — crash-detection grace in progress, deferring")
+            return
+        }
+        Timber.i("ObdForegroundService: shutdown requested — stopping")
+        stopSelf()
+    }
 
     override fun onDestroy() {
+        graceJob?.cancel()
         gpsRecorder?.stop()
         motionRecorder?.stop()
         scope.cancel()
@@ -95,32 +122,9 @@ class ObdForegroundService : Service() {
         // GPS track follows the recording session lifecycle
         scope.launch {
             sessionManager.currentSessionId.collect { sessionId ->
-                gpsRecorder?.stop()
-                gpsRecorder = null
-                motionRecorder?.stop()
-                motionRecorder = null
-                crashResponder.stop()
-                routeHolder.clear()
-                if (sessionId != null) {
-                    val imu = MotionSensorRecorder(applicationContext, imuDao, motionHub).also {
-                        it.start(scope, sessionId)
-                    }
-                    motionRecorder = imu
-                    gpsRecorder = GpsTrackRecorder(
-                        applicationContext,
-                        gpsDao,
-                        trackModeEngine,
-                        onBearing = imu::updateGpsBearing,
-                        cameraAlerter = cameraAlerter,
-                        routeHolder = routeHolder,
-                    ).also { it.start(scope, sessionId) }
-                    crashResponder.start(
-                        scope = scope,
-                        sessionManager = sessionManager,
-                        motionHub = motionHub,
-                        vehicleName = sessionManager.activeProfile.value?.name ?: "tu vehículo",
-                    )
-                }
+                graceJob?.cancel()
+                graceJob = null
+                if (sessionId != null) startSession(sessionId) else handleSessionLost()
             }
         }
 
@@ -131,6 +135,70 @@ class ObdForegroundService : Service() {
                 delay(NOTIFICATION_UPDATE_MS)
             }
         }
+    }
+
+    private fun startSession(sessionId: Long) {
+        gpsRecorder?.stop()
+        motionRecorder?.stop()
+        routeHolder.clear()
+        val imu = MotionSensorRecorder(applicationContext, imuDao, motionHub).also {
+            it.start(scope, sessionId)
+        }
+        motionRecorder = imu
+        gpsRecorder = GpsTrackRecorder(
+            applicationContext,
+            gpsDao,
+            trackModeEngine,
+            onBearing = imu::updateGpsBearing,
+            cameraAlerter = cameraAlerter,
+            routeHolder = routeHolder,
+        ).also { it.start(scope, sessionId) }
+        crashResponder.start(
+            scope = scope,
+            sessionManager = sessionManager,
+            motionHub = motionHub,
+            vehicleName = sessionManager.activeProfile.value?.name ?: "tu vehículo",
+        )
+    }
+
+    /**
+     * C1: the session ID goes null both for a benign disconnect AND for the exact moment a
+     * real crash severs the OBD link (adapter jarred loose, tip-over cuts ignition) — so this
+     * cannot tear the crash subsystem down unconditionally. If detection is enabled and there
+     * was real motion recently, keep GPS + IMU + the responder alive on the old session for a
+     * grace window instead: GpsTrackRecorder and MotionSensorRecorder don't depend on the OBD
+     * link at all, and CrashResponder already falls back to GPS speed
+     * ([LiveRouteHolder.lastSpeedKmh]) once OBD readings go stale/empty, so simply not tearing
+     * the existing recorders down is enough to keep monitoring alive — no separate location
+     * listener needed.
+     */
+    private fun handleSessionLost() {
+        if (shouldEnterCrashGrace()) {
+            Timber.i("ObdForegroundService: link lost with recent motion — entering ${CRASH_GRACE_PERIOD_MS}ms crash-detection grace")
+            graceJob = scope.launch { runCrashGrace() }
+        } else {
+            stopCrashSubsystemAndRecorders()
+        }
+    }
+
+    private fun shouldEnterCrashGrace(): Boolean =
+        crashResponder.isMonitoringEnabled() && crashResponder.hadRecentMotion(CRASH_GRACE_MOTION_LOOKBACK_MS)
+
+    private suspend fun runCrashGrace() {
+        delay(CRASH_GRACE_PERIOD_MS)
+        // If a crash triggered mid-grace, the alarm/SMS flow must be allowed to finish.
+        crashResponder.alarmState.first { it == null }
+        stopCrashSubsystemAndRecorders()
+        stopSelf()
+    }
+
+    private fun stopCrashSubsystemAndRecorders() {
+        gpsRecorder?.stop()
+        gpsRecorder = null
+        motionRecorder?.stop()
+        motionRecorder = null
+        crashResponder.stop()
+        routeHolder.clear()
     }
 
     private fun updateNotification() {
@@ -189,14 +257,27 @@ class ObdForegroundService : Service() {
             PackageManager.PERMISSION_GRANTED
 
     companion object {
+        private const val ACTION_SHUTDOWN = "com.revscope.core.obd.action.SHUTDOWN"
+
         fun start(context: Context) {
             runCatching {
                 context.startForegroundService(Intent(context, ObdForegroundService::class.java))
             }.onFailure { Timber.w(it, "ObdForegroundService: could not start (app in background?)") }
         }
 
+        /** Immediate, unconditional stop — reserved for user-initiated disconnect. */
         fun stop(context: Context) {
             context.stopService(Intent(context, ObdForegroundService::class.java))
+        }
+
+        /**
+         * Graceful stop request: unlike [stop], the service itself decides whether to honor it
+         * now or defer while an active crash-detection grace period is in progress.
+         */
+        fun requestShutdown(context: Context) {
+            runCatching {
+                context.startService(Intent(context, ObdForegroundService::class.java).setAction(ACTION_SHUTDOWN))
+            }.onFailure { Timber.w(it, "ObdForegroundService: could not request shutdown") }
         }
     }
 }

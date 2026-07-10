@@ -27,6 +27,7 @@ private const val G = 9.80665f
 private const val STATIONARY_G_THRESHOLD = 0.06f     // ~0.6 m/s² of filtered movement
 private const val CALIBRATION_HOLD_MS = 2_000L
 private const val MAX_PLAUSIBLE_LEAN_DEG = 70f       // past this the phone was handled, not leaned
+private const val RAW_PEAK_WINDOW_MS = 200L          // rolling peak window fed to CrashDetector
 
 /**
  * Phone-IMU telemetry in vehicle frame:
@@ -58,6 +59,11 @@ class MotionSensorRecorder(
     private val filteredAccel = FloatArray(3)       // device frame, EMA-filtered
     private val filteredGravity = FloatArray(3)     // device frame, EMA-filtered
     private var hasGravity = false
+
+    // Raw (pre-filter) impact envelope for CrashDetector — independent of rotation/gravity
+    // fusion so it isn't blocked by their startup warm-up.
+    private data class RawPeakSample(val timestampMs: Long, val magnitudeG: Float)
+    private val rawPeakSamples = ArrayDeque<RawPeakSample>()
 
     // Vehicle frame inputs
     @Volatile private var gpsBearingDeg: Float? = null
@@ -109,6 +115,7 @@ class MotionSensorRecorder(
         flushJob = null
         baselineGravity = null
         stationarySinceMs = -1L
+        rawPeakSamples.clear()
     }
 
     /** Fed from GPS fixes — defines the vehicle's forward axis in world frame. */
@@ -129,6 +136,7 @@ class MotionSensorRecorder(
                 hasGravity = true
             }
             Sensor.TYPE_LINEAR_ACCELERATION -> {
+                recordRawPeak(event.values)
                 for (i in 0..2) {
                     filteredAccel[i] += EMA_ALPHA * (event.values[i] - filteredAccel[i])
                 }
@@ -138,6 +146,23 @@ class MotionSensorRecorder(
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+    /**
+     * Full 3-axis magnitude of the RAW linear-acceleration sample, in G, before the EMA
+     * filter runs — a real impact spike can be flattened below the crash threshold by the
+     * filter's smoothing, and the UI-facing [processSample] signal is horizontal-only.
+     */
+    private fun recordRawPeak(rawValues: FloatArray) {
+        val now = System.currentTimeMillis()
+        val magnitudeG = sqrt(
+            rawValues[0] * rawValues[0] + rawValues[1] * rawValues[1] + rawValues[2] * rawValues[2]
+        ) / G
+        rawPeakSamples.addLast(RawPeakSample(now, magnitudeG))
+        while (rawPeakSamples.isNotEmpty() && now - rawPeakSamples.first().timestampMs > RAW_PEAK_WINDOW_MS) {
+            rawPeakSamples.removeFirst()
+        }
+        hub.updateRawPeak(rawPeakSamples.maxOf { it.magnitudeG })
+    }
 
     private fun processSample() {
         val now = System.currentTimeMillis()

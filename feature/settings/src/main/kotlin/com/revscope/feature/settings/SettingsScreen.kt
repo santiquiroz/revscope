@@ -36,6 +36,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -99,9 +100,9 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
-    val smsPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> if (granted) vm.updateCrashDetectionEnabled(true) }
+    val crashPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants -> if (grants[Manifest.permission.SEND_SMS] == true) vm.updateCrashDetectionEnabled(true) }
 
     LaunchedEffect(saveResult) {
         saveResult?.let {
@@ -401,7 +402,7 @@ fun SettingsScreen(
                     checked = crashDetectionEnabled,
                     onCheckedChange = { checked ->
                         if (checked && !hasSmsPermission(context)) {
-                            smsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
+                            crashPermissionLauncher.launch(crashDetectionPermissions())
                         } else {
                             vm.updateCrashDetectionEnabled(checked)
                         }
@@ -547,6 +548,15 @@ private fun defaultBackupFileName(): String = "revscope-backup-${LocalDate.now()
 private fun hasSmsPermission(context: android.content.Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) ==
         PackageManager.PERMISSION_GRANTED
+
+/** M4: SMS is the hard requirement, but notifications must also be requested on API 33+ —
+ * without them the alarm can't post while the app is backgrounded. */
+private fun crashDetectionPermissions(): Array<String> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        arrayOf(Manifest.permission.SEND_SMS, Manifest.permission.POST_NOTIFICATIONS)
+    } else {
+        arrayOf(Manifest.permission.SEND_SMS)
+    }
 
 @Composable
 private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
