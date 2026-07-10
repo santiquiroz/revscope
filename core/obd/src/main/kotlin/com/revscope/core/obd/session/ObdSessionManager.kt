@@ -293,12 +293,38 @@ class ObdSessionManager @Inject constructor(
     fun startGpsSession() {
         if (_currentSessionIdFlow.value != null) return
         if (_gpsSessionActive.value) return
-        if (_connectionState.value is ConnectionState.Connecting) return
+        val state = _connectionState.value
+        if (state is ConnectionState.Connecting || state is ConnectionState.Connected) return
+        // User pressing "Iniciar viaje GPS" while Error+reconnectJob is pending means
+        // they chose GPS over the dead OBD link — cancel the background reconnect loop
+        // immediately (non-suspend) so it can't schedule another attempt, then tear down
+        // the stale transport before this GPS session starts (see connect()'s Connected
+        // branch for the defense-in-depth backstop if an attempt was already in flight).
+        val hadPendingReconnect = state is ConnectionState.Error
+        if (hadPendingReconnect) {
+            reconnectJob?.cancel()
+            reconnectJob = null
+        }
         _gpsSessionActive.value = true
         engineOffDetector.reset()
         gpsSessionStartedAt = System.currentTimeMillis()
         scope.launch {
+            if (hadPendingReconnect) {
+                runCatching { transport?.disconnect() }
+                transport = null
+                _connectionState.value = ConnectionState.Disconnected
+            }
             val sessionId = createSession(GPS_ADAPTER_NAME)
+            // The flag can flip back to false while createSession() was suspended
+            // (e.g. connectToDevice() racing in) — don't resurrect a cancelled trip.
+            if (!_gpsSessionActive.value) {
+                runCatching {
+                    sessionDao.getById(sessionId)?.let {
+                        sessionDao.update(it.copy(endedAt = System.currentTimeMillis()))
+                    }
+                }.onFailure { Timber.w(it, "ObdSessionManager: failed to close orphaned GPS session") }
+                return@launch
+            }
             _currentSessionIdFlow.value = sessionId
             ObdForegroundService.start(appContext)
             startGpsInactivityWatcher()
@@ -477,6 +503,11 @@ class ObdSessionManager @Inject constructor(
                         reconnectJob?.cancel()
                         _connectionState.value = state
                         saveLastAdapter(deviceAddress, state.deviceName)
+                        // Defense in depth: a background reconnect can still win the race
+                        // against a user starting a GPS trip during the Error window
+                        // (see startGpsSession) — never let an OBD session start on top
+                        // of a live GPS one.
+                        if (_gpsSessionActive.value) stopGpsSessionInternal(alsoStopService = false)
                         // Keeps recording + GPS alive with the app backgrounded
                         ObdForegroundService.start(appContext)
                         startTelemetry(bt, state.deviceName)
