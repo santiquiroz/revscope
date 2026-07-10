@@ -166,10 +166,23 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             runCatching {
-                _mcpServerEnabled.value = mcpTokenStore.enabled.first()
                 _mcpToken.value = mcpTokenStore.tokenOrGenerate()
+                _mcpServerEnabled.value = reconciledMcpServerEnabled(mcpTokenStore.enabled.first())
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load MCP server settings") }
         }
+    }
+
+    /**
+     * The MCP server never auto-starts after a process restart, so a persisted `enabled = true`
+     * with the controller still [McpServerState.Stopped] means the last session left the toggle
+     * ON without the server actually running. Un-persist it here so the switch never shows ON
+     * for a server that isn't there.
+     */
+    private suspend fun reconciledMcpServerEnabled(persistedEnabled: Boolean): Boolean {
+        if (!persistedEnabled || mcpServerController.state.value != McpServerState.Stopped) return persistedEnabled
+        runCatching { mcpTokenStore.setEnabled(false) }
+            .onFailure { Timber.w(it, "SettingsViewModel: failed to reconcile stale MCP toggle") }
+        return false
     }
 
     /** Persists the toggle and starts/stops the foreground MCP server immediately (session-scoped only). */

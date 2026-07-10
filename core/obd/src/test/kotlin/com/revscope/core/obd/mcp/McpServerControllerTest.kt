@@ -4,7 +4,10 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import java.net.URI
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -95,12 +98,52 @@ class McpServerControllerTest {
         assertEquals(McpServerState.Stopped, controller.state.value)
     }
 
+    @Test
+    fun `wifi perdido durante ejecucion detiene el servidor y publica no wifi`() = runBlocking {
+        val networkAddress = mockk<McpNetworkAddress>()
+        every { networkAddress.currentWifiIpv4() } returnsMany listOf("127.0.0.1", null)
+        val controller = controller(networkAddress, wifiCheckIntervalMs = 20L)
+
+        try {
+            assertTrue(controller.start("token"))
+
+            withTimeout(3_000) {
+                while (controller.state.value !is McpServerState.NoWifi) delay(10)
+            }
+
+            assertEquals(McpServerState.NoWifi, controller.state.value)
+        } finally {
+            controller.stop()
+        }
+    }
+
+    @Test
+    fun `wifi que cambia de ip durante ejecucion detiene el servidor`() = runBlocking {
+        val networkAddress = mockk<McpNetworkAddress>()
+        every { networkAddress.currentWifiIpv4() } returnsMany listOf("127.0.0.1", "10.0.0.5")
+        val controller = controller(networkAddress, wifiCheckIntervalMs = 20L)
+
+        try {
+            assertTrue(controller.start("token"))
+
+            withTimeout(3_000) {
+                while (controller.state.value !is McpServerState.NoWifi) delay(10)
+            }
+
+            assertEquals(McpServerState.NoWifi, controller.state.value)
+        } finally {
+            controller.stop()
+        }
+    }
+
     private fun controller(
         networkAddress: McpNetworkAddress = mockk(relaxed = true),
+        wifiCheckIntervalMs: Long = 60_000L,
     ): McpServerController =
         McpServerController(
             dispatcher = McpDispatcher(emptyList()),
             networkAddress = networkAddress,
             port = 0,
+            wifiCheckIntervalMs = wifiCheckIntervalMs,
         )
 }

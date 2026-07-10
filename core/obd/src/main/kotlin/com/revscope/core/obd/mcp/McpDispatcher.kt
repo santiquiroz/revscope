@@ -61,17 +61,20 @@ class McpDispatcher(
         val tool = toolsByName[toolName]
             ?: return errorResponse(id, INVALID_PARAMS_CODE, "Unknown tool: $toolName")
         val arguments = params.optJSONObject("arguments") ?: JSONObject()
-        val text = runToolOrNull(tool, arguments)
-            ?: return errorResponse(id, INVALID_PARAMS_CODE, "Tool '$toolName' failed")
-        return successResponse(id, toolCallResult(text))
+        return successResponse(id, runTool(tool, arguments))
     }
 
-    private suspend fun runToolOrNull(tool: McpTool, arguments: JSONObject): String? = try {
-        tool.call(arguments)
+    /**
+     * Runs the tool and always returns a normal `tools/call` result — an unexpected exception
+     * becomes `isError: true` content per MCP convention, not a JSON-RPC protocol error. A
+     * protocol error (-32602) is reserved for missing/invalid params before the tool even runs.
+     */
+    private suspend fun runTool(tool: McpTool, arguments: JSONObject): JSONObject = try {
+        toolCallResult(tool.call(arguments))
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        null
+        toolErrorResult()
     }
 
     private fun initializeResult(): JSONObject = JSONObject()
@@ -89,6 +92,14 @@ class McpDispatcher(
 
     private fun toolCallResult(text: String): JSONObject =
         JSONObject().put("content", JSONArray().put(JSONObject().put("type", "text").put("text", text)))
+
+    private fun toolErrorResult(): JSONObject =
+        JSONObject()
+            .put("isError", true)
+            .put(
+                "content",
+                JSONArray().put(JSONObject().put("type", "text").put("text", "error interno de la herramienta")),
+            )
 
     private fun successResponse(id: Any, result: JSONObject): JSONObject = JSONObject()
         .put("jsonrpc", JSONRPC_VERSION)

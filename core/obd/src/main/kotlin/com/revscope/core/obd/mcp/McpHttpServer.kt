@@ -10,6 +10,7 @@ import timber.log.Timber
 private const val MCP_PATH = "/mcp"
 private const val CONTENT_TYPE_JSON = "application/json"
 private const val BEARER_PREFIX = "Bearer "
+private const val MAX_BODY_BYTES = 64_000L
 
 /**
  * MCP "streamable HTTP" transport: a single POST /mcp per JSON-RPC call, single JSON response,
@@ -27,6 +28,7 @@ class McpHttpServer(
     override fun serve(session: IHTTPSession): Response {
         if (session.method != Method.POST || session.uri != MCP_PATH) return notFound()
         if (!isAuthorized(session)) return unauthorized()
+        if (!hasAcceptableContentLength(session)) return payloadTooLarge()
         val body = readBody(session) ?: return badRequest()
         val responseJson = runBlocking { dispatcher.dispatch(body) } ?: return accepted()
         return jsonResponse(Response.Status.OK, responseJson)
@@ -35,6 +37,12 @@ class McpHttpServer(
     private fun isAuthorized(session: IHTTPSession): Boolean {
         val header = session.headers["authorization"] ?: return false
         return header == "$BEARER_PREFIX$token"
+    }
+
+    /** Rejects bodies without a declared size, or larger than [MAX_BODY_BYTES], before parsing. */
+    private fun hasAcceptableContentLength(session: IHTTPSession): Boolean {
+        val contentLength = session.headers["content-length"]?.toLongOrNull() ?: return false
+        return contentLength in 0..MAX_BODY_BYTES
     }
 
     private fun readBody(session: IHTTPSession): String? = try {
@@ -49,6 +57,7 @@ class McpHttpServer(
     private fun notFound() = jsonResponse(Response.Status.NOT_FOUND, """{"error":"not found"}""")
     private fun unauthorized() = jsonResponse(Response.Status.UNAUTHORIZED, """{"error":"unauthorized"}""")
     private fun badRequest() = jsonResponse(Response.Status.BAD_REQUEST, """{"error":"bad request"}""")
+    private fun payloadTooLarge() = jsonResponse(Response.Status.PAYLOAD_TOO_LARGE, """{"error":"payload too large"}""")
     private fun accepted() = jsonResponse(Response.Status.NO_CONTENT, "")
 
     private fun jsonResponse(status: Response.IStatus, body: String): Response =

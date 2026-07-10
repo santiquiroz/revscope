@@ -129,7 +129,7 @@ class McpDispatcherTest {
     }
 
     @Test
-    fun `tool que lanza excepcion responde error sin tumbar el dispatcher`() = runTest {
+    fun `tool que lanza excepcion responde resultado normal con isError true sin tumbar el dispatcher`() = runTest {
         val throwingTool = object : McpTool {
             override val name = "explota"
             override val description = "d"
@@ -142,6 +142,11 @@ class McpDispatcherTest {
         val response = JSONObject(dispatcher.dispatch(request)!!)
 
         assertEquals(6, response.getInt("id"))
-        assertEquals(-32602, response.getJSONObject("error").getInt("code"))
+        assertTrue(response.has("result"))
+        val result = response.getJSONObject("result")
+        assertTrue(result.getBoolean("isError"))
+        val content = result.getJSONArray("content")
+        assertEquals("text", content.getJSONObject(0).getString("type"))
+        assertEquals("error interno de la herramienta", content.getJSONObject(0).getString("text"))
     }
 }

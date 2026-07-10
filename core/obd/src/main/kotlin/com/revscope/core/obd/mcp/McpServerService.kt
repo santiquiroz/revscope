@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -43,6 +44,7 @@ class McpServerService : Service() {
         super.onCreate()
         createChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Iniciando servidor MCP…"))
+        scope.launch { observeState() }
         scope.launch { startServer() }
         Timber.i("McpServerService: started")
     }
@@ -62,14 +64,22 @@ class McpServerService : Service() {
     private suspend fun startServer() {
         val token = tokenStore.tokenOrGenerate()
         val started = controller.start(token)
-        updateNotification()
+        updateNotification(controller.state.value)
         if (!started) stopSelf()
     }
 
-    private fun updateNotification() {
-        val text = notificationTextFor(controller.state.value)
+    /**
+     * Keeps the notification in sync with state changes that happen after startup — e.g. the
+     * controller's WiFi watchdog stopping the server mid-session. Drops the flow's current value
+     * since [startServer] already renders it explicitly right after [McpServerController.start].
+     */
+    private suspend fun observeState() {
+        controller.state.drop(1).collect { updateNotification(it) }
+    }
+
+    private fun updateNotification(state: McpServerState) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification(text))
+        manager.notify(NOTIFICATION_ID, buildNotification(notificationTextFor(state)))
     }
 
     private fun buildNotification(text: String): Notification =
