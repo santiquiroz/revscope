@@ -9,15 +9,23 @@ package com.revscope.core.obd.legal
  */
 object LocalInfoAlertPolicy {
 
-    data class LastAnnouncement(val municipio: String, val dayKey: String)
-
+    /**
+     * Checks if a municipio should be announced based on the daily registry.
+     * Returns true if municipio has never been announced today; false if already announced today.
+     * Lazily prunes entries from the map whose dayKey != today.
+     */
     fun shouldAnnounce(
         municipio: String,
-        lastAnnouncement: LastAnnouncement?,
+        announcedToday: MutableMap<String, String>,
         nowMs: Long,
         timeZoneId: String = "America/Bogota",
     ): Boolean {
-        if (lastAnnouncement == null || lastAnnouncement.municipio != municipio) return true
-        return lastAnnouncement.dayKey != CityAlertPolicy.dayKey(nowMs, timeZoneId)
+        val today = CityAlertPolicy.dayKey(nowMs, timeZoneId)
+
+        // Lazy prune: remove entries from previous days
+        announcedToday.entries.removeAll { (_, dayKey) -> dayKey != today }
+
+        // Check if municipio was announced today
+        return announcedToday[municipio] == null
     }
 }

@@ -119,6 +119,12 @@ class LocalInfoFetcher(private val apiKeyProvider: suspend () -> String?) {
 
     private fun parseLocalInfo(rawText: String): String? {
         val text = rawText.trim()
-        return if (text.isEmpty() || text.equals(NO_INFO_MARKER, ignoreCase = true)) null else text
+        if (text.isEmpty()) return null
+
+        // Treat as no-info if text equals "NADA" or starts with "NADA" (ignoring case, punctuation, whitespace)
+        val normalized = text.uppercase().replace(Regex("[.,!?;:]"), "").trim()
+        if (normalized == NO_INFO_MARKER || normalized.startsWith("$NO_INFO_MARKER ")) return null
+
+        return text
     }
 }

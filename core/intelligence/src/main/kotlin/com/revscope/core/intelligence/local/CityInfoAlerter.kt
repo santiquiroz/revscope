@@ -39,7 +39,7 @@ class CityInfoAlerter(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    @Volatile private var lastAnnouncement: LocalInfoAlertPolicy.LastAnnouncement? = null
+    private val announcedToday: MutableMap<String, String> = mutableMapOf()
 
     override fun onGpsFix(latitude: Double, longitude: Double) {
         if (!localityDetector.shouldEvaluate(latitude, longitude)) return
@@ -53,9 +53,9 @@ class CityInfoAlerter(
             if (!gateProvider()) return
             val locality = localityDetector.detectLocalityChange(latitude, longitude) ?: return
             val now = System.currentTimeMillis()
-            if (!LocalInfoAlertPolicy.shouldAnnounce(locality.municipio, lastAnnouncement, now)) return
+            if (!LocalInfoAlertPolicy.shouldAnnounce(locality.municipio, announcedToday, now)) return
             val frase = localInfoFetcher.fetchLocalInfo(locality.municipio, locality.departamento) ?: return
-            lastAnnouncement = LocalInfoAlertPolicy.LastAnnouncement(locality.municipio, CityAlertPolicy.dayKey(now))
+            announcedToday[locality.municipio] = CityAlertPolicy.dayKey(now)
             Timber.i("CityInfoAlerter: announcing local info for ${locality.municipio}")
             alertsEngine.announceLocalInfo(locality.municipio, frase)
         } catch (e: CancellationException) {

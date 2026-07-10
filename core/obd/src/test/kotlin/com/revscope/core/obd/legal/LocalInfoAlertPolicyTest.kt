@@ -8,9 +8,11 @@ class LocalInfoAlertPolicyTest {
 
     @Test
     fun `municipio nuevo sin anuncio previo se anuncia`() {
+        val announcedToday = mutableMapOf<String, String>()
+
         val result = LocalInfoAlertPolicy.shouldAnnounce(
             municipio = "Guarne",
-            lastAnnouncement = null,
+            announcedToday = announcedToday,
             nowMs = NOW_MS,
         )
 
@@ -19,11 +21,13 @@ class LocalInfoAlertPolicyTest {
 
     @Test
     fun `mismo municipio ya anunciado hoy no se repite`() {
-        val yaAnunciado = LocalInfoAlertPolicy.LastAnnouncement("Guarne", CityAlertPolicy.dayKey(NOW_MS))
+        val announcedToday = mutableMapOf(
+            "Guarne" to CityAlertPolicy.dayKey(NOW_MS)
+        )
 
         val result = LocalInfoAlertPolicy.shouldAnnounce(
             municipio = "Guarne",
-            lastAnnouncement = yaAnunciado,
+            announcedToday = announcedToday,
             nowMs = NOW_MS,
         )
 
@@ -32,11 +36,13 @@ class LocalInfoAlertPolicyTest {
 
     @Test
     fun `mismo municipio anunciado un dia distinto se vuelve a anunciar`() {
-        val anunciadoAyer = LocalInfoAlertPolicy.LastAnnouncement("Guarne", CityAlertPolicy.dayKey(NOW_MS - ONE_DAY_MS))
+        val announcedToday = mutableMapOf(
+            "Guarne" to CityAlertPolicy.dayKey(NOW_MS - ONE_DAY_MS)
+        )
 
         val result = LocalInfoAlertPolicy.shouldAnnounce(
             municipio = "Guarne",
-            lastAnnouncement = anunciadoAyer,
+            announcedToday = announcedToday,
             nowMs = NOW_MS,
         )
 
@@ -45,12 +51,50 @@ class LocalInfoAlertPolicyTest {
 
     @Test
     fun `otro municipio anunciado hoy no bloquea el anuncio de uno distinto`() {
-        val otroMunicipioHoy = LocalInfoAlertPolicy.LastAnnouncement("Rionegro", CityAlertPolicy.dayKey(NOW_MS))
+        val announcedToday = mutableMapOf(
+            "Rionegro" to CityAlertPolicy.dayKey(NOW_MS)
+        )
 
         val result = LocalInfoAlertPolicy.shouldAnnounce(
             municipio = "Guarne",
-            lastAnnouncement = otroMunicipioHoy,
+            announcedToday = announcedToday,
             nowMs = NOW_MS,
+        )
+
+        assertTrue(result)
+    }
+
+    @Test
+    fun `Guarne entonces Rionegro entonces Guarne mismo dia no re-anuncia Guarne`() {
+        val announcedToday = mutableMapOf<String, String>()
+        val dayKeyToday = CityAlertPolicy.dayKey(NOW_MS)
+
+        // First visit to Guarne
+        val firstGuarne = LocalInfoAlertPolicy.shouldAnnounce("Guarne", announcedToday, NOW_MS)
+        assertTrue(firstGuarne)
+        announcedToday["Guarne"] = dayKeyToday
+
+        // Visit to Rionegro
+        val rionegro = LocalInfoAlertPolicy.shouldAnnounce("Rionegro", announcedToday, NOW_MS)
+        assertTrue(rionegro)
+        announcedToday["Rionegro"] = dayKeyToday
+
+        // Return to Guarne same day — should NOT re-announce
+        val secondGuarne = LocalInfoAlertPolicy.shouldAnnounce("Guarne", announcedToday, NOW_MS)
+        assertFalse(secondGuarne)
+    }
+
+    @Test
+    fun `Guarne revisitado al dia siguiente se vuelve a anunciar`() {
+        val announcedToday = mutableMapOf(
+            "Guarne" to CityAlertPolicy.dayKey(NOW_MS)
+        )
+        val nextDayMs = NOW_MS + ONE_DAY_MS
+
+        val result = LocalInfoAlertPolicy.shouldAnnounce(
+            municipio = "Guarne",
+            announcedToday = announcedToday,
+            nowMs = nextDayMs,
         )
 
         assertTrue(result)

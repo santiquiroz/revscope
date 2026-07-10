@@ -276,7 +276,9 @@ class AlertsEngine @Inject constructor(
     fun announceLocalInfo(municipio: String, frase: String) {
         if (!enabled) return
         if (!voiceLocalInfo) return
-        val message = "Estás en $municipio. $frase"
+        val sanitized = sanitizeForSpeech(frase)
+        if (sanitized.isEmpty()) return
+        val message = "Estás en $municipio. $sanitized"
         Timber.i("AlertsEngine: $message")
         _alerts.tryEmit(ObdAlert(AlertType.LOCAL_INFO, message, 0.0))
         speak(message)
@@ -368,6 +370,17 @@ class AlertsEngine @Inject constructor(
         }
         Timber.i("AlertsEngine: $phrase")
         speak(phrase)
+    }
+
+    private fun sanitizeForSpeech(text: String): String {
+        // Strip URLs (https?://\S+)
+        var result = text.replace(Regex("https?://\\S+"), "")
+        // Strip markdown chars: *, _, #, backticks
+        result = result.replace(Regex("[*_#`]"), "")
+        // Collapse whitespace
+        result = result.replace(Regex("\\s+"), " ")
+        // Trim
+        return result.trim()
     }
 
     private fun speak(text: String) {
