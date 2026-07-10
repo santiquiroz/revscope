@@ -23,7 +23,6 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ElmCommandBuilder
 import com.revscope.core.obd.protocol.ProtocolNegotiator
-import com.revscope.core.obd.protocol.ReadinessParser
 import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.service.ObdForegroundService
 import com.revscope.core.obd.service.TripSummaryNotifier
@@ -33,9 +32,6 @@ import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
-import com.revscope.core.obd.telemetry.TripStatsCalculator
-import com.revscope.core.obd.trip.EcoScoreCalculator
-import com.revscope.core.obd.trip.FuelCostCalculator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +53,6 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.roundToInt
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -108,11 +103,12 @@ class ObdSessionManager @Inject constructor(
     private var telemetryJob: Job? = null
     private var stateJob: Job? = null
     private var reconnectJob: Job? = null
-    private var voltageJob: Job? = null
-    private var milWatchJob: Job? = null
     private var currentDeviceAddress: String? = null
     private val derivedEngine = DerivedMetricsEngine()
     private val engineOffDetector = EngineOffDetector()
+    private val voltagePoller = VoltagePoller()
+    private val milWatcher = MilWatcher(alertsEngine)
+    private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings)
     private var activeScheduler: PidScheduler? = null
     private val workshopClients = AtomicInteger(0)
 
@@ -463,8 +459,8 @@ class ObdSessionManager @Inject constructor(
 
     /** Stops everything battery-hungry and posts the trip summary. Terminal state. */
     private suspend fun finalShutdown(summarySessionId: Long?) {
-        voltageJob?.cancel()
-        milWatchJob?.cancel()
+        voltagePoller.stop()
+        milWatcher.stop()
         runCatching { transport?.disconnect() }
         transport = null
         activeScheduler = null
@@ -501,8 +497,13 @@ class ObdSessionManager @Inject constructor(
         launchTimer.reset()
         engineOffDetector.reset()
 
-        startVoltagePolling(bt)
-        startMilWatch(bt)
+        voltagePoller.start(scope, bt) { reading ->
+            _readings.value = _readings.value + (reading.pid to reading)
+            alertsEngine.process(reading)
+        }
+        milWatcher.start(scope, bt) { reading ->
+            _readings.value = _readings.value + (reading.pid to reading)
+        }
 
         telemetryJob = scope.launch {
             try {
@@ -536,8 +537,8 @@ class ObdSessionManager @Inject constructor(
             } catch (e: Exception) {
                 // PidScheduler's circuit breaker lands here when the ECU stops answering
                 Timber.e(e, "ObdSessionManager: telemetry link lost")
-                voltageJob?.cancel()
-                milWatchJob?.cancel()
+                voltagePoller.stop()
+                milWatcher.stop()
                 val closedSessionId = _currentSessionIdFlow.value
                 closedSessionId?.let { id -> runCatching { updateSessionEnd(id) } }
                 _currentSessionIdFlow.value = null
@@ -560,64 +561,9 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
-    /**
-     * Polls adapter battery voltage via "AT RV" — answered by the ELM itself, no ECU
-     * involved. Emitted as pseudo-PID VBAT so gauges and alerts consume it like any PID.
-     */
-    private fun startVoltagePolling(bt: ClassicBtTransport) {
-        voltageJob?.cancel()
-        voltageJob = scope.launch {
-            while (true) {
-                try {
-                    val raw = bt.exchange("AT RV\r", VOLTAGE_TIMEOUT_MS)
-                    parseVoltage(raw)?.let { volts ->
-                        val reading = ObdReading(pid = VBAT_PID, value = volts, unit = "V")
-                        _readings.value = _readings.value + (VBAT_PID to reading)
-                        alertsEngine.process(reading)
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.w(e, "ObdSessionManager: voltage poll failed")
-                }
-                delay(VOLTAGE_POLL_INTERVAL_MS)
-            }
-        }
-    }
-
-    /**
-     * Watches the MIL (check-engine light) while driving. First check 15s after connect
-     * (readiness monitors need the ECU settled), then every 120s — cheap enough to run
-     * alongside the main telemetry pipeline without starving it.
-     */
-    private fun startMilWatch(bt: ClassicBtTransport) {
-        milWatchJob?.cancel()
-        milWatchJob = scope.launch {
-            delay(MIL_WATCH_FIRST_DELAY_MS)
-            while (true) {
-                try {
-                    checkMilStatus(bt)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.w(e, "ObdSessionManager: MIL watch failed")
-                }
-                delay(MIL_WATCH_INTERVAL_MS)
-            }
-        }
-    }
-
-    private suspend fun checkMilStatus(bt: ClassicBtTransport) {
-        val raw = probe(bt, "01 01\r", DTC_TIMEOUT_MS) ?: return
-        val status = ReadinessParser.parse(raw) ?: return
-        if (!status.milOn) return
-        alertsEngine.announceMilOn()
-        _readings.value = _readings.value + (MIL_PID to ObdReading(pid = MIL_PID, value = 1.0, unit = ""))
-    }
-
     private suspend fun stopTelemetry() {
-        voltageJob?.cancel()
-        milWatchJob?.cancel()
+        voltagePoller.stop()
+        milWatcher.stop()
         // Join so SessionRecorder's final NonCancellable flush lands in Room
         // before updateSessionEnd computes the trip aggregates.
         telemetryJob?.cancelAndJoin()
@@ -642,60 +588,7 @@ class ObdSessionManager @Inject constructor(
 
     /** Closes the session and fills the trip aggregates shown in history/reports. */
     private suspend fun updateSessionEnd(sessionId: Long) {
-        val session = sessionDao.getById(sessionId) ?: return
-        val maxRpm = telemetryDao.maxValue(sessionId, "0C") ?: 0f
-        val maxSpeed = telemetryDao.maxValue(sessionId, "0D") ?: 0f
-        val speedPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0D")
-        val aggregates = computeTripAggregates(sessionId)
-        sessionDao.update(
-            session.copy(
-                endedAt = System.currentTimeMillis(),
-                maxRpm = maxRpm.roundToInt(),
-                maxSpeed = maxSpeed.roundToInt(),
-                distanceKm = TripStatsCalculator.distanceKm(speedPoints).toFloat(),
-                fuelLiters = aggregates?.fuelLiters,
-                fuelCostCop = aggregates?.fuelCostCop,
-                ecoScore = aggregates?.ecoScore,
-            )
-        )
-    }
-
-    private data class TripAggregates(val fuelLiters: Double?, val fuelCostCop: Double?, val ecoScore: Int?)
-
-    /**
-     * Fuel cost (COP) and eco-score for the trip just ended — never lets a calculation
-     * error block closing the session, since these are report-only extras.
-     */
-    private suspend fun computeTripAggregates(sessionId: Long): TripAggregates? = runCatching {
-        val fuel = computeFuelResult(sessionId)
-        TripAggregates(
-            fuelLiters = fuel?.liters,
-            fuelCostCop = fuel?.costCop,
-            ecoScore = computeEcoScore(sessionId),
-        )
-    }.onFailure { Timber.w(it, "ObdSessionManager: failed to compute trip aggregates") }
-        .getOrNull()
-
-    private suspend fun computeFuelResult(sessionId: Long): FuelCostCalculator.FuelResult? {
-        val precioGalonCop = settings.data.first()[PreferencesKeys.FUEL_PRICE_COP_PER_GALLON]
-            ?: DEFAULT_FUEL_PRICE_COP_PER_GALLON
-        val fuelRatePoints = telemetryDao.pointsForSessionAndPid(sessionId, PID_FUEL_RATE)
-            .map { it.timestamp to it.value.toDouble() }
-        FuelCostCalculator.fromFuelRate(fuelRatePoints, precioGalonCop)?.let { return it }
-        val mafPoints = telemetryDao.pointsForSessionAndPid(sessionId, PID_MAF)
-            .map { it.timestamp to it.value.toDouble() }
-        return FuelCostCalculator.fromMaf(mafPoints, precioGalonCop)
-    }
-
-    private suspend fun computeEcoScore(sessionId: Long): Int? {
-        // ImuPointEntity.gLong is in G — EcoScoreCalculator's thresholds are m/s².
-        val accelLongitudinal = imuDao.pointsForSession(sessionId)
-            .map { it.gLong.toDouble() * EARTH_GRAVITY_MS2 }
-        val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
-            .map { it.timestamp to it.value.toDouble() }
-        if (accelLongitudinal.isEmpty() && rpmPoints.isEmpty()) return null
-        val redlineRpm = _activeProfile.value?.redlineRpm ?: DEFAULT_REDLINE_RPM
-        return EcoScoreCalculator.calculate(accelLongitudinal, rpmPoints, redlineRpm).score
+        sessionAggregator.close(sessionId) { _activeProfile.value }
     }
 
     companion object {
@@ -705,25 +598,14 @@ class ObdSessionManager @Inject constructor(
         private const val DTC_TIMEOUT_MS = 5_000L
         private const val VIN_TIMEOUT_MS = 4_000L
         private const val VOLTAGE_TIMEOUT_MS = 2_000L
-        private const val VOLTAGE_POLL_INTERVAL_MS = 10_000L
-        private const val MIL_WATCH_FIRST_DELAY_MS = 15_000L
-        private const val MIL_WATCH_INTERVAL_MS = 120_000L
         // 15 s > 12 s connect watchdog, so attempts never overlap; total ≈ 3 min
         private val AUTO_RECONNECT_BACKOFF_MS = listOf(15_000L, 30_000L, 60_000L, 60_000L)
         private const val RECONNECT_FINAL_GRACE_MS = 15_000L
         private const val PROBE_TIMEOUT_MS = 3_000L
 
-        private const val PID_FUEL_RATE = "5E"
-        private const val PID_MAF = "10"
-        private const val DEFAULT_FUEL_PRICE_COP_PER_GALLON = 16_000.0
-        private const val DEFAULT_REDLINE_RPM = 10_500
-        private const val EARTH_GRAVITY_MS2 = 9.80665
-
         private val DTC_PREFIX = mapOf(0 to 'P', 1 to 'C', 2 to 'B', 3 to 'U')
-        private val VOLTAGE_REGEX = Regex("""(\d{1,2}(?:\.\d{1,2})?)V""")
 
-        fun parseVoltage(raw: String): Double? =
-            VOLTAGE_REGEX.find(raw.uppercase())?.groupValues?.get(1)?.toDoubleOrNull()
+        fun parseVoltage(raw: String): Double? = VoltagePoller.parseVoltage(raw)
 
         fun parseDtcResponse(raw: String, mode: DtcMode): List<DtcCode> {
             val hex = raw.filter { it.isLetterOrDigit() }.uppercase()
