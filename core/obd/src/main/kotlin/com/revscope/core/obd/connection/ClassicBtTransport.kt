@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -188,12 +189,16 @@ class ClassicBtTransport(
             receive(timeoutMs)
         } finally {
             // Restaurar SIEMPRE los defaults de telemetría, aun si la petición
-            // agota el tiempo o el módulo no responde. Sin esto, el header custom
-            // quedaría fijo y la telemetría saldría dirigida al módulo equivocado.
-            withContext(Dispatchers.IO) { drainStaleInput() }
-            runCatching {
-                send("AT SH $FUNCTIONAL_HEADER_11BIT\r"); receive(AT_RESTORE_TIMEOUT_MS)
-                send("AT H0\r"); receive(AT_RESTORE_TIMEOUT_MS)
+            // agota el tiempo, el módulo no responde o el job se cancela. Sin esto,
+            // el header custom quedaría fijo y la telemetría saldría dirigida al
+            // módulo equivocado. NonCancellable garantiza que la restauración corra
+            // incluso cuando la coroutine ya está cancelada.
+            withContext(NonCancellable + Dispatchers.IO) {
+                drainStaleInput()
+                runCatching {
+                    send("AT SH $FUNCTIONAL_HEADER_11BIT\r"); receive(AT_RESTORE_TIMEOUT_MS)
+                    send("AT H0\r"); receive(AT_RESTORE_TIMEOUT_MS)
+                }
             }
         }
     }
