@@ -31,4 +31,6 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)
+
+    testImplementation(libs.junit)
 }
