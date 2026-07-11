@@ -16,6 +16,7 @@ import javax.inject.Inject
 
 private const val SCAN_TIMEOUT_MS = 1_200L
 private const val WATCH_POLL_INTERVAL_MS = 400L
+private const val PROBE_REQUEST = "22 F190"
 
 /**
  * Discovers manufacturer-specific Mode 22 (UDS ReadDataByIdentifier) parameters.
@@ -59,6 +60,48 @@ class Mode22ScannerViewModel @Inject constructor() : ViewModel() {
 
     private var scanJob: Job? = null
 
+    // Descubrimiento de módulos
+    enum class ProtocolSupport { UNKNOWN, SUPPORTED, UNSUPPORTED }
+
+    private val _protocolSupport = MutableStateFlow(ProtocolSupport.UNKNOWN)
+    val protocolSupport: StateFlow<ProtocolSupport> = _protocolSupport.asStateFlow()
+
+    private val _modules = MutableStateFlow<List<ModuleDiscovery.ProbeResult>>(emptyList())
+    val modules: StateFlow<List<ModuleDiscovery.ProbeResult>> = _modules.asStateFlow()
+
+    private val _discovering = MutableStateFlow(false)
+    val discovering: StateFlow<Boolean> = _discovering.asStateFlow()
+
+    // Objetivo actual: null = ECU por defecto (comportamiento de hoy)
+    private val _targetHeader = MutableStateFlow<String?>(null)
+    val targetHeader: StateFlow<String?> = _targetHeader.asStateFlow()
+
+    fun selectTarget(header: String?) { _targetHeader.value = header }
+
+    fun discoverModules(connectionVm: ConnectionViewModel) {
+        scanJob?.cancel()
+        _modules.value = emptyList()
+        scanJob = viewModelScope.launch {
+            _discovering.value = true
+            try {
+                if (!ModuleDiscovery.isCan11Bit(connectionVm.protocolNumber())) {
+                    _protocolSupport.value = ProtocolSupport.UNSUPPORTED
+                    return@launch
+                }
+                _protocolSupport.value = ProtocolSupport.SUPPORTED
+                for (candidate in ModuleDiscovery.candidateHeaders()) {
+                    val raw = connectionVm.probeModule(candidate.header, PROBE_REQUEST).getOrNull()
+                    val result = raw?.let { ModuleDiscovery.interpretProbe(candidate.header, it) }
+                    if (result?.present == true) {
+                        _modules.value = _modules.value.filterNot { it.requestHeader == candidate.header } + result
+                    }
+                }
+            } finally {
+                _discovering.value = false
+            }
+        }
+    }
+
     fun startScan(connectionVm: ConnectionViewModel, range: DidRange) {
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
@@ -66,8 +109,7 @@ class Mode22ScannerViewModel @Inject constructor() : ViewModel() {
             for ((index, did) in (range.start..range.end).withIndex()) {
                 _state.value = ScannerState.Scanning(index + 1, total)
                 val didHex = "%04X".format(did)
-                val response = connectionVm.rawExchange("22 $didHex\r", SCAN_TIMEOUT_MS)
-                    .getOrNull() ?: continue
+                val response = readDid(connectionVm, didHex) ?: continue
                 extractDidData(response, didHex)?.let { data ->
                     Timber.i("Mode22Scanner: hit $didHex = $data")
                     _hits.value = _hits.value.filterNot { it.did == didHex } +
@@ -85,8 +127,7 @@ class Mode22ScannerViewModel @Inject constructor() : ViewModel() {
             _state.value = ScannerState.Watching
             while (true) {
                 _hits.value = _hits.value.map { hit ->
-                    val data = connectionVm.rawExchange("22 ${hit.did}\r", SCAN_TIMEOUT_MS)
-                        .getOrNull()
+                    val data = readDid(connectionVm, hit.did)
                         ?.let { extractDidData(it, hit.did) }
                         ?: return@map hit
                     if (data != hit.value) {
@@ -98,6 +139,16 @@ class Mode22ScannerViewModel @Inject constructor() : ViewModel() {
                 }
                 delay(WATCH_POLL_INTERVAL_MS)
             }
+        }
+    }
+
+    // Con objetivo → probeModule (header custom, atómico); sin objetivo → rawExchange (ECU por defecto, como hoy).
+    private suspend fun readDid(connectionVm: ConnectionViewModel, didHex: String): String? {
+        val target = _targetHeader.value
+        return if (target == null) {
+            connectionVm.rawExchange("22 $didHex\r", SCAN_TIMEOUT_MS).getOrNull()
+        } else {
+            connectionVm.probeModule(target, "22 $didHex", SCAN_TIMEOUT_MS).getOrNull()
         }
     }
 
