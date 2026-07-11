@@ -87,6 +87,24 @@ fun Mode22ScannerScreen(
                 .padding(innerPadding)
                 .padding(16.dp),
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceHighColor, RoundedCornerShape(10.dp))
+                    .padding(12.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text("🛈", fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(
+                    "Este escaneo es de SOLO LECTURA: envía peticiones de diagnóstico " +
+                        "estándar para leer datos. No escribe, no borra códigos ni modifica " +
+                        "nada del vehículo — es seguro. Hazlo con el vehículo detenido.",
+                    color = TextMutedColor,
+                    fontSize = 12.sp,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
             if (connectionState !is ConnectionState.Connected) {
                 Text(
                     "Conecta el adaptador primero (moto encendida).",
@@ -99,10 +117,79 @@ fun Mode22ScannerScreen(
             Text(
                 "1. Escanea un rango con el vehículo encendido.\n" +
                     "2. Pulsa Vigilar y cambia el modo de manejo: el identificador que " +
-                    "cambie de valor en ese momento es el del modo.",
+                    "cambie de valor en ese momento es el del modo.\n" +
+                    "También puedes descubrir módulos y dirigir el escaneo a uno (p. ej. " +
+                    "buscar un DID de un subsistema de carrocería).",
                 color = TextMutedColor,
                 fontSize = 12.sp,
             )
+            Spacer(Modifier.height(12.dp))
+
+            val protocolSupport by vm.protocolSupport.collectAsState()
+            val modules by vm.modules.collectAsState()
+            val discovering by vm.discovering.collectAsState()
+            val targetHeader by vm.targetHeader.collectAsState()
+
+            Button(
+                onClick = { vm.discoverModules(connectionVm) },
+                enabled = connectionState is ConnectionState.Connected && !discovering,
+                colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+            ) {
+                Text(if (discovering) "Buscando módulos…" else "Descubrir módulos", color = TextPrimaryColor)
+            }
+
+            if (protocolSupport == Mode22ScannerViewModel.ProtocolSupport.UNSUPPORTED) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Tu vehículo no usa CAN de 11 bits con este adaptador, así que el " +
+                        "descubrimiento de módulos de carrocería no está disponible. El escaneo " +
+                        "de la ECU de motor sí funciona.",
+                    color = DangerColor,
+                    fontSize = 12.sp,
+                )
+            }
+
+            if (modules.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text("Módulos que respondieron — toca uno para dirigir el escaneo:", color = TextMutedColor, fontSize = 12.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    modules.forEach { m ->
+                        val selected = targetHeader == m.requestHeader
+                        Text(
+                            m.requestHeader + (m.replyHeader?.let { " → $it" } ?: ""),
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = if (selected) BgColor else TextPrimaryColor,
+                            modifier = Modifier
+                                .background(if (selected) AccentColor else SurfaceHighColor, RoundedCornerShape(16.dp))
+                                .clickable { vm.selectTarget(if (selected) null else m.requestHeader) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        )
+                    }
+                }
+            }
+
+            targetHeader?.let {
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Objetivo del escaneo: ", color = TextMutedColor, fontSize = 12.sp)
+                    Text(it, color = AccentColor, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "Volver a la ECU",
+                        color = TextMutedColor,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .background(SurfaceHighColor, RoundedCornerShape(12.dp))
+                            .clickable { vm.selectTarget(null) }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
+            }
             Spacer(Modifier.height(12.dp))
 
             Row(

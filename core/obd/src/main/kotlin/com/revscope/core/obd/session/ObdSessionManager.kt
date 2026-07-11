@@ -481,6 +481,34 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
+    /** Sondeo de solo lectura a un módulo por su header 11-bit. Result.failure = sin respuesta. */
+    suspend fun probeModule(
+        requestHeader: String,
+        request: String,
+        timeoutMs: Long = MODULE_PROBE_TIMEOUT_MS,
+    ): Result<String> {
+        val bt = transport ?: return Result.failure(IllegalStateException("Not connected"))
+        return try {
+            Result.success(bt.targetedExchange(requestHeader, request, timeoutMs))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Número de protocolo OBD actual (AT DPN). "6"/"8" = CAN 11-bit; "A6" = auto→6. Null si falla. */
+    suspend fun currentProtocolNumber(): String? {
+        val bt = transport ?: return null
+        return try {
+            ResponseParser.cleanResponse(bt.exchange("AT DPN\r", 1_500L)).takeIf { it.isNotEmpty() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Manual "Leer ahora" — same read+compare+persist pipeline as the automatic one-shot check. */
     suspend fun checkOdometerNow(): OdometerChecker.Result? {
         val bt = transport ?: return null
@@ -783,6 +811,8 @@ class ObdSessionManager @Inject constructor(
         private const val GPS_INACTIVITY_CHECK_INTERVAL_MS = 30_000L
         private const val GPS_STOP_FLUSH_GRACE_MS = 600L
         private const val PROBE_TIMEOUT_MS = 3_000L
+        // Timeout de sondeo de módulo — corto: un módulo ausente debe fallar rápido.
+        private const val MODULE_PROBE_TIMEOUT_MS = 1_500L
 
         private val DTC_PREFIX = mapOf(0 to 'P', 1 to 'C', 2 to 'B', 3 to 'U')
 

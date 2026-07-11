@@ -53,4 +53,12 @@ class ConnectionViewModel @Inject constructor(
 
     suspend fun rawExchange(command: String, timeoutMs: Long = 5_000L): Result<String> =
         manager.rawExchange(command, timeoutMs)
+
+    suspend fun probeModule(
+        requestHeader: String,
+        request: String,
+        timeoutMs: Long = 1_500L,
+    ): Result<String> = manager.probeModule(requestHeader, request, timeoutMs)
+
+    suspend fun protocolNumber(): String? = manager.currentProtocolNumber()
 }
