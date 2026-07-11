@@ -33,6 +33,9 @@ import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.SessionRecorder
+import com.revscope.core.obd.trip.MaintenanceCalculator
+import com.revscope.core.obd.workshop.DiagnosticRules
+import com.revscope.core.obd.workshop.OdometerAutoSync
 import com.revscope.core.obd.workshop.OdometerChecker
 import com.revscope.core.obd.workshop.OdometerHistoryStore
 import com.revscope.core.obd.workshop.OdometerVerifier
@@ -277,7 +280,36 @@ class ObdSessionManager @Inject constructor(
         _odometerSupported.value = odometerChecker.isSupported()
         val profileId = _activeProfile.value?.id ?: return
         runCatching { odometerChecker.check(bt, profileId) }
+            .onSuccess { result -> result?.let { syncOdometerBaseFromEcu(it) } }
             .onFailure { Timber.w(it, "ObdSessionManager: odometer check failed") }
+    }
+
+    /**
+     * Feeds a trusted ECU odometer reading into the app odometer (odometerBaseKm) so
+     * Mantenimiento/Al día/Mecánico IA track the real dashboard value without manual entry.
+     * Runs only at connect time (before the session starts recording distance) — syncing
+     * mid-trip would double-count the open session's km once it closes.
+     */
+    private suspend fun syncOdometerBaseFromEcu(result: OdometerChecker.Result) {
+        val active = _activeProfile.value ?: return
+        try {
+            // Re-read the row so a concurrent writer (adapter link, UI edit) isn't clobbered.
+            val profile = profileDao.getById(active.id) ?: return
+            val sumaSesiones = sessionDao.observeSumDistanceKmForProfile(profile.id).first()
+            val odometroApp = MaintenanceCalculator.odometroActual(profile.odometerBaseKm, sumaSesiones)
+            val esFalla = result.diagnosis.nivel == DiagnosticRules.Nivel.FALLA
+            if (!OdometerAutoSync.debeSincronizar(result.reading.km, odometroApp, sumaSesiones, esFalla)) return
+            val actualizado = profile.copy(
+                odometerBaseKm = OdometerAutoSync.nuevaBase(result.reading.km, sumaSesiones),
+            )
+            profileDao.update(actualizado)
+            notifyProfileUpdated(actualizado)
+            Timber.i("ObdSessionManager: odometer auto-synced from ECU (${result.reading.km} km)")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "ObdSessionManager: odometer auto-sync failed")
+        }
     }
 
     /** Falls back to the adapter's last-linked profile when VIN resolution found none. */
