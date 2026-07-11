@@ -26,6 +26,8 @@ private const val READ_POLL_DELAY_MS = 10L
 private const val CHUNK_SIZE = 256
 private const val PROMPT_CHAR = '>'
 private const val FALLBACK_RFCOMM_CHANNEL = 1
+private const val AT_RESTORE_TIMEOUT_MS = 1_000L
+private const val FUNCTIONAL_HEADER_11BIT = "7DF"
 
 /**
  * Bluetooth Classic RFCOMM transport for SPP-based ELM327 adapters (e.g. Vgate iCar Pro 2S).
@@ -170,6 +172,30 @@ class ClassicBtTransport(
         withContext(Dispatchers.IO) { drainStaleInput() }
         send(command)
         receive(timeoutMs)
+    }
+
+    override suspend fun targetedExchange(
+        requestHeader: String,
+        request: String,
+        timeoutMs: Long,
+    ): String = ioMutex.withLock {
+        withContext(Dispatchers.IO) { drainStaleInput() }
+        try {
+            send("AT H1\r"); receive(AT_RESTORE_TIMEOUT_MS)
+            send("AT SH $requestHeader\r"); receive(AT_RESTORE_TIMEOUT_MS)
+            val cmd = if (request.endsWith("\r")) request else "$request\r"
+            send(cmd)
+            receive(timeoutMs)
+        } finally {
+            // Restaurar SIEMPRE los defaults de telemetría, aun si la petición
+            // agota el tiempo o el módulo no responde. Sin esto, el header custom
+            // quedaría fijo y la telemetría saldría dirigida al módulo equivocado.
+            withContext(Dispatchers.IO) { drainStaleInput() }
+            runCatching {
+                send("AT SH $FUNCTIONAL_HEADER_11BIT\r"); receive(AT_RESTORE_TIMEOUT_MS)
+                send("AT H0\r"); receive(AT_RESTORE_TIMEOUT_MS)
+            }
+        }
     }
 
     /** Discards bytes left over from a previous timed-out read so they don't corrupt the next response. */
