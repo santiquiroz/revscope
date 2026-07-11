@@ -450,7 +450,10 @@ class SettingsViewModel @Inject constructor(
                 }
                 result.fold(
                     onSuccess = { SaveResult(true, "Conexión OK — ${provider.displayName}") },
-                    onFailure = { SaveResult(false, "No se pudo conectar — revisa la llave y la red") },
+                    onFailure = {
+                        val detalle = it.message?.take(200) ?: "revisa la llave y la red"
+                        SaveResult(false, "No se pudo conectar — $detalle")
+                    },
                 )
             }
             _aiTesting.value = false

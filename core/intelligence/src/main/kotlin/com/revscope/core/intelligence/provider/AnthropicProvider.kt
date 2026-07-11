@@ -30,8 +30,8 @@ class AnthropicProvider(
                 val responseBody = conn.inputStream.bufferedReader().readText()
                 AiResponseParsers.parseAnthropicResponse(responseBody)
             } else {
-                runCatching { conn.errorStream?.bufferedReader()?.readText() }
-                Result.failure(Exception("Anthropic HTTP $code"))
+                val errorBody = runCatching { conn.errorStream?.bufferedReader()?.readText() }.getOrNull()
+                Result.failure(Exception(AiResponseParsers.httpErrorMessage("Anthropic", code, errorBody)))
             }
         } catch (e: CancellationException) {
             throw e

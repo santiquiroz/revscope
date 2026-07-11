@@ -64,6 +64,28 @@ object AiResponseParsers {
         }
     }
 
+    /**
+     * Human-readable message for a non-2xx response. The big four wrap API errors as
+     * `{"error": {"message": ...}}`; some OpenAI-compatible servers (LM Studio) use a
+     * plain `{"error": "..."}` string. A missing/non-JSON body degrades to just the code.
+     */
+    fun httpErrorMessage(providerTag: String, code: Int, errorBody: String?): String {
+        val detail = errorBody
+            ?.let { extractApiErrorMessage(it) }
+            ?.take(MAX_ERROR_DETAIL_CHARS)
+        return if (detail == null) "$providerTag HTTP $code" else "$providerTag HTTP $code: $detail"
+    }
+
+    private fun extractApiErrorMessage(body: String): String? = runCatching {
+        when (val error = JSONObject(body).opt("error")) {
+            is JSONObject -> error.optString("message").takeIf { it.isNotBlank() }
+            is String -> error.takeIf { it.isNotBlank() }
+            else -> null
+        }
+    }.getOrNull()
+
+    private const val MAX_ERROR_DETAIL_CHARS = 200
+
     private fun concatenateBlocks(blocks: JSONArray, matches: (JSONObject) -> Boolean): String =
         buildString {
             for (i in 0 until blocks.length()) {

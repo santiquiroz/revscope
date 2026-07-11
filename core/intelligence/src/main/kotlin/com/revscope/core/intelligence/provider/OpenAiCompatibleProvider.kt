@@ -33,8 +33,8 @@ class OpenAiCompatibleProvider(
                 val responseBody = conn.inputStream.bufferedReader().readText()
                 AiResponseParsers.parseOpenAiChatResponse(responseBody)
             } else {
-                runCatching { conn.errorStream?.bufferedReader()?.readText() }
-                Result.failure(Exception("Compatible OpenAI HTTP $code"))
+                val errorBody = runCatching { conn.errorStream?.bufferedReader()?.readText() }.getOrNull()
+                Result.failure(Exception(AiResponseParsers.httpErrorMessage("Compatible OpenAI", code, errorBody)))
             }
         } catch (e: CancellationException) {
             throw e

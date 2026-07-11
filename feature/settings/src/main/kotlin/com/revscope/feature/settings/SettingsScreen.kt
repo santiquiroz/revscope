@@ -714,7 +714,7 @@ private val AiProviderOptions = listOf(
 private val AiModelHints = mapOf(
     "anthropic" to "claude-haiku-4-5-20251001",
     "openai" to "gpt-5-mini",
-    "gemini" to "gemini-2.5-flash",
+    "gemini" to "gemini-flash-latest",
     AI_PROVIDER_CUSTOM to "según tu servidor",
 )
 

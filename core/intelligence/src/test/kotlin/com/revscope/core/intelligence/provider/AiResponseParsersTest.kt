@@ -165,4 +165,64 @@ class AiResponseParsersTest {
 
         assertTrue(result.isFailure)
     }
+
+    // ── httpErrorMessage ─────────────────────────────────────────────────────
+
+    @Test
+    fun `http error message includes api detail when body carries one`() {
+        val body = """{"error":{"message":"API key not valid"}}"""
+
+        val message = AiResponseParsers.httpErrorMessage("Gemini", 400, body)
+
+        assertEquals("Gemini HTTP 400: API key not valid", message)
+    }
+
+    @Test
+    fun `http error message with null body falls back to code only`() {
+        val message = AiResponseParsers.httpErrorMessage("Gemini", 500, null)
+
+        assertEquals("Gemini HTTP 500", message)
+    }
+
+    @Test
+    fun `http error message with non json body falls back to code only`() {
+        val message = AiResponseParsers.httpErrorMessage("OpenAI", 502, "<html>oops</html>")
+
+        assertEquals("OpenAI HTTP 502", message)
+    }
+
+    @Test
+    fun `http error message with json missing error key falls back to code only`() {
+        val message = AiResponseParsers.httpErrorMessage("Anthropic", 404, """{"foo":1}""")
+
+        assertEquals("Anthropic HTTP 404", message)
+    }
+
+    @Test
+    fun `http error message with blank api message falls back to code only`() {
+        val body = """{"error":{"message":""}}"""
+
+        val message = AiResponseParsers.httpErrorMessage("Gemini", 429, body)
+
+        assertEquals("Gemini HTTP 429", message)
+    }
+
+    @Test
+    fun `http error message with plain string error extracts it`() {
+        val body = """{"error":"model not loaded"}"""
+
+        val message = AiResponseParsers.httpErrorMessage("Compatible OpenAI", 404, body)
+
+        assertEquals("Compatible OpenAI HTTP 404: model not loaded", message)
+    }
+
+    @Test
+    fun `http error message truncates detail to 200 chars`() {
+        val longDetail = "x".repeat(250)
+        val body = """{"error":{"message":"$longDetail"}}"""
+
+        val message = AiResponseParsers.httpErrorMessage("Gemini", 400, body)
+
+        assertEquals("Gemini HTTP 400: " + "x".repeat(200), message)
+    }
 }

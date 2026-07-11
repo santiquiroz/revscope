@@ -27,8 +27,8 @@ class GeminiProvider(
                 val responseBody = conn.inputStream.bufferedReader().readText()
                 AiResponseParsers.parseGeminiResponse(responseBody)
             } else {
-                runCatching { conn.errorStream?.bufferedReader()?.readText() }
-                Result.failure(Exception("Gemini HTTP $code"))
+                val errorBody = runCatching { conn.errorStream?.bufferedReader()?.readText() }.getOrNull()
+                Result.failure(Exception(AiResponseParsers.httpErrorMessage("Gemini", code, errorBody)))
             }
         } catch (e: CancellationException) {
             throw e
@@ -62,7 +62,8 @@ class GeminiProvider(
     }
 
     companion object {
-        const val DEFAULT_MODEL = "gemini-2.5-flash"
+        // gemini-2.5-flash quedó 404 para cuentas nuevas (jul 2026); el alias -latest no caduca.
+        const val DEFAULT_MODEL = "gemini-flash-latest"
         private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
         private const val CONNECT_TIMEOUT_MS = 10_000
         private const val READ_TIMEOUT_MS = 20_000

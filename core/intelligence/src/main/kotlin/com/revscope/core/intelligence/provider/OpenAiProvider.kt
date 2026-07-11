@@ -80,8 +80,8 @@ class OpenAiProvider(
         conn.outputStream.use { it.write(body) }
         val code = conn.responseCode
         if (code !in 200..299) {
-            runCatching { conn.errorStream?.bufferedReader()?.readText() }
-            throw Exception("OpenAI HTTP $code")
+            val errorBody = runCatching { conn.errorStream?.bufferedReader()?.readText() }.getOrNull()
+            throw Exception(AiResponseParsers.httpErrorMessage("OpenAI", code, errorBody))
         }
         return conn.inputStream.bufferedReader().readText()
     }
