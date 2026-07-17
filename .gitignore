@@ -37,3 +37,5 @@ keystore.properties
 logs/
 
 backups/
+
+.kotlin/
