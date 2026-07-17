@@ -30,7 +30,7 @@ Cada categoría se puede apagar sin afectar a las demás:
 |---|---|---|
 | Temperatura | Sobrecalentamiento del motor | **Activado** |
 | Batería y carga | Voltaje bajo / problema de carga | **Activado** |
-| Radares de velocidad | Al acercarte a un radar registrado | **Activado** |
+| Radares de velocidad | Solo al ir HACIA un radar registrado (rumbo GPS a ±60° del radar y acercándote) — cámaras atrás o en calles perpendiculares ya no suenan | **Activado** |
 | Umbrales personalizados | Cualquier PID fuera del rango que definas en [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) | **Activado** |
 | Tiempos 0-100 y vueltas | Resultados de aceleración y vueltas en Modo Pista | **Activado** |
 | Pico y placa al entrar a otra ciudad | Aviso al detectar por GPS que entraste a una ciudad con restricción vigente para tu placa | **Activado** |
@@ -38,6 +38,7 @@ Cada categoría se puede apagar sin afectar a las demás:
 | Testigo del motor (MIL) | Cuando se encienda el testigo de check-engine en marcha | Desactivado |
 | Zona roja | Aviso al acercarte a la línea roja (además del *shift light* visual) | Desactivado |
 | Información local al cambiar de ciudad | Usa tu proveedor de IA con búsqueda web para avisar de eventos/cierres relevantes al llegar a un municipio nuevo | Desactivado |
+| Pico y placa por IA en cualquier ciudad | Tu proveedor de IA (con búsqueda web) investiga la restricción vehicular de la ciudad donde estés — pico y placa, hoy no circula, rodízio… — y la guarda hasta que venza (cache local, ~1-2 consultas al mes) | Desactivado |
 
 > 💡 "Información local" es la única categoría que consume tu proveedor de IA (con búsqueda web) cada vez que cambias de municipio — por eso viene apagada por defecto y su subtítulo en la app aclara el costo aproximado. No está disponible con el proveedor "Compatible OpenAI" genérico (LM Studio, etc.) porque no ofrece búsqueda web administrada.
 
@@ -69,6 +70,8 @@ Descarga los radares en 50 km a la redonda de tu ubicación actual, combinando d
 | ANSV (registro oficial) | Radares fijos oficiales de la Agencia Nacional de Seguridad Vial |
 
 Se actualiza **una vez por semana automáticamente** y funciona sin conexión después de la primera descarga. El botón **"Descargar radares de mi zona"** dispara una descarga manual inmediata; debajo aparece el conteo total y por fuente una vez completada.
+
+Además, durante un viaje la app detecta cuando te alejas **más de 35 km** del centro de la última descarga (por ejemplo, un viaje Medellín → Bogotá) y **re-descarga sola** los radares alrededor de tu nueva posición — silencioso, con reintento cada 30 minutos si no hay señal de datos. El refresco semanal sigue a ese nuevo centro automáticamente. Fuera de Colombia solo aplica la fuente OpenStreetMap.
 
 ## Combustible
 
@@ -192,7 +195,7 @@ Rotación vigente de Medellín (S1-2026, días sin restricción sábados/domingo
 
 Bogotá alterna por el **día del mes**: en día impar circulan las placas terminadas en 1-5 (restringidas 6,7,8,9,0) y en día par lo inverso — las motos nunca tienen restricción en Bogotá.
 
-> ⚠️ Al llegar el 1 de agosto de 2026 (o la fecha de vigencia que corresponda), la app deja de aplicar la regla vencida de Medellín y avisa "reglas vencidas" en la tarjeta de Vehículo al día hasta que se publique y configure la rotación del semestre siguiente.
+> ⚠️ Al llegar el 1 de agosto de 2026 (o la fecha de vigencia que corresponda), la app deja de aplicar la regla vencida de Medellín. Si tienes activado **"Pico y placa por IA en cualquier ciudad"** (Ajustes → Alertas por voz), la app le pide a tu proveedor de IA la rotación nueva y la aplica sola — con una notificación mostrando la rotación aplicada para que la verifiques. Sin ese toggle, la tarjeta de Vehículo al día muestra "reglas vencidas" hasta que configures la rotación manualmente (JSON abajo) o llegue una actualización de la app.
 
 **Cali** aparece en el listado de ciudades pero sin una rotación incorporada — la tarjeta de Vehículo al día mostrará "sin datos" con la indicación de configurar la rotación vigente. El motor interno (`PicoYPlacaEngine`) soporta reglas de ciudad totalmente personalizadas en JSON, con este esquema (verificado en el código, campos con default cuando se omiten):
 

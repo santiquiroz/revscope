@@ -39,9 +39,9 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 ## ✨ Todo lo que trae
 
 ### 📋 Para el día a día
-- **Pico y placa automático** — Medellín y Bogotá integrados (motos exentas en Bogotá); si entras a OTRA ciudad donde hoy tienes restricción, te lo dice por voz · [configurar](docs/configuracion.md)
+- **Pico y placa automático** — Medellín y Bogotá integrados (motos exentas en Bogotá); si entras a OTRA ciudad donde hoy tienes restricción, te lo dice por voz. Opcional: tu proveedor de IA investiga la restricción de **cualquier ciudad del mundo** (pico y placa, hoy no circula, rodízio…) y la guarda hasta que venza · [configurar](docs/configuracion.md)
 - **Documentos al día** — vencimientos de SOAT, tecnomecánica, todo riesgo y licencia con recordatorios escalonados y notificación diaria a las 5:30am
-- **Radares con aviso por voz** — registro oficial ANSV + OpenStreetMap, actualización semanal automática, funciona offline
+- **Radares con aviso por voz direccional** — registro oficial ANSV + OpenStreetMap; solo avisa si vas HACIA el radar (no por radio), se re-descarga solo al viajar a otra región, actualización semanal automática, funciona offline
 - **Costo de cada viaje en pesos** — con el precio de TU combustible (corriente / extra / diésel)
 - **Mantenimiento por kilometraje** — aceite, llantas, kit de arrastre, con el odómetro real del vehículo
 
