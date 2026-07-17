@@ -26,7 +26,7 @@ private const val MAX_RESULTS = 1
  */
 class LocalityDetector(private val context: Context) {
 
-    data class Locality(val municipio: String, val departamento: String?)
+    data class Locality(val municipio: String, val departamento: String?, val pais: String? = null)
 
     private val throttle = GpsEvaluationThrottle()
 
@@ -53,18 +53,24 @@ class LocalityDetector(private val context: Context) {
      * en el dispositivo — nunca lanza.
      */
     suspend fun detectLocalityChange(latitude: Double, longitude: Double): Locality? {
-        if (!Geocoder.isPresent()) return null
-        val address = resolveAddress(latitude, longitude) ?: return null
-        val municipio = address.locality ?: address.subAdminArea ?: return null
+        val locality = resolveLocality(latitude, longitude) ?: return null
 
         val previous = lastMunicipio
-        lastMunicipio = municipio
+        lastMunicipio = locality.municipio
         if (!hasBaseline) {
             hasBaseline = true
             return null
         }
-        if (municipio == previous) return null
-        return Locality(municipio, address.adminArea)
+        if (locality.municipio == previous) return null
+        return locality
+    }
+
+    /** Localidad actual del fix sin semántica de cambio — nunca lanza, null ante error. */
+    suspend fun resolveLocality(latitude: Double, longitude: Double): Locality? {
+        if (!Geocoder.isPresent()) return null
+        val address = resolveAddress(latitude, longitude) ?: return null
+        val municipio = address.locality ?: address.subAdminArea ?: return null
+        return Locality(municipio, address.adminArea, address.countryName)
     }
 
     private suspend fun resolveAddress(latitude: Double, longitude: Double): Address? = try {

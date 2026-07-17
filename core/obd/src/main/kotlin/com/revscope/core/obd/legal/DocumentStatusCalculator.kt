@@ -44,20 +44,30 @@ object DocumentStatusCalculator {
     /**
      * [overrideRules] es la edición manual del usuario (Ajustes → JSON de reglas). Solo se usa
      * cuando su `cityId` coincide con `documents.picoPlacaCity`; de lo contrario se resuelven
-     * las reglas vigentes de esa ciudad desde [CityRegistry].
+     * las reglas vigentes de esa ciudad desde [CityRegistry]. [aiFallbackRules] (opcional,
+     * obtenidas vía RestrictionRulesSource cuando [needsAiFallback]) solo aplican si las
+     * curadas faltan o están vencidas.
      */
     fun calculate(
         documents: VehicleDocuments,
         overrideRules: PicoYPlacaEngine.CityRules?,
         nowMs: Long,
         timeZoneId: String = "America/Bogota",
+        aiFallbackRules: PicoYPlacaEngine.CityRules? = null,
     ): List<DocStatus> = listOf(
         expiryStatus(DocType.SOAT, "SOAT", documents.soatExpiresAt, nowMs, timeZoneId),
         expiryStatus(DocType.RTM, "Tecnomecánica", documents.rtmExpiresAt, nowMs, timeZoneId),
-        picoYPlacaStatus(documents, overrideRules, nowMs, timeZoneId),
+        picoYPlacaStatus(documents, overrideRules, aiFallbackRules, nowMs),
         expiryStatus(DocType.TODO_RIESGO, "Todo riesgo", documents.insuranceExpiresAt, nowMs, timeZoneId),
         expiryStatus(DocType.LICENCIA, "Licencia", documents.licenseExpiresAt, nowMs, timeZoneId),
     )
+
+    /** True cuando la ciudad del perfil no tiene reglas curadas vigentes — momento de preguntar a la IA. */
+    fun needsAiFallback(cityId: String?, overrideRules: PicoYPlacaEngine.CityRules?, nowMs: Long): Boolean {
+        if (cityId == null) return false
+        val curated = CityRegistry.resolveRules(cityId, overrideRules) ?: return true
+        return nowMs !in curated.validFromMs..curated.validUntilMs
+    }
 
     /** Convierte un perfil de vehículo + fecha de licencia (DataStore) en [VehicleDocuments]. */
     fun fromProfile(profile: VehicleProfileEntity, licenseExpiresAt: Long?): VehicleDocuments =
@@ -119,8 +129,8 @@ object DocumentStatusCalculator {
     private fun picoYPlacaStatus(
         documents: VehicleDocuments,
         overrideRules: PicoYPlacaEngine.CityRules?,
+        aiFallbackRules: PicoYPlacaEngine.CityRules?,
         nowMs: Long,
-        timeZoneId: String,
     ): DocStatus {
         val titulo = "Pico y placa"
         val plate = documents.plate?.trim()
@@ -128,9 +138,9 @@ object DocumentStatusCalculator {
         if (cityId == null || plate.isNullOrEmpty()) {
             return DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
         }
-        val rules = CityRegistry.resolveRules(cityId, overrideRules)
+        val rules = pickActiveRules(cityId, overrideRules, aiFallbackRules, nowMs)
             ?: return DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, rulesPendientesDetalle(cityId))
-        val result = PicoYPlacaEngine.check(plate, documents.isMotorcycle, rules, nowMs, timeZoneId)
+        val result = PicoYPlacaEngine.check(plate, documents.isMotorcycle, rules, nowMs)
         return when (result.status) {
             PicoYPlacaEngine.Status.SIN_RESTRICCION ->
                 DocStatus(DocType.PICO_Y_PLACA, Nivel.OK, titulo, sinRestriccionDetalle(documents, rules))
@@ -142,6 +152,21 @@ object DocumentStatusCalculator {
                 DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Actualiza las reglas del semestre")
             PicoYPlacaEngine.Status.SIN_DATOS ->
                 DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
+        }
+    }
+
+    /** Curadas vigentes > IA vigente > curadas vencidas (para el status REGLAS_VENCIDAS) > null. */
+    private fun pickActiveRules(
+        cityId: String,
+        overrideRules: PicoYPlacaEngine.CityRules?,
+        aiFallbackRules: PicoYPlacaEngine.CityRules?,
+        nowMs: Long,
+    ): PicoYPlacaEngine.CityRules? {
+        val curated = CityRegistry.resolveRules(cityId, overrideRules)
+        return when {
+            curated != null && nowMs in curated.validFromMs..curated.validUntilMs -> curated
+            aiFallbackRules != null && nowMs in aiFallbackRules.validFromMs..aiFallbackRules.validUntilMs -> aiFallbackRules
+            else -> curated
         }
     }
 

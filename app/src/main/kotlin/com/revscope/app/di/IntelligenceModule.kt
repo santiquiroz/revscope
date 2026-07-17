@@ -3,6 +3,7 @@ package com.revscope.app.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.intelligence.IntelligenceCapability
@@ -16,8 +17,11 @@ import com.revscope.core.intelligence.provider.AI_PROVIDER_GEMINI
 import com.revscope.core.intelligence.provider.AI_PROVIDER_OPENAI
 import com.revscope.core.intelligence.provider.AiProviderFactory
 import com.revscope.core.intelligence.provider.AiProviderSelection
+import com.revscope.core.intelligence.restriction.AiRestrictionRulesSource
+import com.revscope.core.intelligence.restriction.RestrictionRulesFetcher
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.legal.LocalityDetector
+import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.service.GpsInfoSink
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.Module
@@ -84,6 +88,27 @@ object IntelligenceModule {
         gateProvider = localInfoGateProvider(settings, aiProviderFactory),
     )
 
+    /**
+     * Binds [RestrictionRulesSource] (:core:obd) to [AiRestrictionRulesSource]
+     * (:core:intelligence) — same GpsInfoSink/CityInfoAlerter indirection. Cache and gate
+     * travel as lambdas because :core:intelligence can't see :core:data.
+     */
+    @Provides
+    @Singleton
+    fun provideRestrictionRulesSource(
+        @ApplicationContext context: Context,
+        settings: DataStore<Preferences>,
+        alertsEngine: AlertsEngine,
+        aiProviderFactory: AiProviderFactory,
+    ): RestrictionRulesSource = AiRestrictionRulesSource(
+        localityDetector = LocalityDetector(context),
+        fetcher = RestrictionRulesFetcher { aiProviderFactory.current() },
+        alertsEngine = alertsEngine,
+        gateProvider = aiPicoPlacaGateProvider(settings, aiProviderFactory),
+        readCache = { settings.data.first()[PreferencesKeys.AI_RESTRICTION_RULES_JSON] },
+        writeCache = { json -> settings.edit { it[PreferencesKeys.AI_RESTRICTION_RULES_JSON] = json } },
+    )
+
     /** Reads the active provider's raw selection from DataStore + SecureKeyStore for [AiProviderFactory]. */
     private fun aiProviderSelectionProvider(
         settings: DataStore<Preferences>,
@@ -113,6 +138,24 @@ object IntelligenceModule {
         AI_PROVIDER_GEMINI -> PreferencesKeys.AI_MODEL_GEMINI
         AI_PROVIDER_CUSTOM -> PreferencesKeys.AI_MODEL_CUSTOM
         else -> PreferencesKeys.AI_MODEL_ANTHROPIC
+    }
+
+    /** Toggle ON + provider with web search configured — misma forma que el gate de info local. */
+    private fun aiPicoPlacaGateProvider(
+        settings: DataStore<Preferences>,
+        aiProviderFactory: AiProviderFactory,
+    ): suspend () -> Boolean = {
+        try {
+            withContext(Dispatchers.IO) {
+                val enabled = settings.data.first()[PreferencesKeys.AI_PICO_PLACA_ENABLED] ?: false
+                enabled && aiProviderFactory.current()?.supportsWebSearch == true
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "IntelligenceModule: failed to evaluate AI pico y placa gate")
+            false
+        }
     }
 
     /** Toggle ON + provider with web search configured — CityInfoAlerter's own gate on top checks session state. */

@@ -140,6 +140,15 @@ object PreferencesKeys {
     /** User-editable override of PicoYPlacaEngine.CityRules as JSON (rotation changes each semester) */
     val PICO_PLACA_RULES_JSON = stringPreferencesKey("pico_placa_rules_json")
 
+    /**
+     * Pico y placa por IA para cualquier ciudad (default false — opt-in, requiere
+     * proveedor de IA con búsqueda web; se recomienda Gemini por su capa gratuita).
+     */
+    val AI_PICO_PLACA_ENABLED = booleanPreferencesKey("ai_pico_placa_enabled")
+
+    /** Cache de reglas de restricción generadas por IA — ver AiRulesCache (municipio → entrada) */
+    val AI_RESTRICTION_RULES_JSON = stringPreferencesKey("ai_restriction_rules_json")
+
     // ── Combustible ──────────────────────────────────────────────────────────
 
     /**
@@ -160,10 +169,10 @@ object PreferencesKeys {
 
     // ── Radares de velocidad ─────────────────────────────────────────────────
 
-    /** Latitud del último centro de descarga manual de radares (refresco semanal automático) */
+    /** Latitud del centro de la última descarga de radares — manual o auto al salir de cobertura (CameraCoverageTracker) */
     val LAST_CAMERA_LAT = doublePreferencesKey("last_camera_lat")
 
-    /** Longitud del último centro de descarga manual de radares (refresco semanal automático) */
+    /** Longitud del centro de la última descarga de radares — manual o auto al salir de cobertura (CameraCoverageTracker) */
     val LAST_CAMERA_LON = doublePreferencesKey("last_camera_lon")
 
     // ── Copia de seguridad ───────────────────────────────────────────────────

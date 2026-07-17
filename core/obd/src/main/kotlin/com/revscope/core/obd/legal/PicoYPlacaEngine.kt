@@ -38,6 +38,8 @@ object PicoYPlacaEngine {
         val dateParityRestricted: Map<String, List<Int>> = emptyMap(),
         /** Si true, las motos nunca tienen restricción (ej. Bogotá). */
         val motosExentas: Boolean = false,
+        /** Zona horaria donde se evalúa el horario — ciudades fuera de Colombia (reglas IA) la traen en su JSON. */
+        val timeZoneId: String = "America/Bogota",
     )
 
     enum class Status {
@@ -92,7 +94,7 @@ object PicoYPlacaEngine {
         isMotorcycle: Boolean,
         rules: CityRules,
         nowMs: Long,
-        timeZoneId: String = "America/Bogota",
+        timeZoneId: String? = null,
     ): Result {
         if (nowMs !in rules.validFromMs..rules.validUntilMs) {
             return Result(Status.REGLAS_VENCIDAS, null, emptyList())
@@ -100,7 +102,7 @@ object PicoYPlacaEngine {
         if (isMotorcycle && rules.motosExentas) {
             return Result(Status.SIN_RESTRICCION, null, emptyList())
         }
-        val zonedNow = Instant.ofEpochMilli(nowMs).atZone(ZoneId.of(timeZoneId))
+        val zonedNow = Instant.ofEpochMilli(nowMs).atZone(ZoneId.of(timeZoneId ?: rules.timeZoneId))
         if (isWeekend(zonedNow.dayOfWeek)) {
             return Result(Status.SIN_RESTRICCION, null, emptyList())
         }
@@ -167,6 +169,7 @@ object PicoYPlacaEngine {
                 emptyMap()
             },
             motosExentas = obj.optBoolean("motosExentas", false),
+            timeZoneId = obj.optString("timeZoneId").ifBlank { "America/Bogota" },
         )
     } catch (e: Exception) {
         Timber.e(e, "PicoYPlacaEngine: failed to parse city rules JSON")

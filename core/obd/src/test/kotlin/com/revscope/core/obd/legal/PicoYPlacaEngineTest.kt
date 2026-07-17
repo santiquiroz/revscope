@@ -157,6 +157,46 @@ class PicoYPlacaEngineTest {
         assertEquals(bogotaRules, parsed)
     }
 
+    // ── Zona horaria por ciudad (reglas generadas por IA fuera de Colombia) ─────
+
+    private val cdmxRules = rules.copy(
+        cityId = "cdmx",
+        displayName = "Ciudad de México",
+        rotation = mapOf(2 to listOf(5, 6)),
+        timeZoneId = "America/Mexico_City",
+    )
+
+    @Test
+    fun `check evalua la hora en la zona horaria de las reglas`() {
+        // 20:00 Bogotá = 19:00 CDMX (UTC-6): fuera de horario en Bogotá, restringido aún en CDMX
+        val result = PicoYPlacaEngine.check("ABC125", isMotorcycle = false, cdmxRules, MONDAY_20H_BOGOTA_MS)
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_AHORA, result.status)
+    }
+
+    @Test
+    fun `check con zona horaria explicita sigue teniendo prioridad`() {
+        val result = PicoYPlacaEngine.check(
+            "ABC125", isMotorcycle = false, cdmxRules, MONDAY_20H_BOGOTA_MS, timeZoneId = "America/Bogota",
+        )
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_HOY_FUERA_DE_HORARIO, result.status)
+    }
+
+    @Test
+    fun `parseRulesJson lee timeZoneId opcional con default bogota`() {
+        val conTz = PicoYPlacaEngine.parseRulesJson(
+            """{"cityId":"cdmx","displayName":"CDMX","rotation":{"2":[5,6]},"startHour":5,"endHour":20,
+                "carDigit":"LAST","motoDigit":"FIRST","validFromMs":0,"validUntilMs":9999999999999,
+                "timeZoneId":"America/Mexico_City"}""",
+        )
+        assertEquals("America/Mexico_City", conTz?.timeZoneId)
+
+        val sinTz = PicoYPlacaEngine.parseRulesJson(
+            """{"cityId":"medellin","displayName":"Medellín","rotation":{"2":[1,7]},"startHour":5,"endHour":20,
+                "carDigit":"LAST","motoDigit":"FIRST","validFromMs":0,"validUntilMs":9999999999999}""",
+        )
+        assertEquals("America/Bogota", sinTz?.timeZoneId)
+    }
+
     private companion object {
         // 2026-06-01 10:00:00 America/Bogota (UTC-5) = 2026-06-01 15:00:00 UTC — lunes
         const val MONDAY_10AM_MS = 1_780_326_000_000L
@@ -193,5 +233,8 @@ class PicoYPlacaEngineTest {
 
         // 2026-08-05 21:00:00 America/Bogota — mismo día impar, límite superior del horario (exclusive)
         const val ODD_WEEKDAY_21H_MS = 1_785_981_600_000L
+
+        // 2026-06-01 20:00:00 America/Bogota (UTC-5) = 19:00 America/Mexico_City (UTC-6) — lunes
+        const val MONDAY_20H_BOGOTA_MS = 1_780_362_000_000L
     }
 }

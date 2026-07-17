@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
+import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.session.ObdSessionManager
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
@@ -15,6 +16,7 @@ import javax.inject.Inject
 class GetDocumentosTool @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val settings: DataStore<Preferences>,
+    private val aiRulesSource: RestrictionRulesSource,
 ) : McpTool {
 
     override val name = "get_documentos"
@@ -28,7 +30,11 @@ class GetDocumentosTool @Inject constructor(
         val license = prefs[PreferencesKeys.LICENSE_EXPIRES_AT]
         val overrideRules = prefs[PreferencesKeys.PICO_PLACA_RULES_JSON]?.let(PicoYPlacaEngine::parseRulesJson)
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val aiFallback = profile.picoPlacaCity
+            ?.takeIf { DocumentStatusCalculator.needsAiFallback(it, overrideRules, now) }
+            ?.let { runCatching { aiRulesSource.rulesForCity(it) }.getOrNull() }
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
         return JSONObject()
             .put(
                 "documentos",

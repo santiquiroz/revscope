@@ -12,6 +12,7 @@ import com.revscope.core.data.db.entities.MaintenanceItemEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
+import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.trip.MaintenanceCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,6 +40,7 @@ class AlDiaViewModel @Inject constructor(
     private val settings: DataStore<Preferences>,
     private val maintenanceDao: MaintenanceDao,
     private val sessionDao: SessionDao,
+    private val aiRulesSource: RestrictionRulesSource,
 ) : ViewModel() {
 
     val activeProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
@@ -83,15 +85,26 @@ class AlDiaViewModel @Inject constructor(
             calculateStatuses(profile, license, overrideRules)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    private fun calculateStatuses(
+    private suspend fun calculateStatuses(
         profile: VehicleProfileEntity?,
         license: Long?,
         overrideRules: PicoYPlacaEngine.CityRules?,
     ): List<DocumentStatusCalculator.DocStatus> {
         if (profile == null) return emptyList()
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
-        return DocumentStatusCalculator.calculate(documents, overrideRules, System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, now)
+        return DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
     }
+
+    private suspend fun aiFallbackFor(
+        cityId: String?,
+        overrideRules: PicoYPlacaEngine.CityRules?,
+        nowMs: Long,
+    ): PicoYPlacaEngine.CityRules? =
+        cityId
+            ?.takeIf { DocumentStatusCalculator.needsAiFallback(it, overrideRules, nowMs) }
+            ?.let { runCatching { aiRulesSource.rulesForCity(it) }.getOrNull() }
 
     fun setLicenseExpiresAt(value: Long?) {
         viewModelScope.launch {

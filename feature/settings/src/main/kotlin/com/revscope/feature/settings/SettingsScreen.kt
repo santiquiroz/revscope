@@ -110,6 +110,7 @@ fun SettingsScreen(
     val voiceSport by vm.voiceSport.collectAsState()
     val voicePicoPlaca by vm.voicePicoPlaca.collectAsState()
     val voiceLocalInfo by vm.voiceLocalInfo.collectAsState()
+    val aiPicoPlaca by vm.aiPicoPlaca.collectAsState()
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
     val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
@@ -265,6 +266,16 @@ fun SettingsScreen(
                     "Usa tu proveedor de IA con búsqueda web (~$0.02 por ciudad)"
                 } else {
                     "Requiere Claude, OpenAI o Gemini (no disponible con Compatible OpenAI)"
+                },
+            )
+            ToggleRow(
+                "Pico y placa por IA en cualquier ciudad",
+                aiPicoPlaca,
+                vm::updateAiPicoPlaca,
+                subtitle = if (aiProviderSupportsWebSearch(aiProvider)) {
+                    "Investiga la restricción de la ciudad donde estés (pico y placa, hoy no circula, rodízio…) y la guarda hasta que venza"
+                } else {
+                    "Configura primero un proveedor de IA con búsqueda web — recomendamos Gemini por su capa gratuita"
                 },
             )
 

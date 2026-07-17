@@ -11,6 +11,7 @@ import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
+import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
@@ -35,6 +36,7 @@ class DashboardViewModel @Inject constructor(
     private val alertsEngine: AlertsEngine,
     sessionManager: ObdSessionManager,
     private val settings: DataStore<Preferences>,
+    private val aiRulesSource: RestrictionRulesSource,
 ) : ViewModel() {
 
     /** Redline used by the shift light — cached in AlertsEngine from DataStore. */
@@ -103,14 +105,25 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun computeAlDiaBanner(
+    private suspend fun computeAlDiaBanner(
         profile: VehicleProfileEntity?,
         licenseExpiresAt: Long?,
         overrideRules: PicoYPlacaEngine.CityRules?,
     ): String? {
         if (profile == null) return null
         val documents = DocumentStatusCalculator.fromProfile(profile, licenseExpiresAt)
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, now)
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
         return DocumentStatusCalculator.bannerText(statuses)
     }
+
+    private suspend fun aiFallbackFor(
+        cityId: String?,
+        overrideRules: PicoYPlacaEngine.CityRules?,
+        nowMs: Long,
+    ): PicoYPlacaEngine.CityRules? =
+        cityId
+            ?.takeIf { DocumentStatusCalculator.needsAiFallback(it, overrideRules, nowMs) }
+            ?.let { runCatching { aiRulesSource.rulesForCity(it) }.getOrNull() }
 }

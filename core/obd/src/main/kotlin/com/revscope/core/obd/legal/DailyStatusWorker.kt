@@ -31,6 +31,7 @@ class DailyStatusWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val vehicleProfileDao: VehicleProfileDao,
     private val settings: DataStore<Preferences>,
+    private val aiRulesSource: RestrictionRulesSource,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -53,19 +54,29 @@ class DailyStatusWorker @AssistedInject constructor(
     private suspend fun readPicoYPlacaOverrideRules(): PicoYPlacaEngine.CityRules? =
         settings.data.first()[PreferencesKeys.PICO_PLACA_RULES_JSON]?.let(PicoYPlacaEngine::parseRulesJson)
 
-    private fun notableLineFor(
+    private suspend fun notableLineFor(
         profile: VehicleProfileEntity,
         license: Long?,
         overrideRules: PicoYPlacaEngine.CityRules?,
         nowMs: Long,
     ): String? {
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, nowMs)
+        val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, nowMs)
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, nowMs, aiFallbackRules = aiFallback)
         val notable = statuses.filter(::isNotable)
         if (notable.isEmpty()) return null
         val facts = notable.joinToString(" · ") { it.detalle }
         return "${emojiFor(profile)} ${profile.name}: $facts"
     }
+
+    private suspend fun aiFallbackFor(
+        cityId: String?,
+        overrideRules: PicoYPlacaEngine.CityRules?,
+        nowMs: Long,
+    ): PicoYPlacaEngine.CityRules? =
+        cityId
+            ?.takeIf { DocumentStatusCalculator.needsAiFallback(it, overrideRules, nowMs) }
+            ?.let { runCatching { aiRulesSource.rulesForCity(it) }.getOrNull() }
 
     private fun emojiFor(profile: VehicleProfileEntity): String =
         if (profile.type == "MOTORCYCLE") "🏍" else "🚗"

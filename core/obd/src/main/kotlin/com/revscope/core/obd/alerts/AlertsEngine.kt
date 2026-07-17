@@ -16,6 +16,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.R
+import com.revscope.core.obd.legal.CityRulesFormatter
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.model.ObdReading
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,6 +38,7 @@ private const val ANOMALY_COOLDOWN_MS = 60_000L
 private const val CUSTOM_ALERT_COOLDOWN_MS = 120_000L
 private const val LOCAL_INFO_CHANNEL_ID = "revscope_local_info"
 private const val LOCAL_INFO_NOTIFICATION_ID = 2001
+private const val AI_RULES_NOTIFICATION_ID = 2002
 
 /**
  * Turns telemetry readings into audible/haptic alerts. Audio goes out on the media
@@ -286,19 +288,37 @@ class AlertsEngine @Inject constructor(
     }
 
     private fun postLocalInfoNotification(municipio: String, frase: String) {
+        postSilentInfoNotification(LOCAL_INFO_NOTIFICATION_ID, "Estás en $municipio", frase)
+    }
+
+    /**
+     * Transparencia de las reglas de restricción generadas por IA (dato legal — el
+     * usuario debe poder revisarlas): notificación silenciosa con la rotación + aviso
+     * corto por voz gated por la categoría de pico y placa.
+     */
+    fun announceAiRulesUpdated(rules: PicoYPlacaEngine.CityRules) {
+        if (!enabled) return
+        val title = "Pico y placa de ${rules.displayName} actualizado por IA"
+        Timber.i("AlertsEngine: $title")
+        _alerts.tryEmit(ObdAlert(AlertType.PICO_Y_PLACA, title, 0.0))
+        postSilentInfoNotification(AI_RULES_NOTIFICATION_ID, title, CityRulesFormatter.resumen(rules))
+        if (voicePicoPlaca) speak(title)
+    }
+
+    private fun postSilentInfoNotification(notificationId: Int, title: String, body: String) {
         runCatching {
             createLocalInfoChannel()
             val notification = NotificationCompat.Builder(context, LOCAL_INFO_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_revscope)
-                .setContentTitle("Estás en $municipio")
-                .setContentText(frase)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(frase))
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .build()
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                .notify(LOCAL_INFO_NOTIFICATION_ID, notification)
-        }.onFailure { Timber.w(it, "AlertsEngine: local info notification failed") }
+                .notify(notificationId, notification)
+        }.onFailure { Timber.w(it, "AlertsEngine: info notification failed") }
     }
 
     private fun createLocalInfoChannel() {
