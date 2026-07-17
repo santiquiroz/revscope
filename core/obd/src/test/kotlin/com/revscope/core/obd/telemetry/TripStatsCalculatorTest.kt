@@ -125,6 +125,21 @@ class TripStatsCalculatorTest {
     }
 
     @Test
+    fun `initial bearing points north east south west`() {
+        assertEquals(0.0, TripStatsCalculator.initialBearingDegrees(6.0, -75.0, 6.001, -75.0), 0.5)
+        assertEquals(90.0, TripStatsCalculator.initialBearingDegrees(6.0, -75.0, 6.0, -74.999), 0.5)
+        assertEquals(180.0, TripStatsCalculator.initialBearingDegrees(6.0, -75.0, 5.999, -75.0), 0.5)
+        assertEquals(270.0, TripStatsCalculator.initialBearingDegrees(6.0, -75.0, 6.0, -75.001), 0.5)
+    }
+
+    @Test
+    fun `initial bearing medellin to bogota is roughly southeast`() {
+        // Medellín (6.2442, -75.5812) → Bogotá (4.7110, -74.0721) ≈ 136°
+        val bearing = TripStatsCalculator.initialBearingDegrees(6.2442, -75.5812, 4.7110, -74.0721)
+        assertEquals(136.0, bearing, 3.0)
+    }
+
+    @Test
     fun `gps distance with exactly two points matches known distance`() {
         val points = listOf(
             com.revscope.core.data.db.entities.GpsPointEntity(

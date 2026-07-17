@@ -33,13 +33,14 @@ class SpeedCameraAlerter @Inject constructor(
     private val loading = AtomicBoolean(false)
     private var loaded = false
     private val lastAlertedAt = mutableMapOf<Long, Long>()
+    private val lastDistanceM = mutableMapOf<Long, Double>()
 
     fun invalidateCache() {
         loaded = false
         ensureLoaded()
     }
 
-    fun onGpsFix(latitude: Double, longitude: Double) {
+    fun onGpsFix(latitude: Double, longitude: Double, headingDeg: Float?) {
         if (!loaded) {
             ensureLoaded()
             return
@@ -49,7 +50,15 @@ class SpeedCameraAlerter @Inject constructor(
             val distance = TripStatsCalculator.haversineMeters(
                 latitude, longitude, camera.latitude, camera.longitude,
             )
-            if (distance > ALERT_DISTANCE_M) continue
+            if (distance > ALERT_DISTANCE_M) {
+                lastDistanceM.remove(camera.osmId)
+                continue
+            }
+            val previousDistance = lastDistanceM.put(camera.osmId, distance)
+            val bearingToCamera = TripStatsCalculator.initialBearingDegrees(
+                latitude, longitude, camera.latitude, camera.longitude,
+            )
+            if (!CameraApproachGate.shouldAlert(headingDeg, bearingToCamera, previousDistance, distance)) continue
             synchronized(lastAlertedAt) {
                 if (now - (lastAlertedAt[camera.osmId] ?: 0L) < PER_CAMERA_COOLDOWN_MS) return@synchronized
                 lastAlertedAt[camera.osmId] = now

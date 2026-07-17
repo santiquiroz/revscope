@@ -17,6 +17,7 @@ import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.legal.CityEnforcementAlerter
 import com.revscope.core.obd.motion.MotionMetricsHub
@@ -62,6 +63,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var imuDao: ImuDao
     @Inject lateinit var trackModeEngine: TrackModeEngine
     @Inject lateinit var cameraAlerter: SpeedCameraAlerter
+    @Inject lateinit var coverageTracker: CameraCoverageTracker
     @Inject lateinit var cityAlerter: CityEnforcementAlerter
     @Inject lateinit var localInfoSink: GpsInfoSink
     @Inject lateinit var motionHub: MotionMetricsHub
@@ -161,6 +163,7 @@ class ObdForegroundService : Service() {
             trackModeEngine,
             onBearing = imu::updateGpsBearing,
             cameraAlerter = cameraAlerter,
+            coverageTracker = coverageTracker,
             cityAlerter = cityAlerter,
             localInfoSink = localInfoSink,
             routeHolder = routeHolder,

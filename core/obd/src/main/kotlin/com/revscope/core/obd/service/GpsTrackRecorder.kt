@@ -9,6 +9,7 @@ import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.entities.GpsPointEntity
+import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.legal.CityEnforcementAlerter
 import com.revscope.core.obd.track.TrackModeEngine
@@ -36,6 +37,7 @@ class GpsTrackRecorder(
     private val trackModeEngine: TrackModeEngine? = null,
     private val onBearing: ((Float) -> Unit)? = null,
     private val cameraAlerter: SpeedCameraAlerter? = null,
+    private val coverageTracker: CameraCoverageTracker? = null,
     private val cityAlerter: CityEnforcementAlerter? = null,
     private val localInfoSink: GpsInfoSink? = null,
     private val routeHolder: LiveRouteHolder? = null,
@@ -138,7 +140,12 @@ class GpsTrackRecorder(
             synchronized(buffer) { buffer += point }
         }
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
-        cameraAlerter?.onGpsFix(location.latitude, location.longitude)
+        cameraAlerter?.onGpsFix(
+            location.latitude,
+            location.longitude,
+            if (location.hasBearing()) location.bearing else null,
+        )
+        coverageTracker?.onGpsFix(location.latitude, location.longitude)
         cityAlerter?.onGpsFix(location.latitude, location.longitude)
         localInfoSink?.onGpsFix(location.latitude, location.longitude)
         routeHolder?.append(location.latitude, location.longitude)
