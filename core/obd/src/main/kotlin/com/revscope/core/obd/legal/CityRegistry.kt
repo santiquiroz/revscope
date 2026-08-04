@@ -30,7 +30,7 @@ object CityRegistry {
             lat = 6.2442,
             lon = -75.5812,
             radiusKm = 18.0,
-            rules = PicoYPlacaEngine.MEDELLIN_2026_S1,
+            rules = PicoYPlacaEngine.MEDELLIN_2026_S2,
         ),
         City(
             id = "bogota",

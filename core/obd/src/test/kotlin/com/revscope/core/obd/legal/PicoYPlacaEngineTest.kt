@@ -86,6 +86,37 @@ class PicoYPlacaEngineTest {
         assertNull(PicoYPlacaEngine.parseRulesJson("no es json"))
     }
 
+    // ── Medellín 2026-S2 (rige 2026-08-03 → 2027-01-29) ─────────────────────────
+
+    private val rulesS2 = PicoYPlacaEngine.MEDELLIN_2026_S2
+
+    @Test
+    fun `s2 moto con primer digito 2 el miercoles esta restringida ahora`() {
+        // miércoles S2 restringe [0,2]; NZO28H moto → primer dígito 2
+        val result = PicoYPlacaEngine.check("NZO28H", isMotorcycle = true, rulesS2, S2_WEDNESDAY_10AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_AHORA, result.status)
+        assertEquals(20, result.endHour)
+    }
+
+    @Test
+    fun `s2 carro con ultimo digito 4 el martes esta restringido ahora`() {
+        // martes S2 restringe [1,4]
+        val result = PicoYPlacaEngine.check("ABC124", isMotorcycle = false, rulesS2, S2_TUESDAY_10AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.RESTRINGIDO_AHORA, result.status)
+    }
+
+    @Test
+    fun `s2 moto con primer digito 2 el martes esta sin restriccion`() {
+        val result = PicoYPlacaEngine.check("NZO28H", isMotorcycle = true, rulesS2, S2_TUESDAY_10AM_MS)
+        assertEquals(PicoYPlacaEngine.Status.SIN_RESTRICCION, result.status)
+    }
+
+    @Test
+    fun `s2 vencidas despues del 29 de enero 2027`() {
+        val result = PicoYPlacaEngine.check("NZO28H", isMotorcycle = true, rulesS2, S2_FEB_2027_MS)
+        assertEquals(PicoYPlacaEngine.Status.REGLAS_VENCIDAS, result.status)
+    }
+
     // ── Bogotá — esquema DATE_PARITY (par/impar calendario), motos exentas ──────
 
     private val bogotaRules = PicoYPlacaEngine.BOGOTA_2026
@@ -215,6 +246,15 @@ class PicoYPlacaEngineTest {
 
         // 2026-09-01 10:00:00 America/Bogota (UTC-5) = 2026-09-01 15:00:00 UTC — fuera del semestre
         const val SEPT_1_10AM_MS = 1_788_274_800_000L
+
+        // 2026-08-04 10:00:00 America/Bogota (UTC-5) — martes, dentro de S2
+        const val S2_TUESDAY_10AM_MS = 1_785_855_600_000L
+
+        // 2026-08-05 10:00:00 America/Bogota (UTC-5) — miércoles, dentro de S2
+        const val S2_WEDNESDAY_10AM_MS = 1_785_942_000_000L
+
+        // 2027-02-01 10:00:00 America/Bogota (UTC-5) — después del fin de S2 (2027-01-29)
+        const val S2_FEB_2027_MS = 1_801_494_000_000L
 
         // 2026-08-05 10:00:00 America/Bogota — miércoles, día 5 (impar)
         const val ODD_WEEKDAY_10AM_MS = 1_785_942_000_000L

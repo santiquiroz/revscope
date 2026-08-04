@@ -132,6 +132,9 @@ object PreferencesKeys {
      */
     val VOICE_LOCAL_INFO = booleanPreferencesKey("voice_local_info")
 
+    /** Aviso hablado único diario ~25 min antes del atardecer (default true — pico de riesgo moto) */
+    val VOICE_SUNSET = booleanPreferencesKey("voice_sunset")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */

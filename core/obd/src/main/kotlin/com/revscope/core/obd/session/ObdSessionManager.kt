@@ -16,8 +16,11 @@ import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.connection.AdapterType
+import com.revscope.core.obd.connection.BleTransport
 import com.revscope.core.obd.connection.ClassicBtTransport
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
@@ -119,13 +122,15 @@ class ObdSessionManager @Inject constructor(
     private val _odometerSupported = MutableStateFlow<Boolean?>(null)
     val odometerSupported: StateFlow<Boolean?> = _odometerSupported.asStateFlow()
 
-    private var transport: ClassicBtTransport? = null
+    private var transport: Transport? = null
     private var telemetryJob: Job? = null
     private var stateJob: Job? = null
     private var reconnectJob: Job? = null
     private var gpsInactivityJob: Job? = null
     private var gpsSessionStartedAt: Long = 0L
     private var currentDeviceAddress: String? = null
+    private var currentAdapterType: AdapterType = AdapterType.CLASSIC_BT
+    @Volatile private var lastAdapterType: AdapterType = AdapterType.CLASSIC_BT
     private val derivedEngine = DerivedMetricsEngine()
     private val engineOffDetector = EngineOffDetector()
     private val voltagePoller = VoltagePoller()
@@ -257,7 +262,7 @@ class ObdSessionManager @Inject constructor(
      * Reads the VIN (Mode 09 02) and auto-activates the matching profile.
      * Motorcycles often don't implement 09 02 — the previously active profile stays.
      */
-    private suspend fun resolveProfileByVin(bt: ClassicBtTransport) {
+    private suspend fun resolveProfileByVin(bt: Transport) {
         val vin = runCatching { bt.exchange(ElmCommandBuilder.readVin(), VIN_TIMEOUT_MS) }
             .getOrNull()
             ?.let { ResponseParser.parseVinResponse(it) }
@@ -277,7 +282,7 @@ class ObdSessionManager @Inject constructor(
      * [OdometerChecker]. A no-op (near-instant) when the ECU doesn't support the PID;
      * a real ~200ms-5s roundtrip only on vehicles that do.
      */
-    private suspend fun checkOdometerOnce(bt: ClassicBtTransport) {
+    private suspend fun checkOdometerOnce(bt: Transport) {
         _odometerSupported.value = odometerChecker.isSupported()
         val profileId = _activeProfile.value?.id ?: return
         runCatching { odometerChecker.check(bt, profileId) }
@@ -340,13 +345,13 @@ class ObdSessionManager @Inject constructor(
         activeScheduler?.setIdleMode(enabled)
     }
 
-    fun connectToDevice(deviceAddress: String) {
+    fun connectToDevice(deviceAddress: String, type: AdapterType = AdapterType.CLASSIC_BT) {
         reconnectJob?.cancel()
         // A live GPS trip must not keep "owning" currentSessionId once an adapter shows up —
         // close its bookkeeping here; connect()'s own stopTelemetry() below is then a no-op
         // for it (currentSessionId already null) and starts the OBD session cleanly.
         if (_gpsSessionActive.value) stopGpsSessionInternal(alsoStopService = false)
-        connect(deviceAddress, ConnectMode.NORMAL)
+        connect(deviceAddress, ConnectMode.NORMAL, type)
     }
 
     /**
@@ -467,7 +472,7 @@ class ObdSessionManager @Inject constructor(
     /** Retries the current (or last persisted) adapter — wired to the error screen's button. */
     fun reconnectToLast() {
         val address = currentDeviceAddress ?: _lastAdapterAddress.value
-        if (address != null) connectToDevice(address) else disconnect()
+        if (address != null) connectToDevice(address, lastAdapterType) else disconnect()
     }
 
     fun disconnect() {
@@ -572,11 +577,14 @@ class ObdSessionManager @Inject constructor(
     private suspend fun autoConnectToLastAdapter() {
         val prefs = runCatching { settings.data.first() }.getOrNull() ?: return
         val address = prefs[PreferencesKeys.ADAPTER_ADDRESS] ?: return
+        val type = AdapterType.from(prefs[PreferencesKeys.ADAPTER_TYPE])
+        lastAdapterType = type
         _lastAdapterAddress.value = address
         if (_connectionState.value != ConnectionState.Disconnected) return
-        if (!isBonded(address)) return
-        Timber.i("ObdSessionManager: auto-connecting to last adapter $address")
-        connect(address, ConnectMode.STARTUP)
+        // Los adaptadores BLE normalmente no se emparejan — el check de bonded solo aplica a Classic.
+        if (type == AdapterType.CLASSIC_BT && !isBonded(address)) return
+        Timber.i("ObdSessionManager: auto-connecting to last adapter $address ($type)")
+        connect(address, ConnectMode.STARTUP, type)
     }
 
     private fun isBonded(address: String): Boolean = try {
@@ -585,11 +593,12 @@ class ObdSessionManager @Inject constructor(
         false
     }
 
-    private fun connect(deviceAddress: String, mode: ConnectMode) {
+    private fun connect(deviceAddress: String, mode: ConnectMode, type: AdapterType = AdapterType.CLASSIC_BT) {
         scope.launch {
             stopTelemetry()
             transport?.disconnect()
             currentDeviceAddress = deviceAddress
+            currentAdapterType = type
 
             val adapter = bluetoothAdapter ?: run {
                 if (mode == ConnectMode.NORMAL) {
@@ -598,7 +607,10 @@ class ObdSessionManager @Inject constructor(
                 return@launch
             }
 
-            val bt = ClassicBtTransport(adapter, deviceAddress)
+            val bt: Transport = when (type) {
+                AdapterType.CLASSIC_BT -> ClassicBtTransport(adapter, deviceAddress)
+                AdapterType.BLE -> BleTransport(appContext, deviceAddress)
+            }
             transport = bt
 
             var connectedSeen = false
@@ -635,10 +647,12 @@ class ObdSessionManager @Inject constructor(
 
     private suspend fun saveLastAdapter(address: String, name: String) {
         _lastAdapterAddress.value = address
+        lastAdapterType = currentAdapterType
         runCatching {
             settings.edit { prefs ->
                 prefs[PreferencesKeys.ADAPTER_ADDRESS] = address
                 prefs[PreferencesKeys.ADAPTER_NAME] = name
+                prefs[PreferencesKeys.ADAPTER_TYPE] = currentAdapterType.name
             }
         }.onFailure { Timber.w(it, "ObdSessionManager: failed to persist last adapter") }
     }
@@ -651,7 +665,7 @@ class ObdSessionManager @Inject constructor(
                 delay(waitMs)
                 if (_connectionState.value is ConnectionState.Connected) return@launch
                 Timber.i("ObdSessionManager: auto-reconnect attempt ${attempt + 1} to $address")
-                connect(address, ConnectMode.BACKGROUND)
+                connect(address, ConnectMode.BACKGROUND, currentAdapterType)
             }
             // Give the last attempt time to finish its 12 s connect watchdog
             delay(RECONNECT_FINAL_GRACE_MS)
@@ -663,7 +677,7 @@ class ObdSessionManager @Inject constructor(
     }
 
     /** Best-effort probe that still honors coroutine cancellation. */
-    private suspend fun probe(bt: ClassicBtTransport, command: String, timeoutMs: Long): String? =
+    private suspend fun probe(bt: Transport, command: String, timeoutMs: Long): String? =
         try {
             bt.exchange(command, timeoutMs)
         } catch (e: CancellationException) {
@@ -676,7 +690,7 @@ class ObdSessionManager @Inject constructor(
      * Ignition-off signature: the ELM adapter still answers (battery-powered)
      * but the ECU is silent. A dead socket falls back to the movement heuristic.
      */
-    private suspend fun classifyLinkLoss(bt: ClassicBtTransport?): EngineOffDetector.LinkLossCause {
+    private suspend fun classifyLinkLoss(bt: Transport?): EngineOffDetector.LinkLossCause {
         if (bt != null) {
             val adapterAnswer = probe(bt, "AT RV\r", VOLTAGE_TIMEOUT_MS)
             if (adapterAnswer != null && parseVoltage(adapterAnswer) != null) {
@@ -713,7 +727,7 @@ class ObdSessionManager @Inject constructor(
 
     // ── Telemetry pipeline ───────────────────────────────────────────────────
 
-    private suspend fun startTelemetry(bt: ClassicBtTransport, deviceName: String) {
+    private suspend fun startTelemetry(bt: Transport, deviceName: String) {
         _odometerSupported.value = null
         val negotiationResult = ProtocolNegotiator(bt).initialize().getOrElse { e ->
             Timber.e(e, "ObdSessionManager: protocol negotiation failed")

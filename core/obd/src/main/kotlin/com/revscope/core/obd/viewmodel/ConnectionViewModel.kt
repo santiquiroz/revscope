@@ -1,8 +1,11 @@
 package com.revscope.core.obd.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.connection.AdapterType
+import com.revscope.core.obd.connection.BleScanner
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.ObdReading
@@ -21,6 +24,7 @@ import javax.inject.Inject
 class ConnectionViewModel @Inject constructor(
     private val manager: ObdSessionManager,
     alertsEngine: AlertsEngine,
+    private val bleScanner: BleScanner,
 ) : ViewModel() {
 
     val connectionState: StateFlow<ConnectionState> = manager.connectionState
@@ -36,9 +40,19 @@ class ConnectionViewModel @Inject constructor(
 
     fun setGearTable(table: List<Pair<Int, Double>>) = manager.setGearTable(table)
 
-    fun connectToDevice(deviceAddress: String) = manager.connectToDevice(deviceAddress)
+    fun connectToDevice(deviceAddress: String, type: AdapterType = AdapterType.CLASSIC_BT) =
+        manager.connectToDevice(deviceAddress, type)
 
     fun reconnectToLast() = manager.reconnectToLast()
+
+    // ── Escaneo BLE bajo demanda (los adaptadores BLE no aparecen en emparejados) ──
+
+    val bleScanResults: StateFlow<List<BleScanner.Device>> = bleScanner.results
+    val bleScanning: StateFlow<Boolean> = bleScanner.scanning
+
+    fun startBleScan() = bleScanner.start(viewModelScope)
+
+    fun stopBleScan() = bleScanner.stop()
 
     fun disconnect() = manager.disconnect()
 
@@ -61,4 +75,9 @@ class ConnectionViewModel @Inject constructor(
     ): Result<String> = manager.probeModule(requestHeader, request, timeoutMs)
 
     suspend fun protocolNumber(): String? = manager.currentProtocolNumber()
+
+    override fun onCleared() {
+        bleScanner.stop()
+        super.onCleared()
+    }
 }

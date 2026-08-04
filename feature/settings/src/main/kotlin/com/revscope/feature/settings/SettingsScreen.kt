@@ -103,6 +103,7 @@ fun SettingsScreen(
     val voiceTemperature by vm.voiceTemperature.collectAsState()
     val voiceVoltage by vm.voiceVoltage.collectAsState()
     val voiceSpeedCameras by vm.voiceSpeedCameras.collectAsState()
+    val voiceSunset by vm.voiceSunset.collectAsState()
     val voiceAnomalies by vm.voiceAnomalies.collectAsState()
     val voiceMil by vm.voiceMil.collectAsState()
     val voiceRedline by vm.voiceRedline.collectAsState()
@@ -265,6 +266,12 @@ fun SettingsScreen(
             ToggleRow("Umbrales personalizados", voiceCustomThresholds, vm::updateVoiceCustomThresholds)
             ToggleRow("Tiempos 0-100 y vueltas", voiceSport, vm::updateVoiceSport)
             ToggleRow("Pico y placa al entrar a otra ciudad", voicePicoPlaca, vm::updateVoicePicoPlaca)
+            ToggleRow(
+                "Aviso de atardecer",
+                voiceSunset,
+                vm::updateVoiceSunset,
+                subtitle = "Un aviso diario ~25 min antes del ocaso: enciende luces y hazte visible",
+            )
             ToggleRow(
                 "Información local al cambiar de ciudad",
                 voiceLocalInfo,

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,7 +27,11 @@ class LiveMapViewModel @Inject constructor(
     routeHolder: LiveRouteHolder,
     private val cameraDao: SpeedCameraDao,
     sessionManager: ObdSessionManager,
+    cameraAlerter: SpeedCameraAlerter,
 ) : ViewModel() {
+
+    /** Radar hacia el que se dirige el vehículo (cono ±60°, <1 km) — null si ninguno aplica. */
+    val approachingCamera: StateFlow<SpeedCameraAlerter.ApproachingCamera?> = cameraAlerter.approaching
 
     val route: StateFlow<List<LiveRouteHolder.RoutePoint>> = routeHolder.points
 

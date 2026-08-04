@@ -56,6 +56,8 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.revscope.core.obd.connection.AdapterType
+import com.revscope.core.obd.connection.BleScanner
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import com.revscope.feature.dashboard.ui.RevScopeColors
@@ -70,6 +72,12 @@ fun AdapterScanScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val connectionState by connectionVm.connectionState.collectAsState()
     val lastAdapterAddress by connectionVm.lastAdapterAddress.collectAsState()
+    val bleDevices by connectionVm.bleScanResults.collectAsState()
+    val bleScanning by connectionVm.bleScanning.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose { connectionVm.stopBleScan() }
+    }
 
     var hasBluetoothPermission by remember { mutableStateOf(hasBtConnectPermission(context)) }
 
@@ -153,6 +161,8 @@ fun AdapterScanScreen(
                     bondedDevices = bondedDevices,
                     lastAdapterAddress = lastAdapterAddress,
                     hasPermission = hasBluetoothPermission,
+                    bleDevices = bleDevices,
+                    bleScanning = bleScanning,
                     onRequestPermission = {
                         permissionLauncher.launch(
                             arrayOf(
@@ -162,6 +172,11 @@ fun AdapterScanScreen(
                         )
                     },
                     onConnectDevice = { address -> connectionVm.connectToDevice(address) },
+                    onStartBleScan = { connectionVm.startBleScan() },
+                    onConnectBle = { address ->
+                        connectionVm.stopBleScan()
+                        connectionVm.connectToDevice(address, AdapterType.BLE)
+                    },
                 )
 
                 ConnectionState.Connecting -> ConnectingContent()
@@ -193,8 +208,12 @@ private fun DisconnectedContent(
     bondedDevices: List<BluetoothDevice>,
     lastAdapterAddress: String?,
     hasPermission: Boolean,
+    bleDevices: List<BleScanner.Device>,
+    bleScanning: Boolean,
     onRequestPermission: () -> Unit,
     onConnectDevice: (String) -> Unit,
+    onStartBleScan: () -> Unit,
+    onConnectBle: (String) -> Unit,
 ) {
     if (!hasPermission) {
         Column(
@@ -225,23 +244,25 @@ private fun DisconnectedContent(
         return
     }
 
-    Text(
-        "Paired devices",
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = RevScopeColors.TextMuted,
-        modifier = Modifier.padding(bottom = 8.dp),
-    )
-
-    if (bondedDevices.isEmpty()) {
-        Text(
-            "No paired Bluetooth devices found.\nPair your OBD2 adapter in Android Settings first.",
-            color = RevScopeColors.TextMuted,
-            fontSize = 13.sp,
-        )
-    } else {
-        val sortedDevices = bondedDevices.sortedByDescending { it.address == lastAdapterAddress }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val sortedDevices = bondedDevices.sortedByDescending { it.address == lastAdapterAddress }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            Text(
+                "Paired devices",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = RevScopeColors.TextMuted,
+            )
+        }
+        if (sortedDevices.isEmpty()) {
+            item {
+                Text(
+                    "No paired Bluetooth devices found.\nPair your OBD2 adapter in Android Settings first.",
+                    color = RevScopeColors.TextMuted,
+                    fontSize = 13.sp,
+                )
+            }
+        } else {
             items(sortedDevices, key = { it.address }) { device ->
                 DeviceItem(
                     device = device,
@@ -249,6 +270,88 @@ private fun DisconnectedContent(
                     onClick = { onConnectDevice(device.address) },
                 )
             }
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Adaptadores BLE",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = RevScopeColors.TextMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                if (bleScanning) {
+                    CircularProgressIndicator(
+                        color = RevScopeColors.Accent,
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Button(
+                        onClick = onStartBleScan,
+                        colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
+                    ) {
+                        Text("Buscar", color = RevScopeColors.TextPrimary, fontSize = 12.sp)
+                    }
+                }
+            }
+            Text(
+                "Los adaptadores BLE (Vgate 4.0, VLink…) no aparecen en emparejados — búscalos aquí.",
+                color = RevScopeColors.TextMuted,
+                fontSize = 11.sp,
+            )
+        }
+        if (bleDevices.isEmpty() && !bleScanning) {
+            item {
+                Text(
+                    "Sin resultados aún.",
+                    color = RevScopeColors.TextMuted,
+                    fontSize = 12.sp,
+                )
+            }
+        } else {
+            items(bleDevices, key = { "ble-${it.address}" }) { device ->
+                BleDeviceItem(
+                    device = device,
+                    isLastUsed = device.address == lastAdapterAddress,
+                    onClick = { onConnectBle(device.address) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BleDeviceItem(device: BleScanner.Device, isLastUsed: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RevScopeColors.Accent)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(device.name, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text("${device.address}  ·  ${device.rssi} dBm  ·  BLE", color = RevScopeColors.TextMuted, fontSize = 11.sp)
+        }
+        if (isLastUsed) {
+            Text(
+                "Último usado",
+                color = RevScopeColors.Accent,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
         }
     }
 }

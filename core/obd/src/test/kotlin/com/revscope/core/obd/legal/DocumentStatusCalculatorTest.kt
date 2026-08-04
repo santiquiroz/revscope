@@ -166,20 +166,20 @@ class DocumentStatusCalculatorTest {
 
     // ── Fallback IA cuando las reglas curadas faltan o están vencidas ──────────
 
-    /** Rotación S2 ficticia generada por IA: vigente ago-dic 2026, miércoles restringe [2,8]. */
+    /** Rotación ficticia generada por IA: vigente ago 2026 - jun 2027, miércoles restringe [2,8]. */
     private val medellinS2PorIa = PicoYPlacaEngine.MEDELLIN_2026_S1.copy(
         rotation = mapOf(2 to listOf(1, 2), 3 to listOf(3, 4), 4 to listOf(2, 8), 5 to listOf(5, 6), 6 to listOf(9, 0)),
         validFromMs = utcMs(2026, 8, 1),
-        validUntilMs = utcMs(2027, 1, 1),
+        validUntilMs = utcMs(2027, 7, 1),
     )
 
     @Test
     fun `medellin con reglas vencidas usa el fallback IA vigente`() {
-        // Ago 5 2026: MEDELLIN_2026_S1 venció jul 31; la rotación IA restringe el 2 los miércoles
+        // Feb 3 2027: MEDELLIN_2026_S2 venció ene 29; la rotación IA restringe el 2 los miércoles
         val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
 
         val statuses = DocumentStatusCalculator.calculate(
-            documents, null, ODD_WEEKDAY_10AM_MS, aiFallbackRules = medellinS2PorIa,
+            documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, aiFallbackRules = medellinS2PorIa,
         )
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
@@ -191,7 +191,7 @@ class DocumentStatusCalculatorTest {
     fun `medellin con reglas vencidas sin fallback pide actualizar el semestre`() {
         val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
 
-        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS)
+        val statuses = DocumentStatusCalculator.calculate(documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR, picoYPlaca.nivel)
@@ -204,7 +204,7 @@ class DocumentStatusCalculatorTest {
         val iaVencida = medellinS2PorIa.copy(validFromMs = 0L, validUntilMs = 1L)
 
         val statuses = DocumentStatusCalculator.calculate(
-            documents, null, ODD_WEEKDAY_10AM_MS, aiFallbackRules = iaVencida,
+            documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, aiFallbackRules = iaVencida,
         )
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
@@ -214,12 +214,12 @@ class DocumentStatusCalculatorTest {
 
     @Test
     fun `curadas vigentes ganan sobre el fallback IA`() {
-        // Jun 5 viernes: S1 vigente restringe [2,8]; la IA (sin restricción) NO debe aplicar
+        // Miércoles ago 5: S2 vigente restringe [0,2]; la IA (sin restricción) NO debe aplicar
         val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
         val iaSinRestriccion = medellinS2PorIa.copy(rotation = emptyMap(), validFromMs = 0L)
 
         val statuses = DocumentStatusCalculator.calculate(
-            documents, null, FRIDAY_10AM_MS, aiFallbackRules = iaSinRestriccion,
+            documents, null, ODD_WEEKDAY_10AM_MS, aiFallbackRules = iaSinRestriccion,
         )
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
@@ -241,9 +241,10 @@ class DocumentStatusCalculatorTest {
 
     @Test
     fun `needsAiFallback solo cuando faltan reglas curadas vigentes`() {
-        assertEquals(false, DocumentStatusCalculator.needsAiFallback(null, null, FRIDAY_10AM_MS))
-        assertEquals(false, DocumentStatusCalculator.needsAiFallback("medellin", null, FRIDAY_10AM_MS))
-        assertEquals(true, DocumentStatusCalculator.needsAiFallback("medellin", null, ODD_WEEKDAY_10AM_MS))
+        assertEquals(false, DocumentStatusCalculator.needsAiFallback(null, null, ODD_WEEKDAY_10AM_MS))
+        // S2 vigente en ago 2026 → sin fallback; vencida en feb 2027 → fallback
+        assertEquals(false, DocumentStatusCalculator.needsAiFallback("medellin", null, ODD_WEEKDAY_10AM_MS))
+        assertEquals(true, DocumentStatusCalculator.needsAiFallback("medellin", null, EXPIRED_S2_WEDNESDAY_10AM_MS))
         assertEquals(true, DocumentStatusCalculator.needsAiFallback("cali", null, FRIDAY_10AM_MS))
         assertEquals(false, DocumentStatusCalculator.needsAiFallback("bogota", null, ODD_WEEKDAY_10AM_MS))
     }
@@ -280,6 +281,9 @@ class DocumentStatusCalculatorTest {
 
         // 2026-08-05 10:00:00 America/Bogota — miércoles, día 5 (impar), dentro de la vigencia Bogotá
         const val ODD_WEEKDAY_10AM_MS = 1_785_942_000_000L
+
+        // 2027-02-03 10:00:00 America/Bogota — miércoles, después del fin de MEDELLIN_2026_S2 (ene 29)
+        const val EXPIRED_S2_WEDNESDAY_10AM_MS = 1_801_666_800_000L
 
         // 2026-06-10 21:00:00 America/Bogota (UTC-5) = 2026-06-11 02:00:00 UTC.
         // Regression for the timezone bug: the old UTC-only calculation would read the

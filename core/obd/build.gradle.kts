@@ -53,6 +53,9 @@ dependencies {
     implementation(libs.exp4j)
     implementation(libs.timber)
 
+    // Transporte BLE para clones ELM327 BLE (Vgate 4.0, VLink, etc.)
+    implementation(libs.blessed.android)
+
     // Embedded MCP server over local WiFi (Plan 6 Task 4)
     implementation(libs.nanohttpd)
 

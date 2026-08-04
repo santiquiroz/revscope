@@ -24,7 +24,7 @@ class CityRegistryTest {
     fun `registro incluye medellin con las reglas del semestre vigente`() {
         val medellin = CityRegistry.CITIES.first { it.id == "medellin" }
 
-        assertEquals(PicoYPlacaEngine.MEDELLIN_2026_S1, medellin.rules)
+        assertEquals(PicoYPlacaEngine.MEDELLIN_2026_S2, medellin.rules)
     }
 
     @Test

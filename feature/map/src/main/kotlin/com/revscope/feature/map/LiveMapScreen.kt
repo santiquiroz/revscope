@@ -24,9 +24,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import kotlinx.coroutines.flow.StateFlow
 import org.osmdroid.config.Configuration
@@ -47,6 +53,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val route by viewModel.route.collectAsState()
     val routeRevision by viewModel.routeRevision.collectAsState()
     val cameras by viewModel.cameras.collectAsState()
+    val approaching by viewModel.approachingCamera.collectAsState()
     val context = LocalContext.current
 
     // Evita recentrar el mapa (y pelear con el usuario si lo está paneando) en cada
@@ -64,6 +71,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var lastOverlayRevision by remember { mutableStateOf(-1L) }
     var lastOverlaySize by remember { mutableStateOf(-1) }
     var lastOverlayCameraCount by remember { mutableStateOf(-1) }
+    var lastApproachingId by remember { mutableStateOf<Long?>(null) }
     var routeOverlays by remember { mutableStateOf(RouteOverlays(polyline = null, marker = null)) }
 
     Box(Modifier.fillMaxSize()) {
@@ -82,17 +90,21 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             },
             update = { map ->
                 val camerasChanged = cameras.size != lastOverlayCameraCount
+                // Cambió el radar objetivo (entró/salió del cono de rumbo) → repintar para
+                // resaltar solo ese y atenuar el resto.
+                val approachingChanged = approaching?.osmId != lastApproachingId
                 val routeReset = routeRevision < lastOverlayRevision ||
                     (route.isEmpty() && routeOverlays.polyline != null)
                 val revisionChanged = routeRevision != lastOverlayRevision
                 val routeGrew = revisionChanged && !routeReset && route.size > lastOverlaySize
                 val missingPolyline = route.isNotEmpty() && routeOverlays.polyline == null
-                val needsFullRebuild = camerasChanged || routeReset || missingPolyline ||
+                val needsFullRebuild = camerasChanged || approachingChanged || routeReset || missingPolyline ||
                     (revisionChanged && !routeGrew)
 
                 if (needsFullRebuild) {
-                    routeOverlays = rebuildMapOverlays(map, route, cameras)
+                    routeOverlays = rebuildMapOverlays(map, route, cameras, approaching?.osmId)
                     lastOverlayCameraCount = cameras.size
+                    lastApproachingId = approaching?.osmId
                 } else if (routeGrew) {
                     appendRoutePoints(routeOverlays.polyline, route, lastOverlaySize)
                     updateCurrentPositionMarker(routeOverlays.marker, route.last())
@@ -127,6 +139,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
 
+        approaching?.let { target ->
+            ApproachingCameraBanner(target, Modifier.align(Alignment.TopCenter).padding(top = 28.dp))
+        }
+
         FloatingActionButton(
             onClick = {
                 openExternalNavigation(
@@ -137,6 +153,32 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         ) {
             Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps")
+        }
+    }
+}
+
+/** Banner del radar al que el vehículo se dirige — solo ese, nunca los de otras calles. */
+@Composable
+private fun ApproachingCameraBanner(
+    target: SpeedCameraAlerter.ApproachingCamera,
+    modifier: Modifier = Modifier,
+) {
+    Surface(color = Color(0xE6B71C1C), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp), modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+        ) {
+            Icon(Icons.Default.Speed, contentDescription = null, tint = Color.White)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                buildString {
+                    append("Radar en ${target.distanceM} m")
+                    target.maxSpeedKmh?.let { append("  ·  límite $it") }
+                },
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -166,11 +208,16 @@ private fun rebuildMapOverlays(
     map: MapView,
     route: List<LiveRouteHolder.RoutePoint>,
     cameras: List<SpeedCameraEntity>,
+    approachingId: Long?,
 ): RouteOverlays {
     map.overlays.clear()
+    // Con un radar objetivo activo, los demás se atenúan: el mapa informa el radar al que
+    // VAS, no todos los que existen alrededor.
     cameras.forEach { cam ->
-        map.overlays.add(speedCameraAlertCircle(map, cam))
-        map.overlays.add(speedCameraMarker(map, cam))
+        val isTarget = cam.osmId == approachingId
+        val dimmed = approachingId != null && !isTarget
+        map.overlays.add(speedCameraAlertCircle(map, cam, isTarget, dimmed))
+        map.overlays.add(speedCameraMarker(map, cam, isTarget))
     }
     if (route.isEmpty()) return RouteOverlays(polyline = null, marker = null)
     val last = route.last()
@@ -208,23 +255,42 @@ private fun updateCurrentPositionMarker(marker: Marker?, position: LiveRouteHold
 private fun speedCameraAlertCircle(
     map: MapView,
     camera: SpeedCameraEntity,
+    isTarget: Boolean,
+    dimmed: Boolean,
 ) = Polygon(map).apply {
     points = Polygon.pointsAsCircle(
         GeoPoint(camera.latitude, camera.longitude),
         CAMERA_ALERT_RADIUS_METERS,
     )
-    fillPaint.color = 0x22FF5252
-    outlinePaint.color = 0x66FF5252.toInt()
-    outlinePaint.strokeWidth = 2f
+    when {
+        isTarget -> {
+            fillPaint.color = 0x44FF1744
+            outlinePaint.color = 0xFFFF1744.toInt()
+            outlinePaint.strokeWidth = 4f
+        }
+        dimmed -> {
+            fillPaint.color = 0x0DFF5252
+            outlinePaint.color = 0x26FF5252
+            outlinePaint.strokeWidth = 1f
+        }
+        else -> {
+            fillPaint.color = 0x22FF5252
+            outlinePaint.color = 0x66FF5252.toInt()
+            outlinePaint.strokeWidth = 2f
+        }
+    }
 }
 
 private fun speedCameraMarker(
     map: MapView,
     camera: SpeedCameraEntity,
+    isTarget: Boolean,
 ) = Marker(map).apply {
     position = GeoPoint(camera.latitude, camera.longitude)
     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-    title = "Radar" + (camera.maxSpeedKmh?.let { " · $it km/h" } ?: "")
+    title = (if (isTarget) "⚠ Radar en tu ruta" else "Radar") +
+        (camera.maxSpeedKmh?.let { " · $it km/h" } ?: "")
+    alpha = if (isTarget) 1f else 0.75f
 }
 
 private fun openExternalNavigation(

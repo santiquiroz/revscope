@@ -154,6 +154,9 @@ class SettingsViewModel @Inject constructor(
     private val _voiceLocalInfo = MutableStateFlow(false)
     val voiceLocalInfo: StateFlow<Boolean> = _voiceLocalInfo.asStateFlow()
 
+    private val _voiceSunset = MutableStateFlow(true)
+    val voiceSunset: StateFlow<Boolean> = _voiceSunset.asStateFlow()
+
     private val _aiPicoPlaca = MutableStateFlow(false)
     val aiPicoPlaca: StateFlow<Boolean> = _aiPicoPlaca.asStateFlow()
 
@@ -232,6 +235,7 @@ class SettingsViewModel @Inject constructor(
                 _voiceSport.value = prefs[PreferencesKeys.VOICE_SPORT] ?: true
                 _voicePicoPlaca.value = prefs[PreferencesKeys.VOICE_PICO_PLACA] ?: true
                 _voiceLocalInfo.value = prefs[PreferencesKeys.VOICE_LOCAL_INFO] ?: false
+                _voiceSunset.value = prefs[PreferencesKeys.VOICE_SUNSET] ?: true
                 _aiPicoPlaca.value = prefs[PreferencesKeys.AI_PICO_PLACA_ENABLED] ?: false
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
         }
@@ -274,6 +278,9 @@ class SettingsViewModel @Inject constructor(
 
     fun updateVoiceLocalInfo(value: Boolean) =
         updateVoiceCategory(_voiceLocalInfo, PreferencesKeys.VOICE_LOCAL_INFO, value)
+
+    fun updateVoiceSunset(value: Boolean) =
+        updateVoiceCategory(_voiceSunset, PreferencesKeys.VOICE_SUNSET, value)
 
     fun updateAiPicoPlaca(value: Boolean) =
         updateVoiceCategory(_aiPicoPlaca, PreferencesKeys.AI_PICO_PLACA_ENABLED, value)

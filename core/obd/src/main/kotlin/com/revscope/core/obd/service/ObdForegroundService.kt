@@ -71,6 +71,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var coverageTracker: CameraCoverageTracker
     @Inject lateinit var cityAlerter: CityEnforcementAlerter
     @Inject lateinit var localInfoSink: GpsInfoSink
+    @Inject lateinit var sunsetAlerter: com.revscope.core.obd.alerts.SunsetAlerter
     @Inject lateinit var motionHub: MotionMetricsHub
     @Inject lateinit var routeHolder: LiveRouteHolder
     @Inject lateinit var crashResponder: CrashResponder
@@ -196,6 +197,7 @@ class ObdForegroundService : Service() {
             cityAlerter = cityAlerter,
             localInfoSink = localInfoSink,
             routeHolder = routeHolder,
+            sunsetAlerter = sunsetAlerter,
             // Wired unconditionally — the OBD dashboard's speed-source toggle and the
             // speedometer comparison screen need GPS_SPEED too, not just GPS-only trips.
             // publishGpsSpeed() itself decides whether to also feed engineOffDetector.

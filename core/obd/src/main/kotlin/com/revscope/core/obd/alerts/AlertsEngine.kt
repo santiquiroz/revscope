@@ -53,7 +53,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET }
 
     data class ObdAlert(
         val type: AlertType,
@@ -90,6 +90,7 @@ class AlertsEngine @Inject constructor(
     @Volatile private var voiceSport = true
     @Volatile private var voicePicoPlaca = true
     @Volatile private var voiceLocalInfo = false
+    @Volatile private var voiceSunset = true
 
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
@@ -129,6 +130,7 @@ class AlertsEngine @Inject constructor(
             voiceSport = prefs[PreferencesKeys.VOICE_SPORT] ?: true
             voicePicoPlaca = prefs[PreferencesKeys.VOICE_PICO_PLACA] ?: true
             voiceLocalInfo = prefs[PreferencesKeys.VOICE_LOCAL_INFO] ?: false
+            voiceSunset = prefs[PreferencesKeys.VOICE_SUNSET] ?: true
             if (ttsEnabled) tts // touch the lazy so the engine warms up early
             Timber.i(
                 "AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm " +
@@ -275,6 +277,17 @@ class AlertsEngine @Inject constructor(
      * LocalInfoAlertPolicy/CityInfoAlerter; this only gates on the voice category +
      * master switch. Also posts a silent notification with the text so it can be reread.
      */
+    /** Aviso único diario ~25 min antes del ocaso — pico de riesgo para motos. */
+    fun announceSunset(minutesToSunset: Int) {
+        if (!enabled) return
+        if (!voiceSunset) return
+        val message = "Atardece en $minutesToSunset minutos. Enciende las luces y hazte visible."
+        Timber.i("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.SUNSET, message, minutesToSunset.toDouble()))
+        playTone(ToneGenerator.TONE_PROP_ACK, 200)
+        speak(message)
+    }
+
     fun announceLocalInfo(municipio: String, frase: String) {
         if (!enabled) return
         if (!voiceLocalInfo) return

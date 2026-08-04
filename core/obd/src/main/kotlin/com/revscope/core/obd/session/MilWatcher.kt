@@ -1,7 +1,7 @@
 package com.revscope.core.obd.session
 
 import com.revscope.core.obd.alerts.AlertsEngine
-import com.revscope.core.obd.connection.ClassicBtTransport
+import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.protocol.ReadinessParser
 import kotlinx.coroutines.CancellationException
@@ -20,7 +20,7 @@ class MilWatcher(private val alertsEngine: AlertsEngine) {
 
     private var job: Job? = null
 
-    fun start(scope: CoroutineScope, bt: ClassicBtTransport, onMilReading: (ObdReading) -> Unit) {
+    fun start(scope: CoroutineScope, bt: Transport, onMilReading: (ObdReading) -> Unit) {
         job?.cancel()
         job = scope.launch {
             delay(MIL_WATCH_FIRST_DELAY_MS)
@@ -41,7 +41,7 @@ class MilWatcher(private val alertsEngine: AlertsEngine) {
         job?.cancel()
     }
 
-    private suspend fun checkMilStatus(bt: ClassicBtTransport, onMilReading: (ObdReading) -> Unit) {
+    private suspend fun checkMilStatus(bt: Transport, onMilReading: (ObdReading) -> Unit) {
         val raw = probe(bt, "01 01\r", DTC_TIMEOUT_MS) ?: return
         val status = ReadinessParser.parse(raw) ?: return
         if (!status.milOn) return
@@ -50,7 +50,7 @@ class MilWatcher(private val alertsEngine: AlertsEngine) {
     }
 
     /** Best-effort probe that still honors coroutine cancellation. */
-    private suspend fun probe(bt: ClassicBtTransport, command: String, timeoutMs: Long): String? =
+    private suspend fun probe(bt: Transport, command: String, timeoutMs: Long): String? =
         try {
             bt.exchange(command, timeoutMs)
         } catch (e: CancellationException) {

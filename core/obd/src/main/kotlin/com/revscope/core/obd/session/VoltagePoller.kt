@@ -1,6 +1,6 @@
 package com.revscope.core.obd.session
 
-import com.revscope.core.obd.connection.ClassicBtTransport
+import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.ObdReading
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -17,7 +17,7 @@ class VoltagePoller {
 
     private var job: Job? = null
 
-    fun start(scope: CoroutineScope, bt: ClassicBtTransport, onReading: (ObdReading) -> Unit) {
+    fun start(scope: CoroutineScope, bt: Transport, onReading: (ObdReading) -> Unit) {
         job?.cancel()
         job = scope.launch {
             while (true) {
