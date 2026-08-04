@@ -136,6 +136,7 @@ class ObdSessionManager @Inject constructor(
     val odometerCheck: StateFlow<OdometerChecker.Result?> = odometerChecker.lastResult
     private var activeScheduler: PidScheduler? = null
     private val workshopClients = AtomicInteger(0)
+    @Volatile private var idleModeEnabled = false
 
     private val launchTimer = LaunchTimerEngine()
     val launchResults = launchTimer.results
@@ -331,6 +332,12 @@ class ObdSessionManager @Inject constructor(
         val clients = if (enabled) workshopClients.incrementAndGet()
         else workshopClients.updateAndGet { (it - 1).coerceAtLeast(0) }
         activeScheduler?.setWorkshopMode(clients > 0)
+    }
+
+    /** Pantalla apagada: el scheduler estira sus intervalos sin cortar la telemetría. */
+    fun setIdleMode(enabled: Boolean) {
+        idleModeEnabled = enabled
+        activeScheduler?.setIdleMode(enabled)
     }
 
     fun connectToDevice(deviceAddress: String) {
@@ -744,6 +751,7 @@ class ObdSessionManager @Inject constructor(
                 coroutineScope {
                     val scheduler = PidScheduler(bt, registry).also { activeScheduler = it }
                     scheduler.setWorkshopMode(workshopClients.get() > 0)
+                    scheduler.setIdleMode(idleModeEnabled)
                     val rawFlow = scheduler
                         .observeReadings()
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)

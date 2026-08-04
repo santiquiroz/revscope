@@ -5,12 +5,15 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.revscope.core.data.db.dao.GpsDao
@@ -34,6 +37,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -49,6 +53,7 @@ private const val NOTIFICATION_UPDATE_MS = 5_000L
 // at half the battery cost of the previous 180s window.
 private const val CRASH_GRACE_PERIOD_MS = 90_000L
 private const val CRASH_GRACE_MOTION_LOOKBACK_MS = 60_000L
+private const val ALARM_DRAIN_TIMEOUT_MS = 180_000L
 
 /**
  * Keeps telemetry recording and the GPS track alive when the app is backgrounded
@@ -75,19 +80,41 @@ class ObdForegroundService : Service() {
     private var motionRecorder: MotionSensorRecorder? = null
     private var graceJob: Job? = null
 
+    // Pantalla apagada: el scheduler OBD estira intervalos y la notificación deja de
+    // redibujarse — nadie la ve y cada notify() despierta SystemUI.
+    @Volatile private var screenOn = true
+    private var lastNotificationKey: Pair<String, String?>? = null
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val interactive = intent.action != Intent.ACTION_SCREEN_OFF
+            screenOn = interactive
+            sessionManager.setIdleMode(!interactive)
+            if (interactive) updateNotification(force = true)
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
         startInForeground()
+        registerReceiver(screenReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        })
+        screenOn = (getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive != false
+        sessionManager.setIdleMode(!screenOn)
         observeSession()
         Timber.i("ObdForegroundService: started")
     }
 
+    // NOT_STICKY: el estado de sesión vive en el proceso — si el sistema mata el proceso,
+    // el restart sticky revivía un servicio zombie sin sesión que nunca llamaba stopSelf().
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_SHUTDOWN) handleShutdownRequest()
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     /**
@@ -105,6 +132,8 @@ class ObdForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { unregisterReceiver(screenReceiver) }
+        sessionManager.setIdleMode(false)
         graceJob?.cancel()
         gpsRecorder?.stop()
         motionRecorder?.stop()
@@ -212,7 +241,11 @@ class ObdForegroundService : Service() {
     private suspend fun runCrashGrace() {
         delay(CRASH_GRACE_PERIOD_MS)
         // If a crash triggered mid-grace, the alarm/SMS flow must be allowed to finish.
-        crashResponder.alarmState.first { it == null }
+        // Acotado: countdown (60s) + SMS caben de sobra en 3 min — sin tope, un estado de
+        // alarma que nunca se limpia dejaba GPS + IMU vivos indefinidamente.
+        withTimeoutOrNull(ALARM_DRAIN_TIMEOUT_MS) {
+            crashResponder.alarmState.first { it == null }
+        }
         stopCrashSubsystemAndRecorders()
         stopSelf()
     }
@@ -226,7 +259,9 @@ class ObdForegroundService : Service() {
         routeHolder.clear()
     }
 
-    private fun updateNotification() {
+    private fun updateNotification(force: Boolean = false) {
+        // Con la pantalla apagada nadie ve la notificación; el force del screen-on la refresca.
+        if (!screenOn && !force) return
         val state = sessionManager.connectionState.value
         val readings = sessionManager.readings.value
         val title = when (state) {
@@ -244,6 +279,9 @@ class ObdForegroundService : Service() {
             volts?.let { add("%.1fV".format(it)) }
         }.joinToString("  ·  ").ifEmpty { "Grabando telemetría" }
 
+        val key: Pair<String, String?> = title to body
+        if (!force && key == lastNotificationKey) return
+        lastNotificationKey = key
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, buildNotification(title, body))
     }

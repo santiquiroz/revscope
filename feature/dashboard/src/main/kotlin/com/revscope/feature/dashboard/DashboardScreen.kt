@@ -91,6 +91,8 @@ fun DashboardScreen(
                 }
             }
             dashboardVm.startIntelligence(readingsFlow, connectionVm)
+        } else {
+            dashboardVm.stopIntelligence()
         }
     }
 
@@ -110,10 +112,13 @@ fun DashboardScreen(
     val gear by remember { derivedStateOf { readingsState.value["GEAR"]?.value?.toInt() ?: 0 } }
     val vbat by remember { derivedStateOf { readingsState.value["VBAT"]?.value } }
 
-    // Riding with the screen off is useless — keep it on while telemetry flows
+    // Riding with the screen off is useless — keep it on while telemetry flows.
+    // Gateado por ajuste: en carro montado en soporte, horas de pantalla forzada
+    // son el mayor drenaje de batería de todo el sistema.
+    val keepScreenOnSetting by dashboardVm.keepScreenOn.collectAsState()
     val view = LocalView.current
-    DisposableEffect(connectionState) {
-        view.keepScreenOn = connectionState is ConnectionState.Connected
+    DisposableEffect(connectionState, keepScreenOnSetting) {
+        view.keepScreenOn = keepScreenOnSetting && connectionState is ConnectionState.Connected
         onDispose { view.keepScreenOn = false }
     }
 

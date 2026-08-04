@@ -56,6 +56,11 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    /** Default true: en moto la pantalla apagándose a mitad de ruta es peor que la batería. */
+    val keepScreenOn: StateFlow<Boolean> = settings.data
+        .map { it[PreferencesKeys.KEEP_SCREEN_ON] ?: true }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     val anomalyAlerts = orchestrator.anomalyAlerts
     val tripScore = orchestrator.tripScore
 
@@ -79,9 +84,15 @@ class DashboardViewModel @Inject constructor(
         minuteTicker,
     ) { profile, licenseExpiresAt, overrideRules, _ ->
         computeAlDiaBanner(profile, licenseExpiresAt, overrideRules)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private var gearTableJob: Job? = null
+
+    fun stopIntelligence() {
+        orchestrator.stop()
+        gearTableJob?.cancel()
+        gearTableJob = null
+    }
 
     /**
      * Wires [readings] into the intelligence orchestrator and feeds calibrated gear

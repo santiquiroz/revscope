@@ -13,6 +13,9 @@ import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.ObdSessionManager
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 private const val REFRESH_INTERVAL_MS = 1_000L
@@ -31,17 +34,19 @@ class DashboardCarScreen(
     private var connection: ConnectionState = ConnectionState.Disconnected
 
     init {
+        // Reactivo con conflate + delay: throttle natural a 1 Hz mientras fluyen datos y
+        // CERO despertares cuando nada cambia — el poll anterior despertaba cada segundo
+        // aunque el carro llevara horas desconectado.
         lifecycleScope.launch {
-            while (true) {
-                val newReadings = sessionManager.readings.value
-                val newConnection = sessionManager.connectionState.value
-                if (newReadings != readings || newConnection != connection) {
+            combine(sessionManager.readings, sessionManager.connectionState) { r, c -> r to c }
+                .distinctUntilChanged()
+                .conflate()
+                .collect { (newReadings, newConnection) ->
                     readings = newReadings
                     connection = newConnection
                     invalidate()
+                    delay(REFRESH_INTERVAL_MS)
                 }
-                delay(REFRESH_INTERVAL_MS)
-            }
         }
     }
 

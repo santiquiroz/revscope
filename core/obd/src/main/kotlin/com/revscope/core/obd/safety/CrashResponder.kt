@@ -32,8 +32,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -90,19 +93,29 @@ class CrashResponder @Inject constructor(
         this.vehicleName = vehicleName
         detector.reset()
         monitorJob = scope.launch {
-            reloadSettings()
-            // enabled is re-read on every tick (not gated once here) so flipping the
-            // Settings toggle mid-session takes effect without a reconnect.
-            combine(motionHub.snapshot, sessionManager.readings, routeHolder.lastSpeedKmh) { motion, readings, gpsSpeed ->
-                val obdSpeed = readings[SPEED_PID]?.value ?: 0.0
-                // Raw, pre-filter, 3-axis peak — the EMA-filtered horizontal signal used for
-                // the UI can flatten a genuine impact spike below the trigger threshold.
-                maxOf(obdSpeed, gpsSpeed.toDouble()) to motion.rawPeakG.toDouble()
-            }.collect { (speedKmh, accelG) ->
-                if (!enabled) return@collect
-                val state = detector.process(accelG, speedKmh, System.currentTimeMillis())
-                if (state == CrashDetector.State.TRIGGERED) handleTriggered(scope)
-            }
+            // El toggle de Settings se observa reactivo: collectLatest cancela el combine
+            // cuando se apaga (cero trabajo con la detección deshabilitada) y lo relanza al
+            // encenderlo mid-session sin reconectar.
+            settings.data
+                .map { prefs ->
+                    (prefs[PreferencesKeys.CRASH_DETECTION_ENABLED] ?: false) to
+                        prefs[PreferencesKeys.EMERGENCY_PHONE].orEmpty()
+                }
+                .distinctUntilChanged()
+                .collectLatest { (isEnabled, phone) ->
+                    enabled = isEnabled
+                    emergencyPhone = phone
+                    if (!isEnabled) return@collectLatest
+                    combine(motionHub.snapshot, sessionManager.readings, routeHolder.lastSpeedKmh) { motion, readings, gpsSpeed ->
+                        val obdSpeed = readings[SPEED_PID]?.value ?: 0.0
+                        // Raw, pre-filter, 3-axis peak — the EMA-filtered horizontal signal used for
+                        // the UI can flatten a genuine impact spike below the trigger threshold.
+                        maxOf(obdSpeed, gpsSpeed.toDouble()) to motion.rawPeakG.toDouble()
+                    }.collect { (speedKmh, accelG) ->
+                        val state = detector.process(accelG, speedKmh, System.currentTimeMillis())
+                        if (state == CrashDetector.State.TRIGGERED) handleTriggered(scope)
+                    }
+                }
         }
     }
 
@@ -256,7 +269,7 @@ class CrashResponder @Inject constructor(
     // ASCII-only (GSM-7 safe): emoji or accented characters force UCS-2 encoding, which halves
     // the per-segment length and previously truncated the location URL out of the message.
     private fun buildEmergencyMessage(): String {
-        val location = routeHolder.points.value.lastOrNull()
+        val location = routeHolder.lastPoint.value
         val locationText = location
             ?.let { "https://maps.google.com/?q=${it.lat},${it.lon}" }
             ?: "ubicacion no disponible"

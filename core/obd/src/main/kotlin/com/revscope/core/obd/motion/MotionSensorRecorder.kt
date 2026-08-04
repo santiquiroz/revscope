@@ -19,7 +19,12 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private const val SAMPLING_PERIOD_US = 20_000        // 50 Hz
+// 50 Hz solo para el acelerómetro: el pico crudo de CrashDetector necesita esa fidelidad.
+// Rotación y gravedad cambian a dinámica de vehículo (lento) y ambas alimentan señales
+// EMA-filtradas — muestrearlas a 50 Hz mantenía gyro+mag despiertos todo el viaje.
+private const val ACCEL_SAMPLING_PERIOD_US = 20_000     // 50 Hz
+private const val ROTATION_SAMPLING_PERIOD_US = 50_000  // 20 Hz
+private const val GRAVITY_SAMPLING_PERIOD_US = 100_000  // 10 Hz
 private const val STORE_INTERVAL_MS = 100L           // persist at 10 Hz
 private const val FLUSH_INTERVAL_MS = 5_000L
 private const val EMA_ALPHA = 0.25f                  // low-pass vs engine vibration
@@ -95,9 +100,9 @@ class MotionSensorRecorder(
             Timber.w("MotionSensorRecorder: required sensors missing — IMU disabled")
             return
         }
-        sensorManager.registerListener(this, linear, SAMPLING_PERIOD_US)
-        sensorManager.registerListener(this, rotation, SAMPLING_PERIOD_US)
-        sensorManager.registerListener(this, gravity, SAMPLING_PERIOD_US)
+        sensorManager.registerListener(this, linear, ACCEL_SAMPLING_PERIOD_US)
+        sensorManager.registerListener(this, rotation, ROTATION_SAMPLING_PERIOD_US)
+        sensorManager.registerListener(this, gravity, GRAVITY_SAMPLING_PERIOD_US)
         registered = true
         Timber.i("MotionSensorRecorder: recording IMU for session $newSessionId")
 

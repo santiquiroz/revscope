@@ -69,11 +69,18 @@ class O2WaveViewModel @Inject constructor(
 
     private var fastSamplerJob: Job? = null
 
-    init {
-        restartFastSampler(_selectedPid.value)
+    // El sampler extra de 5.5 Hz vive atado a la visibilidad de la pantalla (DisposableEffect
+    // llama setWorkshopMode) — antes arrancaba en init y seguía martillando el bus con la
+    // pantalla en el backstack hasta que el ViewModel muriera.
+    fun setWorkshopMode(enabled: Boolean) {
+        sessionManager.setWorkshopMode(enabled)
+        if (enabled) {
+            restartFastSampler(_selectedPid.value)
+        } else {
+            fastSamplerJob?.cancel()
+            fastSamplerJob = null
+        }
     }
-
-    fun setWorkshopMode(enabled: Boolean) = sessionManager.setWorkshopMode(enabled)
 
     fun selectSensor(pid: String) {
         if (pid == _selectedPid.value) return

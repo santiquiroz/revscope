@@ -82,6 +82,14 @@ class IntelligenceOrchestrator(
         Timber.i("IntelligenceOrchestrator: started (tier=$tier)")
     }
 
+    /** Cancela colectores y el ticker de score — llamar al desconectar, no solo al morir el VM. */
+    fun stop() {
+        readingsJob?.cancel()
+        readingsJob = null
+        scoreJob?.cancel()
+        scoreJob = null
+    }
+
     /**
      * Explains a DTC fault code. Falls back gracefully when API key absent or network fails.
      * [context] — recent readings to include in the AI prompt for better diagnosis.

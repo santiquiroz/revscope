@@ -591,6 +591,27 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // ── Pantalla ─────────────────────────────────────────────────────────────
+
+    private val _keepScreenOn = MutableStateFlow(true)
+    val keepScreenOn: StateFlow<Boolean> = _keepScreenOn.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            runCatching { settings.data.first()[PreferencesKeys.KEEP_SCREEN_ON] ?: true }
+                .onSuccess { _keepScreenOn.value = it }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to load keep-screen-on toggle") }
+        }
+    }
+
+    fun updateKeepScreenOn(value: Boolean) {
+        _keepScreenOn.value = value
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.KEEP_SCREEN_ON] = value } }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist keep-screen-on toggle") }
+        }
+    }
+
     // ── Detección de caída (SAFETY-CRITICAL: desactivada por defecto) ───────
 
     private val _crashDetectionEnabled = MutableStateFlow(false)

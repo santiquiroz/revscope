@@ -7,6 +7,7 @@ import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,9 @@ import javax.inject.Inject
 
 private const val SCAN_TIMEOUT_MS = 1_200L
 private const val WATCH_POLL_INTERVAL_MS = 400L
+// El watch es para accionar un control y ver qué DID cambia — 10 min sobran; sin tope,
+// olvidarlo en el backstack dejaba un poll de 2.5 Hz sobre el bus indefinidamente.
+private const val WATCH_MAX_DURATION_MS = 10 * 60_000L
 private const val PROBE_REQUEST = "22 F190"
 
 /**
@@ -125,20 +129,23 @@ class Mode22ScannerViewModel @Inject constructor() : ViewModel() {
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
             _state.value = ScannerState.Watching
-            while (true) {
-                _hits.value = _hits.value.map { hit ->
-                    val data = readDid(connectionVm, hit.did)
-                        ?.let { extractDidData(it, hit.did) }
-                        ?: return@map hit
-                    if (data != hit.value) {
-                        Timber.i("Mode22Scanner: DID ${hit.did} changed ${hit.value} → $data")
-                        hit.copy(value = data, previousValue = hit.value, changedDuringWatch = true)
-                    } else {
-                        hit
+            withTimeoutOrNull(WATCH_MAX_DURATION_MS) {
+                while (true) {
+                    _hits.value = _hits.value.map { hit ->
+                        val data = readDid(connectionVm, hit.did)
+                            ?.let { extractDidData(it, hit.did) }
+                            ?: return@map hit
+                        if (data != hit.value) {
+                            Timber.i("Mode22Scanner: DID ${hit.did} changed ${hit.value} → $data")
+                            hit.copy(value = data, previousValue = hit.value, changedDuringWatch = true)
+                        } else {
+                            hit
+                        }
                     }
+                    delay(WATCH_POLL_INTERVAL_MS)
                 }
-                delay(WATCH_POLL_INTERVAL_MS)
             }
+            _state.value = ScannerState.Idle
         }
     }
 

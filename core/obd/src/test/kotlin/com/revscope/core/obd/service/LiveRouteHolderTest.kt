@@ -6,7 +6,8 @@ import org.junit.Test
 
 class LiveRouteHolderTest {
 
-    private val holder = LiveRouteHolder()
+    // Intervalo 0: snapshot en cada append — los tests validan el contrato, no el throttle.
+    private val holder = LiveRouteHolder(snapshotIntervalMs = 0L)
 
     @Test
     fun `append acumula puntos en orden`() {

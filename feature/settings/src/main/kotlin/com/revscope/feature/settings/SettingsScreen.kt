@@ -114,6 +114,7 @@ fun SettingsScreen(
     val saveResult by vm.lastSaveResult.collectAsState()
     val backupState by vm.backupState.collectAsState()
     val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
+    val keepScreenOn by vm.keepScreenOn.collectAsState()
     val crashDetectionEnabled by vm.crashDetectionEnabled.collectAsState()
     val emergencyPhone by vm.emergencyPhone.collectAsState()
     val mcpServerEnabled by vm.mcpServerEnabled.collectAsState()
@@ -200,6 +201,12 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             SectionTitle("Herramientas")
             NavRow("Perfiles de vehículo", onNavigateToVehicleProfiles)
+            ToggleRow(
+                "Mantener pantalla encendida",
+                keepScreenOn,
+                vm::updateKeepScreenOn,
+                subtitle = "Durante la conducción con el dashboard abierto. Apagarlo ahorra batería en soporte de carro.",
+            )
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Alertas de audio y vibración")

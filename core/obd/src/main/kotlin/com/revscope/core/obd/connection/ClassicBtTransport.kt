@@ -23,7 +23,12 @@ import java.util.UUID
 
 private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 private const val CONNECT_TIMEOUT_MS = 12_000L
-private const val READ_POLL_DELAY_MS = 10L
+// Poll adaptativo: BluetoothSocket no expone timeout de lectura y un read() bloqueante solo
+// se desbloquea cerrando el socket — inaceptable, porque un timeout de respuesta debe dejar
+// la conexión viva para el retry del caller. El backoff exponencial mantiene latencia baja
+// al inicio (2 ms) y reduce ~3× los wakeups del timer en esperas largas.
+private const val READ_POLL_MIN_MS = 2L
+private const val READ_POLL_MAX_MS = 40L
 private const val CHUNK_SIZE = 256
 private const val PROMPT_CHAR = '>'
 private const val FALLBACK_RFCOMM_CHANNEL = 1
@@ -146,6 +151,7 @@ class ClassicBtTransport(
         val buffer = StringBuilder()
         val chunk = ByteArray(CHUNK_SIZE)
         val deadline = System.currentTimeMillis() + timeoutMs
+        var pollDelayMs = READ_POLL_MIN_MS
 
         while (true) {
             val available = input.available()
@@ -155,9 +161,11 @@ class ClassicBtTransport(
                 if (read > 0) {
                     buffer.append(String(chunk, 0, read, Charsets.US_ASCII))
                     if (buffer.contains(PROMPT_CHAR)) break
+                    pollDelayMs = READ_POLL_MIN_MS
                 }
             } else {
-                delay(READ_POLL_DELAY_MS)
+                delay(pollDelayMs)
+                pollDelayMs = minOf(pollDelayMs * 2, READ_POLL_MAX_MS)
             }
             if (System.currentTimeMillis() >= deadline) {
                 throw IOException(

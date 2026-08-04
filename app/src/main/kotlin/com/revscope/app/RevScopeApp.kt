@@ -6,6 +6,8 @@ import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import com.revscope.core.data.backup.AutoBackupWorker
 import com.revscope.core.obd.cameras.CameraRefreshWorker
 import com.revscope.core.obd.legal.DailyStatusWorker
@@ -47,6 +49,11 @@ class RevScopeApp : Application(), Configuration.Provider {
     private fun scheduleDailyStatusWorker() {
         val request = PeriodicWorkRequestBuilder<DailyStatusWorker>(1, TimeUnit.DAYS)
             .setInitialDelay(delayUntilNextFiveThirtyAmMs(), TimeUnit.MILLISECONDS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            )
             .build()
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork(DailyStatusWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
@@ -54,6 +61,12 @@ class RevScopeApp : Application(), Configuration.Provider {
 
     private fun scheduleCameraRefreshWorker() {
         val request = PeriodicWorkRequestBuilder<CameraRefreshWorker>(CAMERA_REFRESH_INTERVAL_DAYS, TimeUnit.DAYS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            )
             .build()
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork(CameraRefreshWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
@@ -61,6 +74,12 @@ class RevScopeApp : Application(), Configuration.Provider {
 
     private fun scheduleAutoBackupWorker() {
         val request = PeriodicWorkRequestBuilder<AutoBackupWorker>(AUTO_BACKUP_INTERVAL_DAYS, TimeUnit.DAYS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .setRequiresBatteryNotLow(true)
+                    .build()
+            )
             .build()
         WorkManager.getInstance(this)
             .enqueueUniquePeriodicWork(AutoBackupWorker.WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)

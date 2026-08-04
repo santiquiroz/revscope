@@ -9,7 +9,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.IOException
@@ -52,11 +54,28 @@ class PidScheduler(
     // Flips to false on the first response that doesn't parse as a batch.
     private val batchingSupported = AtomicBoolean(true)
 
-    // Priority-4 diagnostics only poll while a workshop screen is on screen
-    private val workshopMode = AtomicBoolean(false)
+    // Priority-4 diagnostics only poll while a workshop screen is on screen.
+    // StateFlow (no AtomicBoolean): el grupo p4 suspende en first{} en vez de
+    // despertarse cada segundo solo para comprobar un booleano que casi siempre es false.
+    private val workshopMode = MutableStateFlow(false)
+
+    // Pantalla apagada = nadie mira los gauges: se estiran los intervalos sin parar la
+    // telemetría. p3 solo ×2 para que la alerta de sobrecalentamiento siga siendo oportuna.
+    private val idleMode = AtomicBoolean(false)
 
     fun setWorkshopMode(enabled: Boolean) {
-        workshopMode.set(enabled)
+        workshopMode.value = enabled
+    }
+
+    fun setIdleMode(enabled: Boolean) {
+        idleMode.set(enabled)
+    }
+
+    private fun idleFactorFor(priority: Int): Double = when {
+        !idleMode.get() -> 1.0
+        priority == 1 -> 5.0
+        priority == 2 -> 3.0
+        else -> 2.0
     }
 
     fun observeReadings(): Flow<ObdReading> = channelFlow {
@@ -75,11 +94,8 @@ class PidScheduler(
         emit: (ObdReading) -> Unit,
     ) {
         while (true) {
-            if (priority == WORKSHOP_PRIORITY && !workshopMode.get()) {
-                delay(baseIntervalMs)
-                continue
-            }
-            val intervalMs = (baseIntervalMs * intervalMultiplier.get()).toLong()
+            if (priority == WORKSHOP_PRIORITY) workshopMode.first { it }
+            val intervalMs = (baseIntervalMs * intervalMultiplier.get() * idleFactorFor(priority)).toLong()
             val defs = registry.definitionsForPriority(priority)
                 .filterNot { it.pid in excludedPids }
 

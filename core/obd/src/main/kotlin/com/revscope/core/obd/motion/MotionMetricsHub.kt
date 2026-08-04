@@ -33,9 +33,15 @@ class MotionMetricsHub @Inject constructor() {
     private val _snapshot = MutableStateFlow(MotionSnapshot())
     val snapshot: StateFlow<MotionSnapshot> = _snapshot.asStateFlow()
 
+    // Acumulado entre emisiones: los máximos se actualizan en cada muestra (50 Hz) pero el
+    // StateFlow solo emite a 10 Hz — emitir por muestra despachaba ~100 eventos/s a cada
+    // colector (dashboard, track mode, CrashResponder) durante todo el viaje.
+    @Volatile private var pending = MotionSnapshot()
+    @Volatile private var lastEmitMs = 0L
+
     fun update(gLat: Float, gLong: Float, leanDeg: Float, magnitudeG: Float, calibrated: Boolean) {
-        val current = _snapshot.value
-        _snapshot.value = current.copy(
+        val current = pending
+        pending = current.copy(
             gLat = gLat,
             gLong = gLong,
             leanDeg = leanDeg,
@@ -45,14 +51,33 @@ class MotionMetricsHub @Inject constructor() {
             calibrated = calibrated,
             magnitudeG = magnitudeG,
         )
+        maybeEmit(force = false)
     }
 
-    /** Published on every raw accel sample, independent of [update]'s rotation/gravity gating. */
+    /** Registered on every raw accel sample, independent of [update]'s rotation/gravity gating. */
     fun updateRawPeak(rawPeakG: Float) {
-        _snapshot.value = _snapshot.value.copy(rawPeakG = rawPeakG)
+        // Un spike de impacto no puede esperar la ventana de throttle: CrashDetector dispara
+        // a 6 G y la ventana rolling del pico es de solo 200 ms.
+        val spike = rawPeakG >= SPIKE_EMIT_G && rawPeakG > pending.rawPeakG
+        pending = pending.copy(rawPeakG = rawPeakG)
+        maybeEmit(force = spike)
+    }
+
+    private fun maybeEmit(force: Boolean) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastEmitMs < EMIT_INTERVAL_MS) return
+        lastEmitMs = now
+        _snapshot.value = pending
     }
 
     fun resetSession() {
-        _snapshot.value = MotionSnapshot()
+        pending = MotionSnapshot()
+        lastEmitMs = 0L
+        _snapshot.value = pending
+    }
+
+    private companion object {
+        const val EMIT_INTERVAL_MS = 100L
+        const val SPIKE_EMIT_G = 2.5f
     }
 }

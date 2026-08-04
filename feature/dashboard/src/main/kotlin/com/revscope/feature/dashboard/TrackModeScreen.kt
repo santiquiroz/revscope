@@ -67,12 +67,12 @@ fun TrackModeScreen(
     val state by vm.engine.state.collectAsState()
     val motion by vm.motionHub.snapshot.collectAsState()
 
-    // Live current-lap clock, ticking locally at 10 Hz
+    // Live current-lap clock, ticking locally at 5 Hz
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(state.lapInProgress) {
         while (state.lapInProgress) {
             nowMs = System.currentTimeMillis()
-            delay(100)
+            delay(200)
         }
     }
 

@@ -83,7 +83,7 @@ class AlDiaViewModel @Inject constructor(
     val docStatuses: StateFlow<List<DocumentStatusCalculator.DocStatus>> =
         combine(activeProfile, licenseExpiresAtFlow, overrideRulesFlow, minuteTicker) { profile, license, overrideRules, _ ->
             calculateStatuses(profile, license, overrideRules)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private suspend fun calculateStatuses(
         profile: VehicleProfileEntity?,

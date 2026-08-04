@@ -212,6 +212,9 @@ object PreferencesKeys {
      */
     val SPEED_SOURCE_GPS = booleanPreferencesKey("speed_source_gps")
 
+    /** Mantener la pantalla encendida mientras el dashboard esté conectado (default true) */
+    val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+
     // ── Servidor MCP (red local) ────────────────────────────────────────────
 
     /** Apagado por defecto — expone el estado del vehículo a clientes MCP del PC (default false) */
