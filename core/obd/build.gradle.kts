@@ -59,6 +59,9 @@ dependencies {
     // Embedded MCP server over local WiFi (Plan 6 Task 4)
     implementation(libs.nanohttpd)
 
+    // WebSocket de rodadas en grupo (revscope-server)
+    implementation(libs.okhttp)
+
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockk)

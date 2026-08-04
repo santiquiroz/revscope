@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -18,6 +19,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +40,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
+import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
 import kotlinx.coroutines.flow.StateFlow
 import org.osmdroid.config.Configuration
@@ -56,6 +63,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val cameras by viewModel.cameras.collectAsState()
     val potholes by viewModel.potholes.collectAsState()
     val approaching by viewModel.approachingCamera.collectAsState()
+    val roomCode by viewModel.roomCode.collectAsState()
+    val peers by viewModel.peers.collectAsState()
+    val roomBusy by viewModel.roomBusy.collectAsState()
+    var showRoomDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     // Evita recentrar el mapa (y pelear con el usuario si lo está paneando) en cada
@@ -74,6 +85,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var lastOverlaySize by remember { mutableStateOf(-1) }
     var lastOverlayCameraCount by remember { mutableStateOf(-1) }
     var lastApproachingId by remember { mutableStateOf<Long?>(null) }
+    var lastPeerCount by remember { mutableStateOf(-1) }
     var routeOverlays by remember { mutableStateOf(RouteOverlays(polyline = null, marker = null)) }
 
     Box(Modifier.fillMaxSize()) {
@@ -95,18 +107,20 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 // Cambió el radar objetivo (entró/salió del cono de rumbo) → repintar para
                 // resaltar solo ese y atenuar el resto.
                 val approachingChanged = approaching?.osmId != lastApproachingId
+                val peersChanged = peers.size != lastPeerCount
                 val routeReset = routeRevision < lastOverlayRevision ||
                     (route.isEmpty() && routeOverlays.polyline != null)
                 val revisionChanged = routeRevision != lastOverlayRevision
                 val routeGrew = revisionChanged && !routeReset && route.size > lastOverlaySize
                 val missingPolyline = route.isNotEmpty() && routeOverlays.polyline == null
-                val needsFullRebuild = camerasChanged || approachingChanged || routeReset || missingPolyline ||
+                val needsFullRebuild = camerasChanged || approachingChanged || peersChanged || routeReset || missingPolyline ||
                     (revisionChanged && !routeGrew)
 
                 if (needsFullRebuild) {
-                    routeOverlays = rebuildMapOverlays(map, route, cameras, potholes, approaching?.osmId)
+                    routeOverlays = rebuildMapOverlays(map, route, cameras, potholes, peers.values.toList(), approaching?.osmId)
                     lastOverlayCameraCount = cameras.size
                     lastApproachingId = approaching?.osmId
+                    lastPeerCount = peers.size
                 } else if (routeGrew) {
                     appendRoutePoints(routeOverlays.polyline, route, lastOverlaySize)
                     updateCurrentPositionMarker(routeOverlays.marker, route.last())
@@ -145,18 +159,102 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             ApproachingCameraBanner(target, Modifier.align(Alignment.TopCenter).padding(top = 28.dp))
         }
 
-        FloatingActionButton(
-            onClick = {
-                openExternalNavigation(
-                    context,
-                    route.lastOrNull() ?: viewModel.initialCenter.value,
+        Column(Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+            FloatingActionButton(
+                onClick = { showRoomDialog = true },
+                containerColor = if (roomCode != null) Color(0xFFE8FF00) else Color(0xFF1C1C28),
+            ) {
+                Icon(
+                    Icons.Default.Group,
+                    contentDescription = "Rodada en grupo",
+                    tint = if (roomCode != null) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                 )
-            },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-        ) {
-            Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps")
+            }
+            Spacer(Modifier.height(12.dp))
+            FloatingActionButton(
+                onClick = {
+                    openExternalNavigation(context, route.lastOrNull() ?: viewModel.initialCenter.value)
+                },
+            ) {
+                Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps")
+            }
+        }
+
+        if (roomCode != null) {
+            Surface(
+                color = Color(0xE6121218),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+            ) {
+                Text(
+                    "\uD83C\uDFCD\uFE0F Sala $roomCode \u00b7 ${peers.size} en l\u00ednea",
+                    color = Color(0xFFE8FF00),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
         }
     }
+
+    if (showRoomDialog) {
+        GroupRideDialog(
+            activeCode = roomCode,
+            busy = roomBusy,
+            onCreate = { viewModel.createRoom { showRoomDialog = false } },
+            onJoin = { code -> viewModel.joinRoom(code); showRoomDialog = false },
+            onLeave = { viewModel.leaveRoom(); showRoomDialog = false },
+            onDismiss = { showRoomDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun GroupRideDialog(
+    activeCode: String?,
+    busy: Boolean,
+    onCreate: () -> Unit,
+    onJoin: (String) -> Unit,
+    onLeave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var codeInput by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF12121A),
+        title = { Text("Rodada en grupo", color = Color(0xFFF0F0F8), fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                if (activeCode != null) {
+                    Text("Est\u00e1s en la sala $activeCode. Comparte el c\u00f3digo con tu parche.", color = Color(0xFF6B7089), fontSize = 13.sp)
+                } else {
+                    Text("Crea una sala y comparte el c\u00f3digo, o \u00fanete a la de un parcero. Ver\u00e1s sus posiciones en el mapa en vivo.", color = Color(0xFF6B7089), fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = codeInput,
+                        onValueChange = { codeInput = it.uppercase().take(6) },
+                        label = { Text("C\u00f3digo de sala", fontSize = 12.sp) },
+                        singleLine = true,
+                    )
+                    Text("Requiere un servidor configurado en Ajustes.", color = Color(0xFF6B7089), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+        },
+        confirmButton = {
+            if (activeCode != null) {
+                TextButton(onClick = onLeave) { Text("Salir de la sala", color = Color(0xFFFF5252)) }
+            } else {
+                TextButton(onClick = onCreate, enabled = !busy) { Text(if (busy) "Creando\u2026" else "Crear sala", color = Color(0xFFE8FF00)) }
+            }
+        },
+        dismissButton = {
+            if (activeCode == null && codeInput.length == 6) {
+                TextButton(onClick = { onJoin(codeInput) }) { Text("Unirse", color = Color(0xFFE8FF00)) }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Cerrar", color = Color(0xFF6B7089)) }
+            }
+        },
+    )
 }
 
 /** Banner del radar al que el vehículo se dirige — solo ese, nunca los de otras calles. */
@@ -211,9 +309,11 @@ private fun rebuildMapOverlays(
     route: List<LiveRouteHolder.RoutePoint>,
     cameras: List<SpeedCameraEntity>,
     potholes: List<PotholeEntity>,
+    peers: List<RoomClient.Peer>,
     approachingId: Long?,
 ): RouteOverlays {
     map.overlays.clear()
+    peers.forEach { map.overlays.add(peerMarker(map, it)) }
     potholes.forEach { map.overlays.add(potholeMarker(map, it)) }
     // Con un radar objetivo activo, los demás se atenúan: el mapa informa el radar al que
     // VAS, no todos los que existen alrededor.
@@ -254,6 +354,15 @@ private fun appendRoutePoints(
 
 private fun updateCurrentPositionMarker(marker: Marker?, position: LiveRouteHolder.RoutePoint) {
     marker?.position = GeoPoint(position.lat, position.lon)
+}
+
+private fun peerMarker(
+    map: MapView,
+    peer: RoomClient.Peer,
+) = Marker(map).apply {
+    position = GeoPoint(peer.lat, peer.lon)
+    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+    title = "\uD83C\uDFCD\uFE0F ${peer.rider}" + (peer.speedKmh?.let { " \u00b7 ${it.toInt()} km/h" } ?: "")
 }
 
 private fun potholeMarker(

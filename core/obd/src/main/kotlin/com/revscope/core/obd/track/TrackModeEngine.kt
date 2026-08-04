@@ -54,6 +54,13 @@ class TrackModeEngine @Inject constructor() {
     private val _lapEvents = MutableSharedFlow<Lap>(extraBufferCapacity = 8)
     val lapEvents: SharedFlow<Lap> = _lapEvents.asSharedFlow()
 
+    // Ghost racing (self-ghost): la vuelta en curso corre contra la MEJOR vuelta de esta
+    // sesión. delta > 0 = vas perdiendo. null = aún no hay fantasma (primera vuelta).
+    private val ghostEngine = GhostRaceEngine()
+    private val lapBuffer = mutableListOf<GhostRaceEngine.GhostPoint>()
+    private val _ghostDeltaMs = MutableStateFlow<Long?>(null)
+    val ghostDeltaMs: StateFlow<Long?> = _ghostDeltaMs.asStateFlow()
+
     private var prevFix: Fix? = null
     private var lastFix: Fix? = null
     private var line: FinishLine? = null
@@ -80,6 +87,9 @@ class TrackModeEngine @Inject constructor() {
             headingX = hx, headingY = hy,
         )
         lapStartMs = null
+        ghostEngine.clearGhost()
+        lapBuffer.clear()
+        _ghostDeltaMs.value = null
         _state.value = _state.value.copy(
             finishLineSet = true,
             lapInProgress = false,
@@ -95,6 +105,9 @@ class TrackModeEngine @Inject constructor() {
     fun clear() {
         line = null
         lapStartMs = null
+        ghostEngine.clearGhost()
+        lapBuffer.clear()
+        _ghostDeltaMs.value = null
         _state.value = TrackState(hasGpsFix = lastFix != null)
     }
 
@@ -108,12 +121,18 @@ class TrackModeEngine @Inject constructor() {
         val activeLine = line ?: return
         val previous = prevFix ?: return
 
-        val crossingT = crossingParameter(activeLine, previous, fix) ?: return
+        val crossingT = crossingParameter(activeLine, previous, fix)
+        if (crossingT == null) {
+            feedGhost(fix)
+            return
+        }
         val crossingTime = previous.timeMs + ((fix.timeMs - previous.timeMs) * crossingT).toLong()
 
         val start = lapStartMs
         if (start == null) {
             lapStartMs = crossingTime
+            ghostEngine.onLapStart()
+            lapBuffer.clear()
             _state.value = _state.value.copy(lapInProgress = true, currentLapStartMs = crossingTime)
             Timber.i("TrackMode: lap 1 started")
             return
@@ -121,6 +140,12 @@ class TrackModeEngine @Inject constructor() {
 
         val lapTime = crossingTime - start
         val lap = Lap(number = _state.value.laps.size + 1, timeMs = lapTime)
+        val isBest = lapTime < (_state.value.bestLapMs ?: Long.MAX_VALUE)
+        // La vuelta que acaba de cerrar se vuelve el fantasma si fue la mejor
+        if (isBest && lapBuffer.size >= 2) ghostEngine.setGhost(lapBuffer.toList())
+        lapBuffer.clear()
+        ghostEngine.onLapStart()
+        _ghostDeltaMs.value = null
         lapStartMs = crossingTime
         _state.value = _state.value.copy(
             laps = _state.value.laps + lap,
@@ -129,6 +154,14 @@ class TrackModeEngine @Inject constructor() {
         )
         _lapEvents.tryEmit(lap)
         Timber.i("TrackMode: lap ${lap.number} = ${lap.timeMs} ms")
+    }
+
+    /** Alimenta el fantasma con la vuelta en curso (buffer propio + delta en vivo). */
+    private fun feedGhost(fix: Fix) {
+        val start = lapStartMs ?: return
+        val tRel = fix.timeMs - start
+        lapBuffer += GhostRaceEngine.GhostPoint(fix.lat, fix.lon, tRel)
+        _ghostDeltaMs.value = ghostEngine.onFix(fix.lat, fix.lon, tRel)
     }
 
     // ── Geometry ─────────────────────────────────────────────────────────────

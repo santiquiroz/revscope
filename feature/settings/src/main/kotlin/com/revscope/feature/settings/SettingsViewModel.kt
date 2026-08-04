@@ -167,6 +167,34 @@ class SettingsViewModel @Inject constructor(
     private val _voiceFatigue = MutableStateFlow(true)
     val voiceFatigue: StateFlow<Boolean> = _voiceFatigue.asStateFlow()
 
+    // ── Servidor colaborativo ─────────────────────────────────────────────────
+
+    private val _serverUrl = MutableStateFlow("")
+    val serverUrl: StateFlow<String> = _serverUrl.asStateFlow()
+
+    private val _serverToken = MutableStateFlow("")
+    val serverToken: StateFlow<String> = _serverToken.asStateFlow()
+
+    private val _riderName = MutableStateFlow("")
+    val riderName: StateFlow<String> = _riderName.asStateFlow()
+
+    fun updateServerUrl(value: String) { _serverUrl.value = value }
+    fun updateServerToken(value: String) { _serverToken.value = value }
+    fun updateRiderName(value: String) { _riderName.value = value }
+
+    fun saveServerSettings() {
+        viewModelScope.launch {
+            runCatching {
+                settings.edit {
+                    it[PreferencesKeys.SERVER_BASE_URL] = _serverUrl.value.trim().trimEnd('/')
+                    it[PreferencesKeys.SERVER_AUTH_TOKEN] = _serverToken.value.trim()
+                    it[PreferencesKeys.SERVER_RIDER_NAME] = _riderName.value.trim()
+                }
+            }
+            _lastSaveResult.value = SaveResult(true, "Servidor guardado")
+        }
+    }
+
     private val _aiPicoPlaca = MutableStateFlow(false)
     val aiPicoPlaca: StateFlow<Boolean> = _aiPicoPlaca.asStateFlow()
 
@@ -249,6 +277,9 @@ class SettingsViewModel @Inject constructor(
                 _voicePotholes.value = prefs[PreferencesKeys.VOICE_POTHOLES] ?: true
                 _voiceRain.value = prefs[PreferencesKeys.VOICE_RAIN] ?: true
                 _voiceFatigue.value = prefs[PreferencesKeys.VOICE_FATIGUE] ?: true
+                _serverUrl.value = prefs[PreferencesKeys.SERVER_BASE_URL].orEmpty()
+                _serverToken.value = prefs[PreferencesKeys.SERVER_AUTH_TOKEN].orEmpty()
+                _riderName.value = prefs[PreferencesKeys.SERVER_RIDER_NAME].orEmpty()
                 _aiPicoPlaca.value = prefs[PreferencesKeys.AI_PICO_PLACA_ENABLED] ?: false
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
         }

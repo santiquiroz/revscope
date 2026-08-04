@@ -10,6 +10,7 @@ import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
+import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,7 +32,28 @@ class LiveMapViewModel @Inject constructor(
     private val potholeDao: PotholeDao,
     sessionManager: ObdSessionManager,
     cameraAlerter: SpeedCameraAlerter,
+    private val roomClient: RoomClient,
 ) : ViewModel() {
+
+    // ── Rodada en grupo ──────────────────────────────────────────────────────
+
+    val roomCode: StateFlow<String?> = roomClient.roomCode
+    val peers: StateFlow<Map<String, RoomClient.Peer>> = roomClient.peers
+
+    private val _roomBusy = MutableStateFlow(false)
+    val roomBusy: StateFlow<Boolean> = _roomBusy.asStateFlow()
+
+    fun createRoom(onCode: (String?) -> Unit) {
+        viewModelScope.launch {
+            _roomBusy.value = true
+            onCode(roomClient.createAndJoin())
+            _roomBusy.value = false
+        }
+    }
+
+    fun joinRoom(code: String) = roomClient.join(code)
+
+    fun leaveRoom() = roomClient.leave()
 
     /** Radar hacia el que se dirige el vehículo (cono ±60°, <1 km) — null si ninguno aplica. */
     val approachingCamera: StateFlow<SpeedCameraAlerter.ApproachingCamera?> = cameraAlerter.approaching

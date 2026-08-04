@@ -20,4 +20,19 @@ interface PotholeDao {
 
     @Query("DELETE FROM potholes")
     suspend fun deleteAll()
+
+    // ── Sync con el servidor colaborativo ────────────────────────────────────
+
+    @Query("SELECT * FROM potholes WHERE source = 'LOCAL' AND syncedAt IS NULL")
+    suspend fun unsynced(): List<PotholeEntity>
+
+    @Query("UPDATE potholes SET syncedAt = :nowMs WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<Long>, nowMs: Long)
+
+    /** El cache remoto se reemplaza completo en cada sync — el server es la fuente de verdad de lo ajeno. */
+    @Query("DELETE FROM potholes WHERE source = 'REMOTE'")
+    suspend fun deleteRemote()
+
+    @Insert
+    suspend fun insertAllRemote(potholes: List<PotholeEntity>)
 }

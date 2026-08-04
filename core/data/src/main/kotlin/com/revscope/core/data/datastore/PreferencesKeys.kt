@@ -147,6 +147,17 @@ object PreferencesKeys {
     /** Lean máximo personal registrado en seco — referencia del guardián wet-lean */
     val MAX_DRY_LEAN_DEG = floatPreferencesKey("max_dry_lean_deg")
 
+    // ── Servidor colaborativo (revscope-server, opcional — offline-first) ────
+
+    /** URL base del servidor (ej. https://mi-server:8080). Vacío = sin servidor. */
+    val SERVER_BASE_URL = stringPreferencesKey("server_base_url")
+
+    /** Bearer token para AUTH_MODE=token del servidor (vacío si el server usa none) */
+    val SERVER_AUTH_TOKEN = stringPreferencesKey("server_auth_token")
+
+    /** Apodo visible para rodadas en grupo y fantasmas */
+    val SERVER_RIDER_NAME = stringPreferencesKey("server_rider_name")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */

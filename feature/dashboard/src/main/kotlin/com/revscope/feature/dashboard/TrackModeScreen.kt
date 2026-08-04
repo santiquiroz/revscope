@@ -66,6 +66,7 @@ fun TrackModeScreen(
 ) {
     val state by vm.engine.state.collectAsState()
     val motion by vm.motionHub.snapshot.collectAsState()
+    val ghostDeltaMs by vm.engine.ghostDeltaMs.collectAsState()
 
     // Live current-lap clock, ticking locally at 5 Hz
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -137,6 +138,16 @@ fun TrackModeScreen(
                     color = RevScopeColors.TextMuted,
                     fontSize = 13.sp,
                 )
+                // Delta vs tu fantasma (mejor vuelta de la sesión): + rojo = perdiendo
+                ghostDeltaMs?.let { delta ->
+                    Text(
+                        "${if (delta >= 0) "+" else "−"}%.1fs 👻".format(kotlin.math.abs(delta) / 1000.0),
+                        color = if (delta >= 0) RevScopeColors.Danger else RevScopeColors.Success,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
 
                 Row(

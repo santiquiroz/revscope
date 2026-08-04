@@ -107,6 +107,9 @@ fun SettingsScreen(
     val voicePotholes by vm.voicePotholes.collectAsState()
     val voiceRain by vm.voiceRain.collectAsState()
     val voiceFatigue by vm.voiceFatigue.collectAsState()
+    val serverUrl by vm.serverUrl.collectAsState()
+    val serverToken by vm.serverToken.collectAsState()
+    val riderName by vm.riderName.collectAsState()
     val guardRunning by vm.guardRunning.collectAsState()
     val guardAlarmActive by vm.guardAlarmActive.collectAsState()
     val voiceAnomalies by vm.voiceAnomalies.collectAsState()
@@ -714,6 +717,44 @@ fun SettingsScreen(
                 onClick = vm::saveCustomAlerts,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) { Text("Validar y aplicar", color = BgColor) }
+
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Servidor colaborativo")
+            Text(
+                "Opcional. Conecta la app a un servidor RevScope para compartir huecos, hacer rodadas " +
+                    "en grupo y fantasmas. La app funciona igual sin esto. Puedes usar el público, el de " +
+                    "tu parche, o montar el tuyo (github.com/santiquiroz/revscope-server). Déjalo vacío para no usar ninguno.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            OutlinedTextField(
+                value = serverUrl,
+                onValueChange = vm::updateServerUrl,
+                label = { Text("URL del servidor (ej. https://mi-server:8080)", fontSize = 12.sp) },
+                singleLine = true,
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = riderName,
+                onValueChange = vm::updateRiderName,
+                label = { Text("Tu apodo (rodadas y fantasmas)", fontSize = 12.sp) },
+                singleLine = true,
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = serverToken,
+                onValueChange = vm::updateServerToken,
+                label = { Text("Token (solo si el server lo pide — déjalo vacío si no)", fontSize = 12.sp) },
+                singleLine = true,
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = vm::saveServerSettings,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Guardar servidor", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Servidor MCP (red local)")

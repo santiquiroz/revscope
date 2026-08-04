@@ -51,7 +51,9 @@ class PotholeTracker @Inject constructor(
     private suspend fun record(lat: Double, lon: Double, severityG: Float, nowMs: Long) {
         runCatching {
             if (!loaded) {
-                known = dao.all()
+                // Solo clusterizamos contra los LOCALES: los remotos son de otros y su
+                // dedupe vive en el servidor.
+                known = dao.all().filter { it.source == PotholeEntity.SOURCE_LOCAL }
                 loaded = true
             }
             val nearby = PotholeClustering.findNearby(lat, lon, known)

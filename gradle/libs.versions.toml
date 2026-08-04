@@ -29,6 +29,7 @@ guava = "33.0.0-android"
 osmdroid = "6.1.20"
 androidxCoreKtx = "1.13.1"
 nanohttpd = "2.3.1"
+okhttp = "4.12.0"
 
 [libraries]
 # Compose BOM
@@ -111,6 +112,9 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 
 # Embedded HTTP server (local-network MCP server)
 nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
+
+# WebSocket client (rodadas en grupo contra revscope-server)
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

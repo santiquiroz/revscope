@@ -77,6 +77,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var rainWatcher: com.revscope.core.obd.weather.RainWatcher
     @Inject lateinit var wetLeanGuard: com.revscope.core.obd.road.WetLeanGuard
     @Inject lateinit var fatigueCoach: com.revscope.core.obd.road.FatigueCoach
+    @Inject lateinit var potholeSync: com.revscope.core.obd.social.PotholeSync
     @Inject lateinit var motionHub: MotionMetricsHub
     @Inject lateinit var routeHolder: LiveRouteHolder
     @Inject lateinit var crashResponder: CrashResponder
@@ -208,6 +209,7 @@ class ObdForegroundService : Service() {
             sunsetAlerter = sunsetAlerter,
             potholeAlerter = potholeAlerter,
             rainWatcher = rainWatcher,
+            potholeSync = potholeSync,
             onFixTick = { fatigueCoach.onTick(sessionManager.readings.value[com.revscope.core.obd.road.FatigueCoach.PID]?.value) },
             // Wired unconditionally — the OBD dashboard's speed-source toggle and the
             // speedometer comparison screen need GPS_SPEED too, not just GPS-only trips.

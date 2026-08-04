@@ -39,7 +39,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         MaintenanceItemEntity::class,
         PotholeEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -14,4 +14,13 @@ data class PotholeEntity(
     /** Veces que se ha vuelto a golpear aquí — confianza del reporte. */
     val hits: Int,
     val lastHitAt: Long,
-)
+    /** LOCAL = detectado por este teléfono; REMOTE = bajado del servidor colaborativo. */
+    val source: String = SOURCE_LOCAL,
+    /** Epoch ms de la última subida al servidor — null = pendiente de sync. Solo aplica a LOCAL. */
+    val syncedAt: Long? = null,
+) {
+    companion object {
+        const val SOURCE_LOCAL = "LOCAL"
+        const val SOURCE_REMOTE = "REMOTE"
+    }
+}

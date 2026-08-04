@@ -76,6 +76,14 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
+/** Sync colaborativo de huecos: origen (LOCAL/REMOTE) + marca de subida al servidor. */
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `potholes` ADD COLUMN `source` TEXT NOT NULL DEFAULT 'LOCAL'")
+        db.execSQL("ALTER TABLE `potholes` ADD COLUMN `syncedAt` INTEGER")
+    }
+}
+
 /** Mapa personal de huecos/resaltos detectados por IMU — tabla nueva, puramente aditiva. */
 val MIGRATION_14_15 = object : Migration(14, 15) {
     override fun migrate(db: SupportSQLiteDatabase) {
