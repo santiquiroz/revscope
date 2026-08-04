@@ -69,11 +69,13 @@ fun DashboardScreen(
     connectionVm: ConnectionViewModel = hiltViewModel(),
     dashboardVm: DashboardViewModel = hiltViewModel(),
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val connectionState by connectionVm.connectionState.collectAsState()
     val readingsState = connectionVm.readings.collectAsState()
     val tripScore by dashboardVm.tripScore.collectAsState()
     val gearCalibrated by dashboardVm.gearCalibrated.collectAsState()
     val alDiaBanner by dashboardVm.alDiaBanner.collectAsState()
+    val update by dashboardVm.updateAvailable.collectAsState()
     val isGpsTrip by connectionVm.isGpsTripActive.collectAsState()
     val speedSourceGps by dashboardVm.speedSourceGps.collectAsState()
 
@@ -228,6 +230,21 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            update?.let { info ->
+                UpdateBanner(
+                    version = info.version,
+                    onDownload = {
+                        val url = info.apkUrl ?: info.releaseUrl
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                            )
+                        }
+                    },
+                    onDismiss = { dashboardVm.dismissUpdate() },
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             alDiaBanner?.let { message ->
                 Text(
                     text = "⚠ $message",
@@ -351,6 +368,36 @@ private fun GpsTripButton(
             text = if (isActive) "Finalizar viaje GPS" else "Iniciar viaje GPS",
             color = RevScopeColors.Background,
             fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/** Aviso de nueva versión en GitHub — descargar (abre navegador al APK) o descartar. */
+@Composable
+private fun UpdateBanner(version: String, onDownload: () -> Unit, onDismiss: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Nueva versión $version disponible", color = RevScopeColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("Toca Descargar para actualizar", color = RevScopeColors.TextMuted, fontSize = 11.sp)
+        }
+        Text(
+            "Descargar",
+            color = RevScopeColors.Accent,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable(onClick = onDownload).padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+        Text(
+            "✕",
+            color = RevScopeColors.TextMuted,
+            fontSize = 15.sp,
+            modifier = Modifier.clickable(onClick = onDismiss).padding(horizontal = 6.dp, vertical = 4.dp),
         )
     }
 }

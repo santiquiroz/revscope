@@ -37,7 +37,20 @@ class DashboardViewModel @Inject constructor(
     sessionManager: ObdSessionManager,
     private val settings: DataStore<Preferences>,
     private val aiRulesSource: RestrictionRulesSource,
+    private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
 ) : ViewModel() {
+
+    /** Nueva versión disponible en GitHub — null si estás al día o sin red. */
+    val updateAvailable: StateFlow<com.revscope.core.obd.update.UpdateChecker.Update?> = updateChecker.available
+
+    init {
+        // Chequeo silencioso al abrir (throttle interno 12 h) — sin red no pasa nada.
+        viewModelScope.launch { updateChecker.check() }
+    }
+
+    fun dismissUpdate() {
+        viewModelScope.launch { updateChecker.dismiss() }
+    }
 
     /** Redline used by the shift light — cached in AlertsEngine from DataStore. */
     val redlineRpm: Int get() = alertsEngine.currentRedlineRpm

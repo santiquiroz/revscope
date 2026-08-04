@@ -65,6 +65,7 @@ class SettingsViewModel @Inject constructor(
     private val crashResponder: CrashResponder,
     private val mcpTokenStore: McpTokenStore,
     private val mcpServerController: McpServerController,
+    private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -181,6 +182,18 @@ class SettingsViewModel @Inject constructor(
     fun updateServerUrl(value: String) { _serverUrl.value = value }
     fun updateServerToken(value: String) { _serverToken.value = value }
     fun updateRiderName(value: String) { _riderName.value = value }
+
+    // ── Buscar actualizaciones (manual) ──────────────────────────────────────
+
+    fun checkForUpdates() {
+        viewModelScope.launch {
+            _lastSaveResult.value = SaveResult(true, "Buscando actualizaciones…")
+            updateChecker.check(force = true)
+            _lastSaveResult.value = updateChecker.available.value?.let {
+                SaveResult(true, "Nueva versión ${it.version} — revisa el aviso en Conducir")
+            } ?: SaveResult(true, "Estás en la última versión")
+        }
+    }
 
     fun saveServerSettings() {
         viewModelScope.launch {

@@ -158,6 +158,14 @@ object PreferencesKeys {
     /** Apodo visible para rodadas en grupo y fantasmas */
     val SERVER_RIDER_NAME = stringPreferencesKey("server_rider_name")
 
+    // ── Aviso de actualización (GitHub Releases) ─────────────────────────────
+
+    /** Epoch ms del último chequeo de versión — throttle */
+    val LAST_UPDATE_CHECK_MS = longPreferencesKey("last_update_check_ms")
+
+    /** Versión que el usuario descartó — no vuelve a avisar por esa */
+    val DISMISSED_UPDATE_VERSION = stringPreferencesKey("dismissed_update_version")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */

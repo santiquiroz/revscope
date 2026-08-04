@@ -794,6 +794,19 @@ fun SettingsScreen(
                 )
             }
 
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Acerca de")
+            val appVersion = remember {
+                runCatching {
+                    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+                }.getOrNull() ?: "?"
+            }
+            Text("RevScope v$appVersion", color = TextMutedColor, fontSize = 12.sp)
+            Button(
+                onClick = vm::checkForUpdates,
+                colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+            ) { Text("Buscar actualizaciones", color = TextPrimaryColor) }
+
             Spacer(Modifier.height(24.dp))
         }
     }
