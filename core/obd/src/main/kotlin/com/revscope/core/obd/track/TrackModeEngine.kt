@@ -61,6 +61,34 @@ class TrackModeEngine @Inject constructor() {
     private val _ghostDeltaMs = MutableStateFlow<Long?>(null)
     val ghostDeltaMs: StateFlow<Long?> = _ghostDeltaMs.asStateFlow()
 
+    // Cuando hay un fantasma REMOTO cargado, la mejor vuelta propia deja de sobrescribirlo.
+    @Volatile private var remoteGhostActive = false
+
+    /** Snapshot de la mejor vuelta de la sesión, lista para subir al servidor. */
+    data class BestLapUpload(val finishLat: Double, val finishLon: Double, val timeMs: Long, val points: List<GhostRaceEngine.GhostPoint>)
+    @Volatile private var bestLapUpload: BestLapUpload? = null
+
+    fun bestLapForUpload(): BestLapUpload? = bestLapUpload
+
+    /** Coordenadas de la línea de meta armada — para pedir fantasmas de esta pista. */
+    fun finishLinePoint(): Pair<Double, Double>? = line?.let { it.refLat to it.refLon }
+
+    /** Carga un fantasma remoto y corre contra él (reemplaza el self-ghost hasta [useSelfGhost]). */
+    @Synchronized
+    fun setRemoteGhost(points: List<GhostRaceEngine.GhostPoint>) {
+        ghostEngine.setGhost(points)
+        remoteGhostActive = ghostEngine.hasGhost
+        ghostEngine.onLapStart()
+        _ghostDeltaMs.value = null
+    }
+
+    @Synchronized
+    fun useSelfGhost() {
+        remoteGhostActive = false
+        ghostEngine.clearGhost()
+        _ghostDeltaMs.value = null
+    }
+
     private var prevFix: Fix? = null
     private var lastFix: Fix? = null
     private var line: FinishLine? = null
@@ -87,8 +115,9 @@ class TrackModeEngine @Inject constructor() {
             headingX = hx, headingY = hy,
         )
         lapStartMs = null
-        ghostEngine.clearGhost()
+        if (!remoteGhostActive) ghostEngine.clearGhost()
         lapBuffer.clear()
+        bestLapUpload = null
         _ghostDeltaMs.value = null
         _state.value = _state.value.copy(
             finishLineSet = true,
@@ -105,8 +134,10 @@ class TrackModeEngine @Inject constructor() {
     fun clear() {
         line = null
         lapStartMs = null
+        remoteGhostActive = false
         ghostEngine.clearGhost()
         lapBuffer.clear()
+        bestLapUpload = null
         _ghostDeltaMs.value = null
         _state.value = TrackState(hasGpsFix = lastFix != null)
     }
@@ -141,8 +172,13 @@ class TrackModeEngine @Inject constructor() {
         val lapTime = crossingTime - start
         val lap = Lap(number = _state.value.laps.size + 1, timeMs = lapTime)
         val isBest = lapTime < (_state.value.bestLapMs ?: Long.MAX_VALUE)
-        // La vuelta que acaba de cerrar se vuelve el fantasma si fue la mejor
-        if (isBest && lapBuffer.size >= 2) ghostEngine.setGhost(lapBuffer.toList())
+        // La mejor vuelta se guarda para subir, y se vuelve el self-ghost salvo que
+        // haya un fantasma remoto cargado.
+        if (isBest && lapBuffer.size >= 2) {
+            val snapshot = lapBuffer.toList()
+            bestLapUpload = BestLapUpload(activeLine.refLat, activeLine.refLon, lapTime, snapshot)
+            if (!remoteGhostActive) ghostEngine.setGhost(snapshot)
+        }
         lapBuffer.clear()
         ghostEngine.onLapStart()
         _ghostDeltaMs.value = null

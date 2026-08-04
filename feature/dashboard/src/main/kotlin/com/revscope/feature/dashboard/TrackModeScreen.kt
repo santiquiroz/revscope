@@ -1,6 +1,7 @@
 package com.revscope.feature.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.revscope.core.obd.motion.MotionMetricsHub
 import com.revscope.core.obd.track.TrackModeEngine
 import com.revscope.feature.dashboard.ui.RevScopeColors
@@ -49,7 +52,68 @@ import javax.inject.Inject
 class TrackModeViewModel @Inject constructor(
     val engine: TrackModeEngine,
     val motionHub: MotionMetricsHub,
-) : ViewModel()
+    private val ghostClient: com.revscope.core.obd.social.GhostClient,
+) : ViewModel() {
+
+    sealed interface GhostAction {
+        data object Idle : GhostAction
+        data object Working : GhostAction
+        data class Message(val text: String) : GhostAction
+    }
+
+    private val _ghostAction = kotlinx.coroutines.flow.MutableStateFlow<GhostAction>(GhostAction.Idle)
+    val ghostAction: kotlinx.coroutines.flow.StateFlow<GhostAction> = _ghostAction
+
+    private val _nearbyGhosts = kotlinx.coroutines.flow.MutableStateFlow<List<com.revscope.core.obd.social.GhostClient.GhostSummary>>(emptyList())
+    val nearbyGhosts: kotlinx.coroutines.flow.StateFlow<List<com.revscope.core.obd.social.GhostClient.GhostSummary>> = _nearbyGhosts
+
+    fun uploadBestLap() {
+        val best = engine.bestLapForUpload() ?: run {
+            _ghostAction.value = GhostAction.Message("Aún no tienes una vuelta para subir")
+            return
+        }
+        viewModelScope.launch {
+            _ghostAction.value = GhostAction.Working
+            val id = ghostClient.upload(best.finishLat, best.finishLon, best.timeMs, best.points)
+            _ghostAction.value = GhostAction.Message(
+                if (id != null) "Fantasma subido ✓" else "No se pudo subir (¿servidor configurado?)"
+            )
+        }
+    }
+
+    fun loadNearbyGhosts() {
+        val finish = engine.finishLinePoint() ?: return
+        viewModelScope.launch {
+            _ghostAction.value = GhostAction.Working
+            _nearbyGhosts.value = ghostClient.near(finish.first, finish.second)
+            _ghostAction.value =
+                if (_nearbyGhosts.value.isEmpty()) GhostAction.Message("Sin fantasmas para esta pista")
+                else GhostAction.Idle
+        }
+    }
+
+    fun raceGhost(id: Long) {
+        viewModelScope.launch {
+            _ghostAction.value = GhostAction.Working
+            val points = ghostClient.download(id)
+            if (points.size >= 2) {
+                engine.setRemoteGhost(points)
+                _ghostAction.value = GhostAction.Message("Corriendo contra el fantasma 👻")
+            } else {
+                _ghostAction.value = GhostAction.Message("No se pudo cargar el fantasma")
+            }
+            _nearbyGhosts.value = emptyList()
+        }
+    }
+
+    fun useSelfGhost() {
+        engine.useSelfGhost()
+        _nearbyGhosts.value = emptyList()
+        _ghostAction.value = GhostAction.Message("Fantasma remoto quitado")
+    }
+
+    fun clearGhostMessage() { _ghostAction.value = GhostAction.Idle }
+}
 
 private fun formatLap(ms: Long): String {
     val minutes = ms / 60_000
@@ -202,6 +266,8 @@ fun TrackModeScreen(
                     }
                 }
 
+                GhostSection(vm, hasBestLap = state.bestLapMs != null)
+
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = { vm.engine.clear() },
@@ -210,6 +276,59 @@ fun TrackModeScreen(
                     Text("Quitar línea y reiniciar", color = RevScopeColors.TextPrimary)
                 }
             }
+        }
+    }
+}
+
+/** Fantasmas remotos: subir tu mejor vuelta y elegir contra quién correr. Opt-in, requiere servidor. */
+@Composable
+private fun GhostSection(vm: TrackModeViewModel, hasBestLap: Boolean) {
+    val action by vm.ghostAction.collectAsState()
+    val nearby by vm.nearbyGhosts.collectAsState()
+
+    Spacer(Modifier.height(12.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Button(
+            onClick = { vm.uploadBestLap() },
+            enabled = hasBestLap && action !is TrackModeViewModel.GhostAction.Working,
+            colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Surface),
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("👻 Subir vuelta", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+        }
+        Button(
+            onClick = { vm.loadNearbyGhosts() },
+            enabled = action !is TrackModeViewModel.GhostAction.Working,
+            colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Surface),
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("Retar fantasma", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+        }
+    }
+    (action as? TrackModeViewModel.GhostAction.Message)?.let {
+        Text(it.text, color = RevScopeColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+    }
+    nearby.forEach { ghost ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
+                .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
+                .clickable { vm.raceGhost(ghost.id) }
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("👻 ${ghost.rider}", color = RevScopeColors.TextPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text(
+                formatLap(ghost.timeMs),
+                color = RevScopeColors.Accent,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+            )
         }
     }
 }
