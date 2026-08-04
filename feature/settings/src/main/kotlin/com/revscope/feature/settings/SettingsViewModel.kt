@@ -25,6 +25,7 @@ import com.revscope.core.intelligence.provider.AiProviderFactory
 import com.revscope.core.intelligence.provider.AiProviderSelection
 import com.revscope.core.intelligence.provider.AiRequest
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.guard.GuardService
 import com.revscope.core.obd.alerts.CustomAlertRules
 import com.revscope.core.obd.cameras.CameraDownloadResult
 import com.revscope.core.obd.cameras.SpeedCameraUpdater
@@ -157,6 +158,15 @@ class SettingsViewModel @Inject constructor(
     private val _voiceSunset = MutableStateFlow(true)
     val voiceSunset: StateFlow<Boolean> = _voiceSunset.asStateFlow()
 
+    private val _voicePotholes = MutableStateFlow(true)
+    val voicePotholes: StateFlow<Boolean> = _voicePotholes.asStateFlow()
+
+    private val _voiceRain = MutableStateFlow(true)
+    val voiceRain: StateFlow<Boolean> = _voiceRain.asStateFlow()
+
+    private val _voiceFatigue = MutableStateFlow(true)
+    val voiceFatigue: StateFlow<Boolean> = _voiceFatigue.asStateFlow()
+
     private val _aiPicoPlaca = MutableStateFlow(false)
     val aiPicoPlaca: StateFlow<Boolean> = _aiPicoPlaca.asStateFlow()
 
@@ -236,6 +246,9 @@ class SettingsViewModel @Inject constructor(
                 _voicePicoPlaca.value = prefs[PreferencesKeys.VOICE_PICO_PLACA] ?: true
                 _voiceLocalInfo.value = prefs[PreferencesKeys.VOICE_LOCAL_INFO] ?: false
                 _voiceSunset.value = prefs[PreferencesKeys.VOICE_SUNSET] ?: true
+                _voicePotholes.value = prefs[PreferencesKeys.VOICE_POTHOLES] ?: true
+                _voiceRain.value = prefs[PreferencesKeys.VOICE_RAIN] ?: true
+                _voiceFatigue.value = prefs[PreferencesKeys.VOICE_FATIGUE] ?: true
                 _aiPicoPlaca.value = prefs[PreferencesKeys.AI_PICO_PLACA_ENABLED] ?: false
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
         }
@@ -281,6 +294,24 @@ class SettingsViewModel @Inject constructor(
 
     fun updateVoiceSunset(value: Boolean) =
         updateVoiceCategory(_voiceSunset, PreferencesKeys.VOICE_SUNSET, value)
+
+    fun updateVoicePotholes(value: Boolean) =
+        updateVoiceCategory(_voicePotholes, PreferencesKeys.VOICE_POTHOLES, value)
+
+    fun updateVoiceRain(value: Boolean) =
+        updateVoiceCategory(_voiceRain, PreferencesKeys.VOICE_RAIN, value)
+
+    fun updateVoiceFatigue(value: Boolean) =
+        updateVoiceCategory(_voiceFatigue, PreferencesKeys.VOICE_FATIGUE, value)
+
+    // ── Modo guardia antirrobo ───────────────────────────────────────────────
+
+    val guardRunning: StateFlow<Boolean> = GuardService.running
+    val guardAlarmActive: StateFlow<Boolean> = GuardService.alarmActive
+
+    fun armGuard() = GuardService.arm(appContext)
+
+    fun disarmGuard() = GuardService.disarm(appContext)
 
     fun updateAiPicoPlaca(value: Boolean) =
         updateVoiceCategory(_aiPicoPlaca, PreferencesKeys.AI_PICO_PLACA_ENABLED, value)
@@ -436,9 +467,21 @@ class SettingsViewModel @Inject constructor(
                     it[modelKeyFor(provider)] = _aiModel.value.trim()
                     if (provider == AI_PROVIDER_CUSTOM) it[PreferencesKeys.AI_CUSTOM_BASE_URL] = _aiCustomBaseUrl.value.trim()
                 }
+                // Guardar una key = quiero IA: se encienden todas las funciones IA de una
+                // vez (el usuario puede apagarlas individualmente después). Sin esto cada
+                // función era un opt-in enterrado que nadie descubría.
+                if (_aiApiKey.value.isNotBlank()) {
+                    settings.edit {
+                        it[PreferencesKeys.AI_PICO_PLACA_ENABLED] = true
+                        it[PreferencesKeys.VOICE_LOCAL_INFO] = true
+                    }
+                    _aiPicoPlaca.value = true
+                    _voiceLocalInfo.value = true
+                }
             }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Configuración de IA guardada")
+                val extra = if (_aiApiKey.value.isNotBlank()) " — funciones IA activadas" else ""
+                SaveResult(true, "Configuración de IA guardada$extra")
             } else {
                 SaveResult(false, "Error guardando la configuración de IA")
             }

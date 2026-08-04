@@ -72,6 +72,11 @@ class ObdForegroundService : Service() {
     @Inject lateinit var cityAlerter: CityEnforcementAlerter
     @Inject lateinit var localInfoSink: GpsInfoSink
     @Inject lateinit var sunsetAlerter: com.revscope.core.obd.alerts.SunsetAlerter
+    @Inject lateinit var potholeTracker: com.revscope.core.obd.road.PotholeTracker
+    @Inject lateinit var potholeAlerter: com.revscope.core.obd.road.PotholeAlerter
+    @Inject lateinit var rainWatcher: com.revscope.core.obd.weather.RainWatcher
+    @Inject lateinit var wetLeanGuard: com.revscope.core.obd.road.WetLeanGuard
+    @Inject lateinit var fatigueCoach: com.revscope.core.obd.road.FatigueCoach
     @Inject lateinit var motionHub: MotionMetricsHub
     @Inject lateinit var routeHolder: LiveRouteHolder
     @Inject lateinit var crashResponder: CrashResponder
@@ -184,9 +189,12 @@ class ObdForegroundService : Service() {
         motionRecorder?.stop()
         routeHolder.clear()
         val imu = MotionSensorRecorder(applicationContext, imuDao, motionHub).also {
+            it.onVerticalSpike = potholeTracker::onVerticalSpike
             it.start(scope, sessionId)
         }
         motionRecorder = imu
+        wetLeanGuard.start(scope)
+        fatigueCoach.onSessionStart()
         gpsRecorder = GpsTrackRecorder(
             applicationContext,
             gpsDao,
@@ -198,6 +206,9 @@ class ObdForegroundService : Service() {
             localInfoSink = localInfoSink,
             routeHolder = routeHolder,
             sunsetAlerter = sunsetAlerter,
+            potholeAlerter = potholeAlerter,
+            rainWatcher = rainWatcher,
+            onFixTick = { fatigueCoach.onTick(sessionManager.readings.value[com.revscope.core.obd.road.FatigueCoach.PID]?.value) },
             // Wired unconditionally — the OBD dashboard's speed-source toggle and the
             // speedometer comparison screen need GPS_SPEED too, not just GPS-only trips.
             // publishGpsSpeed() itself decides whether to also feed engineOffDetector.
@@ -255,8 +266,11 @@ class ObdForegroundService : Service() {
     private fun stopCrashSubsystemAndRecorders() {
         gpsRecorder?.stop()
         gpsRecorder = null
+        motionRecorder?.onVerticalSpike = null
         motionRecorder?.stop()
         motionRecorder = null
+        wetLeanGuard.stop(motionHub.snapshot.value.maxAbsLean)
+        fatigueCoach.onSessionEnd()
         crashResponder.stop()
         routeHolder.clear()
     }

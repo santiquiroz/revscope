@@ -165,6 +165,7 @@ fun SessionDetailScreen(
             is SessionDetailViewModel.UiState.Ready -> ReportContent(
                 report = s.report,
                 profiles = profiles,
+                vm = vm,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -226,6 +227,7 @@ private fun exportMenuOptions(report: SessionDetailViewModel.TripReport?): List<
 private fun ReportContent(
     report: SessionDetailViewModel.TripReport,
     profiles: List<VehicleProfileEntity>,
+    vm: SessionDetailViewModel,
     modifier: Modifier = Modifier,
 ) {
     val session = report.session
@@ -291,6 +293,8 @@ private fun ReportContent(
         if (ecoScore != null) {
             EcoCard(score = ecoScore, desglose = report.ecoDesglose)
         }
+
+        DebriefCard(vm)
 
         if (session.best0to60Ms != null || session.best0to100Ms != null) {
             Row(
@@ -510,6 +514,53 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
     ) {
         Text(value, color = AccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Text(label, color = TextMutedColor, fontSize = 11.sp)
+    }
+}
+
+/** Análisis IA del viaje: agregados locales → una llamada corta al proveedor configurado. */
+@Composable
+private fun DebriefCard(vm: SessionDetailViewModel) {
+    val debrief by vm.debrief.collectAsState()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceColor, RoundedCornerShape(12.dp))
+            .padding(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("🤖 Análisis IA", color = TextPrimaryColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            when (debrief) {
+                is SessionDetailViewModel.DebriefState.Generating ->
+                    Text("Generando…", color = TextMutedColor, fontSize = 12.sp)
+                else -> Text(
+                    if (debrief is SessionDetailViewModel.DebriefState.Ready) "Regenerar" else "Analizar",
+                    color = AccentColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { vm.generateDebrief() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+            }
+        }
+        when (val d = debrief) {
+            is SessionDetailViewModel.DebriefState.Ready -> Text(
+                d.text, color = TextPrimaryColor, fontSize = 13.sp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            is SessionDetailViewModel.DebriefState.Error -> Text(
+                d.message, color = Color(0xFFFF5252), fontSize = 12.sp,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            else -> Text(
+                "Resumen y consejos de tu coach IA con los datos de este viaje, comparados con tu historial.",
+                color = TextMutedColor, fontSize = 11.sp,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
     }
 }
 

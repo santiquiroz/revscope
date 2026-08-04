@@ -33,6 +33,7 @@ private const val STATIONARY_G_THRESHOLD = 0.06f     // ~0.6 m/s² of filtered m
 private const val CALIBRATION_HOLD_MS = 2_000L
 private const val MAX_PLAUSIBLE_LEAN_DEG = 70f       // past this the phone was handled, not leaned
 private const val RAW_PEAK_WINDOW_MS = 200L          // rolling peak window fed to CrashDetector
+private const val VERTICAL_SPIKE_MIN_G = 2.2f        // pre-filtro del callback de huecos
 
 /**
  * Phone-IMU telemetry in vehicle frame:
@@ -78,6 +79,10 @@ class MotionSensorRecorder(
 
     // Vehicle frame inputs
     @Volatile private var gpsBearingDeg: Float? = null
+
+    // Golpe vertical (hueco/resalto): magnitud proyectada sobre la gravedad, pre-filtro.
+    // El consumidor (PotholeTracker) decide umbral final y gating por velocidad.
+    @Volatile var onVerticalSpike: ((Float) -> Unit)? = null
 
     // Lean calibration — reference gravity direction with the vehicle upright
     private var baselineGravity: FloatArray? = null
@@ -188,6 +193,20 @@ class MotionSensorRecorder(
             rawPeakSamples.removeFirst()
         }
         hub.updateRawPeak(rawPeakSamples.maxOf { it.magnitudeG })
+        reportVerticalSpike(rawValues)
+    }
+
+    /** Componente vertical (proyección sobre la gravedad filtrada) del sample crudo, en G. */
+    private fun reportVerticalSpike(rawValues: FloatArray) {
+        val callback = onVerticalSpike ?: return
+        if (!hasGravity) return
+        val g = filteredGravity
+        val gravityMag = sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2])
+        if (gravityMag < 1f) return
+        val verticalG = kotlin.math.abs(
+            rawValues[0] * g[0] + rawValues[1] * g[1] + rawValues[2] * g[2]
+        ) / gravityMag / G
+        if (verticalG >= VERTICAL_SPIKE_MIN_G) callback(verticalG)
     }
 
     private fun processSample() {

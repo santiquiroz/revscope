@@ -12,6 +12,11 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <service
+            android:name="com.revscope.core.obd.guard.GuardService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
         <receiver
             android:name="com.revscope.core.obd.safety.CrashCancelReceiver"
             android:exported="false" />

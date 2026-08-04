@@ -30,6 +30,7 @@ import javax.inject.Inject
 class HealthCheckViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val reportDao: HealthReportDao,
+    private val telemetryDao: com.revscope.core.data.db.dao.TelemetryDao,
 ) : ViewModel() {
 
     sealed interface UiState {
@@ -76,6 +77,9 @@ class HealthCheckViewModel @Inject constructor(
 
                 _state.value = UiState.Running("Verificando odómetro…")
                 items += odometerDiagnoses()
+
+                _state.value = UiState.Running("Analizando tendencia de batería…")
+                batteryTrendDiagnosis()?.let { items += it }
 
                 val now = System.currentTimeMillis()
                 persist(items, now)
@@ -124,6 +128,24 @@ class HealthCheckViewModel @Inject constructor(
     }
 
     /** Distinguishes a genuinely clean scan from one where a mode failed to answer mid-scan. */
+    /** Tendencia de voltaje entre sesiones — null cuando no hay historial suficiente. */
+    private suspend fun batteryTrendDiagnosis(): DiagnosticRules.Diagnosis? {
+        val voltages = runCatching { telemetryDao.recentSessionVoltages() }.getOrNull() ?: return null
+        val result = com.revscope.core.obd.workshop.BatteryTrendAnalyzer.analyze(voltages.map { it.avgVolts })
+        return when (result.verdict) {
+            com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.SIN_DATOS -> null
+            com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.OK -> DiagnosticRules.Diagnosis(
+                DiagnosticRules.Nivel.OK, "Batería (tendencia)", "Carga estable entre viajes", result.detalle,
+            )
+            com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.DEGRADANDO -> DiagnosticRules.Diagnosis(
+                DiagnosticRules.Nivel.ATENCION, "Batería (tendencia)", "Voltaje de carga en descenso", result.detalle,
+            )
+            com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.CARGA_DEBIL -> DiagnosticRules.Diagnosis(
+                DiagnosticRules.Nivel.ATENCION, "Batería (tendencia)", "Carga débil sostenida", result.detalle,
+            )
+        }
+    }
+
     private data class DtcScanResult(val codes: List<String>, val readFailed: Boolean)
 
     private fun buildDtcDiagnosis(scan: DtcScanResult): DiagnosticRules.Diagnosis = when {

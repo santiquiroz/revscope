@@ -22,6 +22,7 @@ import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.intelligence.debrief.TripDebriefGenerator
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.obd.trip.EcoScoreCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,6 +43,7 @@ private const val CHART_MAX_POINTS = 240
 class SessionDetailViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val sessionDao: SessionDao,
+    private val debriefGenerator: TripDebriefGenerator,
     private val telemetryDao: TelemetryDao,
     private val gpsDao: GpsDao,
     private val lapDao: LapDao,
@@ -108,10 +110,59 @@ class SessionDetailViewModel @Inject constructor(
         data class NotFound(val message: String) : UiState()
     }
 
+    sealed class DebriefState {
+        object Idle : DebriefState()
+        object Generating : DebriefState()
+        data class Ready(val text: String) : DebriefState()
+        data class Error(val message: String) : DebriefState()
+    }
+
     private val sessionId: Long = checkNotNull(savedStateHandle["sessionId"])
 
     private val _state = MutableStateFlow<UiState>(UiState.Loading)
     val state: StateFlow<UiState> = _state.asStateFlow()
+
+    private val _debrief = MutableStateFlow<DebriefState>(DebriefState.Idle)
+    val debrief: StateFlow<DebriefState> = _debrief.asStateFlow()
+
+    /** Digest local (SQL/Kotlin) → una llamada corta a la IA que solo narra. */
+    fun generateDebrief() {
+        val report = (_state.value as? UiState.Ready)?.report ?: return
+        if (_debrief.value is DebriefState.Generating) return
+        _debrief.value = DebriefState.Generating
+        viewModelScope.launch {
+            val session = report.session
+            val profile = profiles.value.firstOrNull { it.id == session.vehicleProfileId }
+            val previous = runCatching { sessionDao.getRecentForProfile(session.vehicleProfileId, 10) }
+                .getOrNull()
+                .orEmpty()
+                .filter { it.id != session.id && it.endedAt != null }
+            val prevEco = previous.mapNotNull { it.ecoScore }
+            val prevMaxSpeed = previous.map { it.maxSpeed }.filter { it > 0 }
+            val digest = TripDebriefGenerator.TripDigest(
+                vehicleName = profile?.name ?: "Mi vehículo",
+                isMotorcycle = profile?.type == "MOTORCYCLE",
+                distanceKm = if (session.distanceKm > 0) session.distanceKm.toDouble() else report.gpsDistanceKm,
+                durationMin = ((session.endedAt ?: session.startedAt) - session.startedAt) / 60_000L,
+                avgSpeedKmh = report.avgSpeedKmh.toInt(),
+                maxSpeedKmh = maxOf(session.maxSpeed, report.gpsMaxSpeedKmh),
+                maxRpm = report.maxRpm,
+                ecoScore = session.ecoScore,
+                fuelCostCop = session.fuelCostCop,
+                maxBrakingG = report.maxBrakingG,
+                maxLateralG = report.maxLateralG,
+                maxLeanDeg = report.maxLeanDeg,
+                best0to100s = session.best0to100Ms?.let { it / 1000.0 },
+                prevTripCount = previous.size,
+                prevAvgEcoScore = prevEco.takeIf { it.isNotEmpty() }?.average()?.toInt(),
+                prevAvgMaxSpeedKmh = prevMaxSpeed.takeIf { it.isNotEmpty() }?.average()?.toInt(),
+            )
+            debriefGenerator.generate(digest).fold(
+                onSuccess = { _debrief.value = DebriefState.Ready(it.trim()) },
+                onFailure = { _debrief.value = DebriefState.Error(it.message?.take(160) ?: "Error generando el análisis") },
+            )
+        }
+    }
 
     init {
         viewModelScope.launch { loadReport() }

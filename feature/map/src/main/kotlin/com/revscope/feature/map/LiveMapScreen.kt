@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
@@ -53,6 +54,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val route by viewModel.route.collectAsState()
     val routeRevision by viewModel.routeRevision.collectAsState()
     val cameras by viewModel.cameras.collectAsState()
+    val potholes by viewModel.potholes.collectAsState()
     val approaching by viewModel.approachingCamera.collectAsState()
     val context = LocalContext.current
 
@@ -102,7 +104,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                     (revisionChanged && !routeGrew)
 
                 if (needsFullRebuild) {
-                    routeOverlays = rebuildMapOverlays(map, route, cameras, approaching?.osmId)
+                    routeOverlays = rebuildMapOverlays(map, route, cameras, potholes, approaching?.osmId)
                     lastOverlayCameraCount = cameras.size
                     lastApproachingId = approaching?.osmId
                 } else if (routeGrew) {
@@ -208,9 +210,11 @@ private fun rebuildMapOverlays(
     map: MapView,
     route: List<LiveRouteHolder.RoutePoint>,
     cameras: List<SpeedCameraEntity>,
+    potholes: List<PotholeEntity>,
     approachingId: Long?,
 ): RouteOverlays {
     map.overlays.clear()
+    potholes.forEach { map.overlays.add(potholeMarker(map, it)) }
     // Con un radar objetivo activo, los demás se atenúan: el mapa informa el radar al que
     // VAS, no todos los que existen alrededor.
     cameras.forEach { cam ->
@@ -250,6 +254,16 @@ private fun appendRoutePoints(
 
 private fun updateCurrentPositionMarker(marker: Marker?, position: LiveRouteHolder.RoutePoint) {
     marker?.position = GeoPoint(position.lat, position.lon)
+}
+
+private fun potholeMarker(
+    map: MapView,
+    pothole: PotholeEntity,
+) = Marker(map).apply {
+    position = GeoPoint(pothole.latitude, pothole.longitude)
+    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+    title = "Hueco · %.1fG · %dx".format(pothole.severityG, pothole.hits)
+    alpha = 0.85f
 }
 
 private fun speedCameraAlertCircle(

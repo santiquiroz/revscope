@@ -104,6 +104,11 @@ fun SettingsScreen(
     val voiceVoltage by vm.voiceVoltage.collectAsState()
     val voiceSpeedCameras by vm.voiceSpeedCameras.collectAsState()
     val voiceSunset by vm.voiceSunset.collectAsState()
+    val voicePotholes by vm.voicePotholes.collectAsState()
+    val voiceRain by vm.voiceRain.collectAsState()
+    val voiceFatigue by vm.voiceFatigue.collectAsState()
+    val guardRunning by vm.guardRunning.collectAsState()
+    val guardAlarmActive by vm.guardAlarmActive.collectAsState()
     val voiceAnomalies by vm.voiceAnomalies.collectAsState()
     val voiceMil by vm.voiceMil.collectAsState()
     val voiceRedline by vm.voiceRedline.collectAsState()
@@ -271,6 +276,24 @@ fun SettingsScreen(
                 voiceSunset,
                 vm::updateVoiceSunset,
                 subtitle = "Un aviso diario ~25 min antes del ocaso: enciende luces y hazte visible",
+            )
+            ToggleRow(
+                "Huecos y resaltos",
+                voicePotholes,
+                vm::updateVoicePotholes,
+                subtitle = "Avisa al acercarte a un hueco que tu propio IMU ya detectó antes",
+            )
+            ToggleRow(
+                "Lluvia e inclinación en mojado",
+                voiceRain,
+                vm::updateVoiceRain,
+                subtitle = "Lluvia inminente en tu zona + guardián de lean con piso mojado",
+            )
+            ToggleRow(
+                "Fatiga e hidratación",
+                voiceFatigue,
+                vm::updateVoiceFatigue,
+                subtitle = "Pausa sugerida cada 2 h; hidratación cuando hace calor",
             )
             ToggleRow(
                 "Información local al cambiar de ciudad",
@@ -540,6 +563,22 @@ fun SettingsScreen(
                 onClick = vm::testCrashAlert,
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
             ) { Text("Probar (sin enviar SMS real)", color = TextPrimaryColor) }
+
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Modo guardia antirrobo")
+            Text(
+                "Con la moto apagada y parqueada cerca, el teléfono vigila el adaptador OBD: " +
+                    "si despierta (alguien giró la llave), suena una alarma fuerte. Requiere estar " +
+                    "en rango Bluetooth (~10-30 m) — cubre el robo exprés, no vigilancia remota.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            ToggleRow(
+                "Modo guardia",
+                guardRunning,
+                { enabled -> if (enabled) vm.armGuard() else vm.disarmGuard() },
+                subtitle = if (guardAlarmActive) "⚠ ¡ALARMA ACTIVA — el adaptador despertó!" else null,
+            )
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Inteligencia artificial")

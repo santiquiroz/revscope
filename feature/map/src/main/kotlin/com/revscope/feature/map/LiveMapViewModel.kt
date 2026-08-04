@@ -5,7 +5,9 @@ import android.content.Context
 import android.location.LocationManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.data.db.dao.PotholeDao
 import com.revscope.core.data.db.dao.SpeedCameraDao
+import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
@@ -26,6 +28,7 @@ class LiveMapViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     routeHolder: LiveRouteHolder,
     private val cameraDao: SpeedCameraDao,
+    private val potholeDao: PotholeDao,
     sessionManager: ObdSessionManager,
     cameraAlerter: SpeedCameraAlerter,
 ) : ViewModel() {
@@ -61,10 +64,14 @@ class LiveMapViewModel @Inject constructor(
     private val _cameras = MutableStateFlow<List<SpeedCameraEntity>>(emptyList())
     val cameras: StateFlow<List<SpeedCameraEntity>> = _cameras.asStateFlow()
 
+    private val _potholes = MutableStateFlow<List<PotholeEntity>>(emptyList())
+    val potholes: StateFlow<List<PotholeEntity>> = _potholes.asStateFlow()
+
     init {
         loadLastKnownLocation()
         viewModelScope.launch {
             runCatching { cameraDao.all() }.onSuccess { _cameras.value = it }
+            runCatching { potholeDao.all() }.onSuccess { _potholes.value = it }
         }
     }
 }

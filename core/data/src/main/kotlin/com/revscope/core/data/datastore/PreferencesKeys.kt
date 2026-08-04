@@ -135,6 +135,18 @@ object PreferencesKeys {
     /** Aviso hablado único diario ~25 min antes del atardecer (default true — pico de riesgo moto) */
     val VOICE_SUNSET = booleanPreferencesKey("voice_sunset")
 
+    /** Aviso de hueco del mapa personal en el cono de rumbo (default true) */
+    val VOICE_POTHOLES = booleanPreferencesKey("voice_potholes")
+
+    /** Avisos de lluvia inminente + guardián de inclinación en mojado (default true) */
+    val VOICE_RAIN = booleanPreferencesKey("voice_rain")
+
+    /** Coach de fatiga: pausa a las 2 h e hidratación con calor (default true) */
+    val VOICE_FATIGUE = booleanPreferencesKey("voice_fatigue")
+
+    /** Lean máximo personal registrado en seco — referencia del guardián wet-lean */
+    val MAX_DRY_LEAN_DEG = floatPreferencesKey("max_dry_lean_deg")
+
     // ── Vehículo al día ──────────────────────────────────────────────────────
 
     /** Driver's license expiration, epoch ms — app-wide, not per vehicle profile */

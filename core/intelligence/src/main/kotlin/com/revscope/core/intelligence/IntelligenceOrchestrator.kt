@@ -94,8 +94,11 @@ class IntelligenceOrchestrator(
      * Explains a DTC fault code. Falls back gracefully when API key absent or network fails.
      * [context] — recent readings to include in the AI prompt for better diagnosis.
      */
-    suspend fun explainDtc(code: String, context: List<ObdReading>): DtcExplanation =
-        dtcExplainer.explain(code, context)
+    suspend fun explainDtc(
+        code: String,
+        context: List<ObdReading>,
+        freezeFrame: List<Pair<String, String>> = emptyList(),
+    ): DtcExplanation = dtcExplainer.explain(code, context, freezeFrame)
 
     /** Finalizes and returns the current trip score without resetting state. */
     fun currentScore(): TripScore = driveStyleClassifier.score()

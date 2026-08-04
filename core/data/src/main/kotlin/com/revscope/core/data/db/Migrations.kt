@@ -75,3 +75,18 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
         db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `fuelType` TEXT NOT NULL DEFAULT 'CORRIENTE'")
     }
 }
+
+/** Mapa personal de huecos/resaltos detectados por IMU — tabla nueva, puramente aditiva. */
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `potholes` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`latitude` REAL NOT NULL, " +
+                "`longitude` REAL NOT NULL, " +
+                "`severityG` REAL NOT NULL, " +
+                "`hits` INTEGER NOT NULL, " +
+                "`lastHitAt` INTEGER NOT NULL)"
+        )
+    }
+}

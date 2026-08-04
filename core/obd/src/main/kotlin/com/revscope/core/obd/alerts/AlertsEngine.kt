@@ -53,7 +53,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE }
 
     data class ObdAlert(
         val type: AlertType,
@@ -91,6 +91,9 @@ class AlertsEngine @Inject constructor(
     @Volatile private var voicePicoPlaca = true
     @Volatile private var voiceLocalInfo = false
     @Volatile private var voiceSunset = true
+    @Volatile private var voicePotholes = true
+    @Volatile private var voiceRain = true
+    @Volatile private var voiceFatigue = true
 
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
@@ -131,6 +134,9 @@ class AlertsEngine @Inject constructor(
             voicePicoPlaca = prefs[PreferencesKeys.VOICE_PICO_PLACA] ?: true
             voiceLocalInfo = prefs[PreferencesKeys.VOICE_LOCAL_INFO] ?: false
             voiceSunset = prefs[PreferencesKeys.VOICE_SUNSET] ?: true
+            voicePotholes = prefs[PreferencesKeys.VOICE_POTHOLES] ?: true
+            voiceRain = prefs[PreferencesKeys.VOICE_RAIN] ?: true
+            voiceFatigue = prefs[PreferencesKeys.VOICE_FATIGUE] ?: true
             if (ttsEnabled) tts // touch the lazy so the engine warms up early
             Timber.i(
                 "AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm " +
@@ -277,6 +283,59 @@ class AlertsEngine @Inject constructor(
      * LocalInfoAlertPolicy/CityInfoAlerter; this only gates on the voice category +
      * master switch. Also posts a silent notification with the text so it can be reread.
      */
+    /** Hueco del mapa personal adelante en el cono de rumbo. */
+    fun announcePothole(distanceM: Int) {
+        if (!enabled) return
+        if (!voicePotholes) return
+        val message = "Hueco reportado a $distanceM metros"
+        Timber.i("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.POTHOLE, message, distanceM.toDouble()))
+        playTone(ToneGenerator.TONE_PROP_BEEP, 150)
+        vibrate(longArrayOf(0, 150))
+        speak(message)
+    }
+
+    /** Lluvia inminente o empezando — los primeros minutos son los más resbalosos. */
+    fun announceRain(startingNow: Boolean, minutesAhead: Int) {
+        if (!enabled) return
+        if (!voiceRain) return
+        val message = if (startingNow) {
+            "Está empezando a llover. Los primeros minutos son los más resbalosos: suaviza frenos e inclinación."
+        } else {
+            "Lluvia probable en $minutesAhead minutos en tu zona."
+        }
+        Timber.i("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.RAIN, message, minutesAhead.toDouble()))
+        playTone(ToneGenerator.TONE_PROP_ACK, 200)
+        speak(message)
+    }
+
+    /** Inclinación excesiva para piso mojado (guardián wet-lean). */
+    fun announceWetLean(leanDeg: Int) {
+        if (!enabled) return
+        if (!voiceRain) return
+        val message = "Cuidado: $leanDeg grados de inclinación con lluvia activa"
+        Timber.w("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.RAIN, message, leanDeg.toDouble()))
+        playTone(ToneGenerator.TONE_SUP_ERROR, 250)
+        vibrate(longArrayOf(0, 300))
+        speak(message)
+    }
+
+    /** Coach de fatiga: pausa cada 2 h / hidratación con calor. */
+    fun announceFatigue(hydration: Boolean) {
+        if (!enabled) return
+        if (!voiceFatigue) return
+        val message = if (hydration) {
+            "Temperatura alta. Hidrátate en la próxima parada."
+        } else {
+            "Llevas más de dos horas rodando. Considera una pausa corta."
+        }
+        Timber.i("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.FATIGUE, message, 0.0))
+        speak(message)
+    }
+
     /** Aviso único diario ~25 min antes del ocaso — pico de riesgo para motos. */
     fun announceSunset(minutesToSunset: Int) {
         if (!enabled) return

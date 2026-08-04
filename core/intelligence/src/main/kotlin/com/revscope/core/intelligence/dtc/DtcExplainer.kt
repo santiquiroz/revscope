@@ -31,13 +31,17 @@ class DtcExplainer(private val providerProvider: suspend () -> AiProvider?) {
 
     private val cache = ConcurrentHashMap<String, DtcExplanation>()
 
-    suspend fun explain(dtcCode: String, context: List<ObdReading>): DtcExplanation {
+    suspend fun explain(
+        dtcCode: String,
+        context: List<ObdReading>,
+        freezeFrame: List<Pair<String, String>> = emptyList(),
+    ): DtcExplanation {
         cache[dtcCode]?.let { return it.copy(source = "cache") }
 
         val provider = providerProvider()
             ?: return DtcExplanation.noApiKey(dtcCode)
 
-        val result = callProvider(provider, dtcCode, context)
+        val result = callProvider(provider, dtcCode, context, freezeFrame)
         cache[dtcCode] = result
         return result
     }
@@ -46,10 +50,11 @@ class DtcExplainer(private val providerProvider: suspend () -> AiProvider?) {
         provider: AiProvider,
         dtcCode: String,
         context: List<ObdReading>,
+        freezeFrame: List<Pair<String, String>>,
     ): DtcExplanation = try {
         val request = AiRequest(
             system = SYSTEM_PROMPT,
-            user = buildUserMessage(dtcCode, context),
+            user = buildUserMessage(dtcCode, context, freezeFrame),
             maxTokens = MAX_TOKENS,
             needsWebSearch = false,
         )
@@ -67,7 +72,11 @@ class DtcExplainer(private val providerProvider: suspend () -> AiProvider?) {
         DtcExplanation.fallback(dtcCode)
     }
 
-    private fun buildUserMessage(dtcCode: String, context: List<ObdReading>): String {
+    private fun buildUserMessage(
+        dtcCode: String,
+        context: List<ObdReading>,
+        freezeFrame: List<Pair<String, String>>,
+    ): String {
         val contextText = context
             .filter { it.unit.isNotEmpty() }
             .joinToString("\n") { "  PID ${it.pid}: ${it.value} ${it.unit}" }
@@ -78,12 +87,19 @@ class DtcExplainer(private val providerProvider: suspend () -> AiProvider?) {
                 appendLine("Lecturas actuales del sensor:")
                 appendLine(contextText)
             }
+            if (freezeFrame.isNotEmpty()) {
+                // El freeze frame es la "caja negra": condiciones exactas al saltar la falla —
+                // distingue falla en frío vs caliente, ralentí vs bajo demanda.
+                appendLine("Condiciones capturadas AL MOMENTO de la falla (freeze frame):")
+                freezeFrame.forEach { (label, value) -> appendLine("  $label: $value") }
+            }
             appendLine()
             append(
                 "Explica este código en 2-3 oraciones para un conductor no técnico. " +
                     "Incluye: (1) qué significa en lenguaje simple, " +
-                    "(2) causas probables según los sensores actuales, " +
-                    "(3) urgencia: seguro de conducir / revisar pronto / detener inmediatamente.",
+                    "(2) causas probables según los sensores actuales" +
+                    (if (freezeFrame.isNotEmpty()) " y las condiciones del freeze frame (¿frío o caliente? ¿ralentí o bajo carga?)" else "") +
+                    ", (3) urgencia: seguro de conducir / revisar pronto / detener inmediatamente.",
             )
         }
     }

@@ -49,4 +49,17 @@ interface TelemetryDao {
 
     @Query("SELECT COUNT(*) FROM telemetry_points WHERE sessionId = :sessionId")
     suspend fun countForSession(sessionId: Long): Int
+
+    // ── Tendencia de salud de batería ────────────────────────────────────────
+
+    data class SessionVoltage(val startedAt: Long, val avgVolts: Double)
+
+    /** Voltaje promedio (VBAT) por sesión, más reciente primero — insumo del análisis de tendencia. */
+    @Query(
+        "SELECT s.startedAt AS startedAt, AVG(t.value) AS avgVolts " +
+            "FROM telemetry_points t JOIN sessions s ON s.id = t.sessionId " +
+            "WHERE t.pid = 'VBAT' AND t.value > 0 " +
+            "GROUP BY t.sessionId ORDER BY s.startedAt DESC LIMIT :limit"
+    )
+    suspend fun recentSessionVoltages(limit: Int = 20): List<SessionVoltage>
 }

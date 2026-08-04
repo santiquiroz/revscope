@@ -42,6 +42,10 @@ class GpsTrackRecorder(
     private val localInfoSink: GpsInfoSink? = null,
     private val routeHolder: LiveRouteHolder? = null,
     private val sunsetAlerter: com.revscope.core.obd.alerts.SunsetAlerter? = null,
+    private val potholeAlerter: com.revscope.core.obd.road.PotholeAlerter? = null,
+    private val rainWatcher: com.revscope.core.obd.weather.RainWatcher? = null,
+    /** Tick genérico 1 Hz para consumidores que se auto-throttlean (coach de fatiga). */
+    private val onFixTick: (() -> Unit)? = null,
     /** Wired by the service ONLY in GPS-only trip mode, to drive the GPS_SPEED pseudo-reading. */
     private val onSpeed: ((Float) -> Unit)? = null,
 ) {
@@ -150,6 +154,13 @@ class GpsTrackRecorder(
         cityAlerter?.onGpsFix(location.latitude, location.longitude)
         localInfoSink?.onGpsFix(location.latitude, location.longitude)
         sunsetAlerter?.onGpsFix(location.latitude, location.longitude)
+        potholeAlerter?.onGpsFix(
+            location.latitude,
+            location.longitude,
+            if (location.hasBearing()) location.bearing else null,
+        )
+        rainWatcher?.onGpsFix(location.latitude, location.longitude)
+        onFixTick?.invoke()
         routeHolder?.append(location.latitude, location.longitude)
         routeHolder?.updateSpeed(point.speedKmh)
         onSpeed?.invoke(point.speedKmh)

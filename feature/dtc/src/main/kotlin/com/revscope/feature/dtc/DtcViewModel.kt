@@ -103,7 +103,10 @@ class DtcViewModel @Inject constructor(
 
         codes.forEachIndexed { index, dtc ->
             val explanation = try {
-                orchestrator.explainDtc(dtc.code, context).explanation
+                orchestrator.explainDtc(
+                    dtc.code, context,
+                    freezeFrame = _freezeFrame.value.map { it.label to it.value },
+                ).explanation
             } catch (_: Exception) {
                 null
             }
