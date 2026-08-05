@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
+import com.revscope.core.intelligence.provider.AI_PROVIDER_NODO
+import com.revscope.core.intelligence.provider.NODO_BASE_URL_POR_DEFECTO
 import com.revscope.core.obd.mcp.McpServerState
 import java.time.LocalDate
 import kotlinx.coroutines.delay
@@ -307,7 +309,7 @@ fun SettingsScreen(
                 subtitle = if (aiProviderSupportsWebSearch(aiProvider)) {
                     "Usa tu proveedor de IA con búsqueda web (~$0.02 por ciudad)"
                 } else {
-                    "Requiere Claude, OpenAI o Gemini (no disponible con Compatible OpenAI)"
+                    "Requiere Claude, OpenAI o Gemini (no disponible con Nodo ni Compatible OpenAI)"
                 },
             )
             ToggleRow(
@@ -612,11 +614,17 @@ fun SettingsScreen(
                 colors = settingsFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            if (aiProvider == AI_PROVIDER_CUSTOM) {
+            if (aiProvider == AI_PROVIDER_CUSTOM || aiProvider == AI_PROVIDER_NODO) {
                 OutlinedTextField(
                     value = aiCustomBaseUrl,
                     onValueChange = vm::updateAiCustomBaseUrl,
-                    label = { Text("Base URL (LM Studio, DeepSeek, Groq, OpenRouter…)", fontSize = 12.sp) },
+                    label = {
+                        Text(
+                            if (aiProvider == AI_PROVIDER_NODO) "Base URL (vacío = $NODO_BASE_URL_POR_DEFECTO)"
+                            else "Base URL (LM Studio, DeepSeek, Groq, OpenRouter…)",
+                            fontSize = 12.sp,
+                        )
+                    },
                     singleLine = true,
                     colors = settingsFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
@@ -847,6 +855,7 @@ private val AiProviderOptions = listOf(
     "anthropic" to "Claude (Anthropic)",
     "openai" to "OpenAI",
     "gemini" to "Gemini (Google)",
+    AI_PROVIDER_NODO to "Nodo (este teléfono)",
     AI_PROVIDER_CUSTOM to "Compatible OpenAI (LM Studio, DeepSeek, Groq, OpenRouter…)",
 )
 
@@ -854,6 +863,7 @@ private val AiModelHints = mapOf(
     "anthropic" to "claude-haiku-4-5-20251001",
     "openai" to "gpt-5-mini",
     "gemini" to "gemini-flash-latest",
+    AI_PROVIDER_NODO to "el que tengas cargado en Nodo",
     AI_PROVIDER_CUSTOM to "según tu servidor",
 )
 
@@ -862,8 +872,9 @@ private fun aiProviderLabel(provider: String): String =
 
 private fun aiModelHint(provider: String): String = AiModelHints[provider].orEmpty()
 
-/** Only the generic Compatible-OpenAI endpoint lacks a server-side web search tool. */
-private fun aiProviderSupportsWebSearch(provider: String): Boolean = provider != AI_PROVIDER_CUSTOM
+/** Ni el endpoint genérico ni Nodo traen búsqueda web del lado del servidor. */
+private fun aiProviderSupportsWebSearch(provider: String): Boolean =
+    provider != AI_PROVIDER_CUSTOM && provider != AI_PROVIDER_NODO
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

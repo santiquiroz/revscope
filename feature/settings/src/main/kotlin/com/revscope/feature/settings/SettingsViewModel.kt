@@ -19,6 +19,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.intelligence.provider.AI_PROVIDER_ANTHROPIC
 import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
+import com.revscope.core.intelligence.provider.AI_PROVIDER_NODO
 import com.revscope.core.intelligence.provider.AI_PROVIDER_GEMINI
 import com.revscope.core.intelligence.provider.AI_PROVIDER_OPENAI
 import com.revscope.core.intelligence.provider.AiProviderFactory
@@ -523,7 +524,9 @@ class SettingsViewModel @Inject constructor(
                 settings.edit {
                     it[PreferencesKeys.AI_PROVIDER] = provider
                     it[modelKeyFor(provider)] = _aiModel.value.trim()
-                    if (provider == AI_PROVIDER_CUSTOM) it[PreferencesKeys.AI_CUSTOM_BASE_URL] = _aiCustomBaseUrl.value.trim()
+                    if (provider == AI_PROVIDER_CUSTOM || provider == AI_PROVIDER_NODO) {
+                        it[PreferencesKeys.AI_CUSTOM_BASE_URL] = _aiCustomBaseUrl.value.trim()
+                    }
                 }
                 // Guardar una key = quiero IA: se encienden todas las funciones IA de una
                 // vez (el usuario puede apagarlas individualmente después). Sin esto cada
@@ -602,7 +605,7 @@ class SettingsViewModel @Inject constructor(
     private fun modelKeyFor(provider: String) = when (provider) {
         AI_PROVIDER_OPENAI -> PreferencesKeys.AI_MODEL_OPENAI
         AI_PROVIDER_GEMINI -> PreferencesKeys.AI_MODEL_GEMINI
-        AI_PROVIDER_CUSTOM -> PreferencesKeys.AI_MODEL_CUSTOM
+        AI_PROVIDER_CUSTOM, AI_PROVIDER_NODO -> PreferencesKeys.AI_MODEL_CUSTOM
         else -> PreferencesKeys.AI_MODEL_ANTHROPIC
     }
 
