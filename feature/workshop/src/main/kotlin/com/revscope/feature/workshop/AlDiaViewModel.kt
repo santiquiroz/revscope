@@ -41,7 +41,11 @@ class AlDiaViewModel @Inject constructor(
     private val maintenanceDao: MaintenanceDao,
     private val sessionDao: SessionDao,
     private val aiRulesSource: RestrictionRulesSource,
+    zoneBriefHolder: com.revscope.core.obd.service.ZoneBriefHolder,
 ) : ViewModel() {
+
+    /** Último brief de zona del compañero de viaje — null si aún no hay. */
+    val zoneBrief: StateFlow<com.revscope.core.obd.service.ZoneBriefHolder.ZoneBrief?> = zoneBriefHolder.brief
 
     val activeProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
 

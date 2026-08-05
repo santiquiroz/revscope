@@ -158,6 +158,13 @@ object PreferencesKeys {
     /** Apodo visible para rodadas en grupo y fantasmas */
     val SERVER_RIDER_NAME = stringPreferencesKey("server_rider_name")
 
+    /** Compañero de viaje: brief de zona (combustible/peajes/restricciones) al llegar a un lugar
+     *  nuevo. Server-first + respaldo IA. Default false (el respaldo IA cuesta). */
+    val ZONE_BRIEF_ENABLED = booleanPreferencesKey("zone_brief_enabled")
+
+    /** Anuncio hablado corto al llegar el brief de zona (default true; el detalle va a notificación) */
+    val VOICE_ZONE_BRIEF = booleanPreferencesKey("voice_zone_brief")
+
     // ── Aviso de actualización (GitHub Releases) ─────────────────────────────
 
     /** Epoch ms del último chequeo de versión — throttle */

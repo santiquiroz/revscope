@@ -168,6 +168,12 @@ class SettingsViewModel @Inject constructor(
     private val _voiceFatigue = MutableStateFlow(true)
     val voiceFatigue: StateFlow<Boolean> = _voiceFatigue.asStateFlow()
 
+    private val _zoneBriefEnabled = MutableStateFlow(false)
+    val zoneBriefEnabled: StateFlow<Boolean> = _zoneBriefEnabled.asStateFlow()
+
+    private val _voiceZoneBrief = MutableStateFlow(true)
+    val voiceZoneBrief: StateFlow<Boolean> = _voiceZoneBrief.asStateFlow()
+
     // ── Servidor colaborativo ─────────────────────────────────────────────────
 
     private val _serverUrl = MutableStateFlow("")
@@ -290,6 +296,8 @@ class SettingsViewModel @Inject constructor(
                 _voicePotholes.value = prefs[PreferencesKeys.VOICE_POTHOLES] ?: true
                 _voiceRain.value = prefs[PreferencesKeys.VOICE_RAIN] ?: true
                 _voiceFatigue.value = prefs[PreferencesKeys.VOICE_FATIGUE] ?: true
+                _zoneBriefEnabled.value = prefs[PreferencesKeys.ZONE_BRIEF_ENABLED] ?: false
+                _voiceZoneBrief.value = prefs[PreferencesKeys.VOICE_ZONE_BRIEF] ?: true
                 _serverUrl.value = prefs[PreferencesKeys.SERVER_BASE_URL].orEmpty()
                 _serverToken.value = prefs[PreferencesKeys.SERVER_AUTH_TOKEN].orEmpty()
                 _riderName.value = prefs[PreferencesKeys.SERVER_RIDER_NAME].orEmpty()
@@ -347,6 +355,12 @@ class SettingsViewModel @Inject constructor(
 
     fun updateVoiceFatigue(value: Boolean) =
         updateVoiceCategory(_voiceFatigue, PreferencesKeys.VOICE_FATIGUE, value)
+
+    fun updateZoneBriefEnabled(value: Boolean) =
+        updateVoiceCategory(_zoneBriefEnabled, PreferencesKeys.ZONE_BRIEF_ENABLED, value)
+
+    fun updateVoiceZoneBrief(value: Boolean) =
+        updateVoiceCategory(_voiceZoneBrief, PreferencesKeys.VOICE_ZONE_BRIEF, value)
 
     // ── Modo guardia antirrobo ───────────────────────────────────────────────
 

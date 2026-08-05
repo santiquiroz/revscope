@@ -39,6 +39,7 @@ private const val CUSTOM_ALERT_COOLDOWN_MS = 120_000L
 private const val LOCAL_INFO_CHANNEL_ID = "revscope_local_info"
 private const val LOCAL_INFO_NOTIFICATION_ID = 2001
 private const val AI_RULES_NOTIFICATION_ID = 2002
+private const val ZONE_BRIEF_NOTIFICATION_ID = 2003
 
 /**
  * Turns telemetry readings into audible/haptic alerts. Audio goes out on the media
@@ -53,7 +54,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE, ZONE_BRIEF }
 
     data class ObdAlert(
         val type: AlertType,
@@ -94,6 +95,7 @@ class AlertsEngine @Inject constructor(
     @Volatile private var voicePotholes = true
     @Volatile private var voiceRain = true
     @Volatile private var voiceFatigue = true
+    @Volatile private var voiceZoneBrief = true
 
     private val tts: TextToSpeech by lazy {
         TextToSpeech(context) { status ->
@@ -137,6 +139,7 @@ class AlertsEngine @Inject constructor(
             voicePotholes = prefs[PreferencesKeys.VOICE_POTHOLES] ?: true
             voiceRain = prefs[PreferencesKeys.VOICE_RAIN] ?: true
             voiceFatigue = prefs[PreferencesKeys.VOICE_FATIGUE] ?: true
+            voiceZoneBrief = prefs[PreferencesKeys.VOICE_ZONE_BRIEF] ?: true
             if (ttsEnabled) tts // touch the lazy so the engine warms up early
             Timber.i(
                 "AlertsEngine: enabled=$enabled temp=$tempMaxC volt=$voltageMin redline=$redlineRpm " +
@@ -361,6 +364,18 @@ class AlertsEngine @Inject constructor(
 
     private fun postLocalInfoNotification(municipio: String, frase: String) {
         postSilentInfoNotification(LOCAL_INFO_NOTIFICATION_ID, "Estás en $municipio", frase)
+    }
+
+    /**
+     * Brief de conducción de zona (combustible, peajes, restricciones) al llegar a un
+     * lugar nuevo. El detalle va a una notificación legible (multi-línea); la voz solo
+     * anuncia que está listo — leer 5 viñetas en voz alta mientras se rueda es peor.
+     */
+    fun announceZoneBrief(place: String, body: String) {
+        if (!enabled) return
+        postSilentInfoNotification(ZONE_BRIEF_NOTIFICATION_ID, "Info de conducción: $place", body)
+        _alerts.tryEmit(ObdAlert(AlertType.ZONE_BRIEF, "Info de conducción de $place lista", 0.0))
+        if (voiceZoneBrief) speak("Info de conducción para $place disponible")
     }
 
     /**

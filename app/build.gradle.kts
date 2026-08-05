@@ -14,8 +14,8 @@ android {
         applicationId = "com.revscope.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.10.1"
+        versionCode = 14
+        versionName = "1.11.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

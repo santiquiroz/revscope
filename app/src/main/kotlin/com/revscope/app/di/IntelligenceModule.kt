@@ -19,11 +19,15 @@ import com.revscope.core.intelligence.provider.AiProviderFactory
 import com.revscope.core.intelligence.provider.AiProviderSelection
 import com.revscope.core.intelligence.restriction.AiRestrictionRulesSource
 import com.revscope.core.intelligence.restriction.RestrictionRulesFetcher
+import com.revscope.core.intelligence.zone.ZoneBriefAlerter
+import com.revscope.core.intelligence.zone.ZoneBriefFetcher
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.legal.LocalityDetector
 import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.service.GpsInfoSink
+import com.revscope.core.obd.service.ZoneBriefHolder
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.social.ZoneBriefClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -80,13 +84,49 @@ object IntelligenceModule {
         sessionManager: ObdSessionManager,
         localInfoFetcher: LocalInfoFetcher,
         aiProviderFactory: AiProviderFactory,
-    ): GpsInfoSink = CityInfoAlerter(
-        localityDetector = LocalityDetector(context),
-        localInfoFetcher = localInfoFetcher,
-        alertsEngine = alertsEngine,
-        sessionManager = sessionManager,
-        gateProvider = localInfoGateProvider(settings, aiProviderFactory),
-    )
+        zoneBriefClient: ZoneBriefClient,
+        zoneBriefHolder: ZoneBriefHolder,
+    ): GpsInfoSink {
+        // Info local (festivales/cierres) por voz — feature existente.
+        val cityInfo = CityInfoAlerter(
+            localityDetector = LocalityDetector(context),
+            localInfoFetcher = localInfoFetcher,
+            alertsEngine = alertsEngine,
+            sessionManager = sessionManager,
+            gateProvider = localInfoGateProvider(settings, aiProviderFactory),
+        )
+        // Compañero de viaje: brief de zona server-first + respaldo IA.
+        val zoneBrief = ZoneBriefAlerter(
+            localityDetector = LocalityDetector(context),
+            client = zoneBriefClient,
+            fetcher = ZoneBriefFetcher { aiProviderFactory.current() },
+            holder = zoneBriefHolder,
+            alertsEngine = alertsEngine,
+            sessionManager = sessionManager,
+            homeCountry = "Colombia",
+            enabledProvider = zoneBriefEnabledProvider(settings),
+            aiAllowedProvider = { aiProviderFactory.current()?.supportsWebSearch == true },
+        )
+        // Fan-out: un solo GpsInfoSink alimenta ambos alerters (cada uno tiene su throttle).
+        return GpsInfoSink { lat, lon ->
+            cityInfo.onGpsFix(lat, lon)
+            zoneBrief.onGpsFix(lat, lon)
+        }
+    }
+
+    /** Toggle maestro del compañero de viaje — el respaldo IA se decide aparte por web search. */
+    private fun zoneBriefEnabledProvider(
+        settings: DataStore<Preferences>,
+    ): suspend () -> Boolean = {
+        try {
+            withContext(Dispatchers.IO) { settings.data.first()[PreferencesKeys.ZONE_BRIEF_ENABLED] ?: false }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "IntelligenceModule: fallo gate de zone brief")
+            false
+        }
+    }
 
     /**
      * Binds [RestrictionRulesSource] (:core:obd) to [AiRestrictionRulesSource]

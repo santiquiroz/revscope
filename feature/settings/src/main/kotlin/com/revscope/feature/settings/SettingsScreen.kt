@@ -110,6 +110,8 @@ fun SettingsScreen(
     val serverUrl by vm.serverUrl.collectAsState()
     val serverToken by vm.serverToken.collectAsState()
     val riderName by vm.riderName.collectAsState()
+    val zoneBriefEnabled by vm.zoneBriefEnabled.collectAsState()
+    val voiceZoneBrief by vm.voiceZoneBrief.collectAsState()
     val guardRunning by vm.guardRunning.collectAsState()
     val guardAlarmActive by vm.guardAlarmActive.collectAsState()
     val voiceAnomalies by vm.voiceAnomalies.collectAsState()
@@ -755,6 +757,25 @@ fun SettingsScreen(
                 onClick = vm::saveServerSettings,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) { Text("Guardar servidor", color = BgColor) }
+
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Compañero de viaje")
+            Text(
+                "Al llegar a un lugar nuevo — en el país o en el extranjero — te da un brief de " +
+                    "conducción: precio del combustible, peajes, restricciones y, si estás fuera, qué " +
+                    "necesitas para manejar allí. Pregunta PRIMERO al servidor colaborativo (gratis); si " +
+                    "nadie ha reportado esa zona y tienes IA con búsqueda web, la genera y la comparte de " +
+                    "vuelta para el próximo viajero. Apagado por defecto (el respaldo con IA cuesta).",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            ToggleRow("Activar compañero de viaje", zoneBriefEnabled, vm::updateZoneBriefEnabled)
+            ToggleRow(
+                "Anunciar por voz al llegar",
+                voiceZoneBrief,
+                vm::updateVoiceZoneBrief,
+                subtitle = "Avisa que el brief está listo; el detalle queda en la notificación",
+            )
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Servidor MCP (red local)")

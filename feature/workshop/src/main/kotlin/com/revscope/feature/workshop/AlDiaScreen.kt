@@ -76,6 +76,7 @@ fun AlDiaScreen(
     val statuses by vm.docStatuses.collectAsState()
     val licenseExpiresAt by vm.licenseExpiresAt.collectAsState()
     val maintenanceEstados by vm.maintenanceEstados.collectAsState()
+    val zoneBrief by vm.zoneBrief.collectAsState()
 
     Column(
         modifier = Modifier
@@ -98,6 +99,11 @@ fun AlDiaScreen(
             fontSize = 13.sp,
             modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
         )
+
+        zoneBrief?.let { brief ->
+            ZoneBriefCard(brief)
+            Spacer(Modifier.height(12.dp))
+        }
 
         val soat = statuses.find(DocumentStatusCalculator.DocType.SOAT)
         val rtm = statuses.find(DocumentStatusCalculator.DocType.RTM)
@@ -134,6 +140,22 @@ fun AlDiaScreen(
             licencia?.let {
                 item { LicenseCard(status = it, expiresAt = licenseExpiresAt, onChange = vm::setLicenseExpiresAt) }
             }
+        }
+    }
+}
+
+/** Brief del compañero de viaje: combustible/peajes/restricciones de la zona actual. */
+@Composable
+private fun ZoneBriefCard(brief: com.revscope.core.obd.service.ZoneBriefHolder.ZoneBrief) {
+    val fuente = when (brief.source) {
+        com.revscope.core.obd.service.ZoneBriefHolder.Source.COMMUNITY -> "ℹ️ de la comunidad"
+        com.revscope.core.obd.service.ZoneBriefHolder.Source.AI -> "🤖 generado por IA"
+    }
+    Surface(shape = RoundedCornerShape(14.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp)) {
+            Text("🧭 ${brief.place}", color = AccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(fuente, color = TextMutedColor, fontSize = 11.sp, modifier = Modifier.padding(bottom = 6.dp))
+            Text(brief.body, color = TextColor, fontSize = 13.sp, lineHeight = 19.sp)
         }
     }
 }
