@@ -81,6 +81,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var motionHub: MotionMetricsHub
     @Inject lateinit var routeHolder: LiveRouteHolder
     @Inject lateinit var crashResponder: CrashResponder
+    @Inject lateinit var engineSound: com.revscope.core.obd.sound.EngineSoundController
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var gpsRecorder: GpsTrackRecorder? = null
@@ -144,6 +145,7 @@ class ObdForegroundService : Service() {
         graceJob?.cancel()
         gpsRecorder?.stop()
         motionRecorder?.stop()
+        engineSound.stop()
         // NEW-2: if the service dies mid-real-countdown (e.g. manual disconnect while an
         // alarm is counting down), cancel it here too — otherwise the looping alarm sound
         // and notification outlive the service with nothing left to stop them.
@@ -222,6 +224,7 @@ class ObdForegroundService : Service() {
             motionHub = motionHub,
             vehicleName = sessionManager.activeProfile.value?.name ?: "tu vehículo",
         )
+        engineSound.start()
     }
 
     /**
@@ -236,6 +239,9 @@ class ObdForegroundService : Service() {
      * listener needed.
      */
     private fun handleSessionLost() {
+        // Sin link OBD el mapa de lecturas congela la última RPM — el sonido seguiría
+        // rugiendo con el motor apagado; se corta siempre, incluso durante la gracia.
+        engineSound.stop()
         if (shouldEnterCrashGrace()) {
             Timber.i("ObdForegroundService: link lost with recent motion — entering ${CRASH_GRACE_PERIOD_MS}ms crash-detection grace")
             // NEW-1: the closed session must not keep growing — recorders stay alive to feed
