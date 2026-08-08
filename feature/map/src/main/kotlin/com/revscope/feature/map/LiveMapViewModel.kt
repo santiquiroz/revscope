@@ -13,8 +13,10 @@ import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.feature.map.routing.OsrmRouteFetcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -58,6 +60,9 @@ class LiveMapViewModel @Inject constructor(
     /** Radar hacia el que se dirige el vehículo (cono ±60°, <1 km) — null si ninguno aplica. */
     val approachingCamera: StateFlow<SpeedCameraAlerter.ApproachingCamera?> = cameraAlerter.approaching
 
+    /** Radio configurado del aviso de radar — el círculo del mapa dibuja el mismo valor que dispara la voz. */
+    val cameraAlertRadiusM: StateFlow<Int> = cameraAlerter.alertRadiusM
+
     val route: StateFlow<List<LiveRouteHolder.RoutePoint>> = routeHolder.points
 
     // route.size se estanca al llegar al tope de puntos; revision avanza siempre que
@@ -82,6 +87,36 @@ class LiveMapViewModel @Inject constructor(
     val speedKmh: StateFlow<Int?> = sessionManager.readings
         .map { it["0D"]?.value?.toInt() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // ── Ruta a destino (OSRM) ────────────────────────────────────────────────
+
+    private val _destination = MutableStateFlow<LiveRouteHolder.RoutePoint?>(null)
+    val destination: StateFlow<LiveRouteHolder.RoutePoint?> = _destination.asStateFlow()
+
+    private val _plannedRoute = MutableStateFlow<OsrmRouteFetcher.Route?>(null)
+    val plannedRoute: StateFlow<OsrmRouteFetcher.Route?> = _plannedRoute.asStateFlow()
+
+    private val _routing = MutableStateFlow(false)
+    val routing: StateFlow<Boolean> = _routing.asStateFlow()
+
+    /** Long-press en el mapa: fija destino y pide la ruta a OSRM desde la posición actual. */
+    fun setDestination(lat: Double, lon: Double) {
+        val origin = route.value.lastOrNull() ?: _initialCenter.value ?: return
+        _destination.value = LiveRouteHolder.RoutePoint(lat, lon)
+        _plannedRoute.value = null
+        _routing.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val fetched = OsrmRouteFetcher.fetch(origin.lat, origin.lon, lat, lon)
+            _plannedRoute.value = fetched
+            _routing.value = false
+        }
+    }
+
+    fun clearDestination() {
+        _destination.value = null
+        _plannedRoute.value = null
+        _routing.value = false
+    }
 
     private val _cameras = MutableStateFlow<List<SpeedCameraEntity>>(emptyList())
     val cameras: StateFlow<List<SpeedCameraEntity>> = _cameras.asStateFlow()

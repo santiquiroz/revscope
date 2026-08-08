@@ -32,4 +32,5 @@ dependencies {
     implementation(libs.osmdroid)
     implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)
+    testImplementation(libs.junit)
 }
