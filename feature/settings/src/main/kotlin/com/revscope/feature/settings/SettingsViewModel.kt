@@ -28,6 +28,7 @@ import com.revscope.core.intelligence.provider.AiRequest
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.guard.GuardService
 import com.revscope.core.obd.alerts.CustomAlertRules
+import com.revscope.core.obd.cameras.CameraAlertRadius
 import com.revscope.core.obd.cameras.CameraDownloadResult
 import com.revscope.core.obd.cameras.SpeedCameraUpdater
 import com.revscope.core.obd.mcp.McpServerController
@@ -38,6 +39,7 @@ import com.revscope.core.obd.mcp.McpTokenStore
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.safety.CrashResponder
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.sound.SoundPack
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -120,6 +122,18 @@ class SettingsViewModel @Inject constructor(
 
     private val _fuelPriceDiesel = MutableStateFlow(FuelPricePrefs.DEFAULT_DIESEL.toLong().toString())
     val fuelPriceDiesel: StateFlow<String> = _fuelPriceDiesel.asStateFlow()
+
+    private val _cameraAlertRadius = MutableStateFlow(CameraAlertRadius.DEFAULT_M.toString())
+    val cameraAlertRadius: StateFlow<String> = _cameraAlertRadius.asStateFlow()
+
+    private val _engineSoundEnabled = MutableStateFlow(false)
+    val engineSoundEnabled: StateFlow<Boolean> = _engineSoundEnabled.asStateFlow()
+
+    private val _engineSoundPack = MutableStateFlow(SoundPack.DEFAULT.id)
+    val engineSoundPack: StateFlow<String> = _engineSoundPack.asStateFlow()
+
+    private val _engineSoundVolume = MutableStateFlow("70")
+    val engineSoundVolume: StateFlow<String> = _engineSoundVolume.asStateFlow()
 
     private val _lastSaveResult = MutableStateFlow<SaveResult?>(null)
     val lastSaveResult: StateFlow<SaveResult?> = _lastSaveResult.asStateFlow()
@@ -286,6 +300,11 @@ class SettingsViewModel @Inject constructor(
                 _voiceTemperature.value = prefs[PreferencesKeys.VOICE_TEMPERATURE] ?: true
                 _voiceVoltage.value = prefs[PreferencesKeys.VOICE_VOLTAGE] ?: true
                 _voiceSpeedCameras.value = prefs[PreferencesKeys.VOICE_SPEED_CAMERAS] ?: true
+                _cameraAlertRadius.value =
+                    CameraAlertRadius.sanitize(prefs[PreferencesKeys.CAMERA_ALERT_RADIUS_M]).toString()
+                _engineSoundEnabled.value = prefs[PreferencesKeys.ENGINE_SOUND_ENABLED] ?: false
+                _engineSoundPack.value = SoundPack.fromId(prefs[PreferencesKeys.ENGINE_SOUND_PACK]).id
+                _engineSoundVolume.value = (prefs[PreferencesKeys.ENGINE_SOUND_VOLUME] ?: 70).toString()
                 _voiceAnomalies.value = prefs[PreferencesKeys.VOICE_ANOMALIES] ?: false
                 _voiceMil.value = prefs[PreferencesKeys.VOICE_MIL] ?: false
                 _voiceRedline.value = prefs[PreferencesKeys.VOICE_REDLINE] ?: false
@@ -873,6 +892,67 @@ class SettingsViewModel @Inject constructor(
 
     private fun sourceBreakdown(result: CameraDownloadResult): String =
         "OSM: ${result.osmCount} · ANSV: ${result.ansvCount}"
+
+    fun updateCameraAlertRadius(value: String) {
+        _cameraAlertRadius.value = value
+    }
+
+    fun updateEngineSoundEnabled(value: Boolean) {
+        _engineSoundEnabled.value = value
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.ENGINE_SOUND_ENABLED] = value } }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist engine sound enabled") }
+        }
+    }
+
+    fun updateEngineSoundPack(id: String) {
+        val pack = SoundPack.fromId(id)
+        _engineSoundPack.value = pack.id
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.ENGINE_SOUND_PACK] = pack.id } }
+                .onFailure { Timber.w(it, "SettingsViewModel: failed to persist engine sound pack") }
+        }
+    }
+
+    fun updateEngineSoundVolume(value: String) {
+        _engineSoundVolume.value = value
+    }
+
+    fun saveEngineSoundVolume() {
+        viewModelScope.launch {
+            val parsed = _engineSoundVolume.value.toIntOrNull()
+            if (parsed == null) {
+                _lastSaveResult.value = SaveResult(false, "Volumen inválido — usa un número 0-100")
+                return@launch
+            }
+            val volume = parsed.coerceIn(0, 100)
+            _engineSoundVolume.value = volume.toString()
+            _lastSaveResult.value = runCatching {
+                settings.edit { it[PreferencesKeys.ENGINE_SOUND_VOLUME] = volume }
+            }.fold(
+                onSuccess = { SaveResult(true, "Volumen del motor: $volume%") },
+                onFailure = { SaveResult(false, "Error guardando el volumen") },
+            )
+        }
+    }
+
+    fun saveCameraAlertRadius() {
+        viewModelScope.launch {
+            val parsed = _cameraAlertRadius.value.toIntOrNull()
+            if (parsed == null) {
+                _lastSaveResult.value = SaveResult(false, "Radio inválido — usa un número en metros")
+                return@launch
+            }
+            val radius = CameraAlertRadius.sanitize(parsed)
+            _cameraAlertRadius.value = radius.toString()
+            _lastSaveResult.value = runCatching {
+                settings.edit { it[PreferencesKeys.CAMERA_ALERT_RADIUS_M] = radius }
+            }.fold(
+                onSuccess = { SaveResult(true, "Radio de aviso: $radius m") },
+                onFailure = { SaveResult(false, "Error guardando el radio de aviso") },
+            )
+        }
+    }
 
     /** Guarda el centro de la última descarga exitosa para el refresco semanal automático. */
     private suspend fun persistLastCameraCenter(latitude: Double, longitude: Double) {

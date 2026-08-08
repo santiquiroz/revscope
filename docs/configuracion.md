@@ -73,6 +73,18 @@ Se actualiza **una vez por semana automáticamente** y funciona sin conexión de
 
 Además, durante un viaje la app detecta cuando te alejas **más de 35 km** del centro de la última descarga (por ejemplo, un viaje Medellín → Bogotá) y **re-descarga sola** los radares alrededor de tu nueva posición — silencioso, con reintento cada 30 minutos si no hay señal de datos. El refresco semanal sigue a ese nuevo centro automáticamente. Fuera de Colombia solo aplica la fuente OpenStreetMap.
 
+El campo **Radio de aviso (m)** controla a qué distancia suena la voz al acercarte a un radar (100-1000 m, default 250 m). Menos metros = avisos más puntuales y menos parloteo en ciudad; el círculo rojo del mapa dibuja exactamente ese radio.
+
+## Sonido de motor
+
+Simulador estilo SoundRacer sin comprar el adaptador: sintetiza en tiempo real el sonido de un motor siguiendo las RPM reales del OBD2 y lo saca por los parlantes del teléfono, el estéreo del carro o el intercomunicador del casco (Bluetooth).
+
+- **Sonido de motor al conducir** — apagado por defecto; solo suena con telemetría OBD conectada.
+- **Pack de sonido** — deportivos (V8 muscle, V10 F1, V12 GT) y graciosos (motor flatulento, podracer, arcade 8-bit).
+- **Volumen (0-100)** — con botón **Guardar volumen**; el cambio de pack aplica al instante.
+
+No usa grabaciones: todo es síntesis procedural, así que el tono sigue tus RPM sin cortes ni loops.
+
 ## Combustible
 
 Tres campos numéricos, uno por tipo de combustible, usados para estimar el costo de cada viaje según el tipo de combustible configurado en el vehículo activo:

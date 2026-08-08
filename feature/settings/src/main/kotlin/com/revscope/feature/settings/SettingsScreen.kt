@@ -68,6 +68,7 @@ import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
 import com.revscope.core.intelligence.provider.AI_PROVIDER_NODO
 import com.revscope.core.intelligence.provider.NODO_BASE_URL_POR_DEFECTO
 import com.revscope.core.obd.mcp.McpServerState
+import com.revscope.core.obd.sound.SoundPack
 import java.time.LocalDate
 import kotlinx.coroutines.delay
 
@@ -366,6 +367,41 @@ fun SettingsScreen(
             ) { Text("Guardar alertas", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
+            SectionTitle("Sonido de motor")
+            Text(
+                "Sintetiza el sonido de un motor deportivo (o uno gracioso) siguiendo las RPM " +
+                    "reales del OBD2 — suena por los parlantes o el intercomunicador Bluetooth. " +
+                    "Estilo SoundRacer, sin comprar el adaptador.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            val engineSoundEnabled by vm.engineSoundEnabled.collectAsState()
+            val engineSoundPack by vm.engineSoundPack.collectAsState()
+            val engineSoundVolume by vm.engineSoundVolume.collectAsState()
+            ToggleRow(
+                "Sonido de motor al conducir",
+                engineSoundEnabled,
+                vm::updateEngineSoundEnabled,
+                subtitle = "Se activa solo con telemetría OBD conectada",
+            )
+            if (engineSoundEnabled) {
+                EngineSoundPackDropdown(selected = engineSoundPack, onSelected = vm::updateEngineSoundPack)
+                OutlinedTextField(
+                    value = engineSoundVolume,
+                    onValueChange = vm::updateEngineSoundVolume,
+                    label = { Text("Volumen (0-100)", fontSize = 12.sp) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    colors = settingsFieldColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = vm::saveEngineSoundVolume,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+                ) { Text("Guardar volumen", color = BgColor) }
+            }
+
+            Spacer(Modifier.height(8.dp))
             SectionTitle("Combustible")
             OutlinedTextField(
                 value = fuelPriceCorriente,
@@ -421,6 +457,26 @@ fun SettingsScreen(
                 onClick = vm::downloadSpeedCameras,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) { Text("Descargar radares de mi zona", color = BgColor) }
+
+            val cameraAlertRadius by vm.cameraAlertRadius.collectAsState()
+            OutlinedTextField(
+                value = cameraAlertRadius,
+                onValueChange = vm::updateCameraAlertRadius,
+                label = { Text("Radio de aviso (m)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                colors = settingsFieldColors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                "Distancia a la que suena el aviso por voz (100-1000 m). Menos metros = menos avisos anticipados.",
+                color = TextMutedColor,
+                fontSize = 12.sp,
+            )
+            Button(
+                onClick = vm::saveCameraAlertRadius,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            ) { Text("Guardar radio", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Pico y placa personalizado")
@@ -877,6 +933,42 @@ private fun aiProviderSupportsWebSearch(provider: String): Boolean =
     provider != AI_PROVIDER_CUSTOM && provider != AI_PROVIDER_NODO
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EngineSoundPackDropdown(selected: String, onSelected: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = SoundPack.fromId(selected).displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Pack de sonido", fontSize = 12.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
+            colors = settingsFieldColors(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            SoundPack.entries.forEach { pack ->
+                DropdownMenuItem(
+                    text = { Text(pack.displayName + if (pack.funny) " 😜" else "") },
+                    onClick = {
+                        onSelected(pack.id)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun AiProviderDropdown(selected: String, onSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
