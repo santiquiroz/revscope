@@ -1,5 +1,8 @@
 package com.revscope.core.obd.cameras
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.alerts.AlertsEngine
@@ -16,7 +19,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val ALERT_DISTANCE_M = 400.0
 // Rango visual del mapa: más amplio que el de audio para anticipar el radar objetivo
 // sin disparar la voz todavía.
 private const val VISUAL_RANGE_M = 1_000.0
@@ -31,9 +33,23 @@ private const val PER_CAMERA_COOLDOWN_MS = 120_000L
 class SpeedCameraAlerter @Inject constructor(
     private val dao: SpeedCameraDao,
     private val alertsEngine: AlertsEngine,
+    settings: DataStore<Preferences>,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // El radio de aviso es configurable en Ajustes; se observa el DataStore para que un
+    // cambio aplique en el próximo fix GPS sin recrear el singleton.
+    private val _alertRadiusM = MutableStateFlow(CameraAlertRadius.DEFAULT_M)
+    val alertRadiusM: StateFlow<Int> = _alertRadiusM.asStateFlow()
+
+    init {
+        scope.launch {
+            settings.data.collect { prefs ->
+                _alertRadiusM.value = CameraAlertRadius.sanitize(prefs[PreferencesKeys.CAMERA_ALERT_RADIUS_M])
+            }
+        }
+    }
 
     /** Radar hacia el que el vehículo se dirige AHORA (cono ±60° del rumbo, <1 km). */
     data class ApproachingCamera(
@@ -90,7 +106,7 @@ class SpeedCameraAlerter @Inject constructor(
                 )
             }
 
-            if (distance > ALERT_DISTANCE_M) {
+            if (distance > _alertRadiusM.value) {
                 lastDistanceM.remove(camera.osmId)
                 continue
             }

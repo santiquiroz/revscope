@@ -216,6 +216,20 @@ object PreferencesKeys {
     /** Longitud del centro de la última descarga de radares — manual o auto al salir de cobertura (CameraCoverageTracker) */
     val LAST_CAMERA_LON = doublePreferencesKey("last_camera_lon")
 
+    /** Radio en metros del aviso por voz al acercarse a un radar (default 250, rango 100-1000) */
+    val CAMERA_ALERT_RADIUS_M = intPreferencesKey("camera_alert_radius_m")
+
+    // ── Sonido de motor ──────────────────────────────────────────────────────
+
+    /** Simulador de sonido de motor por RPM activo durante la telemetría (default false) */
+    val ENGINE_SOUND_ENABLED = booleanPreferencesKey("engine_sound_enabled")
+
+    /** Pack de sonido activo — id de [SoundPack] (default v8_muscle) */
+    val ENGINE_SOUND_PACK = stringPreferencesKey("engine_sound_pack")
+
+    /** Volumen del sonido de motor 0-100 (default 70) */
+    val ENGINE_SOUND_VOLUME = intPreferencesKey("engine_sound_volume")
+
     // ── Copia de seguridad ───────────────────────────────────────────────────
 
     /** Copia de seguridad automática semanal a Descargas/RevScope (default true) */
