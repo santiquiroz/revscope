@@ -969,6 +969,7 @@ private fun EngineSoundPackDropdown(selected: String, onSelected: (String) -> Un
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AiProviderDropdown(selected: String, onSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
