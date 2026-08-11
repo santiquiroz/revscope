@@ -19,6 +19,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.R
+import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.motion.MotionMetricsHub
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.session.ObdSessionManager
@@ -47,6 +48,7 @@ private const val ALARM_CHANNEL_ID = "revscope_emergencia"
 private const val ALARM_NOTIFICATION_ID = 4001
 private const val COUNTDOWN_TOTAL_MS = 60_000L
 private const val COUNTDOWN_TICK_MS = 5_000L
+private const val VOICE_REMINDER_INTERVAL_MS = 10_000L
 private const val SPEED_PID = "0D"
 
 /**
@@ -62,9 +64,12 @@ class CrashResponder @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: DataStore<Preferences>,
     private val routeHolder: LiveRouteHolder,
+    private val alertsEngine: AlertsEngine,
 ) {
 
     data class AlarmState(val remainingMs: Long, val vehicleName: String)
+
+    private data class DetectorInput(val speedKmh: Double, val accelG: Double, val horizontalG: Double)
 
     private val detector = CrashDetector()
 
@@ -108,11 +113,21 @@ class CrashResponder @Inject constructor(
                     if (!isEnabled) return@collectLatest
                     combine(motionHub.snapshot, sessionManager.readings, routeHolder.lastSpeedKmh) { motion, readings, gpsSpeed ->
                         val obdSpeed = readings[SPEED_PID]?.value ?: 0.0
-                        // Raw, pre-filter, 3-axis peak — the EMA-filtered horizontal signal used for
+                        // Raw, pre-filter peaks — the EMA-filtered horizontal signal used for
                         // the UI can flatten a genuine impact spike below the trigger threshold.
-                        maxOf(obdSpeed, gpsSpeed.toDouble()) to motion.rawPeakG.toDouble()
-                    }.collect { (speedKmh, accelG) ->
-                        val state = detector.process(accelG, speedKmh, System.currentTimeMillis())
+                        // El pico horizontal separa un choque de un golpe vertical del camino.
+                        DetectorInput(
+                            speedKmh = maxOf(obdSpeed, gpsSpeed.toDouble()),
+                            accelG = motion.rawPeakG.toDouble(),
+                            horizontalG = motion.rawHorizontalPeakG.toDouble(),
+                        )
+                    }.collect { input ->
+                        val state = detector.process(
+                            accelG = input.accelG,
+                            horizontalG = input.horizontalG,
+                            speedKmh = input.speedKmh,
+                            nowMs = System.currentTimeMillis(),
+                        )
                         if (state == CrashDetector.State.TRIGGERED) handleTriggered(scope)
                     }
                 }
@@ -176,19 +191,35 @@ class CrashResponder @Inject constructor(
         createAlarmChannel()
         postAlarmNotification(COUNTDOWN_TOTAL_MS)
         startLoopingAlarmSound()
+        announceCountdown(COUNTDOWN_TOTAL_MS)
         countdownJob = scope.launch {
             var remainingMs = COUNTDOWN_TOTAL_MS
             while (remainingMs > 0) {
                 delay(COUNTDOWN_TICK_MS)
                 remainingMs -= COUNTDOWN_TICK_MS
                 postAlarmNotification(remainingMs)
+                if (remainingMs > 0 && remainingMs % VOICE_REMINDER_INTERVAL_MS == 0L) {
+                    announceCountdown(remainingMs)
+                }
             }
             onCountdownExpired(simulated)
             countdownJob = null
         }
     }
 
+    /**
+     * La notificación con `setOnlyAlertOnce` y la alarma en el stream de alarma no bastan:
+     * rodando, con el celular en el bolsillo, el conductor no ve ni oye nada y la cuenta
+     * regresiva se le vence encima. Esta voz sale por el stream de media, que es el que llega
+     * al intercomunicador del casco.
+     */
+    private fun announceCountdown(remainingMs: Long) {
+        runCatching { alertsEngine.announceCrashCountdown((remainingMs / 1000).toInt()) }
+            .onFailure { Timber.w(it, "CrashResponder: failed to announce countdown") }
+    }
+
     private suspend fun onCountdownExpired(simulated: Boolean) {
+        announceCountdown(0L)
         if (!simulated) sendEmergencySms()
         postFinalNotification(simulated)
         _alarmState.value = null

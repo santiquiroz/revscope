@@ -74,7 +74,7 @@ class MotionSensorRecorder(
 
     // Raw (pre-filter) impact envelope for CrashDetector — independent of rotation/gravity
     // fusion so it isn't blocked by their startup warm-up.
-    private data class RawPeakSample(val timestampMs: Long, val magnitudeG: Float)
+    private data class RawPeakSample(val timestampMs: Long, val magnitudeG: Float, val horizontalG: Float)
     private val rawPeakSamples = ArrayDeque<RawPeakSample>()
 
     // Vehicle frame inputs
@@ -188,25 +188,32 @@ class MotionSensorRecorder(
         val magnitudeG = sqrt(
             rawValues[0] * rawValues[0] + rawValues[1] * rawValues[1] + rawValues[2] * rawValues[2]
         ) / G
-        rawPeakSamples.addLast(RawPeakSample(now, magnitudeG))
+        val verticalG = verticalComponentG(rawValues)
+        // Sin gravedad todavía (arranque de sensores) no se puede descomponer: se reporta el
+        // pico completo como horizontal para no cegar la detección de choque en ese lapso.
+        val horizontalG = verticalG
+            ?.let { sqrt((magnitudeG * magnitudeG - it * it).coerceAtLeast(0f)) }
+            ?: magnitudeG
+        rawPeakSamples.addLast(RawPeakSample(now, magnitudeG, horizontalG))
         while (rawPeakSamples.isNotEmpty() && now - rawPeakSamples.first().timestampMs > RAW_PEAK_WINDOW_MS) {
             rawPeakSamples.removeFirst()
         }
-        hub.updateRawPeak(rawPeakSamples.maxOf { it.magnitudeG })
-        reportVerticalSpike(rawValues)
+        hub.updateRawPeak(
+            rawPeakG = rawPeakSamples.maxOf { it.magnitudeG },
+            rawHorizontalPeakG = rawPeakSamples.maxOf { it.horizontalG },
+        )
+        if (verticalG != null && verticalG >= VERTICAL_SPIKE_MIN_G) onVerticalSpike?.invoke(verticalG)
     }
 
     /** Componente vertical (proyección sobre la gravedad filtrada) del sample crudo, en G. */
-    private fun reportVerticalSpike(rawValues: FloatArray) {
-        val callback = onVerticalSpike ?: return
-        if (!hasGravity) return
+    private fun verticalComponentG(rawValues: FloatArray): Float? {
+        if (!hasGravity) return null
         val g = filteredGravity
         val gravityMag = sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2])
-        if (gravityMag < 1f) return
-        val verticalG = kotlin.math.abs(
+        if (gravityMag < 1f) return null
+        return kotlin.math.abs(
             rawValues[0] * g[0] + rawValues[1] * g[1] + rawValues[2] * g[2]
         ) / gravityMag / G
-        if (verticalG >= VERTICAL_SPIKE_MIN_G) callback(verticalG)
     }
 
     private fun processSample() {

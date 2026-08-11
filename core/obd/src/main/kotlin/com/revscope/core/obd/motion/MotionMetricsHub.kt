@@ -28,6 +28,10 @@ class MotionMetricsHub @Inject constructor() {
         // Full 3-axis magnitude of the RAW (pre-filter) accel sample, 200ms rolling peak.
         // Feeds CrashDetector directly — EMA smoothing can flatten a genuine impact spike.
         val rawPeakG: Float = 0f,
+        // Componente del pico crudo perpendicular a la gravedad, 200ms rolling peak.
+        // Separa un choque (decelera hacia adelante/al costado) de un golpe del camino
+        // (resalto/hueco: casi todo el pico es vertical).
+        val rawHorizontalPeakG: Float = 0f,
     )
 
     private val _snapshot = MutableStateFlow(MotionSnapshot())
@@ -55,11 +59,11 @@ class MotionMetricsHub @Inject constructor() {
     }
 
     /** Registered on every raw accel sample, independent of [update]'s rotation/gravity gating. */
-    fun updateRawPeak(rawPeakG: Float) {
+    fun updateRawPeak(rawPeakG: Float, rawHorizontalPeakG: Float) {
         // Un spike de impacto no puede esperar la ventana de throttle: CrashDetector dispara
         // a 6 G y la ventana rolling del pico es de solo 200 ms.
         val spike = rawPeakG >= SPIKE_EMIT_G && rawPeakG > pending.rawPeakG
-        pending = pending.copy(rawPeakG = rawPeakG)
+        pending = pending.copy(rawPeakG = rawPeakG, rawHorizontalPeakG = rawHorizontalPeakG)
         maybeEmit(force = spike)
     }
 

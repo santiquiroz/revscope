@@ -54,7 +54,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE, ZONE_BRIEF }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE, ZONE_BRIEF, CRASH_COUNTDOWN }
 
     data class ObdAlert(
         val type: AlertType,
@@ -240,6 +240,30 @@ class AlertsEngine @Inject constructor(
         playTone(tonePattern, toneDurationMs)
         vibrate(vibrationMs)
         if (voiceEnabled) speak(message)
+    }
+
+    /**
+     * Cuenta regresiva hablada de la detección de caída.
+     *
+     * IGNORA A PROPÓSITO el interruptor maestro y las categorías de voz: mientras se rueda,
+     * la voz por el stream de media (intercomunicador del casco) es el ÚNICO canal por el que
+     * el conductor puede enterarse de que hay una cuenta regresiva y cancelarla. La alarma en
+     * el stream de alarma queda en el parlante del celular — en el bolsillo, bajo la chaqueta
+     * y con el motor andando, es inaudible. Un falso positivo silencioso manda un SMS de
+     * emergencia real (pasó en campo el 2026-08-08).
+     */
+    fun announceCrashCountdown(secondsRemaining: Int) {
+        val message = if (secondsRemaining > 0) {
+            "Posible caída detectada. Si estás bien, toca estoy bien. " +
+                "Mensaje de emergencia en $secondsRemaining segundos"
+        } else {
+            "Enviando mensaje de emergencia"
+        }
+        Timber.w("AlertsEngine: $message")
+        _alerts.tryEmit(ObdAlert(AlertType.CRASH_COUNTDOWN, message, secondsRemaining.toDouble()))
+        playTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 800)
+        vibrate(longArrayOf(0, 600, 200, 600, 200, 600))
+        speakUnconditionally(message)
     }
 
     /** Spoken speed-camera proximity warning. Per-camera cooldown lives in the alerter. */
@@ -492,9 +516,21 @@ class AlertsEngine @Inject constructor(
 
     private fun speak(text: String) {
         if (!enabled || !ttsEnabled) return
+        speakUnconditionally(text)
+    }
+
+    /**
+     * Habla sin consultar los interruptores de alertas. Reservado para la cuenta regresiva de
+     * emergencia — ver [announceCrashCountdown]. Usa QUEUE_FLUSH: la cuenta regresiva no puede
+     * quedar detrás de un aviso de radar en la cola.
+     */
+    private fun speakUnconditionally(text: String) {
         runCatching {
+            // Tocar el lazy arranca la inicialización si nadie habló todavía en esta sesión;
+            // si aún no está listo, el siguiente tick de la cuenta regresiva sí sonará.
+            val engine = tts
             if (ttsReady) {
-                tts.speak(text, TextToSpeech.QUEUE_ADD, null, "revscope_alert")
+                engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "revscope_alert")
             }
         }.onFailure { Timber.w(it, "AlertsEngine: TTS failed") }
     }
