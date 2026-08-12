@@ -14,9 +14,14 @@ import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.feature.map.routing.OsrmRouteFetcher
+import com.revscope.feature.map.search.PhotonGeocoder
+import com.revscope.feature.map.search.PlaceResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -99,6 +104,56 @@ class LiveMapViewModel @Inject constructor(
     private val _routing = MutableStateFlow(false)
     val routing: StateFlow<Boolean> = _routing.asStateFlow()
 
+    // ── Búsqueda de direcciones ──────────────────────────────────────────────
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<PlaceResult>>(emptyList())
+    val searchResults: StateFlow<List<PlaceResult>> = _searchResults.asStateFlow()
+
+    private val _searching = MutableStateFlow(false)
+    val searching: StateFlow<Boolean> = _searching.asStateFlow()
+
+    private var searchJob: Job? = null
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+        searchJob?.cancel()
+        if (query.trim().length < PhotonGeocoder.MIN_QUERY_LENGTH) {
+            _searchResults.value = emptyList()
+            _searching.value = false
+            return
+        }
+        _searching.value = true
+        searchJob = viewModelScope.launch {
+            // Photon es un servicio público y gratuito: una consulta por pulsación es abusar.
+            delay(SEARCH_DEBOUNCE_MS)
+            val bias = lastKnownPoint()
+            val results = withContext(Dispatchers.IO) {
+                PhotonGeocoder.search(query, bias?.lat, bias?.lon)
+            }
+            _searchResults.value = results
+            _searching.value = false
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+        _searching.value = false
+    }
+
+    /** Elegir un resultado reusa el mismo camino que el long-press en el mapa. */
+    fun selectSearchResult(place: PlaceResult) {
+        clearSearch()
+        setDestination(place.lat, place.lon)
+    }
+
+    private fun lastKnownPoint(): LiveRouteHolder.RoutePoint? =
+        route.value.lastOrNull() ?: _initialCenter.value
+
     /** Long-press en el mapa: fija destino y pide la ruta a OSRM desde la posición actual. */
     fun setDestination(lat: Double, lon: Double) {
         val origin = route.value.lastOrNull() ?: _initialCenter.value ?: return
@@ -130,5 +185,9 @@ class LiveMapViewModel @Inject constructor(
             runCatching { cameraDao.all() }.onSuccess { _cameras.value = it }
             runCatching { potholeDao.all() }.onSuccess { _potholes.value = it }
         }
+    }
+
+    private companion object {
+        const val SEARCH_DEBOUNCE_MS = 350L
     }
 }

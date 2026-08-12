@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)
+    // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
+    testImplementation(libs.org.json)
 }
 
 kotlin {

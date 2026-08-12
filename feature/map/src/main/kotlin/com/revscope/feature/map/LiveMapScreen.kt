@@ -74,6 +74,9 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val destination by viewModel.destination.collectAsState()
     val plannedRoute by viewModel.plannedRoute.collectAsState()
     val routing by viewModel.routing.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
+    val searching by viewModel.searching.collectAsState()
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
@@ -179,6 +182,16 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             color = AttributionColor,
             fontSize = 9.sp,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+        )
+
+        SearchOverlay(
+            query = searchQuery,
+            results = searchResults,
+            searching = searching,
+            onQueryChange = viewModel::updateSearchQuery,
+            onClear = viewModel::clearSearch,
+            onSelect = viewModel::selectSearchResult,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 68.dp, start = 12.dp, end = 12.dp),
         )
 
         SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
