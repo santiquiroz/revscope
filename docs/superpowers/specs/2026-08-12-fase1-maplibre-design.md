@@ -89,7 +89,17 @@ Soporte de PMTiles: la doc dice 11.7.0, el CHANGELOG lo lista en 11.8.0 — con 
 - Pero cada request paga un **302** a una URL prefirmada que expira y no se puede cachear: **0,40–0,55 s por request** contra 0,10–0,14 s yendo directo. PMTiles hace decenas de range requests por viewport. Serializado, son segundos de primer pintado.
 - Y la postura de ToS de GitHub sobre servir tiles range-heavy desde ese endpoint **no está verificada**. No es para lo que existe.
 
-Decisión: **origen con range requests reales y URL estable** — Cloudflare R2 es el candidato natural (sin cargos de egress, documentado funcionando con PMTiles); alternativas verificadas: Tigris, S3, GCS, B2, o `revscope-server` sirviendo el archivo.
+Decisión: **`revscope-server` sirve el archivo**, con soporte de range requests (`206 Partial Content`) y URL estable.
+
+**El servidor no puede volverse un requisito.** La app tiene que seguir funcionando en lo básico sin él, así que `MapStyleProvider` resuelve el origen en cascada:
+
+1. **Archivo local** `.pmtiles` en el almacenamiento del dispositivo, si existe → `pmtiles://file:///…`
+2. **`revscope-server`**, si responde → `pmtiles://https://…`
+3. **Degradado**: sin basemap, pero la pantalla **sigue dibujando sus capas propias** — ruta, radares, huecos, peers — sobre fondo vacío, sin crash.
+
+El paso 1 se implementa desde esta fase aunque la descarga del archivo sea Fase 4: es una rama de resolución de URL, no un subsistema, y dejarlo para después obligaría a rehacer el proveedor. Además, desde 13.3.0 MapLibre tiene caché ambiente para sources PMTiles (PR #4290), así que las zonas ya vistas siguen disponibles sin red.
+
+Nada del resto de la app depende del mapa: telemetría, alertas de radar por voz, detección de caída y pico y placa ya funcionan offline contra Room. Esta fase no puede introducir la primera dependencia dura de red.
 
 El asset de release de GitHub **sí** sirve para la Fase 4: ahí la descarga es una sola secuencial, no decenas de rangos, y el límite de 2 GiB por archivo entra sobrado — Colombia a z15 fue **medido en 906 MB** (1,0 GB incluyendo islas).
 
@@ -153,6 +163,12 @@ La fase no cierra hasta que todo esto se comporte igual que antes, verificado en
 - [ ] Casing blanco `0xCCFFFFFF` debajo
 - [ ] Zoom al bounding box con escala 1,25
 - [ ] Scroll de la pantalla no secuestrado por el mapa
+
+**Autonomía (el servidor no es requisito)**
+- [ ] En modo avión y sin servidor, la pantalla de mapa **no crashea** y sigue dibujando ruta, radares y huecos sobre fondo vacío
+- [ ] Con el servidor caído pero con red, mismo resultado — y sin bloquear la UI esperando timeout
+- [ ] Las zonas ya vistas se siguen renderizando sin red (caché ambiente de PMTiles)
+- [ ] El resto de la app (telemetría, avisos de radar, caída, pico y placa) funciona igual sin servidor
 
 **No funcional**
 - [ ] Sin crash al apagar y encender la pantalla 20 veces con el mapa abierto
