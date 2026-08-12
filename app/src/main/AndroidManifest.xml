@@ -41,6 +41,12 @@
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
+    <!-- Aviso diario "Vehículo al día" a las 5:30am: alarma que atraviesa Doze y se
+         reagenda tras reiniciar. Sin SCHEDULE_EXACT_ALARM la app cae a una alarma
+         inexacta (unos minutos de margen), no se queda sin aviso. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:name=".RevScopeApp"
         android:label="@string/app_name"

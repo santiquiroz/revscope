@@ -1,6 +1,6 @@
 # Configuración
 
-> Índice: [Vehículo](#vehículo) · [Alertas de audio y vibración](#alertas-de-audio-y-vibración) · [Alertas de voz por categoría](#alertas-de-voz-por-categoría) · [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) · [Radares](#radares-de-velocidad) · [Combustible](#combustible) · [Inteligencia artificial](#inteligencia-artificial) · [Detección de caída](#detección-de-caída) · [Servidor MCP](#servidor-mcp-red-local) · [Copia de seguridad](#copia-de-seguridad) · [PIDs personalizados](#pids-personalizados) · [Pico y placa](#pico-y-placa)
+> Índice: [Vehículo](#vehículo) · [Alertas de audio y vibración](#alertas-de-audio-y-vibración) · [Alertas de voz por categoría](#alertas-de-voz-por-categoría) · [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) · [Radares](#radares-de-velocidad) · [Combustible](#combustible) · [Inteligencia artificial](#inteligencia-artificial) · [Detección de caída](#detección-de-caída) · [Avisos en segundo plano](#avisos-en-segundo-plano) · [Servidor MCP](#servidor-mcp-red-local) · [Copia de seguridad](#copia-de-seguridad) · [PIDs personalizados](#pids-personalizados) · [Pico y placa](#pico-y-placa)
 >
 > Ver también: [Instalación](instalacion.md) · [Manual de usuario](manual-usuario.md) · [FAQ](faq.md) · [Desarrollo](desarrollo.md)
 
@@ -135,6 +135,23 @@ Pensada para motociclistas. Está **desactivada por defecto**.
 Campos y controles: **Teléfono de emergencia** + botón **Guardar teléfono**, interruptor **Activar detección de caída**, y botón **"Probar (sin enviar SMS real)"** que simula la alarma completa sin enviar ningún mensaje.
 
 > ⚠️ Esta función es un apoyo adicional, no un sistema de emergencias certificado: depende de que haya una sesión de grabación activa, de la señal GPS/celular en el momento del incidente, y de umbrales fijos que pueden no cubrir todos los tipos de caída o accidente. No sustituye el sentido común ni el equipo de protección al conducir.
+
+## Avisos en segundo plano
+
+El aviso diario **"Vehículo al día"** (pico y placa de hoy, documentos por vencer en 30/15/7/1/0 días) sale a las **5:30am** hora de Colombia, sin necesidad de abrir la app.
+
+Lo dispara una **alarma del sistema** que atraviesa el modo Doze, y se reagenda sola tras cada disparo, al reiniciar el celular y al actualizar la app. El trabajo periódico de WorkManager quedó como red de seguridad; el aviso se deduplica por día calendario, así que nunca llega dos veces.
+
+Dos ajustes del sistema pueden retrasarlo, y la sección muestra el estado de cada uno con ✓ o ✗:
+
+| Ajuste | Efecto si falta |
+|---|---|
+| **Alarmas exactas** (Android 12+) | El aviso cae a una alarma inexacta: llega igual, pero con hasta una hora de margen. El botón **"Permitir alarmas exactas"** abre el ajuste del sistema. |
+| **Optimización de batería** | Samsung puede "dormir" la app y retrasar o saltarse el aviso. El botón **"Optimización de batería"** abre la lista del sistema para marcar RevScope como *sin restricciones*. |
+
+El botón **"Probar aviso (15 s)"** agenda el aviso real dentro de 15 segundos por la misma cadena que usa el disparo diario — sirve para comprobar en el propio celular que llega, sobre todo después de conceder alguno de los dos permisos.
+
+> Si el aviso solo aparece **al abrir la app**, es justo el síntoma de que el sistema está postergando el trabajo en segundo plano: revisa los dos ajustes de arriba.
 
 ## Servidor MCP (red local)
 

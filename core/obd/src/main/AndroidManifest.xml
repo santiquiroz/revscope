@@ -20,5 +20,20 @@
         <receiver
             android:name="com.revscope.core.obd.safety.CrashCancelReceiver"
             android:exported="false" />
+
+        <!-- Alarma diaria del aviso "Vehículo al día". Las alarmas se pierden al reiniciar
+             y al actualizar la app, por eso también escucha esos dos eventos. -->
+        <receiver
+            android:name="com.revscope.core.obd.legal.DailyStatusReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.revscope.action.DAILY_STATUS" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <!-- Al conceder "Alarmas y recordatorios" hay que reagendar: la alarma ya
+                     puesta sigue siendo inexacta hasta que se vuelve a pedir. -->
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

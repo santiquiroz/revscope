@@ -219,6 +219,9 @@ object PreferencesKeys {
     /** Radio en metros del aviso por voz al acercarse a un radar (default 250, rango 100-1000) */
     val CAMERA_ALERT_RADIUS_M = intPreferencesKey("camera_alert_radius_m")
 
+    /** Día calendario (epoch day, America/Bogota) del último aviso "Vehículo al día" — evita el aviso doble */
+    val DAILY_STATUS_LAST_NOTIFIED_DAY = longPreferencesKey("daily_status_last_notified_day")
+
     // ── Sonido de motor ──────────────────────────────────────────────────────
 
     /** Simulador de sonido de motor por RPM activo durante la telemetría (default false) */

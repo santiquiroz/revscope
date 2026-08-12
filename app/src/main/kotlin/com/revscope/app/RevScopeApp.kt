@@ -10,18 +10,14 @@ import androidx.work.Constraints
 import androidx.work.NetworkType
 import com.revscope.core.data.backup.AutoBackupWorker
 import com.revscope.core.obd.cameras.CameraRefreshWorker
+import com.revscope.core.obd.legal.DailyStatusSchedule
+import com.revscope.core.obd.legal.DailyStatusScheduler
 import com.revscope.core.obd.legal.DailyStatusWorker
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
-import java.time.Duration
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-private const val DAILY_STATUS_HOUR = 5
-private const val DAILY_STATUS_MINUTE = 30
-private const val BOGOTA_ZONE_ID = "America/Bogota"
 private const val CAMERA_REFRESH_INTERVAL_DAYS = 7L
 private const val AUTO_BACKUP_INTERVAL_DAYS = 7L
 
@@ -41,6 +37,9 @@ class RevScopeApp : Application(), Configuration.Provider {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
+        // Alarma puntual (atraviesa Doze) + trabajo periódico como red de seguridad. El aviso
+        // se deduplica por día, así que tener los dos disparos no produce avisos repetidos.
+        DailyStatusScheduler.scheduleNext(this)
         scheduleDailyStatusWorker()
         scheduleCameraRefreshWorker()
         scheduleAutoBackupWorker()
@@ -88,8 +87,6 @@ class RevScopeApp : Application(), Configuration.Provider {
 
 /** Milisegundos hasta las próximas 5:30am America/Bogota (hoy si aún no pasan, si no mañana). */
 private fun delayUntilNextFiveThirtyAmMs(): Long {
-    val now = ZonedDateTime.now(ZoneId.of(BOGOTA_ZONE_ID))
-    val todayTarget = now.withHour(DAILY_STATUS_HOUR).withMinute(DAILY_STATUS_MINUTE).withSecond(0).withNano(0)
-    val nextTarget = if (todayTarget.isAfter(now)) todayTarget else todayTarget.plusDays(1)
-    return Duration.between(now, nextTarget).toMillis()
+    val now = System.currentTimeMillis()
+    return DailyStatusSchedule.nextTriggerAtMs(now) - now
 }
