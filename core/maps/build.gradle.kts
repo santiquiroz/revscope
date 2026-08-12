@@ -25,6 +25,9 @@ android {
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
+    // Trae androidx.lifecycle.compose.LocalLifecycleOwner: el de compose.ui.platform está
+    // deprecado y este módulo es nuevo, así que arranca con la API vigente.
+    implementation(libs.lifecycle.runtime.compose)
     implementation(libs.maplibre)
     implementation(libs.maplibre.turf)
     implementation(libs.timber)
