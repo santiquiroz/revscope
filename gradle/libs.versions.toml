@@ -30,6 +30,7 @@ osmdroid = "6.1.20"
 androidxCoreKtx = "1.13.1"
 nanohttpd = "2.3.1"
 okhttp = "4.12.0"
+maplibre = "13.4.1"
 
 [libraries]
 # Compose BOM
@@ -75,6 +76,13 @@ guava-android = { group = "com.google.guava", name = "guava", version.ref = "gua
 
 # Real map tiles (OpenStreetMap)
 osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
+
+# Motor de mapas vectoriales. Variante OpenGL a propósito: desde 13.0.0 el
+# artefacto por defecto usa Vulkan, cuyo paquete filtra dispositivos por
+# android.hardware.vulkan.version y tiene un fix pendiente de release para
+# VK_ERROR_DEVICE_LOST en Adreno 600 con el indicador de ubicación.
+maplibre = { group = "org.maplibre.gl", name = "android-sdk-opengl", version.ref = "maplibre" }
+
 coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 # Coroutines
