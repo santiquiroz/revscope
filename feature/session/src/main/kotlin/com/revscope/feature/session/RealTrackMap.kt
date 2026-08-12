@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -17,6 +21,7 @@ import com.revscope.core.maps.physicalPxToDp
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
@@ -61,14 +66,18 @@ fun RealTrackMap(
     // mostraba osmdroid. El replay de un viaje no necesita modo oscuro.
     val styleJson = remember { MapStyleProvider.styleJson(tilesUrl = null, dark = false) }
 
+    var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
+    var styleEpoch by remember { mutableStateOf(0) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         MapLibreMapView(
             modifier = modifier,
             styleJson = styleJson,
         ) { map, style ->
-            if (track.size < 2) return@MapLibreMapView
-
-            style.addSource(GeoJsonSource(SRC_CASING, casingGeometry(track)))
+            // Las capas se crean vacías: el track llega asíncrono del ViewModel, así que en la
+            // primera composición todavía no está. Poblarlas acá y salir dejaría el mapa sin
+            // trazado para siempre, porque el estilo no vuelve a cargar.
+            style.addSource(GeoJsonSource(SRC_CASING, emptyLine()))
             style.addLayer(
                 LineLayer(LYR_CASING, SRC_CASING).withProperties(
                     PropertyFactory.lineColor(AndroidColor.parseColor("#CCFFFFFF")),
@@ -78,23 +87,38 @@ fun RealTrackMap(
                 ),
             )
 
-            style.addSource(GeoJsonSource(SRC_SEGMENTS, segmentFeatures(track, speeds)))
+            style.addSource(GeoJsonSource(SRC_SEGMENTS, FeatureCollection.fromFeatures(emptyList())))
             style.addLayer(
                 LineLayer(LYR_SEGMENTS, SRC_SEGMENTS).withProperties(
-                    PropertyFactory.lineColor(Expression.get(PROP_COLOR)),
+                    // toColor es obligatorio: get() devuelve string y lineColor espera color.
+                    // Sin la conversión la capa no pinta nada, en silencio.
+                    PropertyFactory.lineColor(Expression.toColor(Expression.get(PROP_COLOR))),
                     PropertyFactory.lineWidth(physicalPxToDp(SEGMENT_PHYSICAL_PX, density)),
                     PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
                     PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
                 ),
             )
 
+            mapRef = map
+            styleEpoch++
+        }
+
+        LaunchedEffect(styleEpoch, track, speeds) {
+            val map = mapRef ?: return@LaunchedEffect
+            val style = map.style ?: return@LaunchedEffect
+            if (!style.isFullyLoaded() || track.size < 2) return@LaunchedEffect
+
+            style.getSourceAs<GeoJsonSource>(SRC_CASING)?.setGeoJson(casingGeometry(track))
+            style.getSourceAs<GeoJsonSource>(SRC_SEGMENTS)?.setGeoJson(segmentFeatures(track, speeds))
+
             boundsOf(track)?.let { b ->
                 val bounds = LatLngBounds.Builder()
                     .include(LatLng(b[0], b[1]))
                     .include(LatLng(b[2], b[3]))
                     .build()
-                val padding = (BOUNDS_PADDING_DP * density).toInt()
-                map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+                map.moveCamera(
+                    CameraUpdateFactory.newLatLngBounds(bounds, (BOUNDS_PADDING_DP * density).toInt()),
+                )
             }
         }
         Text(
@@ -104,6 +128,8 @@ fun RealTrackMap(
         )
     }
 }
+
+private fun emptyLine(): LineString = LineString.fromLngLats(emptyList<Point>())
 
 private fun casingGeometry(track: List<Pair<Double, Double>>): LineString =
     LineString.fromLngLats(track.map { Point.fromLngLat(it.second, it.first) })

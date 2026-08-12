@@ -76,6 +76,11 @@ fun MapLibreMapView(
             if (appliedStyle.value != styleJson) {
                 appliedStyle.value = styleJson
                 view.getMapAsync { map ->
+                    // MapLibre dibuja su logo y un botón de info abajo a la izquierda, justo
+                    // donde va el badge de velocidad. La app ya muestra su propia atribución
+                    // de OpenStreetMap, que es la que la licencia exige.
+                    map.uiSettings.isLogoEnabled = false
+                    map.uiSettings.isAttributionEnabled = false
                     map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
                         currentOnStyleInstalled(map, style)
                     }

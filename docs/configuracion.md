@@ -1,6 +1,6 @@
 # Configuración
 
-> Índice: [Vehículo](#vehículo) · [Alertas de audio y vibración](#alertas-de-audio-y-vibración) · [Alertas de voz por categoría](#alertas-de-voz-por-categoría) · [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) · [Radares](#radares-de-velocidad) · [Combustible](#combustible) · [Inteligencia artificial](#inteligencia-artificial) · [Detección de caída](#detección-de-caída) · [Avisos en segundo plano](#avisos-en-segundo-plano) · [Servidor MCP](#servidor-mcp-red-local) · [Copia de seguridad](#copia-de-seguridad) · [PIDs personalizados](#pids-personalizados) · [Pico y placa](#pico-y-placa)
+> Índice: [Vehículo](#vehículo) · [Alertas de audio y vibración](#alertas-de-audio-y-vibración) · [Alertas de voz por categoría](#alertas-de-voz-por-categoría) · [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) · [Radares](#radares-de-velocidad) · [Combustible](#combustible) · [Inteligencia artificial](#inteligencia-artificial) · [Detección de caída](#detección-de-caída) · [Mapa](#mapa) · [Avisos en segundo plano](#avisos-en-segundo-plano) · [Servidor MCP](#servidor-mcp-red-local) · [Copia de seguridad](#copia-de-seguridad) · [PIDs personalizados](#pids-personalizados) · [Pico y placa](#pico-y-placa)
 >
 > Ver también: [Instalación](instalacion.md) · [Manual de usuario](manual-usuario.md) · [FAQ](faq.md) · [Desarrollo](desarrollo.md)
 
@@ -135,6 +135,23 @@ Pensada para motociclistas. Está **desactivada por defecto**.
 Campos y controles: **Teléfono de emergencia** + botón **Guardar teléfono**, interruptor **Activar detección de caída**, y botón **"Probar (sin enviar SMS real)"** que simula la alarma completa sin enviar ningún mensaje.
 
 > ⚠️ Esta función es un apoyo adicional, no un sistema de emergencias certificado: depende de que haya una sesión de grabación activa, de la señal GPS/celular en el momento del incidente, y de umbrales fijos que pueden no cubrir todos los tipos de caída o accidente. No sustituye el sentido común ni el equipo de protección al conducir.
+
+## Mapa
+
+El motor de mapas es **MapLibre** (open source, sin API key). Reemplazó a osmdroid, que su autor archivó en noviembre de 2024.
+
+De dónde salen los tiles, en cascada — el primero que esté disponible gana:
+
+| Tier | Origen | Funciona sin red |
+|---|---|---|
+| 1 | Archivo `colombia.pmtiles` en el almacenamiento del dispositivo | **Sí** |
+| 2 | `revscope-server` sirviendo el mismo archivo | No |
+| 3 | Tiles ráster de OpenStreetMap | No |
+| 4 | Solo fondo — el mapa queda vacío pero la pantalla sigue dibujando tu ruta, radares y huecos | — |
+
+Hoy aplica el tier 3: son los mismos tiles que servía osmdroid. Los tiers 1 y 2 se activan cuando exista el extracto vectorial de Colombia; ahí el modo nocturno pasa a ser un estilo oscuro de verdad en vez de la aproximación actual (bajar brillo y saturación).
+
+> El servidor **no** es un requisito. Sin él, y sin red, la app sigue funcionando en todo lo demás: telemetría, avisos de radar por voz, detección de caída y pico y placa viven de la base de datos local.
 
 ## Avisos en segundo plano
 

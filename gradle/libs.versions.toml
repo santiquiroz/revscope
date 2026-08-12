@@ -26,7 +26,6 @@ wearCompose = "1.4.0"
 healthServices = "1.0.0"
 playServicesWearable = "18.2.0"
 guava = "33.0.0-android"
-osmdroid = "6.1.20"
 androidxCoreKtx = "1.13.1"
 nanohttpd = "2.3.1"
 okhttp = "4.12.0"
@@ -74,9 +73,6 @@ wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-fou
 health-services = { group = "androidx.health", name = "health-services-client", version.ref = "healthServices" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 guava-android = { group = "com.google.guava", name = "guava", version.ref = "guava" }
-
-# Real map tiles (OpenStreetMap)
-osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 
 # Motor de mapas vectoriales. Variante OpenGL a propósito: desde 13.0.0 el
 # artefacto por defecto usa Vulkan, cuyo paquete filtra dispositivos por

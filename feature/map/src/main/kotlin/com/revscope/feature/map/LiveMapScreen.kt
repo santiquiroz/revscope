@@ -41,27 +41,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.revscope.core.data.db.entities.PotholeEntity
-import com.revscope.core.data.db.entities.SpeedCameraEntity
-import android.view.MotionEvent
+import com.revscope.core.maps.MapLibreMapView
+import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
-import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.feature.map.routing.OsrmRouteFetcher
 import kotlinx.coroutines.flow.StateFlow
-import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polygon
-import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.TilesOverlay
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.gestures.MoveGestureDetector
+import org.maplibre.android.maps.MapLibreMap
 
 private const val INITIAL_ZOOM = 16.0
 private const val IDLE_ZOOM = 13.0
@@ -86,120 +79,100 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var headingUp by remember { mutableStateOf(false) }
     var darkTiles by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val density = context.resources.displayMetrics.density
 
-    // Long-press = fijar destino; el overlay vive fuera del rebuild para no perder el listener.
-    val mapEventsOverlay = remember {
-        MapEventsOverlay(object : MapEventsReceiver {
-            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean = false
-            override fun longPressHelper(p: GeoPoint?): Boolean {
-                p?.let { viewModel.setDestination(it.latitude, it.longitude) }
-                return p != null
-            }
-        })
+    // Fase 4 llena esto con el .pmtiles local o el del servidor; hasta entonces cae al tier
+    // ráster de OSM, que son los mismos tiles que servía osmdroid.
+    val styleJson = remember(darkTiles) {
+        MapStyleProvider.styleJson(tilesUrl = null, dark = darkTiles)
     }
+    var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
+    var styleEpoch by remember { mutableStateOf(0) }
 
-    // Evita recentrar el mapa (y pelear con el usuario si lo está paneando) en cada
-    // recomposición disparada por lecturas OBD; solo recentra cuando cambia routeRevision
-    // (route.size se estanca en viajes de 5h+, por eso no sirve como señal de cambio),
-    // y usa la ubicación inicial una única vez sin viaje activo.
+    // Solo re-centra cuando llega una revisión nueva, para no pelear con el usuario mientras
+    // panea ni recentrar en recomposiciones ajenas (route.size se estanca en viajes de 5h+,
+    // por eso la señal es la revisión y no el tamaño).
     var lastCenteredRevision by remember { mutableStateOf(-1L) }
     var hasCenteredInitial by remember { mutableStateOf(false) }
 
-    // Evita limpiar y reconstruir los overlays (hasta 18.000 puntos de ruta) en cada
-    // recomposición; cuando la ruta solo CRECE (por debajo del tope) se agregan los
-    // puntos nuevos al Polyline existente (addPoint) — la reconstrucción completa queda
-    // para cuando cambian las cámaras, la ruta se encoge/reinicia (nuevo viaje), o la
-    // ruta cambió pero su tamaño se estancó (viaje en el tope de MAX_POINTS).
-    var lastOverlayRevision by remember { mutableStateOf(-1L) }
-    var lastOverlaySize by remember { mutableStateOf(-1) }
-    var lastOverlayCameraCount by remember { mutableStateOf(-1) }
-    var lastOverlayAlertRadius by remember { mutableStateOf(-1) }
-    var lastApproachingId by remember { mutableStateOf<Long?>(null) }
-    var lastPeerCount by remember { mutableStateOf(-1) }
-    var lastDestination by remember { mutableStateOf<LiveRouteHolder.RoutePoint?>(null) }
-    var lastPlannedRoute by remember { mutableStateOf<OsrmRouteFetcher.Route?>(null) }
-    var routeOverlays by remember { mutableStateOf(RouteOverlays(polyline = null, marker = null)) }
+    val data = LiveMapData(
+        route = route,
+        cameras = cameras,
+        potholes = potholes,
+        peers = peers.values.toList(),
+        approachingId = approaching?.osmId,
+        alertRadiusM = alertRadiusM,
+        destination = destination,
+        plannedRoute = plannedRoute,
+    )
 
     Box(Modifier.fillMaxSize()) {
-        AndroidView(
+        MapLibreMapView(
             modifier = Modifier.fillMaxSize(),
-            factory = { ctx ->
-                Configuration.getInstance().apply {
-                    userAgentValue = ctx.packageName
-                    load(ctx, ctx.getSharedPreferences("osmdroid", 0))
-                }
-                MapView(ctx).apply {
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setMultiTouchControls(true)
-                    controller.setZoom(INITIAL_ZOOM)
-                    // Pan/zoom manual apaga el follow — el FAB de recentrar lo devuelve.
-                    setOnTouchListener { _, event ->
-                        if (event.action == MotionEvent.ACTION_DOWN) followEnabled = false
-                        false
-                    }
-                }
-            },
-            update = { map ->
-                val camerasChanged = cameras.size != lastOverlayCameraCount ||
-                    alertRadiusM != lastOverlayAlertRadius
-                // Cambió el radar objetivo (entró/salió del cono de rumbo) → repintar para
-                // resaltar solo ese y atenuar el resto.
-                val approachingChanged = approaching?.osmId != lastApproachingId
-                val peersChanged = peers.size != lastPeerCount
-                val destinationChanged = destination != lastDestination || plannedRoute != lastPlannedRoute
-                val routeReset = routeRevision < lastOverlayRevision ||
-                    (route.isEmpty() && routeOverlays.polyline != null)
-                val revisionChanged = routeRevision != lastOverlayRevision
-                val routeGrew = revisionChanged && !routeReset && route.size > lastOverlaySize
-                val missingPolyline = route.isNotEmpty() && routeOverlays.polyline == null
-                val needsFullRebuild = camerasChanged || approachingChanged || peersChanged || destinationChanged ||
-                    routeReset || missingPolyline || (revisionChanged && !routeGrew)
+            styleJson = styleJson,
+        ) { map, style ->
+            installLiveMapLayers(style, density, data)
+            mapRef = map
+            // Sube en cada instalación de estilo para que los efectos de datos y cámara
+            // vuelvan a correr: al recargar el estilo las fuentes viejas quedan detached.
+            styleEpoch++
+        }
 
-                if (needsFullRebuild) {
-                    routeOverlays = rebuildMapOverlays(
-                        map, route, cameras, potholes, peers.values.toList(), approaching?.osmId,
-                        alertRadiusM, mapEventsOverlay, destination, plannedRoute,
+        // Un solo registro por instancia de mapa: registrarlos en el callback de estilo
+        // los duplicaría en cada cambio de modo nocturno.
+        LaunchedEffect(mapRef) {
+            val map = mapRef ?: return@LaunchedEffect
+            map.addOnMapLongClickListener { latLng ->
+                viewModel.setDestination(latLng.latitude, latLng.longitude)
+                true
+            }
+            map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
+                // Cualquier gesto del usuario apaga el follow; el FAB lo devuelve.
+                override fun onMoveBegin(detector: MoveGestureDetector) { followEnabled = false }
+                override fun onMove(detector: MoveGestureDetector) = Unit
+                override fun onMoveEnd(detector: MoveGestureDetector) = Unit
+            })
+        }
+
+        // La ruta viva llega a 18.000 puntos y cada escritura re-indexa el dataset completo,
+        // así que se escribe solo cuando la revisión cambia, no en cada recomposición.
+        LaunchedEffect(styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute) {
+            mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
+        }
+
+        LaunchedEffect(styleEpoch, routeRevision, followEnabled, headingUp) {
+            val map = mapRef ?: return@LaunchedEffect
+            val last = route.lastOrNull()
+            if (last != null) {
+                if (followEnabled && routeRevision != lastCenteredRevision) {
+                    lastCenteredRevision = routeRevision
+                    // Sin .zoom(): el follow re-centra pero no re-zoomea, así que el pinch del
+                    // usuario se respeta indefinidamente.
+                    map.animateCamera(
+                        CameraUpdateFactory.newCameraPosition(
+                            CameraPosition.Builder()
+                                .target(LatLng(last.lat, last.lon))
+                                .bearing(if (headingUp) currentBearingDegrees(route) else 0.0)
+                                .build(),
+                        ),
                     )
-                    lastOverlayCameraCount = cameras.size
-                    lastOverlayAlertRadius = alertRadiusM
-                    lastApproachingId = approaching?.osmId
-                    lastPeerCount = peers.size
-                    lastDestination = destination
-                    lastPlannedRoute = plannedRoute
-                } else if (routeGrew) {
-                    appendRoutePoints(routeOverlays.polyline, route, lastOverlaySize)
-                    updateCurrentPositionMarker(routeOverlays.marker, route.last())
+                } else if (!headingUp && map.cameraPosition.bearing != 0.0) {
+                    // Apagar rumbo-arriba des-rota de inmediato, sin esperar revisión.
+                    map.animateCamera(
+                        CameraUpdateFactory.newCameraPosition(
+                            CameraPosition.Builder().bearing(0.0).build(),
+                        ),
+                    )
                 }
-                lastOverlayRevision = routeRevision
-                lastOverlaySize = route.size
-
-                map.overlayManager.tilesOverlay.setColorFilter(
-                    if (darkTiles) TilesOverlay.INVERT_COLORS else null,
-                )
-
-                if (route.isNotEmpty()) {
-                    val last = route.last()
-                    if (followEnabled && routeRevision != lastCenteredRevision) {
-                        lastCenteredRevision = routeRevision
-                        map.controller.setCenter(GeoPoint(last.lat, last.lon))
-                        map.mapOrientation = if (headingUp) {
-                            -currentBearingDegrees(route).toFloat()
-                        } else {
-                            0f
-                        }
-                    }
-                    if (!headingUp && map.mapOrientation != 0f) map.mapOrientation = 0f
-                } else if (!hasCenteredInitial) {
-                    viewModel.initialCenter.value?.let {
-                        map.controller.setCenter(GeoPoint(it.lat, it.lon))
-                        map.controller.setZoom(IDLE_ZOOM)
-                        hasCenteredInitial = true
-                    }
+            } else if (!hasCenteredInitial) {
+                viewModel.initialCenter.value?.let {
+                    map.moveCamera(
+                        CameraUpdateFactory.newLatLngZoom(LatLng(it.lat, it.lon), IDLE_ZOOM),
+                    )
+                    hasCenteredInitial = true
                 }
-                map.invalidate()
-            },
-            onRelease = { it.onDetach() },
-        )
+            }
+        }
 
         Text(
             "© OpenStreetMap contributors",
@@ -450,146 +423,6 @@ private fun CurrentSpeedBadge(speedKmh: Int, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
-}
-
-/** Live route Polyline + "Tú" position Marker, so the update block can grow/move them incrementally. */
-private data class RouteOverlays(val polyline: Polyline?, val marker: Marker?)
-
-private fun rebuildMapOverlays(
-    map: MapView,
-    route: List<LiveRouteHolder.RoutePoint>,
-    cameras: List<SpeedCameraEntity>,
-    potholes: List<PotholeEntity>,
-    peers: List<RoomClient.Peer>,
-    approachingId: Long?,
-    alertRadiusM: Int,
-    eventsOverlay: MapEventsOverlay,
-    destination: LiveRouteHolder.RoutePoint?,
-    plannedRoute: OsrmRouteFetcher.Route?,
-): RouteOverlays {
-    map.overlays.clear()
-    // Primero en la lista = debajo de todo y recibe los long-press que nadie más consuma.
-    map.overlays.add(eventsOverlay)
-    plannedRoute?.let { planned ->
-        map.overlays.add(
-            Polyline(map).apply {
-                setPoints(planned.points.map { GeoPoint(it.lat, it.lon) })
-                outlinePaint.color = 0xFF00E5FF.toInt()
-                outlinePaint.strokeWidth = 10f
-            },
-        )
-    }
-    destination?.let { dest ->
-        map.overlays.add(
-            Marker(map).apply {
-                position = GeoPoint(dest.lat, dest.lon)
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Destino"
-            },
-        )
-    }
-    peers.forEach { map.overlays.add(peerMarker(map, it)) }
-    potholes.forEach { map.overlays.add(potholeMarker(map, it)) }
-    // Con un radar objetivo activo, los demás se atenúan: el mapa informa el radar al que
-    // VAS, no todos los que existen alrededor.
-    cameras.forEach { cam ->
-        val isTarget = cam.osmId == approachingId
-        val dimmed = approachingId != null && !isTarget
-        map.overlays.add(speedCameraAlertCircle(map, cam, isTarget, dimmed, alertRadiusM))
-        map.overlays.add(speedCameraMarker(map, cam, isTarget))
-    }
-    if (route.isEmpty()) return RouteOverlays(polyline = null, marker = null)
-    val last = route.last()
-    val polyline = Polyline(map).apply {
-        setPoints(route.map { GeoPoint(it.lat, it.lon) })
-        outlinePaint.color = 0xFFE8FF00.toInt()
-        outlinePaint.strokeWidth = 8f
-    }
-    val marker = Marker(map).apply {
-        position = GeoPoint(last.lat, last.lon)
-        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        title = "Tú"
-    }
-    map.overlays.add(polyline)
-    map.overlays.add(marker)
-    return RouteOverlays(polyline, marker)
-}
-
-/** Appends only the points added since [fromIndex] — avoids rebuilding a route of up to 18.000 points on every reading. */
-private fun appendRoutePoints(
-    polyline: Polyline?,
-    route: List<LiveRouteHolder.RoutePoint>,
-    fromIndex: Int,
-) {
-    if (polyline == null) return
-    for (i in fromIndex.coerceAtLeast(0) until route.size) {
-        polyline.addPoint(GeoPoint(route[i].lat, route[i].lon))
-    }
-}
-
-private fun updateCurrentPositionMarker(marker: Marker?, position: LiveRouteHolder.RoutePoint) {
-    marker?.position = GeoPoint(position.lat, position.lon)
-}
-
-private fun peerMarker(
-    map: MapView,
-    peer: RoomClient.Peer,
-) = Marker(map).apply {
-    position = GeoPoint(peer.lat, peer.lon)
-    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-    title = "\uD83C\uDFCD\uFE0F ${peer.rider}" + (peer.speedKmh?.let { " \u00b7 ${it.toInt()} km/h" } ?: "")
-}
-
-private fun potholeMarker(
-    map: MapView,
-    pothole: PotholeEntity,
-) = Marker(map).apply {
-    position = GeoPoint(pothole.latitude, pothole.longitude)
-    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-    title = "Hueco · %.1fG · %dx".format(pothole.severityG, pothole.hits)
-    alpha = 0.85f
-}
-
-private fun speedCameraAlertCircle(
-    map: MapView,
-    camera: SpeedCameraEntity,
-    isTarget: Boolean,
-    dimmed: Boolean,
-    alertRadiusM: Int,
-) = Polygon(map).apply {
-    points = Polygon.pointsAsCircle(
-        GeoPoint(camera.latitude, camera.longitude),
-        alertRadiusM.toDouble(),
-    )
-    when {
-        isTarget -> {
-            fillPaint.color = 0x44FF1744
-            outlinePaint.color = 0xFFFF1744.toInt()
-            outlinePaint.strokeWidth = 4f
-        }
-        dimmed -> {
-            fillPaint.color = 0x0DFF5252
-            outlinePaint.color = 0x26FF5252
-            outlinePaint.strokeWidth = 1f
-        }
-        else -> {
-            fillPaint.color = 0x22FF5252
-            outlinePaint.color = 0x66FF5252.toInt()
-            outlinePaint.strokeWidth = 2f
-        }
-    }
-}
-
-private fun speedCameraMarker(
-    map: MapView,
-    camera: SpeedCameraEntity,
-    isTarget: Boolean,
-) = Marker(map).apply {
-    position = GeoPoint(camera.latitude, camera.longitude)
-    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-    title = (if (isTarget) "⚠ Radar en tu ruta" else "Radar") +
-        (camera.maxSpeedKmh?.let { " · $it km/h" } ?: "")
-    alpha = if (isTarget) 1f else 0.75f
 }
 
 private fun openExternalNavigation(

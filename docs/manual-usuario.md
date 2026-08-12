@@ -37,7 +37,7 @@ Tu posición y ruta en vivo sobre un mapa de OpenStreetMap (offline una vez desc
 - **Ruta recorrida** dibujada como línea, con un marcador "Tú" en la posición actual.
 - **Follow inteligente**: el mapa te sigue solo; al panear con el dedo deja de pelear contigo, y el botón de **mi posición** (⌖) lo reactiva.
 - **Rumbo arriba** (🧭): rota el mapa según tu dirección de marcha, como un navegador; tócalo de nuevo para volver a norte-arriba.
-- **Mapa nocturno** (🌙): invierte los colores de los tiles para manejar de noche sin encandilarte.
+- **Mapa nocturno** (🌙): oscurece el mapa para manejar de noche sin encandilarte.
 - **Ruta a destino**: mantén presionado cualquier punto del mapa y RevScope calcula la ruta en carro (OSRM), la dibuja y muestra **distancia y tiempo estimado** en un chip; la ✕ del chip la quita. Con destino fijado, el botón de navegación lanza **turn-by-turn real** en Google Maps hacia ese punto.
 - **Radares de velocidad** cercanos: cada uno con un marcador y un círculo semitransparente del **radio de aviso configurado** (default 250 m — ajustable en [Configuración → Radares](configuracion.md#radares-de-velocidad)).
 - **Velocidad actual** en una insignia en la esquina inferior izquierda.
