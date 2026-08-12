@@ -19,9 +19,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 }
 
 kapt {
@@ -50,4 +47,9 @@ dependencies {
     implementation(libs.timber)
 
     testImplementation(libs.junit)
+}
+
+kotlin {
+    // Kotlin 2.3 elimino el DSL kotlinOptions; jvmTarget vive en compilerOptions.
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }

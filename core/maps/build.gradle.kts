@@ -12,13 +12,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-        // MapLibre 13.4.1 y su kotlin-stdlib vienen compilados con Kotlin 2.2 y el proyecto
-        // compila con 2.0.21. Sin esto el compilador rechaza leer su metadata. Provisional:
-        // la salida real es subir Kotlin (Ferrostar exigirá 2.3.x en la Fase 3).
-        freeCompilerArgs += "-Xskip-metadata-version-check"
-    }
     buildFeatures { compose = true }
 }
 
@@ -32,4 +25,20 @@ dependencies {
     implementation(libs.maplibre.turf)
     implementation(libs.timber)
     testImplementation(libs.junit)
+}
+
+kotlin {
+    // Kotlin 2.3 elimino el DSL kotlinOptions; jvmTarget vive en compilerOptions.
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        // MapLibre 13.4.1 y su kotlin-stdlib vienen compilados con Kotlin 2.2 y el proyecto
+        // compila con 2.0.21, así que el compilador se niega a leer su metadata.
+        //
+        // Medido: subir Kotlin no es opción todavía. 2.2.21 rompe kapt en :core:obd
+        // ("Unable to read Kotlin metadata due to unsupported metadata kind: null" en las
+        // clases @HiltWorker: androidx.hilt:hilt-compiler:1.2.0 no lee metadata 2.2) y
+        // 2.3.21 rompe además kapt en :core:data. Salir de acá exige migrar Room y Hilt de
+        // kapt a KSP, que es tarea cero de la Fase 3 (Ferrostar exigirá stdlib 2.3.x).
+        freeCompilerArgs.add("-Xskip-metadata-version-check")
+    }
 }

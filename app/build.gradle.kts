@@ -37,9 +37,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     buildFeatures {
         compose = true
@@ -99,4 +96,9 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+}
+
+kotlin {
+    // Kotlin 2.3 elimino el DSL kotlinOptions; jvmTarget vive en compilerOptions.
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }

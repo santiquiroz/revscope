@@ -19,9 +19,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     // Make main assets visible to JVM unit tests via classpath
     sourceSets {
@@ -67,4 +64,9 @@ dependencies {
     testImplementation(libs.mockk)
     // org.json available on Android runtime; add for JVM unit tests
     testImplementation(libs.org.json)
+}
+
+kotlin {
+    // Kotlin 2.3 elimino el DSL kotlinOptions; jvmTarget vive en compilerOptions.
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
