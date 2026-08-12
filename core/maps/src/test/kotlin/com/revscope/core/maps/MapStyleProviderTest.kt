@@ -45,11 +45,33 @@ class MapStyleProviderTest {
     }
 
     @Test
-    fun `sin origen el estilo sigue siendo valido y sin fuentes`() {
+    fun `sin origen vectorial cae al raster de OSM para no perder las calles`() {
         val json = MapStyleProvider.styleJson(null, dark = false)
+        assertTrue(json.contains("\"type\": \"raster\""))
+        assertTrue(json.contains("tile.openstreetmap.org"))
+        assertTrue(json.contains("OpenStreetMap contributors"))
+    }
+
+    @Test
+    fun `sin origen y sin raster el estilo queda solo con fondo pero valido`() {
+        val json = MapStyleProvider.styleJson(null, dark = false, rasterFallback = false)
         assertTrue(json.contains("\"version\""))
-        assertTrue(json.contains("\"sources\""))
         assertTrue(json.contains("background"))
+        assertTrue(!json.contains("raster"))
+    }
+
+    @Test
+    fun `el vectorial gana sobre el raster cuando hay origen`() {
+        val json = MapStyleProvider.styleJson("pmtiles://https://x/y.pmtiles", dark = false)
+        assertTrue(json.contains("\"type\": \"vector\""))
+        assertTrue(!json.contains("raster"))
+    }
+
+    @Test
+    fun `el raster oscuro baja brillo y saturacion`() {
+        val json = MapStyleProvider.styleJson(null, dark = true)
+        assertTrue(json.contains("raster-brightness-max"))
+        assertTrue(json.contains("raster-saturation"))
     }
 
     @Test

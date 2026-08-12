@@ -913,6 +913,29 @@ archivada desde 2024 sale del grafo."
 
 ---
 
+## Enmiendas surgidas de la ejecución
+
+**Hueco del plan: ninguna tarea generaba el `.pmtiles`.** Sin extracto vectorial, migrar el
+motor dejaba las pantallas sin calles — peor que lo que había. Resuelto agregando un tier
+**ráster de OpenStreetMap** a `MapStyleProvider`, que sirve exactamente los mismos tiles que
+usa osmdroid hoy. La cascada real quedó en cuatro niveles: `.pmtiles` local (único que anda sin
+red) → `.pmtiles` del servidor → ráster de OSM → solo fondo. Generar y hospedar el extracto
+pasa a ser una tarea propia, previa a que el modo oscuro pueda ser un estilo oscuro de verdad:
+con tiles ráster solo se puede aproximar bajando brillo y saturación.
+
+**Kotlin: medido, no asumido.** El conflicto es error duro y la mitigación del plan (forzar
+`kotlin-stdlib`) no servía. Intentos: 2.3.21 elimina el DSL `kotlinOptions` (migrado igual, 17
+módulos) y rompe kapt en `:core:data`; 2.2.21 rompe kapt en `:core:obd` porque
+`androidx.hilt:hilt-compiler:1.2.0` no lee metadata 2.2 en las clases `@HiltWorker`. Se queda
+en 2.0.21 con `-Xskip-metadata-version-check` a nivel del build raíz, porque lo necesita todo
+módulo que compile contra MapLibre. Salir de ahí exige migrar Room y Hilt de kapt a KSP: es
+tarea cero de la Fase 3, donde Ferrostar exigirá stdlib 2.3.x de todas formas.
+
+**Diferido para la Task 6:** `RealTrackMap` habla GeoJSON y capas de MapLibre directamente, en
+vez de pasar por helpers de `:core:maps` como pedía §4. Se deja así a propósito hasta tener el
+segundo caso de uso (`LiveMapScreen`) a la vista: extraer la abstracción con un solo consumidor
+es adivinar su forma.
+
 ## Notas para quien ejecute
 
 - **Las tareas 5 a 10 requieren el S25 desbloqueado.** El render no se puede verificar sin dispositivo y el teléfono suele estar con PIN. Coordinar con el usuario antes de empezar la Task 5.
