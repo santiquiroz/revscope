@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.revscope.wear"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         // Same applicationId as the phone app — required for the Data Layer to

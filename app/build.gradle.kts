@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.revscope.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.revscope.app"

@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.revscope.core.intelligence"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
