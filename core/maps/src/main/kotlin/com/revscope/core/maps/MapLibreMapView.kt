@@ -15,6 +15,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.maplibre.android.MapLibre
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 
@@ -47,7 +48,14 @@ fun MapLibreMapView(
     // MapLibreConfigurationException.
     val mapView = remember {
         MapLibre.getInstance(context)
-        MapView(context).apply { onCreate(Bundle()) }
+        // textureMode: por defecto MapLibre renderiza en un GLSurfaceView, que vive en una
+        // capa aparte del árbol de vistas. Al navegar a otra pestaña, Compose destruye el
+        // composable pero la superficie tarda en liberarse y el mapa se queda unos segundos
+        // encima de la pantalla nueva. Con TextureView el mapa es una vista común y
+        // desaparece con ella. Cuesta algo de rendimiento y batería; el artefacto visual
+        // cuesta más. Requiere el backend OpenGL, que es el que usa este proyecto.
+        val options = MapLibreMapOptions.createFromAttributes(context).textureMode(true)
+        MapView(context, options).apply { onCreate(Bundle()) }
     }
 
     DisposableEffect(lifecycleOwner) {
