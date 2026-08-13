@@ -41,7 +41,7 @@ class LiveMapViewModel @Inject constructor(
     routeHolder: LiveRouteHolder,
     private val cameraDao: SpeedCameraDao,
     private val potholeDao: PotholeDao,
-    sessionManager: ObdSessionManager,
+    private val sessionManager: ObdSessionManager,
     cameraAlerter: SpeedCameraAlerter,
     private val roomClient: RoomClient,
     private val navigationController: NavigationController,
@@ -57,6 +57,12 @@ class LiveMapViewModel @Inject constructor(
         val route = _plannedRoute.value ?: return
         val origin = lastKnownPoint() ?: return
         val destination = _destination.value ?: return
+        // El GPS lo entrega el servicio en primer plano, y ese solo corre con un viaje activo.
+        // Sin viaje, la navegación arrancaría y se quedaría muda: mejor decirlo.
+        if (sessionManager.currentSessionId.value == null) {
+            _navigationError.value = "Inicia un viaje para que la navegación reciba el GPS"
+            return
+        }
         val started = navigationController.start(
             route = route,
             origin = LatLon(origin.lat, origin.lon),

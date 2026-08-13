@@ -80,6 +80,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val searchResults by viewModel.searchResults.collectAsState()
     val searching by viewModel.searching.collectAsState()
     val navigation by viewModel.navigation.collectAsState()
+    val navigationError by viewModel.navigationError.collectAsState()
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
@@ -281,6 +282,27 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 onClear = viewModel::clearDestination,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
             )
+        }
+
+        navigationError?.let { message ->
+            Surface(
+                color = Color(0xF2121218),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 90.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        message,
+                        color = Color(0xFFE8FF00),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
+                    )
+                    IconButton(onClick = viewModel::clearNavigationError) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
+                    }
+                }
+            }
         }
 
         if (roomCode != null) {

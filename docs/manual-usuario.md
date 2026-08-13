@@ -39,7 +39,14 @@ Tu posición y ruta en vivo sobre un mapa de OpenStreetMap (offline una vez desc
 - **Rumbo arriba** (🧭): rota el mapa según tu dirección de marcha, como un navegador; tócalo de nuevo para volver a norte-arriba.
 - **Mapa nocturno** (🌙): oscurece el mapa para manejar de noche sin encandilarte.
 - **Búsqueda de direcciones**: el campo de arriba busca calles y lugares (Photon, sobre datos de OpenStreetMap, sin cuenta ni API key). Los resultados se **sesgan por tu ubicación**, así que buscar "medellín" te da Medellín, Antioquia y no la de Filipinas. Tocar un resultado lo fija como destino.
-- **Ruta a destino**: además de la búsqueda, mantén presionado cualquier punto del mapa. RevScope calcula la ruta en carro (OSRM), la dibuja y muestra **distancia y tiempo estimado** en un chip; la ✕ del chip la quita. Con destino fijado, el botón de navegación lanza **turn-by-turn real** en Google Maps hacia ese punto.
+- **Ruta a destino**: además de la búsqueda, mantén presionado cualquier punto del mapa. RevScope calcula la ruta en carro (OSRM), la dibuja y muestra **distancia y tiempo estimado** en un chip; la ✕ del chip la quita. Con destino fijado, el botón de navegación lanza turn-by-turn en Google Maps hacia ese punto.
+- **Navegación paso a paso propia**: el botón **Navegar** del chip de ruta arranca la guía dentro de RevScope, sin salir a otra app.
+  - Arriba aparece la **maniobra que viene**: una flecha grande, la distancia y el nombre de la calle.
+  - Abajo, lo que **falta del viaje**: distancia, tiempo y hora estimada de llegada.
+  - Las instrucciones se **dicen en voz alta en español** por el mismo canal que el resto de los avisos, así que se oyen en el intercomunicador del casco. Cada giro se anuncia a 400 m, a 150 m y justo al llegar, sin repetirse entre medio.
+  - Si te sales de la ruta, avisa una vez. Todavía **no recalcula solo**: hay que volver a fijar el destino.
+  - Necesita un **viaje activo** (OBD o GPS), porque de ahí sale la señal. Si no hay viaje, la app te lo dice en vez de quedarse muda.
+  - La ✕ del banner termina la navegación.
 - **Radares de velocidad** cercanos: cada uno con un marcador y un círculo semitransparente del **radio de aviso configurado** (default 250 m — ajustable en [Configuración → Radares](configuracion.md#radares-de-velocidad)).
 - **Velocidad actual** en una insignia en la esquina inferior izquierda.
 - Botón flotante **"Abrir en Maps"** (ícono de navegación): sin destino fijado, abre tu app de navegación externa en tu última posición conocida.

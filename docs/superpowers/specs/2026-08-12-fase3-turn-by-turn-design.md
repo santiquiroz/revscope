@@ -52,14 +52,31 @@ Módulo nuevo `:core:navigation` con Ferrostar `core:0.53.0` resolviendo y compi
 
 La voz sale por `AlertsEngine`, no por el TTS de Ferrostar: ya está resuelto que llegue al intercomunicador del casco por el stream de media, y la lección del falso positivo de caída fue que una alerta que no se oye rodando es una alerta que no existe. No se introduce un segundo motor de voz con otras reglas de ruteo de audio.
 
-## Lo que falta para cerrar la fase
+### Qué hace Ferrostar de verdad con el OSRM público
 
-1. **`OsrmRouteFetcher` con `steps=true`** y un parser de pasos a un modelo de dominio, con la precisión de polyline fijada por test.
-2. **Wiring de `FerrostarCore`**: proveedor de ubicación propio (la app ya tiene su stream de GPS), `RouteProvider` contra OSRM, y el servicio en primer plano.
-3. **UI de navegación** sobre el mapa que ya existe: banner de maniobra, distancia restante y ETA.
-4. **Anuncio por voz** enganchando `ManeuverSpeech` al progreso de ruta, con la regla de no repetir el mismo aviso a la misma distancia.
-5. Decidir el backend de voz: seguir con OSRM + instrucciones propias (lo implementado), o self-hostear Valhalla y usar sus instrucciones nativas.
+Medido en el dispositivo, contra la respuesta real guardada en `core/navigation/src/androidTest/assets/`:
+
+| Pregunta | Respuesta medida |
+|---|---|
+| ¿Parsea la respuesta completa? | **No** — `createRouteFromOsrm` la rechaza con `missing field duration`. La vía que sirve es `createRouteFromOsrmRoute` con `routes[0]` y los waypoints como objetos. |
+| ¿Ve los mismos pasos que nuestro parser? | **Sí** — mismo conteo, mismo orden, mismos nombres de vía y distancias. Eso habilita cruzarlos por índice, y hay un test que lo fija. |
+| ¿Puede decir qué maniobra es? | **No** — su texto de instrucción es literalmente `"TODO: OSRM instruction synthesis"`. |
+
+De ahí sale el reparto definitivo: Ferrostar hace lo difícil de hacer bien —enganche a la ruta, avance de paso, desvío y progreso— y las maniobras salen de nuestro parser.
+
+## Fase 3 completa
+
+1. **Rutas con pasos** — `steps=true`, `OsrmRouteParser` puro, precisión de polyline atada al parámetro pedido.
+2. **Motor** — `NavigationSession` sobre Ferrostar; `StepCursor` aparte y puro para la aritmética de índices.
+3. **Voz** — `ManeuverAnnouncer` decide cuándo, `ManeuverSpeech` decide qué, `AlertsEngine` lo dice.
+4. **UI** — banner de maniobra arriba, distancia/tiempo/ETA al pie.
+5. **Continuidad** — `NavigationController` es singleton y se alimenta del GPS del servicio en primer plano, así que la guía sigue con la pantalla apagada.
+
+Bug encontrado por el test de recorrido simulado: con la misma condición de avance para el último paso que para los demás, **la llegada nunca se dispara**. El paso final no se puede dar por cumplido "saliendo" de él porque no hay siguiente. La condición de llegada es ahora por distancia al final del paso.
 
 ## Deuda anotada
 
-El chip de ruta se queda en `"Sin ruta — ¿hay internet?"` indefinidamente cuando OSRM falla. Debería limpiarse solo tras un tiempo. Se toca en el punto 1.
+- La navegación necesita un viaje activo, porque el GPS lo entrega el servicio en primer plano. Cuando no lo hay, la app lo dice en vez de quedarse muda; falta el modo "solo navegar" que levante el servicio por su cuenta.
+- El chip de ruta se queda en `"Sin ruta — ¿hay internet?"` indefinidamente cuando OSRM falla.
+- No hay rerouteo automático: al salirse de la ruta se avisa, pero la ruta no se recalcula sola.
+- Sigue pendiente decidir el backend definitivo: seguir con OSRM + instrucciones propias, o self-hostear Valhalla (Fase 4/5).
