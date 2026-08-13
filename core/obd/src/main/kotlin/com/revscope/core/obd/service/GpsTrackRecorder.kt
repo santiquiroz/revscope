@@ -8,6 +8,8 @@ import android.location.LocationListener
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.navigation.LocationFix
+import com.revscope.core.navigation.NavigationController
 import com.revscope.core.data.db.entities.GpsPointEntity
 import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
@@ -49,6 +51,8 @@ class GpsTrackRecorder(
     private val onFixTick: (() -> Unit)? = null,
     /** Wired by the service ONLY in GPS-only trip mode, to drive the GPS_SPEED pseudo-reading. */
     private val onSpeed: ((Float) -> Unit)? = null,
+    /** La navegación paso a paso: recibe la lectura completa, no solo el punto. */
+    private val navigation: NavigationController? = null,
 ) {
 
     private val buffer = mutableListOf<GpsPointEntity>()
@@ -167,6 +171,7 @@ class GpsTrackRecorder(
         routeHolder?.updateSpeed(point.speedKmh)
         onSpeed?.invoke(point.speedKmh)
         if (location.hasBearing()) onBearing?.invoke(location.bearing)
+        navigation?.onFix(location.toNavigationFix())
     }
 
     private suspend fun flush() {
@@ -178,3 +183,15 @@ class GpsTrackRecorder(
             .onFailure { Timber.e(it, "GpsTrackRecorder: flush failed (${snapshot.size} points)") }
     }
 }
+
+private fun Location.toNavigationFix() = LocationFix(
+    lat = latitude,
+    lon = longitude,
+    accuracyM = if (hasAccuracy()) accuracy.toDouble() else UNKNOWN_ACCURACY_M,
+    bearingDeg = if (hasBearing()) bearing.toInt() else null,
+    speedMps = if (hasSpeed()) speed.toDouble() else null,
+    timestampMs = time,
+)
+
+/** Sin exactitud declarada hay que asumir lo peor, o el detector de desvío se dispara solo. */
+private const val UNKNOWN_ACCURACY_M = 50.0

@@ -54,7 +54,7 @@ class AlertsEngine @Inject constructor(
     private val settings: DataStore<Preferences>,
 ) {
 
-    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE, ZONE_BRIEF, CRASH_COUNTDOWN }
+    enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE, ZONE_BRIEF, CRASH_COUNTDOWN, NAVIGATION }
 
     data class ObdAlert(
         val type: AlertType,
@@ -264,6 +264,23 @@ class AlertsEngine @Inject constructor(
         playTone(ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 800)
         vibrate(longArrayOf(0, 600, 200, 600, 200, 600))
         speakUnconditionally(message)
+    }
+
+    /**
+     * Instrucción de navegación paso a paso.
+     *
+     * No consulta los interruptores de alertas porque no es una alerta: el conductor pidió
+     * que lo guiaran, y callar una instrucción de giro por tener silenciados los avisos de
+     * radar sería obedecer la preferencia equivocada. Sí respeta el interruptor de voz: si el
+     * TTS está apagado, la navegación queda visual, que es lo que se pidió.
+     *
+     * Cuándo hablar lo decide ManeuverAnnouncer; aquí solo se dice.
+     */
+    fun announceNavigation(instruction: String) {
+        if (!ttsEnabled) return
+        Timber.i("AlertsEngine: navegación — $instruction")
+        _alerts.tryEmit(ObdAlert(AlertType.NAVIGATION, instruction, 0.0))
+        speakUnconditionally(instruction)
     }
 
     /** Spoken speed-camera proximity warning. Per-camera cooldown lives in the alerter. */

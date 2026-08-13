@@ -23,6 +23,7 @@ object OsrmRouteParser {
             distanceM = route.optDouble("distance", 0.0),
             durationS = route.optDouble("duration", 0.0),
             steps = parseSteps(route.optJSONArray("legs"), precision),
+            osrmRouteJson = route.toString(),
         )
     }
 

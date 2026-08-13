@@ -13,7 +13,10 @@ import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.navigation.LatLon
+import com.revscope.core.navigation.NavigationController
 import com.revscope.core.navigation.NavigationRoute
+import com.revscope.core.navigation.NavigationState
 import com.revscope.feature.map.routing.OsrmRouteFetcher
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
@@ -41,7 +44,35 @@ class LiveMapViewModel @Inject constructor(
     sessionManager: ObdSessionManager,
     cameraAlerter: SpeedCameraAlerter,
     private val roomClient: RoomClient,
+    private val navigationController: NavigationController,
 ) : ViewModel() {
+
+    // ── Navegación paso a paso ───────────────────────────────────────────────
+
+    /** Estado de la navegación viva. Vive en el controlador, no aquí: sigue con la pantalla apagada. */
+    val navigation: StateFlow<NavigationState?> = navigationController.state
+
+    /** Arranca la guía por voz sobre la ruta ya calculada. */
+    fun startNavigation() {
+        val route = _plannedRoute.value ?: return
+        val origin = lastKnownPoint() ?: return
+        val destination = _destination.value ?: return
+        val started = navigationController.start(
+            route = route,
+            origin = LatLon(origin.lat, origin.lon),
+            destination = LatLon(destination.lat, destination.lon),
+        )
+        if (!started) _navigationError.value = "No se pudo iniciar la navegación"
+    }
+
+    fun stopNavigation() = navigationController.stop()
+
+    private val _navigationError = MutableStateFlow<String?>(null)
+    val navigationError: StateFlow<String?> = _navigationError.asStateFlow()
+
+    fun clearNavigationError() {
+        _navigationError.value = null
+    }
 
     // ── Rodada en grupo ──────────────────────────────────────────────────────
 
@@ -169,6 +200,7 @@ class LiveMapViewModel @Inject constructor(
     }
 
     fun clearDestination() {
+        navigationController.stop()
         _destination.value = null
         _plannedRoute.value = null
         _routing.value = false

@@ -34,6 +34,7 @@ android {
 
 dependencies {
     implementation(project(":core:data"))
+    api(project(":core:navigation"))
 
     implementation(libs.coroutines.android)
 

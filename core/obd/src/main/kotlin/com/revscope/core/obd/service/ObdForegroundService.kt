@@ -80,6 +80,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var potholeSync: com.revscope.core.obd.social.PotholeSync
     @Inject lateinit var motionHub: MotionMetricsHub
     @Inject lateinit var routeHolder: LiveRouteHolder
+    @Inject lateinit var navigationController: com.revscope.core.navigation.NavigationController
     @Inject lateinit var crashResponder: CrashResponder
     @Inject lateinit var engineSound: com.revscope.core.obd.sound.EngineSoundController
 
@@ -217,6 +218,7 @@ class ObdForegroundService : Service() {
             // speedometer comparison screen need GPS_SPEED too, not just GPS-only trips.
             // publishGpsSpeed() itself decides whether to also feed engineOffDetector.
             onSpeed = sessionManager::publishGpsSpeed,
+            navigation = navigationController,
         ).also { it.start(scope, sessionId) }
         crashResponder.start(
             scope = scope,

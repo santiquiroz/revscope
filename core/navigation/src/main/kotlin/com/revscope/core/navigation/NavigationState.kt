@@ -12,6 +12,11 @@ data class LocationFix(
 
 data class NavigationState(
     val maneuver: Maneuver?,
+    /**
+     * Identidad del paso al que pertenece la maniobra. La voz la necesita para no repetir un
+     * aviso: dos giros iguales seguidos por la misma calle son indistinguibles por contenido.
+     */
+    val maneuverIndex: Int,
     val distanceToManeuverM: Int,
     val distanceRemainingM: Int,
     val durationRemainingS: Int,
@@ -23,6 +28,7 @@ data class NavigationState(
     companion object {
         val IDLE = NavigationState(
             maneuver = null,
+            maneuverIndex = -1,
             distanceToManeuverM = 0,
             distanceRemainingM = 0,
             durationRemainingS = 0,

@@ -56,6 +56,7 @@ class NavigationSession private constructor(
     private fun describe(trip: TripState): NavigationState = when (trip) {
         is TripState.Navigating -> NavigationState(
             maneuver = StepCursor.maneuverAhead(steps, trip.remainingSteps.size),
+            maneuverIndex = StepCursor.nextManeuverIndex(steps.size, trip.remainingSteps.size),
             distanceToManeuverM = trip.progress.distanceToNextManeuver.toInt(),
             distanceRemainingM = trip.progress.distanceRemaining.toInt(),
             durationRemainingS = trip.progress.durationRemaining.toInt(),
@@ -65,6 +66,7 @@ class NavigationSession private constructor(
         )
         is TripState.Complete -> NavigationState.IDLE.copy(
             maneuver = steps.lastOrNull()?.maneuver,
+            maneuverIndex = steps.lastIndex,
             arrived = true,
         )
         else -> NavigationState.IDLE

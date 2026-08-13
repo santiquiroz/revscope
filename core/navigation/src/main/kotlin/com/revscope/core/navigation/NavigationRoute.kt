@@ -19,4 +19,11 @@ data class NavigationRoute(
     val distanceM: Double,
     val durationS: Double,
     val steps: List<RouteStep>,
+    /**
+     * El `routes[0]` del que salió esta ruta, tal cual. Se conserva porque el motor de
+     * navegación lo vuelve a parsear por su cuenta, y volver a pedirle la ruta al servidor
+     * solo para empezar a navegar sería pedirla dos veces —y fallar si en ese momento no hay
+     * señal, que es justo cuando uno arranca a rodar.
+     */
+    val osrmRouteJson: String,
 )

@@ -49,6 +49,8 @@ import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.navigation.NavigationRoute
+import com.revscope.feature.map.navigation.NavigationBanner
+import com.revscope.feature.map.navigation.NavigationProgressBar
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -77,6 +79,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val searching by viewModel.searching.collectAsState()
+    val navigation by viewModel.navigation.collectAsState()
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
@@ -258,10 +261,23 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             }
         }
 
-        if (destination != null) {
+        navigation?.let { live ->
+            NavigationBanner(
+                state = live,
+                onStop = viewModel::stopNavigation,
+                modifier = Modifier.align(Alignment.TopCenter).padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+            NavigationProgressBar(
+                state = live,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 24.dp),
+            )
+        }
+
+        if (destination != null && navigation == null) {
             RouteInfoChip(
                 routing = routing,
                 plannedRoute = plannedRoute,
+                onStart = viewModel::startNavigation,
                 onClear = viewModel::clearDestination,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
             )
@@ -349,6 +365,7 @@ private fun GroupRideDialog(
 private fun RouteInfoChip(
     routing: Boolean,
     plannedRoute: NavigationRoute?,
+    onStart: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -371,6 +388,11 @@ private fun RouteInfoChip(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
             )
+            if (plannedRoute != null) {
+                TextButton(onClick = onStart) {
+                    Text("Navegar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                }
+            }
             IconButton(onClick = onClear) {
                 Icon(Icons.Default.Close, contentDescription = "Quitar destino", tint = Color(0xFF6B7089))
             }
