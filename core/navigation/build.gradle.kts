@@ -6,7 +6,14 @@ plugins {
 android {
     namespace = "com.revscope.core.navigation"
     compileSdk = 36
-    defaultConfig { minSdk = 26 }
+    defaultConfig {
+        minSdk = 26
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Ferrostar es Rust: solo hay .so de Android, así que lo que lo toca corre en el
+        // dispositivo. Mismas ABI que el APK, para no empaquetar x86 que no se usa.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+    }
+    sourceSets["androidTest"].assets.srcDir("src/androidTest/assets")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -23,6 +30,8 @@ dependencies {
     testImplementation(libs.junit)
     // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
     testImplementation(libs.org.json)
+    androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.runner)
 }
 
 kotlin {
