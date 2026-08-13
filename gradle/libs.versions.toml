@@ -33,6 +33,9 @@ maplibre = "13.4.1"
 maplibreTurf = "6.0.1"
 # KSP va atado a la versión de Kotlin: al subir Kotlin hay que subir este también.
 ksp = "2.2.21-2.0.5"
+# SDK de navegación turn-by-turn (BSD-3). Exige compileSdk 36 y core library desugaring.
+ferrostar = "0.53.0"
+desugarJdkLibs = "2.1.5"
 
 [libraries]
 # Compose BOM
@@ -85,6 +88,12 @@ maplibre = { group = "org.maplibre.gl", name = "android-sdk-opengl", version.ref
 # Turf viaja como transitiva del SDK pero solo en el classpath de runtime, así que hay
 # que declararla para compilar contra TurfTransformation.circle (círculos en metros).
 maplibre-turf = { group = "org.maplibre.gl", name = "android-sdk-turf", version.ref = "maplibreTurf" }
+
+# Ferrostar: SOLO el core. ui-compose arrastraría Compose BOM 2026.02.01 y ui-maplibre
+# traería org.maplibre.gl:android-sdk (variante Vulkan) que COLISIONA clase por clase con
+# el android-sdk-opengl que ya usa :core:maps. La UI de navegación se dibuja con lo propio.
+ferrostar-core = { group = "com.stadiamaps.ferrostar", name = "core", version.ref = "ferrostar" }
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 
 coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
