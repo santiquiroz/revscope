@@ -9,7 +9,7 @@ import com.revscope.core.maps.geodesicCircle
 import com.revscope.core.maps.physicalPxToDp
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.social.RoomClient
-import com.revscope.feature.map.routing.OsrmRouteFetcher
+import com.revscope.core.navigation.NavigationRoute
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.FillLayer
@@ -62,7 +62,7 @@ data class LiveMapData(
     val approachingId: Long?,
     val alertRadiusM: Int,
     val destination: LiveRouteHolder.RoutePoint?,
-    val plannedRoute: OsrmRouteFetcher.Route?,
+    val plannedRoute: NavigationRoute?,
 )
 
 /**
@@ -193,7 +193,7 @@ private fun matchState(target: String, normal: String, dimmed: String): Expressi
 private fun liveGeometry(route: List<LiveRouteHolder.RoutePoint>): LineString =
     LineString.fromLngLats(route.map { Point.fromLngLat(it.lon, it.lat) })
 
-private fun plannedGeometry(planned: OsrmRouteFetcher.Route?): LineString =
+private fun plannedGeometry(planned: NavigationRoute?): LineString =
     LineString.fromLngLats(
         planned?.points?.map { Point.fromLngLat(it.lon, it.lat) } ?: emptyList(),
     )

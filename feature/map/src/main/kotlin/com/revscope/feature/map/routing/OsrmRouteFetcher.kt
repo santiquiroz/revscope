@@ -1,6 +1,7 @@
 package com.revscope.feature.map.routing
 
-import org.json.JSONObject
+import com.revscope.core.navigation.NavigationRoute
+import com.revscope.core.navigation.OsrmRouteParser
 import timber.log.Timber
 import java.net.HttpURLConnection
 import java.net.URL
@@ -12,23 +13,21 @@ import java.util.Locale
  */
 object OsrmRouteFetcher {
 
-    data class Route(
-        val points: List<PolylineDecoder.LatLon>,
-        val distanceM: Double,
-        val durationS: Double,
-    )
-
     private const val BASE_URL = "https://router.project-osrm.org/route/v1/driving"
     private const val CONNECT_TIMEOUT_MS = 10_000
     private const val READ_TIMEOUT_MS = 15_000
 
-    fun fetch(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Route? {
+    /** `geometries=polyline` implica precisión 5. Las dos cosas van juntas o la ruta se desplaza. */
+    private const val GEOMETRY_FORMAT = "polyline"
+    private const val GEOMETRY_PRECISION = 5
+
+    fun fetch(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): NavigationRoute? {
         val url = String.format(
             Locale.US,
-            "%s/%f,%f;%f,%f?overview=full&geometries=polyline",
-            BASE_URL, fromLon, fromLat, toLon, toLat,
+            "%s/%f,%f;%f,%f?overview=full&geometries=%s&steps=true",
+            BASE_URL, fromLon, fromLat, toLon, toLat, GEOMETRY_FORMAT,
         )
-        return runCatching { parseRoute(httpGet(url)) }
+        return runCatching { OsrmRouteParser.parse(httpGet(url), GEOMETRY_PRECISION) }
             .onFailure { Timber.w(it, "OsrmRouteFetcher: route fetch failed") }
             .getOrNull()
     }
@@ -42,18 +41,5 @@ object OsrmRouteFetcher {
         } finally {
             connection.disconnect()
         }
-    }
-
-    private fun parseRoute(body: String): Route? {
-        val json = JSONObject(body)
-        if (json.optString("code") != "Ok") return null
-        val route = json.getJSONArray("routes").optJSONObject(0) ?: return null
-        val points = PolylineDecoder.decode(route.getString("geometry"))
-        if (points.isEmpty()) return null
-        return Route(
-            points = points,
-            distanceM = route.getDouble("distance"),
-            durationS = route.getDouble("duration"),
-        )
     }
 }

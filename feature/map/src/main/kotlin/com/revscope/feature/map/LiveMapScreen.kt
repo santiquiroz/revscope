@@ -48,7 +48,7 @@ import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.telemetry.TripStatsCalculator
-import com.revscope.feature.map.routing.OsrmRouteFetcher
+import com.revscope.core.navigation.NavigationRoute
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -348,7 +348,7 @@ private fun GroupRideDialog(
 @Composable
 private fun RouteInfoChip(
     routing: Boolean,
-    plannedRoute: OsrmRouteFetcher.Route?,
+    plannedRoute: NavigationRoute?,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -378,7 +378,7 @@ private fun RouteInfoChip(
     }
 }
 
-private fun formatRouteSummary(route: OsrmRouteFetcher.Route): String {
+private fun formatRouteSummary(route: NavigationRoute): String {
     val km = route.distanceM / 1000.0
     val minutes = (route.durationS / 60.0).toInt()
     val distance = if (km >= 10) "%.0f km".format(km) else "%.1f km".format(km)

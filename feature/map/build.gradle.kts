@@ -29,6 +29,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(project(":core:maps"))
+    api(project(":core:navigation"))
     implementation(libs.maplibre)
     implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)

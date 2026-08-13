@@ -1,14 +1,21 @@
-package com.revscope.feature.map.routing
+package com.revscope.core.navigation
+
+import kotlin.math.pow
+
+data class LatLon(val lat: Double, val lon: Double)
 
 /**
- * Decodificador del formato Encoded Polyline de Google (precisión 1e-5) — el mismo
- * que devuelve OSRM en `geometries=polyline`. Puro, sin dependencias.
+ * Decodificador del formato Encoded Polyline de Google. Puro, sin dependencias.
+ *
+ * La precisión es un parámetro **obligatorio** a propósito. OSRM devuelve precisión 5 con
+ * `geometries=polyline` y 6 con `geometries=polyline6`; decodificar una como la otra no falla,
+ * solo desplaza las coordenadas por un factor de 10 y la ruta aparece en otro continente.
+ * Un valor por omisión aquí sería justamente la trampa.
  */
 object PolylineDecoder {
 
-    data class LatLon(val lat: Double, val lon: Double)
-
-    fun decode(encoded: String): List<LatLon> {
+    fun decode(encoded: String, precision: Int): List<LatLon> {
+        val divisor = 10.0.pow(precision)
         val points = mutableListOf<LatLon>()
         var index = 0
         var lat = 0
@@ -20,7 +27,7 @@ object PolylineDecoder {
             val deltaLon = decodeChunk(encoded, index)
             index = deltaLon.second
             lon += deltaLon.first
-            points.add(LatLon(lat / PRECISION, lon / PRECISION))
+            points.add(LatLon(lat / divisor, lon / divisor))
         }
         return points
     }
@@ -38,6 +45,4 @@ object PolylineDecoder {
         val delta = if (result and 1 != 0) (result shr 1).inv() else result shr 1
         return delta to index
     }
-
-    private const val PRECISION = 1e5
 }

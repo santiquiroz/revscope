@@ -13,6 +13,7 @@ import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.navigation.NavigationRoute
 import com.revscope.feature.map.routing.OsrmRouteFetcher
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
@@ -98,8 +99,8 @@ class LiveMapViewModel @Inject constructor(
     private val _destination = MutableStateFlow<LiveRouteHolder.RoutePoint?>(null)
     val destination: StateFlow<LiveRouteHolder.RoutePoint?> = _destination.asStateFlow()
 
-    private val _plannedRoute = MutableStateFlow<OsrmRouteFetcher.Route?>(null)
-    val plannedRoute: StateFlow<OsrmRouteFetcher.Route?> = _plannedRoute.asStateFlow()
+    private val _plannedRoute = MutableStateFlow<NavigationRoute?>(null)
+    val plannedRoute: StateFlow<NavigationRoute?> = _plannedRoute.asStateFlow()
 
     private val _routing = MutableStateFlow(false)
     val routing: StateFlow<Boolean> = _routing.asStateFlow()

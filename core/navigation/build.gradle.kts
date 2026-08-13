@@ -21,6 +21,8 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.timber)
     testImplementation(libs.junit)
+    // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
+    testImplementation(libs.org.json)
 }
 
 kotlin {
