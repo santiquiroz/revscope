@@ -29,7 +29,5 @@ dependencies {
 
 kotlin {
     // Kotlin 2.3 elimino el DSL kotlinOptions; jvmTarget vive en compilerOptions.
-    // El -Xskip-metadata-version-check que MapLibre exige está en el build raíz: lo necesita
-    // todo módulo que compile contra MapLibre, no solo este.
     compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
