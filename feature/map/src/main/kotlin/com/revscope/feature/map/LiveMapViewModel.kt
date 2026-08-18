@@ -141,6 +141,10 @@ class LiveMapViewModel @Inject constructor(
 
     fun onMapHidden() = locationProvider.stop()
 
+    override fun onCleared() {
+        locationProvider.stop()
+    }
+
     val speedKmh: StateFlow<Int?> = sessionManager.readings
         .map { it["0D"]?.value?.toInt() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
