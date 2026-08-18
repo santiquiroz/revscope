@@ -5,12 +5,16 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.revscope.core.data.db.entities.PotholeEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PotholeDao {
 
     @Query("SELECT * FROM potholes")
     suspend fun all(): List<PotholeEntity>
+
+    @Query("SELECT * FROM potholes")
+    fun observeAll(): Flow<List<PotholeEntity>>
 
     @Insert
     suspend fun insert(pothole: PotholeEntity): Long

@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SpeedCameraDao {
@@ -15,6 +16,10 @@ interface SpeedCameraDao {
 
     @Query("SELECT * FROM speed_cameras")
     suspend fun all(): List<SpeedCameraEntity>
+
+    /** Variante observable: el mapa se actualiza solo cuando una descarga reemplaza la tabla. */
+    @Query("SELECT * FROM speed_cameras")
+    fun observeAll(): Flow<List<SpeedCameraEntity>>
 
     @Query("SELECT COUNT(*) FROM speed_cameras")
     suspend fun count(): Int

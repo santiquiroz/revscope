@@ -212,18 +212,16 @@ class LiveMapViewModel @Inject constructor(
         _routing.value = false
     }
 
-    private val _cameras = MutableStateFlow<List<SpeedCameraEntity>>(emptyList())
-    val cameras: StateFlow<List<SpeedCameraEntity>> = _cameras.asStateFlow()
+    // Flow y no one-shot: este ViewModel sobrevive los cambios de tab (restoreState),
+    // así que una lectura única dejaba el mapa ciego a descargas posteriores.
+    val cameras: StateFlow<List<SpeedCameraEntity>> = cameraDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _potholes = MutableStateFlow<List<PotholeEntity>>(emptyList())
-    val potholes: StateFlow<List<PotholeEntity>> = _potholes.asStateFlow()
+    val potholes: StateFlow<List<PotholeEntity>> = potholeDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         loadLastKnownLocation()
-        viewModelScope.launch {
-            runCatching { cameraDao.all() }.onSuccess { _cameras.value = it }
-            runCatching { potholeDao.all() }.onSuccess { _potholes.value = it }
-        }
     }
 
     private companion object {
