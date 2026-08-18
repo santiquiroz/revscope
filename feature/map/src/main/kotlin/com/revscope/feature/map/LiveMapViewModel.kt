@@ -9,6 +9,7 @@ import com.revscope.core.data.db.dao.PotholeDao
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
@@ -17,6 +18,7 @@ import com.revscope.core.navigation.LatLon
 import com.revscope.core.navigation.NavigationController
 import com.revscope.core.navigation.NavigationRoute
 import com.revscope.core.navigation.NavigationState
+import com.revscope.feature.map.location.MapLocationProvider
 import com.revscope.feature.map.routing.OsrmRouteFetcher
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -45,6 +48,8 @@ class LiveMapViewModel @Inject constructor(
     cameraAlerter: SpeedCameraAlerter,
     private val roomClient: RoomClient,
     private val navigationController: NavigationController,
+    private val locationProvider: MapLocationProvider,
+    private val coverageTracker: CameraCoverageTracker,
 ) : ViewModel() {
 
     // ── Navegación paso a paso ───────────────────────────────────────────────
@@ -127,6 +132,15 @@ class LiveMapViewModel @Inject constructor(
         }
     }
 
+    // ── GPS vivo sin viaje ───────────────────────────────────────────────────
+
+    /** Fix del provider del mapa — null sin permiso, sin señal o con el mapa cerrado. */
+    val liveFix: StateFlow<LiveRouteHolder.RoutePoint?> = locationProvider.fix
+
+    fun onMapVisible() = locationProvider.start()
+
+    fun onMapHidden() = locationProvider.stop()
+
     val speedKmh: StateFlow<Int?> = sessionManager.readings
         .map { it["0D"]?.value?.toInt() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -190,11 +204,11 @@ class LiveMapViewModel @Inject constructor(
     }
 
     private fun lastKnownPoint(): LiveRouteHolder.RoutePoint? =
-        route.value.lastOrNull() ?: _initialCenter.value
+        route.value.lastOrNull() ?: locationProvider.fix.value ?: _initialCenter.value
 
     /** Long-press en el mapa: fija destino y pide la ruta a OSRM desde la posición actual. */
     fun setDestination(lat: Double, lon: Double) {
-        val origin = route.value.lastOrNull() ?: _initialCenter.value ?: return
+        val origin = route.value.lastOrNull() ?: locationProvider.fix.value ?: _initialCenter.value ?: return
         _destination.value = LiveRouteHolder.RoutePoint(lat, lon)
         _plannedRoute.value = null
         _routing.value = true
@@ -222,6 +236,11 @@ class LiveMapViewModel @Inject constructor(
 
     init {
         loadLastKnownLocation()
+        // El tracker ya trae throttle/cooldown/chequeo de cobertura: acá solo se le
+        // entregan los fixes que antes solo veía durante un viaje activo.
+        viewModelScope.launch {
+            locationProvider.fix.filterNotNull().collect { coverageTracker.onGpsFix(it.lat, it.lon) }
+        }
     }
 
     private companion object {
