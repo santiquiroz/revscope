@@ -88,6 +88,9 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val navigationError by viewModel.navigationError.collectAsState()
     val liveFix by viewModel.liveFix.collectAsState()
     val initialCenter by viewModel.initialCenter.collectAsState()
+    // Durante un viaje la ruta viva ya alimenta puck y efectos a ~1 Hz; pasar también el fix
+    // del provider duplicaría los re-writes del dataset completo sin cambio visual (T4 lo enmascara).
+    val standaloneFix = if (route.isEmpty()) liveFix else null
     val context = LocalContext.current
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -99,7 +102,6 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         hasLocationPermission = granted
-        if (granted) viewModel.onMapVisible()
     }
     val centering = remember { InitialCentering() }
 
@@ -137,7 +139,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         alertRadiusM = alertRadiusM,
         destination = destination,
         plannedRoute = plannedRoute,
-        liveFix = liveFix,
+        liveFix = standaloneFix,
     )
 
     Box(Modifier.fillMaxSize()) {
@@ -173,11 +175,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         // La ruta viva llega a 18.000 puntos y cada escritura re-indexa el dataset completo,
         // así que se escribe solo cuando la revisión cambia, no en cada recomposición.
-        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute, liveFix) {
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute, standaloneFix) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
-        LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, liveFix, initialCenter) {
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, standaloneFix, initialCenter) {
             val map = mapRef ?: return@LaunchedEffect
             val last = route.lastOrNull()
             if (last != null) {
@@ -202,7 +204,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                     )
                 }
             } else {
-                centering.onLiveFix(liveFix)?.let {
+                centering.onLiveFix(standaloneFix)?.let {
                     map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.lat, it.lon), it.zoom))
                     return@LaunchedEffect
                 }
@@ -211,9 +213,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                     return@LaunchedEffect
                 }
                 // Sin viaje pero con follow armado: el puck standalone también se sigue.
-                if (followEnabled && liveFix != null) {
+                if (followEnabled && standaloneFix != null) {
+                    val fix = standaloneFix
                     map.animateCamera(
-                        CameraUpdateFactory.newLatLng(LatLng(liveFix!!.lat, liveFix!!.lon)),
+                        CameraUpdateFactory.newLatLng(LatLng(fix.lat, fix.lon)),
                     )
                 }
             }
