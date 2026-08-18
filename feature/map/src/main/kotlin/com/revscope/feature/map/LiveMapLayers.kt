@@ -63,6 +63,7 @@ data class LiveMapData(
     val alertRadiusM: Int,
     val destination: LiveRouteHolder.RoutePoint?,
     val plannedRoute: NavigationRoute?,
+    val liveFix: LiveRouteHolder.RoutePoint? = null,
 )
 
 /**
@@ -224,7 +225,8 @@ private fun markerFeatures(data: LiveMapData): FeatureCollection {
         val icon = if (cam.osmId == data.approachingId) ICON_CAMERA_TARGET else ICON_CAMERA
         features += marker(cam.latitude, cam.longitude, icon)
     }
-    data.route.lastOrNull()?.let { features += marker(it.lat, it.lon, ICON_ME) }
+    // Con viaje activo el puck sigue la ruta viva; sin viaje, el fix del provider del mapa.
+    (data.route.lastOrNull() ?: data.liveFix)?.let { features += marker(it.lat, it.lon, ICON_ME) }
 
     return FeatureCollection.fromFeatures(features)
 }
