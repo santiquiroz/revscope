@@ -1,8 +1,12 @@
 package com.revscope.feature.map
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -41,7 +45,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
@@ -49,6 +55,7 @@ import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.navigation.NavigationRoute
+import com.revscope.feature.map.location.InitialCentering
 import com.revscope.feature.map.navigation.NavigationBanner
 import com.revscope.feature.map.navigation.NavigationProgressBar
 import kotlinx.coroutines.flow.StateFlow
@@ -58,8 +65,6 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.maps.MapLibreMap
 
-private const val INITIAL_ZOOM = 16.0
-private const val IDLE_ZOOM = 13.0
 private val AttributionColor = Color(0xFF6B7089)
 
 @Composable
@@ -81,11 +86,33 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val searching by viewModel.searching.collectAsState()
     val navigation by viewModel.navigation.collectAsState()
     val navigationError by viewModel.navigationError.collectAsState()
+    val liveFix by viewModel.liveFix.collectAsState()
+    val initialCenter by viewModel.initialCenter.collectAsState()
+    val context = LocalContext.current
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasLocationPermission = granted
+        if (granted) viewModel.onMapVisible()
+    }
+    val centering = remember { InitialCentering() }
+
+    // GPS solo mientras el mapa está en pantalla: al salir del tab se corta.
+    DisposableEffect(hasLocationPermission) {
+        if (hasLocationPermission) viewModel.onMapVisible()
+        onDispose { viewModel.onMapHidden() }
+    }
+
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
     var darkTiles by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     val density = context.resources.displayMetrics.density
 
     // Fase 4 llena esto con el .pmtiles local o el del servidor; hasta entonces cae al tier
@@ -100,7 +127,6 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     // panea ni recentrar en recomposiciones ajenas (route.size se estanca en viajes de 5h+,
     // por eso la señal es la revisión y no el tamaño).
     var lastCenteredRevision by remember { mutableStateOf(-1L) }
-    var hasCenteredInitial by remember { mutableStateOf(false) }
 
     val data = LiveMapData(
         route = route,
@@ -111,6 +137,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         alertRadiusM = alertRadiusM,
         destination = destination,
         plannedRoute = plannedRoute,
+        liveFix = liveFix,
     )
 
     Box(Modifier.fillMaxSize()) {
@@ -135,7 +162,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             }
             map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
                 // Cualquier gesto del usuario apaga el follow; el FAB lo devuelve.
-                override fun onMoveBegin(detector: MoveGestureDetector) { followEnabled = false }
+                override fun onMoveBegin(detector: MoveGestureDetector) {
+                    followEnabled = false
+                    centering.onUserPan()
+                }
                 override fun onMove(detector: MoveGestureDetector) = Unit
                 override fun onMoveEnd(detector: MoveGestureDetector) = Unit
             })
@@ -143,11 +173,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         // La ruta viva llega a 18.000 puntos y cada escritura re-indexa el dataset completo,
         // así que se escribe solo cuando la revisión cambia, no en cada recomposición.
-        LaunchedEffect(styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute) {
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute, liveFix) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
-        LaunchedEffect(styleEpoch, routeRevision, followEnabled, headingUp) {
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, liveFix, initialCenter) {
             val map = mapRef ?: return@LaunchedEffect
             val last = route.lastOrNull()
             if (last != null) {
@@ -171,12 +201,20 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                         ),
                     )
                 }
-            } else if (!hasCenteredInitial) {
-                viewModel.initialCenter.value?.let {
-                    map.moveCamera(
-                        CameraUpdateFactory.newLatLngZoom(LatLng(it.lat, it.lon), IDLE_ZOOM),
+            } else {
+                centering.onLiveFix(liveFix)?.let {
+                    map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.lat, it.lon), it.zoom))
+                    return@LaunchedEffect
+                }
+                centering.onLastKnown(initialCenter)?.let {
+                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(it.lat, it.lon), it.zoom))
+                    return@LaunchedEffect
+                }
+                // Sin viaje pero con follow armado: el puck standalone también se sigue.
+                if (followEnabled && liveFix != null) {
+                    map.animateCamera(
+                        CameraUpdateFactory.newLatLng(LatLng(liveFix!!.lat, liveFix!!.lon)),
                     )
-                    hasCenteredInitial = true
                 }
             }
         }
@@ -187,6 +225,28 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             fontSize = 9.sp,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
+
+        if (!hasLocationPermission) {
+            Surface(
+                color = Color(0xF2121218),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Ubicación desactivada",
+                        color = Color(0xFFF0F0F8),
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
+                    )
+                    TextButton(
+                        onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+                    ) {
+                        Text("Permitir", color = Color(0xFFE8FF00), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
 
         SearchOverlay(
             query = searchQuery,
