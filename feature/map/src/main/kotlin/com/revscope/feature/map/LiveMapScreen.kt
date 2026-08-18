@@ -49,6 +49,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
@@ -98,17 +101,32 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 PackageManager.PERMISSION_GRANTED,
         )
     }
+    // Android 12+ ignora un request de FINE sin COARSE en el mismo diálogo.
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        hasLocationPermission = granted
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        hasLocationPermission = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true
     }
     val centering = remember { InitialCentering() }
 
-    // GPS solo mientras el mapa está en pantalla: al salir del tab se corta.
-    DisposableEffect(hasLocationPermission) {
-        if (hasLocationPermission) viewModel.onMapVisible()
-        onDispose { viewModel.onMapHidden() }
+    // GPS solo con el mapa visible Y la app en foreground: Home o pantalla apagada lo cortan.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(hasLocationPermission, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> if (hasLocationPermission) viewModel.onMapVisible()
+                Lifecycle.Event.ON_STOP -> viewModel.onMapHidden()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (hasLocationPermission && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            viewModel.onMapVisible()
+        }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.onMapHidden()
+        }
     }
 
     var showRoomDialog by remember { mutableStateOf(false) }
@@ -243,7 +261,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                         modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
                     )
                     TextButton(
-                        onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+                        onClick = {
+                            permissionLauncher.launch(
+                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                            )
+                        },
                     ) {
                         Text("Permitir", color = Color(0xFFE8FF00), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }

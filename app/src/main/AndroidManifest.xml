@@ -26,6 +26,7 @@
 
     <!-- Location required for BT discovery on API ≤ 29 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Alerts: haptic feedback on overheat/low-voltage/redline -->
     <uses-permission android:name="android.permission.VIBRATE" />

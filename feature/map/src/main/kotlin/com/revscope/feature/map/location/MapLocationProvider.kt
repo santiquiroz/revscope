@@ -5,6 +5,7 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Bundle
 import com.revscope.core.obd.service.LiveRouteHolder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,8 +32,16 @@ class MapLocationProvider @Inject constructor(
     fun start() {
         if (listener != null) return
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val l = LocationListener { location: Location ->
-            _fix.value = LiveRouteHolder.RoutePoint(location.latitude, location.longitude)
+        // API 26-29: la interfaz de plataforma aún declara estos métodos abstractos (defaults
+        // llegaron en API 30) — sin overrides explícitos el framework crashea con AbstractMethodError.
+        val l = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                _fix.value = LiveRouteHolder.RoutePoint(location.latitude, location.longitude)
+            }
+            @Suppress("OVERRIDE_DEPRECATION")
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
+            override fun onProviderEnabled(provider: String) = Unit
+            override fun onProviderDisabled(provider: String) = Unit
         }
         // Sin permiso o sin provider GPS: el mapa queda en lastKnown, el banner de la
         // pantalla se encarga de pedirlo — acá no se revienta.
