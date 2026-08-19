@@ -12,6 +12,7 @@ import com.revscope.core.data.db.MIGRATION_12_13
 import com.revscope.core.data.db.MIGRATION_13_14
 import com.revscope.core.data.db.MIGRATION_14_15
 import com.revscope.core.data.db.MIGRATION_15_16
+import com.revscope.core.data.db.MIGRATION_16_17
 import com.revscope.core.data.db.MIGRATION_9_10
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.HealthReportDao
@@ -47,7 +48,7 @@ object DataModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "revscope.db")
-            .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+            .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
             // Sin fallback destructivo: toda migración debe ser explícita (incidente 2026-07-08).
             .build()
 

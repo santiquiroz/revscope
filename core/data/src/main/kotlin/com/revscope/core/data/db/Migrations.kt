@@ -98,3 +98,18 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
         )
     }
 }
+
+/** Navegación: lugares guardados (casa, trabajo, favoritos, recientes). */
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `saved_places` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`type` TEXT NOT NULL, " +
+                "`name` TEXT NOT NULL, " +
+                "`lat` REAL NOT NULL, " +
+                "`lon` REAL NOT NULL, " +
+                "`lastUsedAt` INTEGER NOT NULL)",
+        )
+    }
+}
