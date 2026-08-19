@@ -68,6 +68,7 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.gestures.MoveGestureDetector
+import org.maplibre.android.gestures.StandardScaleGestureDetector
 import org.maplibre.android.maps.MapLibreMap
 
 private val AttributionColor = Color(0xFF6B7089)
@@ -191,6 +192,15 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 }
                 override fun onMove(detector: MoveGestureDetector) = Unit
                 override fun onMoveEnd(detector: MoveGestureDetector) = Unit
+            })
+            map.addOnScaleListener(object : MapLibreMap.OnScaleListener {
+                // Pinch = el usuario toma el control, igual que el pan; el FAB lo devuelve.
+                override fun onScaleBegin(detector: StandardScaleGestureDetector) {
+                    followEnabled = false
+                    centering.onUserPan()
+                }
+                override fun onScale(detector: StandardScaleGestureDetector) = Unit
+                override fun onScaleEnd(detector: StandardScaleGestureDetector) = Unit
             })
         }
 
