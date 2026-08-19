@@ -115,7 +115,7 @@ class CrashDetectorTest {
             State.MONITORING,
             detector.process(
                 accelG = 8.0,
-                horizontalG = CrashDetector.IMPACT_MIN_HORIZONTAL_G,
+                horizontalG = CrashThresholds.MOTORCYCLE.impactMinHorizontalG,
                 speedKmh = 5.0,
                 nowMs = now,
             ),
@@ -366,6 +366,29 @@ class CrashDetectorTest {
         assertEquals(
             State.MONITORING,
             detector.process(accelG = peak, horizontalG = horizontal, speedKmh = 0.0, nowMs = now),
+        )
+    }
+
+    // ── Umbrales por tipo de vehículo ─────────────────────────────────────────
+
+    @Test
+    fun `umbral de auto acepta impacto de 5G que moto ignora`() {
+        // 5.5G total con 3G horizontal a 40 km/h: bajo el umbral moto (6.0), sobre el de auto (5.0).
+        var now = 0L
+        detector.process(accelG = 1.0, horizontalG = 0.5, speedKmh = 40.0, nowMs = now)
+        now += 100
+        assertEquals(
+            State.MONITORING,
+            detector.process(accelG = 5.5, horizontalG = 3.0, speedKmh = 5.0, nowMs = now),
+        )
+
+        val carDetector = CrashDetector(thresholds = CrashThresholds.CAR)
+        var carNow = 0L
+        carDetector.process(accelG = 1.0, horizontalG = 0.5, speedKmh = 40.0, nowMs = carNow)
+        carNow += 100
+        assertEquals(
+            State.IMPACT_DETECTED,
+            carDetector.process(accelG = 5.5, horizontalG = 3.0, speedKmh = 5.0, nowMs = carNow),
         )
     }
 }

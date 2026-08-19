@@ -66,6 +66,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
 import com.revscope.core.intelligence.provider.AI_PROVIDER_NODO
 import com.revscope.core.intelligence.provider.NODO_BASE_URL_POR_DEFECTO
@@ -576,8 +578,13 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
             SectionTitle("Detección de caída")
+            val crashSubject = if (activeVehicleProfile?.vehicleType == VehicleType.CAR) {
+                "un posible choque"
+            } else {
+                "un posible accidente de moto"
+            }
             Text(
-                "Si detecta un posible accidente de moto, suena una alarma de pantalla completa con " +
+                "Si detecta $crashSubject, suena una alarma de pantalla completa con " +
                     "cuenta regresiva de 60 s. Si no respondes \"ESTOY BIEN\", envía un SMS con tu última " +
                     "ubicación al contacto de emergencia. Desactivada por defecto.",
                 color = TextMutedColor,

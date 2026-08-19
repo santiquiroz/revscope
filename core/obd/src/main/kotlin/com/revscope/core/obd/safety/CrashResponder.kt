@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.R
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.motion.MotionMetricsHub
@@ -71,7 +72,7 @@ class CrashResponder @Inject constructor(
 
     private data class DetectorInput(val speedKmh: Double, val accelG: Double, val horizontalG: Double)
 
-    private val detector = CrashDetector()
+    private var detector = CrashDetector()
 
     // Own long-lived scope for work that must outlive any single caller's lifecycle
     // (e.g. Settings' "Probar" button must keep counting down after the user navigates away).
@@ -93,10 +94,11 @@ class CrashResponder @Inject constructor(
         sessionManager: ObdSessionManager,
         motionHub: MotionMetricsHub,
         vehicleName: String,
+        vehicleType: VehicleType = VehicleType.MOTORCYCLE,
     ) {
         monitorJob?.cancel()
         this.vehicleName = vehicleName
-        detector.reset()
+        detector = CrashDetector(thresholds = CrashThresholds.forType(vehicleType))
         monitorJob = scope.launch {
             // El toggle de Settings se observa reactivo: collectLatest cancela el combine
             // cuando se apaga (cero trabajo con la detección deshabilitada) y lo relanza al
@@ -144,7 +146,7 @@ class CrashResponder @Inject constructor(
     fun isMonitoringEnabled(): Boolean = enabled
 
     /**
-     * True if the detector saw real motion (> [CrashDetector.IMPACT_MIN_SPEED_KMH]) within
+     * True if the detector saw real motion (above the configured minimum impact speed) within
      * [windowMs]. Lets the foreground service decide whether a dropped OBD link deserves a
      * grace period before tearing down crash detection instead of stopping instantly.
      */

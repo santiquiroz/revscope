@@ -18,6 +18,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.cameras.CameraCoverageTracker
@@ -225,6 +227,7 @@ class ObdForegroundService : Service() {
             sessionManager = sessionManager,
             motionHub = motionHub,
             vehicleName = sessionManager.activeProfile.value?.name ?: "tu vehículo",
+            vehicleType = sessionManager.activeProfile.value?.vehicleType ?: VehicleType.MOTORCYCLE,
         )
         engineSound.start()
     }
