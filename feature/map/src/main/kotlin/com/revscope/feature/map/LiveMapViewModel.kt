@@ -75,7 +75,10 @@ class LiveMapViewModel @Inject constructor(
         if (!started) _navigationError.value = "No se pudo iniciar la navegación"
     }
 
-    fun stopNavigation() = navigationController.stop()
+    fun stopNavigation() {
+        rerouteJob?.cancel()
+        navigationController.stop()
+    }
 
     private fun maybeReroute(state: NavigationState) {
         if (!state.offRoute) { rerouteDecider.shouldReroute(false, System.currentTimeMillis()); return }
@@ -83,9 +86,14 @@ class LiveMapViewModel @Inject constructor(
         if (!rerouteDecider.shouldReroute(true, System.currentTimeMillis())) return
         val current = state.snapped ?: lastKnownPoint()?.let { LatLon(it.lat, it.lon) } ?: return
         val destination = _destination.value ?: return
-        rerouteJob = viewModelScope.launch(Dispatchers.IO) {
-            val fresh = OsrmRouteFetcher.fetch(current.lat, current.lon, destination.lat, destination.lon)
-                ?: return@launch // falla de red: la ruta vieja sigue; el cooldown regula el reintento
+        rerouteJob = viewModelScope.launch {
+            val fresh = withContext(Dispatchers.IO) {
+                OsrmRouteFetcher.fetch(current.lat, current.lon, destination.lat, destination.lon)
+            } ?: return@launch // falla de red: la ruta vieja sigue; el cooldown regula el reintento
+            // Guard de staleness: si mientras viajaba el fetch el usuario paró la navegación
+            // o cambió el destino, este resultado ya no manda.
+            if (!navigationController.isNavigating) return@launch
+            if (_destination.value != destination) return@launch
             _plannedRoute.value = fresh
             navigationController.start(
                 route = fresh,
@@ -244,6 +252,7 @@ class LiveMapViewModel @Inject constructor(
     }
 
     fun clearDestination() {
+        rerouteJob?.cancel()
         navigationController.stop()
         _destination.value = null
         _plannedRoute.value = null
