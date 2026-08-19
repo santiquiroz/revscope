@@ -158,7 +158,8 @@ class SessionDetailViewModel @Inject constructor(
             val prevMaxSpeed = previous.map { it.maxSpeed }.filter { it > 0 }
             val digest = TripDebriefGenerator.TripDigest(
                 vehicleName = profile?.name ?: "Mi vehículo",
-                isMotorcycle = isMotorcycle.value,
+                // El debrief describe el vehículo de la sesión; sin perfil resoluble no se asume el activo.
+                isMotorcycle = profile?.vehicleType == VehicleType.MOTORCYCLE,
                 distanceKm = if (session.distanceKm > 0) session.distanceKm.toDouble() else report.gpsDistanceKm,
                 durationMin = ((session.endedAt ?: session.startedAt) - session.startedAt) / 60_000L,
                 avgSpeedKmh = report.avgSpeedKmh.toInt(),
