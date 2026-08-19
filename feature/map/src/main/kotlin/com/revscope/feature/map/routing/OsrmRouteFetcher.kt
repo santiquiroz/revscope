@@ -17,6 +17,10 @@ object OsrmRouteFetcher {
     private const val CONNECT_TIMEOUT_MS = 10_000
     private const val READ_TIMEOUT_MS = 15_000
 
+    // El demo de OSRM devuelve 403 al UA "Dalvik/..." que Android manda por defecto;
+    // identificarse con app+contacto es además la política de uso del servidor.
+    private const val USER_AGENT = "RevScope (+https://github.com/santiquiroz/revscope)"
+
     /** `geometries=polyline` implica precisión 5. Las dos cosas van juntas o la ruta se desplaza. */
     private const val GEOMETRY_FORMAT = "polyline"
     private const val GEOMETRY_PRECISION = 5
@@ -37,6 +41,7 @@ object OsrmRouteFetcher {
         return try {
             connection.connectTimeout = CONNECT_TIMEOUT_MS
             connection.readTimeout = READ_TIMEOUT_MS
+            connection.setRequestProperty("User-Agent", USER_AGENT)
             connection.inputStream.bufferedReader().readText()
         } finally {
             connection.disconnect()
