@@ -44,6 +44,24 @@ class NavigationController @Inject constructor(
         return true
     }
 
+    /**
+     * Reemplaza la ruta en caliente tras un recálculo: el estado anterior queda visible
+     * hasta el próximo fix, y la voz no repite el arranque — ya avisó "recalculando".
+     */
+    fun swap(route: NavigationRoute, origin: LatLon, destination: LatLon): Boolean {
+        val fresh = NavigationSession.create(
+            osrmRouteJson = route.osrmRouteJson,
+            route = route,
+            origin = origin,
+            destination = destination,
+            polylinePrecision = OSRM_POLYLINE_PRECISION,
+        ) ?: return false
+        session?.close()
+        session = fresh
+        Timber.i("NavigationController: ruta recalculada, ${route.steps.size} pasos")
+        return true
+    }
+
     fun stop() {
         session?.close()
         session = null

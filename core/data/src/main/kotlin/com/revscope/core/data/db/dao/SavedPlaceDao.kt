@@ -38,9 +38,16 @@ interface SavedPlaceDao {
     )
     suspend fun pruneRecents()
 
+    @Query("DELETE FROM saved_places WHERE type = :type AND name = :name AND lat = :lat AND lon = :lon")
+    suspend fun deleteMatching(type: String, name: String, lat: Double, lon: Double)
+
+    @Query("SELECT COUNT(*) FROM saved_places WHERE type = 'FAVORITE' AND name = :name AND lat = :lat AND lon = :lon")
+    suspend fun countFavorite(name: String, lat: Double, lon: Double): Int
+
     /** Un destino usado entra al historial; el historial no crece sin tope (LRU 20). */
     @Transaction
     suspend fun recordRecent(place: SavedPlaceEntity) {
+        deleteMatching("RECENT", place.name, place.lat, place.lon)
         insert(place)
         pruneRecents()
     }

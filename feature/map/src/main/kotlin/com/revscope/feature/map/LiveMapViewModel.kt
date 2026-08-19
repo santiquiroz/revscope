@@ -95,7 +95,10 @@ class LiveMapViewModel @Inject constructor(
         if (!state.offRoute) { rerouteDecider.shouldReroute(false, System.currentTimeMillis()); return }
         if (rerouteJob?.isActive == true) return
         if (!rerouteDecider.shouldReroute(true, System.currentTimeMillis())) return
-        val current = state.snapped ?: lastKnownPoint()?.let { LatLon(it.lat, it.lon) } ?: return
+        val current = route.value.lastOrNull()?.let { LatLon(it.lat, it.lon) }
+            ?: locationProvider.fix.value?.let { LatLon(it.lat, it.lon) }
+            ?: state.snapped
+            ?: return
         val destination = _destination.value ?: return
         rerouteJob = viewModelScope.launch {
             val fresh = withContext(Dispatchers.IO) {
@@ -106,7 +109,7 @@ class LiveMapViewModel @Inject constructor(
             if (!navigationController.isNavigating) return@launch
             if (_destination.value != destination) return@launch
             _plannedRoute.value = fresh
-            navigationController.start(
+            navigationController.swap(
                 route = fresh,
                 origin = current,
                 destination = LatLon(destination.lat, destination.lon),
@@ -219,7 +222,7 @@ class LiveMapViewModel @Inject constructor(
     }
 
     val speedKmh: StateFlow<Int?> = sessionManager.readings
-        .map { it["0D"]?.value?.toInt() }
+        .map { (it["0D"] ?: it["GPS_SPEED"])?.value?.toInt() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // ── Ruta a destino (OSRM) ────────────────────────────────────────────────
@@ -303,14 +306,9 @@ class LiveMapViewModel @Inject constructor(
 
     fun saveFavorite(place: PlaceResult) {
         viewModelScope.launch {
+            if (savedPlaceDao.countFavorite(place.name, place.lat, place.lon) > 0) return@launch
             savedPlaceDao.insert(
-                SavedPlaceEntity(
-                    type = "FAVORITE",
-                    name = place.name,
-                    lat = place.lat,
-                    lon = place.lon,
-                    lastUsedAt = System.currentTimeMillis(),
-                ),
+                SavedPlaceEntity(type = "FAVORITE", name = place.name, lat = place.lat, lon = place.lon, lastUsedAt = System.currentTimeMillis()),
             )
         }
     }
@@ -338,6 +336,8 @@ class LiveMapViewModel @Inject constructor(
 
     /** Long-press en el mapa: fija destino y pide la ruta a OSRM desde la posición actual. */
     fun setDestination(lat: Double, lon: Double) {
+        // Navegando no se cambia el destino con un toque: pará la navegación primero.
+        if (navigationController.isNavigating) return
         val origin = route.value.lastOrNull() ?: locationProvider.fix.value ?: _initialCenter.value ?: return
         _destination.value = LiveRouteHolder.RoutePoint(lat, lon)
         _plannedRoute.value = null

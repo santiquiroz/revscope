@@ -142,6 +142,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var headingUp by remember { mutableStateOf(false) }
     val density = context.resources.displayMetrics.density
 
+    // Iniciar navegación toma el control de la cámara aunque el usuario venía paneando.
+    LaunchedEffect(navigation != null) {
+        if (navigation != null) followEnabled = true
+    }
+
     // Fase 4 llena esto con el .pmtiles local o el del servidor; hasta entonces cae al tier
     // ráster de OSM, que son los mismos tiles que servía osmdroid.
     val styleJson = remember(darkTiles) {

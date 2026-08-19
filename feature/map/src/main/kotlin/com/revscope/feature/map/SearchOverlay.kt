@@ -30,9 +30,15 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,6 +69,11 @@ fun SearchOverlay(
     onRemoveSaved: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var focused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val selectAndClearFocus: (PlaceResult) -> Unit = { place -> focusManager.clearFocus(); onSelect(place) }
+    val selectSavedAndClearFocus: (SavedPlaceEntity) -> Unit = { place -> focusManager.clearFocus(); onSelectSaved(place) }
+
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = query,
@@ -87,12 +98,12 @@ fun SearchOverlay(
                 unfocusedBorderColor = Color(0xFF2A2A3A),
                 cursorColor = AccentColor,
             ),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
         )
 
         val specials = savedPlaces.filter { it.type == "HOME" || it.type == "WORK" }
         val favorites = savedPlaces.filter { it.type == "FAVORITE" }
-        if (query.isEmpty() && (specials.isNotEmpty() || favorites.isNotEmpty())) {
+        if (query.isEmpty() && focused && (specials.isNotEmpty() || favorites.isNotEmpty())) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -100,21 +111,21 @@ fun SearchOverlay(
                     .horizontalScroll(rememberScrollState()),
             ) {
                 (specials + favorites).forEach { place ->
-                    PlaceChip(place, onSelectSaved)
+                    PlaceChip(place, selectSavedAndClearFocus)
                     Spacer(Modifier.width(8.dp))
                 }
             }
         }
 
         val recents = savedPlaces.filter { it.type == "RECENT" }.take(6)
-        if (query.isEmpty() && recents.isNotEmpty()) {
+        if (query.isEmpty() && focused && recents.isNotEmpty()) {
             Surface(
                 color = PanelColor,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
             ) {
                 Column {
-                    recents.forEach { place -> RecentRow(place, onSelectSaved, onRemoveSaved) }
+                    recents.forEach { place -> RecentRow(place, selectSavedAndClearFocus, onRemoveSaved) }
                 }
             }
         }
@@ -129,7 +140,7 @@ fun SearchOverlay(
         ) {
             when {
                 results.isNotEmpty() -> LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
-                    items(results) { place -> ResultRow(place, onSelect, onSaveFavorite) }
+                    items(results) { place -> ResultRow(place, selectAndClearFocus, onSaveFavorite) }
                 }
                 searching -> Text(
                     "Buscando…",
