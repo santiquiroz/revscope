@@ -20,6 +20,7 @@ import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.LapDao
 import com.revscope.core.data.db.dao.MaintenanceDao
+import com.revscope.core.data.db.dao.SavedPlaceDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.dao.TelemetryDao
@@ -84,4 +85,7 @@ object DataModule {
 
     @Provides
     fun provideMaintenanceDao(db: AppDatabase): MaintenanceDao = db.maintenanceDao()
+
+    @Provides
+    fun provideSavedPlaceDao(db: AppDatabase): SavedPlaceDao = db.savedPlaceDao()
 }
