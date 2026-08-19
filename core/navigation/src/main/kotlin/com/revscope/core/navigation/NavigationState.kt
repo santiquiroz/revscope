@@ -24,6 +24,8 @@ data class NavigationState(
     val snapped: LatLon?,
     val offRoute: Boolean,
     val arrived: Boolean,
+    /** La maniobra que sigue a la actual — para encadenar "luego gire..." cuando vienen pegadas. */
+    val nextManeuver: Maneuver? = null,
 ) {
     companion object {
         val IDLE = NavigationState(

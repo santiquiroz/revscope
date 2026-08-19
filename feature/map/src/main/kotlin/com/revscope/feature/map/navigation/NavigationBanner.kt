@@ -69,6 +69,9 @@ fun NavigationBanner(state: NavigationState, onStop: () -> Unit, modifier: Modif
                 subtitle(state)?.let {
                     Text(it, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 }
+                chained(state)?.let {
+                    Text(it, color = MUTED, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                }
             }
             IconButton(onClick = onStop) {
                 Icon(Icons.Default.Close, contentDescription = "Terminar navegación", tint = MUTED)
@@ -111,6 +114,14 @@ private fun subtitle(state: NavigationState): String? = when {
     state.arrived -> "Llegó a su destino"
     state.offRoute -> "Se salió de la ruta"
     else -> state.maneuver?.let(::maneuverLabel)
+}
+
+/** "Luego: ..." solo cuando las maniobras vienen pegadas; si no, es ruido. */
+private fun chained(state: NavigationState): String? {
+    if (state.arrived || state.offRoute) return null
+    if (state.distanceToManeuverM >= CHAIN_THRESHOLD_M) return null
+    val next = state.nextManeuver ?: return null
+    return "Luego: ${maneuverLabel(next)}"
 }
 
 private fun maneuverLabel(maneuver: Maneuver): String {
@@ -185,6 +196,7 @@ private val CLOCK: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 private const val IMMEDIATE_M = 30
 private const val METERS_ROUNDING = 50
+private const val CHAIN_THRESHOLD_M = 150
 
 private val PANEL = Color(0xF2121218)
 private val ACCENT = Color(0xFFE8FF00)

@@ -54,16 +54,20 @@ class NavigationSession private constructor(
     }
 
     private fun describe(trip: TripState): NavigationState = when (trip) {
-        is TripState.Navigating -> NavigationState(
-            maneuver = StepCursor.maneuverAhead(steps, trip.remainingSteps.size),
-            maneuverIndex = StepCursor.nextManeuverIndex(steps.size, trip.remainingSteps.size),
-            distanceToManeuverM = trip.progress.distanceToNextManeuver.toInt(),
-            distanceRemainingM = trip.progress.distanceRemaining.toInt(),
-            durationRemainingS = trip.progress.durationRemaining.toInt(),
-            snapped = trip.snappedUserLocation.coordinates.toLatLon(),
-            offRoute = trip.deviation is RouteDeviation.Deviation,
-            arrived = false,
-        )
+        is TripState.Navigating -> {
+            val maneuverIndex = StepCursor.nextManeuverIndex(steps.size, trip.remainingSteps.size)
+            NavigationState(
+                maneuver = StepCursor.maneuverAhead(steps, trip.remainingSteps.size),
+                nextManeuver = steps.getOrNull(maneuverIndex + 1)?.maneuver,
+                maneuverIndex = maneuverIndex,
+                distanceToManeuverM = trip.progress.distanceToNextManeuver.toInt(),
+                distanceRemainingM = trip.progress.distanceRemaining.toInt(),
+                durationRemainingS = trip.progress.durationRemaining.toInt(),
+                snapped = trip.snappedUserLocation.coordinates.toLatLon(),
+                offRoute = trip.deviation is RouteDeviation.Deviation,
+                arrived = false,
+            )
+        }
         is TripState.Complete -> NavigationState.IDLE.copy(
             maneuver = steps.lastOrNull()?.maneuver,
             maneuverIndex = steps.lastIndex,
