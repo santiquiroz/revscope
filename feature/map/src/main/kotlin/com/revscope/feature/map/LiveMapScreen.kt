@@ -90,6 +90,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val searching by viewModel.searching.collectAsState()
+    val savedPlaces by viewModel.savedPlaces.collectAsState()
     val navigation by viewModel.navigation.collectAsState()
     val navigationError by viewModel.navigationError.collectAsState()
     val speedKmh by viewModel.speedKmh.collectAsState()
@@ -323,9 +324,13 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             query = searchQuery,
             results = searchResults,
             searching = searching,
+            savedPlaces = savedPlaces,
             onQueryChange = viewModel::updateSearchQuery,
             onClear = viewModel::clearSearch,
             onSelect = viewModel::selectSearchResult,
+            onSelectSaved = viewModel::selectSavedPlace,
+            onSaveFavorite = viewModel::saveFavorite,
+            onRemoveSaved = viewModel::removePlace,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 68.dp, start = 12.dp, end = 12.dp),
         )
 

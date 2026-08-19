@@ -6,8 +6,10 @@ import android.location.LocationManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.db.dao.PotholeDao
+import com.revscope.core.data.db.dao.SavedPlaceDao
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.PotholeEntity
+import com.revscope.core.data.db.entities.SavedPlaceEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
@@ -51,6 +53,7 @@ class LiveMapViewModel @Inject constructor(
     private val navigationController: NavigationController,
     private val locationProvider: MapLocationProvider,
     private val coverageTracker: CameraCoverageTracker,
+    private val savedPlaceDao: SavedPlaceDao,
 ) : ViewModel() {
 
     // ── Navegación paso a paso ───────────────────────────────────────────────
@@ -229,10 +232,63 @@ class LiveMapViewModel @Inject constructor(
         _searching.value = false
     }
 
-    /** Elegir un resultado reusa el mismo camino que el long-press en el mapa. */
+    /** Elegir un resultado reusa el mismo camino que el long-press y entra al historial. */
     fun selectSearchResult(place: PlaceResult) {
         clearSearch()
         setDestination(place.lat, place.lon)
+        viewModelScope.launch {
+            savedPlaceDao.recordRecent(
+                SavedPlaceEntity(
+                    type = "RECENT",
+                    name = place.name,
+                    lat = place.lat,
+                    lon = place.lon,
+                    lastUsedAt = System.currentTimeMillis(),
+                ),
+            )
+        }
+    }
+
+    fun selectSavedPlace(place: SavedPlaceEntity) {
+        clearSearch()
+        setDestination(place.lat, place.lon)
+        viewModelScope.launch { savedPlaceDao.touch(place.id, System.currentTimeMillis()) }
+    }
+
+    fun saveHome(place: PlaceResult) = saveSpecial("HOME", place)
+
+    fun saveWork(place: PlaceResult) = saveSpecial("WORK", place)
+
+    fun saveFavorite(place: PlaceResult) {
+        viewModelScope.launch {
+            savedPlaceDao.insert(
+                SavedPlaceEntity(
+                    type = "FAVORITE",
+                    name = place.name,
+                    lat = place.lat,
+                    lon = place.lon,
+                    lastUsedAt = System.currentTimeMillis(),
+                ),
+            )
+        }
+    }
+
+    fun removePlace(id: Long) {
+        viewModelScope.launch { savedPlaceDao.delete(id) }
+    }
+
+    private fun saveSpecial(type: String, place: PlaceResult) {
+        viewModelScope.launch {
+            savedPlaceDao.upsertSpecial(
+                SavedPlaceEntity(
+                    type = type,
+                    name = place.name,
+                    lat = place.lat,
+                    lon = place.lon,
+                    lastUsedAt = System.currentTimeMillis(),
+                ),
+            )
+        }
     }
 
     private fun lastKnownPoint(): LiveRouteHolder.RoutePoint? =
@@ -265,6 +321,9 @@ class LiveMapViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val potholes: StateFlow<List<PotholeEntity>> = potholeDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val savedPlaces: StateFlow<List<SavedPlaceEntity>> = savedPlaceDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
