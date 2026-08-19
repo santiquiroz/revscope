@@ -96,7 +96,7 @@ fun SessionCompareScreen(
             ) { Text(s.message, color = TextMutedColor) }
 
             is SessionCompareViewModel.UiState.Ready -> CompareContent(
-                s.runA, s.runB, Modifier.padding(innerPadding),
+                s.runA, s.runB, s.showLean, Modifier.padding(innerPadding),
             )
         }
     }
@@ -106,6 +106,7 @@ fun SessionCompareScreen(
 private fun CompareContent(
     runA: SessionCompareViewModel.RunData,
     runB: SessionCompareViewModel.RunData,
+    showLean: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -159,12 +160,14 @@ private fun CompareContent(
             runB.maxAbsG?.let { "%.2f".format(it) } ?: "—",
             highlightMax = (runA.maxAbsG ?: 0f).compareTo(runB.maxAbsG ?: 0f),
         )
-        CompareRow(
-            "Lean máx",
-            runA.maxLean?.let { "%.0f°".format(it) } ?: "—",
-            runB.maxLean?.let { "%.0f°".format(it) } ?: "—",
-            highlightMax = (runA.maxLean ?: 0f).compareTo(runB.maxLean ?: 0f),
-        )
+        if (showLean) {
+            CompareRow(
+                "Lean máx",
+                runA.maxLean?.let { "%.0f°".format(it) } ?: "—",
+                runB.maxLean?.let { "%.0f°".format(it) } ?: "—",
+                highlightMax = (runA.maxLean ?: 0f).compareTo(runB.maxLean ?: 0f),
+            )
+        }
 
         if (runA.speedSeries.size >= 2 && runB.speedSeries.size >= 2) {
             Text("Velocidad — A amarillo, B azul", color = TextMutedColor, fontSize = 11.sp)

@@ -22,7 +22,10 @@ import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.intelligence.debrief.TripDebriefGenerator
+import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.obd.trip.EcoScoreCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -50,6 +54,7 @@ class SessionDetailViewModel @Inject constructor(
     private val imuDao: ImuDao,
     private val hrDao: HrDao,
     private val profileDao: VehicleProfileDao,
+    sessionManager: ObdSessionManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -122,6 +127,18 @@ class SessionDetailViewModel @Inject constructor(
     private val _state = MutableStateFlow<UiState>(UiState.Loading)
     val state: StateFlow<UiState> = _state.asStateFlow()
 
+    /**
+     * Gate de lean para esta sesión: usa el perfil asignado a la sesión si está disponible,
+     * si no cae al perfil activo — mismo patrón que [ObdForegroundService] para sesiones en curso.
+     */
+    val isMotorcycle: StateFlow<Boolean> = combine(
+        state, profiles, sessionManager.activeProfile,
+    ) { uiState, profileList, activeProfile ->
+        val vehicleProfileId = (uiState as? UiState.Ready)?.report?.session?.vehicleProfileId
+        val profile = profileList.firstOrNull { it.id == vehicleProfileId } ?: activeProfile
+        profile?.vehicleType == VehicleType.MOTORCYCLE
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     private val _debrief = MutableStateFlow<DebriefState>(DebriefState.Idle)
     val debrief: StateFlow<DebriefState> = _debrief.asStateFlow()
 
@@ -141,7 +158,7 @@ class SessionDetailViewModel @Inject constructor(
             val prevMaxSpeed = previous.map { it.maxSpeed }.filter { it > 0 }
             val digest = TripDebriefGenerator.TripDigest(
                 vehicleName = profile?.name ?: "Mi vehículo",
-                isMotorcycle = profile?.type == "MOTORCYCLE",
+                isMotorcycle = isMotorcycle.value,
                 distanceKm = if (session.distanceKm > 0) session.distanceKm.toDouble() else report.gpsDistanceKm,
                 durationMin = ((session.endedAt ?: session.startedAt) - session.startedAt) / 60_000L,
                 avgSpeedKmh = report.avgSpeedKmh.toInt(),
@@ -434,6 +451,7 @@ class SessionDetailViewModel @Inject constructor(
                 lapCount = r.laps.size,
                 bestLapMs = r.laps.minOfOrNull { it.timeMs },
                 track = r.gpsTrack,
+                showLean = isMotorcycle.value,
             ),
         )
     }

@@ -235,6 +235,7 @@ private fun ReportContent(
     val durationMin = TimeUnit.MILLISECONDS.toMinutes(durationMs)
     val durationSec = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60
     val assignedVehicleName = profiles.find { it.id == session.vehicleProfileId }?.name ?: "Sin vehículo"
+    val isMotorcycle by vm.isMotorcycle.collectAsState()
 
     Column(
         modifier = modifier
@@ -371,14 +372,16 @@ private fun ReportContent(
             )
         }
 
-        if (report.maxLateralG != null || report.maxLeanDeg != null) {
+        if (report.maxLateralG != null || (isMotorcycle && report.maxLeanDeg != null)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 StatCard("G lat máx", report.maxLateralG?.let { "%.2f".format(it) } ?: "—", Modifier.weight(1f))
                 StatCard("Frenada máx", report.maxBrakingG?.let { "%.2f G".format(-it) } ?: "—", Modifier.weight(1f))
-                StatCard("Lean máx", report.maxLeanDeg?.let { "%.0f°".format(it) } ?: "—", Modifier.weight(1f))
+                if (isMotorcycle) {
+                    StatCard("Lean máx", report.maxLeanDeg?.let { "%.0f°".format(it) } ?: "—", Modifier.weight(1f))
+                }
             }
         }
         if (report.avgBpm != null || report.maxBpm != null) {
@@ -409,11 +412,11 @@ private fun ReportContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Vuelta ${lap.lapNumber}", color = TextPrimaryColor, fontSize = 13.sp)
-                        if (stat?.maxAbsG != null || stat?.maxAbsLean != null || stat?.maxBpm != null) {
+                        if (stat?.maxAbsG != null || (isMotorcycle && stat?.maxAbsLean != null) || stat?.maxBpm != null) {
                             Text(
                                 buildList {
                                     stat.maxAbsG?.let { add("%.2fG".format(it)) }
-                                    stat.maxAbsLean?.let { add("%.0f° lean".format(it)) }
+                                    if (isMotorcycle) stat.maxAbsLean?.let { add("%.0f° lean".format(it)) }
                                     stat.maxBpm?.let { add("♥%.0f".format(it)) }
                                 }.joinToString(" · "),
                                 color = TextMutedColor,

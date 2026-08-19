@@ -41,11 +41,18 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.motion.MotionMetricsHub
+import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.track.TrackModeEngine
 import com.revscope.feature.dashboard.ui.RevScopeColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
@@ -53,7 +60,13 @@ class TrackModeViewModel @Inject constructor(
     val engine: TrackModeEngine,
     val motionHub: MotionMetricsHub,
     private val ghostClient: com.revscope.core.obd.social.GhostClient,
+    sessionManager: ObdSessionManager,
 ) : ViewModel() {
+
+    /** Sin perfil activo se asume moto (comportamiento histórico de la app antes de tipar el vehículo). */
+    val isMotorcycle: StateFlow<Boolean> = sessionManager.activeProfile
+        .map { (it?.vehicleType ?: VehicleType.MOTORCYCLE) == VehicleType.MOTORCYCLE }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     sealed interface GhostAction {
         data object Idle : GhostAction
@@ -131,6 +144,7 @@ fun TrackModeScreen(
     val state by vm.engine.state.collectAsState()
     val motion by vm.motionHub.snapshot.collectAsState()
     val ghostDeltaMs by vm.engine.ghostDeltaMs.collectAsState()
+    val isMotorcycle by vm.isMotorcycle.collectAsState()
 
     // Live current-lap clock, ticking locally at 5 Hz
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -229,11 +243,13 @@ fun TrackModeScreen(
                 ) {
                     TrackStat("G lat", "%.2f".format(motion.gLat), Modifier.weight(1f))
                     TrackStat("G long", "%.2f".format(motion.gLong), Modifier.weight(1f))
-                    TrackStat(
-                        if (motion.calibrated) "Lean" else "Lean (calibrando…)",
-                        "%.0f°".format(motion.leanDeg),
-                        Modifier.weight(1f),
-                    )
+                    if (isMotorcycle) {
+                        TrackStat(
+                            if (motion.calibrated) "Lean" else "Lean (calibrando…)",
+                            "%.0f°".format(motion.leanDeg),
+                            Modifier.weight(1f),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
 

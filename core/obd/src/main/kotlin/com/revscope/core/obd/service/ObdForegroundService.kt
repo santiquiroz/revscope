@@ -90,6 +90,9 @@ class ObdForegroundService : Service() {
     private var gpsRecorder: GpsTrackRecorder? = null
     private var motionRecorder: MotionSensorRecorder? = null
     private var graceJob: Job? = null
+    // Tipo de vehículo fijado al arrancar la sesión — start()/stop() de WetLeanGuard deben
+    // usar el mismo valor para no leer un perfil activo que cambió a mitad de sesión.
+    private var sessionVehicleType: VehicleType = VehicleType.MOTORCYCLE
 
     // Pantalla apagada: el scheduler OBD estira intervalos y la notificación deja de
     // redibujarse — nadie la ve y cada notify() despierta SystemUI.
@@ -199,7 +202,9 @@ class ObdForegroundService : Service() {
             it.start(scope, sessionId)
         }
         motionRecorder = imu
-        wetLeanGuard.start(scope)
+        sessionVehicleType = sessionManager.activeProfile.value?.vehicleType ?: VehicleType.MOTORCYCLE
+        // El guard era implícitamente moto (el lean en carro es ~0 y nunca dispara); ahora el gate es explícito.
+        if (sessionVehicleType == VehicleType.MOTORCYCLE) wetLeanGuard.start(scope)
         fatigueCoach.onSessionStart()
         gpsRecorder = GpsTrackRecorder(
             applicationContext,
@@ -227,7 +232,7 @@ class ObdForegroundService : Service() {
             sessionManager = sessionManager,
             motionHub = motionHub,
             vehicleName = sessionManager.activeProfile.value?.name ?: "tu vehículo",
-            vehicleType = sessionManager.activeProfile.value?.vehicleType ?: VehicleType.MOTORCYCLE,
+            vehicleType = sessionVehicleType,
         )
         engineSound.start()
     }
@@ -282,7 +287,7 @@ class ObdForegroundService : Service() {
         motionRecorder?.onVerticalSpike = null
         motionRecorder?.stop()
         motionRecorder = null
-        wetLeanGuard.stop(motionHub.snapshot.value.maxAbsLean)
+        if (sessionVehicleType == VehicleType.MOTORCYCLE) wetLeanGuard.stop(motionHub.snapshot.value.maxAbsLean)
         fatigueCoach.onSessionEnd()
         crashResponder.stop()
         routeHolder.clear()

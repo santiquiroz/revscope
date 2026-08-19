@@ -47,6 +47,8 @@ object TripShareCard {
         val lapCount: Int,
         val bestLapMs: Long?,
         val track: List<Pair<Double, Double>>,
+        /** Carro: el lean no aplica y se omite del PNG aunque [maxLeanDeg] traiga dato. */
+        val showLean: Boolean = true,
     )
 
     fun render(context: Context, data: CardData): Uri? = runCatching {
@@ -89,7 +91,7 @@ object TripShareCard {
             add("RPM MÁX" to "${data.maxRpm}")
             data.best0to100Ms?.let { add("0-100" to "%.2fs".format(it / 1000.0)) }
             data.maxLateralG?.let { add("G LATERAL" to "%.2f G".format(it)) }
-            data.maxLeanDeg?.let { add("LEAN MÁX" to "%.0f°".format(it)) }
+            if (data.showLean) data.maxLeanDeg?.let { add("LEAN MÁX" to "%.0f°".format(it)) }
             data.maxBpm?.let { add("♥ MÁX" to "${it} bpm") }
             if (data.lapCount > 0) {
                 add("VUELTAS" to "${data.lapCount}")

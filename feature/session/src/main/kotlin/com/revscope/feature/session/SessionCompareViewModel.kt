@@ -7,7 +7,11 @@ import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.TelemetryDao
+import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.SessionEntity
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
+import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +30,8 @@ class SessionCompareViewModel @Inject constructor(
     private val telemetryDao: TelemetryDao,
     private val gpsDao: GpsDao,
     private val imuDao: ImuDao,
+    private val profileDao: VehicleProfileDao,
+    private val sessionManager: ObdSessionManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -40,7 +46,8 @@ class SessionCompareViewModel @Inject constructor(
 
     sealed class UiState {
         object Loading : UiState()
-        data class Ready(val runA: RunData, val runB: RunData) : UiState()
+        /** [showLean] es true si CUALQUIERA de las dos sesiones es de moto. */
+        data class Ready(val runA: RunData, val runB: RunData, val showLean: Boolean) : UiState()
         data class Error(val message: String) : UiState()
     }
 
@@ -56,7 +63,8 @@ class SessionCompareViewModel @Inject constructor(
                 val a = loadRun(idA)
                 val b = loadRun(idB)
                 _state.value = if (a != null && b != null) {
-                    UiState.Ready(a, b)
+                    val showLean = isMotorcycleForSession(a.session) || isMotorcycleForSession(b.session)
+                    UiState.Ready(a, b, showLean)
                 } else {
                     UiState.Error("Sesión no encontrada")
                 }
@@ -81,6 +89,12 @@ class SessionCompareViewModel @Inject constructor(
             speedSeries = downsample(speedPoints.map { it.value }),
             track = downsample(gps.map { it.latitude to it.longitude }),
         )
+    }
+
+    /** Tipo del perfil de la sesión si está disponible; si no, el perfil activo — mismo patrón que SessionDetail. */
+    private suspend fun isMotorcycleForSession(session: SessionEntity): Boolean {
+        val profile = profileDao.getById(session.vehicleProfileId) ?: sessionManager.activeProfile.value
+        return profile?.vehicleType == VehicleType.MOTORCYCLE
     }
 
     private fun <T> downsample(points: List<T>): List<T> {
