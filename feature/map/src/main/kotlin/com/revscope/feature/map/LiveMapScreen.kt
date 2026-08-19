@@ -57,8 +57,10 @@ import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.telemetry.TripStatsCalculator
+import com.revscope.core.navigation.LatLon
 import com.revscope.core.navigation.NavigationRoute
 import com.revscope.feature.map.location.InitialCentering
+import com.revscope.feature.map.navigation.NavCamera
 import com.revscope.feature.map.navigation.NavigationBanner
 import com.revscope.feature.map.navigation.NavigationProgressBar
 import kotlinx.coroutines.flow.StateFlow
@@ -89,6 +91,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val searching by viewModel.searching.collectAsState()
     val navigation by viewModel.navigation.collectAsState()
     val navigationError by viewModel.navigationError.collectAsState()
+    val speedKmh by viewModel.speedKmh.collectAsState()
     val liveFix by viewModel.liveFix.collectAsState()
     val initialCenter by viewModel.initialCenter.collectAsState()
     // Durante un viaje la ruta viva ya alimenta puck y efectos a ~1 Hz; pasar también el fix
@@ -197,8 +200,26 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
-        LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, standaloneFix, initialCenter) {
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, standaloneFix, initialCenter, navigation) {
             val map = mapRef ?: return@LaunchedEffect
+            // Navegando: cámara dedicada — course-up, inclinada, zoom por velocidad y maniobra.
+            val nav = navigation
+            if (nav != null && !nav.arrived && followEnabled) {
+                val target = nav.snapped ?: route.lastOrNull()?.let { LatLon(it.lat, it.lon) }
+                if (target != null) {
+                    map.animateCamera(
+                        CameraUpdateFactory.newCameraPosition(
+                            CameraPosition.Builder()
+                                .target(LatLng(target.lat, target.lon))
+                                .bearing(currentBearingDegrees(route))
+                                .zoom(NavCamera.zoom(speedKmh, nav.distanceToManeuverM))
+                                .tilt(NavCamera.PITCH)
+                                .build(),
+                        ),
+                    )
+                }
+                return@LaunchedEffect
+            }
             val last = route.lastOrNull()
             if (last != null) {
                 if (followEnabled && routeRevision != lastCenteredRevision) {
@@ -236,6 +257,21 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                     map.animateCamera(
                         CameraUpdateFactory.newLatLng(LatLng(fix.lat, fix.lon)),
                     )
+                }
+            }
+        }
+
+        // Fin de navegación: quitar la inclinación; zoom y centro quedan como estaban.
+        LaunchedEffect(navigation == null) {
+            if (navigation == null) {
+                mapRef?.let { map ->
+                    if (map.cameraPosition.tilt != 0.0) {
+                        map.animateCamera(
+                            CameraUpdateFactory.newCameraPosition(
+                                CameraPosition.Builder().tilt(0.0).build(),
+                            ),
+                        )
+                    }
                 }
             }
         }
