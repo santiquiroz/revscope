@@ -89,6 +89,7 @@ fun VehicleProfileScreen(
     val editingProfile by vm.editingProfile.collectAsState()
     val formMaxRpm by vm.formMaxRpm.collectAsState()
     val formRedlineRpm by vm.formRedlineRpm.collectAsState()
+    val formGearCount by vm.formGearCount.collectAsState()
     val vinStatus by vm.vinStatus.collectAsState()
     val formPlate by vm.formPlate.collectAsState()
     val formPicoPlacaCity by vm.formPicoPlacaCity.collectAsState()
@@ -253,6 +254,20 @@ fun VehicleProfileScreen(
                     value = formRedlineRpm,
                     onValueChange = { vm.setRedlineRpm(it) },
                     label = { Text("Zona roja RPM", color = TextMutedColor, fontSize = 11.sp) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentColor,
+                        unfocusedBorderColor = SurfaceHighColor,
+                        focusedTextColor = TextPrimaryColor,
+                        unfocusedTextColor = TextPrimaryColor,
+                    ),
+                )
+                OutlinedTextField(
+                    value = formGearCount,
+                    onValueChange = { vm.setGearCount(it) },
+                    label = { Text("Marchas", color = TextMutedColor, fontSize = 11.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),

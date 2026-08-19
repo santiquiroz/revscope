@@ -58,6 +58,9 @@ class VehicleViewModel @Inject constructor(
     private val _formRedlineRpm = MutableStateFlow("6500")
     val formRedlineRpm: StateFlow<String> = _formRedlineRpm.asStateFlow()
 
+    private val _formGearCount = MutableStateFlow("6")
+    val formGearCount: StateFlow<String> = _formGearCount.asStateFlow()
+
     private val _vinStatus = MutableStateFlow<String?>(null)
     val vinStatus: StateFlow<String?> = _vinStatus.asStateFlow()
 
@@ -81,11 +84,29 @@ class VehicleViewModel @Inject constructor(
     val formInsuranceExpiresAt: StateFlow<Long?> = _formInsuranceExpiresAt.asStateFlow()
 
     fun setName(v: String) { _formName.value = v }
-    fun setType(v: String) { _formType.value = v }
+
+    fun setType(type: String) {
+        _formType.value = type
+        if (_editingProfile.value == null) applyTypeDefaults(type)
+    }
+
+    private fun applyTypeDefaults(type: String) {
+        if (type == "MOTORCYCLE") {
+            _formMaxRpm.value = "12000"
+            _formRedlineRpm.value = "10500"
+            _formGearCount.value = "5"
+        } else {
+            _formMaxRpm.value = "8000"
+            _formRedlineRpm.value = "6500"
+            _formGearCount.value = "6"
+        }
+    }
+
     fun setFuelType(v: String) { _formFuelType.value = v }
     fun setVin(v: String) { _formVin.value = v }
     fun setMaxRpm(v: String) { _formMaxRpm.value = v }
     fun setRedlineRpm(v: String) { _formRedlineRpm.value = v }
+    fun setGearCount(v: String) { _formGearCount.value = v.filter { it.isDigit() } }
     fun setPlate(v: String) { _formPlate.value = v.uppercase() }
     fun setPicoPlacaCity(v: String?) { _formPicoPlacaCity.value = v }
     fun setSoatExpiresAt(v: Long?) { _formSoatExpiresAt.value = v }
@@ -147,6 +168,7 @@ class VehicleViewModel @Inject constructor(
         _formEnabledPids.value = parseEnabledPids(profile.enabledPids)
         _formMaxRpm.value = profile.maxRpm.toString()
         _formRedlineRpm.value = profile.redlineRpm.toString()
+        _formGearCount.value = profile.gearCount.toString()
         _formPlate.value = profile.plate.orEmpty()
         _formPicoPlacaCity.value = profile.picoPlacaCity
         _formSoatExpiresAt.value = profile.soatExpiresAt
@@ -177,6 +199,7 @@ class VehicleViewModel @Inject constructor(
         if (name.isEmpty()) return
         val maxRpm = (_formMaxRpm.value.toIntOrNull() ?: 8_000).coerceIn(3_000, 20_000)
         val redline = (_formRedlineRpm.value.toIntOrNull() ?: 6_500).coerceIn(2_000, maxRpm)
+        val gearCount = (_formGearCount.value.toIntOrNull() ?: 6).coerceIn(3, 8)
         viewModelScope.launch {
             val editing = _editingProfile.value
             val plate = _formPlate.value.trim().ifEmpty { null }
@@ -189,6 +212,7 @@ class VehicleViewModel @Inject constructor(
                     enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
                     maxRpm = maxRpm,
                     redlineRpm = redline,
+                    gearCount = gearCount,
                     plate = plate,
                     picoPlacaCity = _formPicoPlacaCity.value,
                     soatExpiresAt = _formSoatExpiresAt.value,
@@ -209,6 +233,7 @@ class VehicleViewModel @Inject constructor(
                         createdAt = System.currentTimeMillis(),
                         maxRpm = maxRpm,
                         redlineRpm = redline,
+                        gearCount = gearCount,
                         plate = plate,
                         picoPlacaCity = _formPicoPlacaCity.value,
                         soatExpiresAt = _formSoatExpiresAt.value,
@@ -237,6 +262,7 @@ class VehicleViewModel @Inject constructor(
         _formEnabledPids.value = DEFAULT_PIDS
         _formMaxRpm.value = "8000"
         _formRedlineRpm.value = "6500"
+        _formGearCount.value = "6"
         _vinStatus.value = null
         _adapterLinkStatus.value = null
         _formPlate.value = ""

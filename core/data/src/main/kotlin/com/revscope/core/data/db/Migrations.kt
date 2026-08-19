@@ -113,3 +113,13 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
         )
     }
 }
+
+/**
+ * Número de marchas por perfil — gobierna el gear learner. Default 6 (auto típico) para
+ * filas existentes; el form aplica 5 para MOTORCYCLE nuevas (ver VehicleViewModel.setType).
+ */
+val MIGRATION_17_18 = object : Migration(17, 18) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `gearCount` INTEGER NOT NULL DEFAULT 6")
+    }
+}

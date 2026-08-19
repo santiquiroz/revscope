@@ -42,7 +42,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         PotholeEntity::class,
         SavedPlaceEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

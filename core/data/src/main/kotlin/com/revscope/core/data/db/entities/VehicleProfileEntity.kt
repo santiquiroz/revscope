@@ -47,4 +47,11 @@ data class VehicleProfileEntity(
      */
     @ColumnInfo(defaultValue = "CORRIENTE")
     val fuelType: String = "CORRIENTE",
+    /**
+     * Número de marchas — gobierna el gear learner. Default 6 (auto típico).
+     * `defaultValue` must match MIGRATION_17_18's `DEFAULT 6` (same reasoning as
+     * `odometerBaseKm` above).
+     */
+    @ColumnInfo(defaultValue = "6")
+    val gearCount: Int = 6,
 )
