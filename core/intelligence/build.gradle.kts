@@ -26,6 +26,9 @@ android {
 }
 
 dependencies {
+    // AdaptiveGearLearner necesita VehicleType (marchas por perfil, Task 4) — core:obd
+    // depende de core:data via implementation (no transitivo), así que hace falta directo.
+    implementation(project(":core:data"))
     implementation(project(":core:obd"))
 
     implementation(libs.coroutines.android)

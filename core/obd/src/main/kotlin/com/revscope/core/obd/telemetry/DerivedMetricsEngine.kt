@@ -1,5 +1,6 @@
 package com.revscope.core.obd.telemetry
 
+import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.model.ObdReading
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -10,14 +11,8 @@ private const val POWER_DIVISOR = 9549.0
 private const val MIN_RPM_FOR_GEAR = 500.0
 private const val MIN_SPEED_KMH_FOR_GEAR = 3.0
 
-private val DEFAULT_GEAR_TABLE = listOf(
-    1 to 12.0,
-    2 to 20.0,
-    3 to 31.0,
-    4 to 43.0,
-    5 to 56.0,
-    6 to 77.0,
-)
+// Auto 6 marchas — comportamiento idéntico al histórico; GearDefaults es la única fuente.
+private val DEFAULT_GEAR_TABLE = GearDefaults.ratios(6, VehicleType.CAR).mapIndexed { i, ratio -> (i + 1) to ratio }
 
 /**
  * Derives BOOST, GEAR, and POWER readings from the raw OBD-II [Flow].

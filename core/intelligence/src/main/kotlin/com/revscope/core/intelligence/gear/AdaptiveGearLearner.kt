@@ -1,6 +1,8 @@
 package com.revscope.core.intelligence.gear
 
+import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.telemetry.GearDefaults
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,13 +16,17 @@ import kotlin.math.abs
  * connected vehicle over the first [MIN_OBSERVATIONS_PER_GEAR] observations per gear.
  *
  * Algorithm: for each RPM+speed pair compute `ratio = speed_kmh * 1000 / rpm`,
- * assign it to the nearest of 6 clusters (one per gear), then nudge that cluster's
- * centroid toward the new observation using EMA (alpha = [LEARNING_RATE]).
+ * assign it to the nearest of [gearCount] clusters (one per gear), then nudge that
+ * cluster's centroid toward the new observation using EMA (alpha = [LEARNING_RATE]).
  *
- * Until [isCalibrated] returns true the static default table is reported.
- * Once calibrated [gearTable] emits a live [List<GearCluster>] for DerivedMetricsEngine.
+ * Until [isCalibrated] returns true the static default table (from [GearDefaults]) is
+ * reported. Once calibrated [gearTable] emits a live [List<GearCluster>] for
+ * DerivedMetricsEngine.
  */
-class AdaptiveGearLearner {
+class AdaptiveGearLearner(
+    gearCount: Int = 6,
+    type: VehicleType = VehicleType.CAR,
+) {
 
     companion object {
         private const val LEARNING_RATE = 0.05
@@ -28,21 +34,26 @@ class AdaptiveGearLearner {
         private const val MIN_RPM = 500.0
         private const val MIN_SPEED_KMH = 3.0
 
-        val DEFAULT_CLUSTERS = listOf(
-            GearCluster(gear = 1, centerRatio = 12.0),
-            GearCluster(gear = 2, centerRatio = 20.0),
-            GearCluster(gear = 3, centerRatio = 31.0),
-            GearCluster(gear = 4, centerRatio = 43.0),
-            GearCluster(gear = 5, centerRatio = 56.0),
-            GearCluster(gear = 6, centerRatio = 77.0),
-        )
+        private fun buildClusters(gearCount: Int, type: VehicleType): List<GearCluster> =
+            GearDefaults.ratios(gearCount, type).mapIndexed { i, ratio -> GearCluster(gear = i + 1, centerRatio = ratio) }
     }
 
-    private val _gearTable = MutableStateFlow(DEFAULT_CLUSTERS)
+    private val _gearTable = MutableStateFlow(buildClusters(gearCount, type))
     val gearTable: StateFlow<List<GearCluster>> = _gearTable.asStateFlow()
 
     private var latestRpm: Double? = null
     private var latestSpeed: Double? = null
+
+    /**
+     * Re-arma la tabla de clusters para el perfil dado sin perder la identidad del learner:
+     * IntelligenceOrchestrator es un singleton construido antes de conocer el perfil activo,
+     * así que los StateFlow externos ya suscritos a [gearTable] deben seguir vivos tras esto.
+     */
+    fun reconfigure(gearCount: Int, type: VehicleType) {
+        latestRpm = null
+        latestSpeed = null
+        _gearTable.value = buildClusters(gearCount, type)
+    }
 
     fun observe(reading: ObdReading) {
         when (reading.pid) {

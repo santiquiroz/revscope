@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.legal.DocumentStatusCalculator
@@ -34,7 +36,7 @@ private const val MINUTE_MS = 60_000L
 class DashboardViewModel @Inject constructor(
     val orchestrator: IntelligenceOrchestrator,
     private val alertsEngine: AlertsEngine,
-    sessionManager: ObdSessionManager,
+    private val sessionManager: ObdSessionManager,
     private val settings: DataStore<Preferences>,
     private val aiRulesSource: RestrictionRulesSource,
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
@@ -116,7 +118,13 @@ class DashboardViewModel @Inject constructor(
      */
     fun startIntelligence(readings: Flow<ObdReading>, connectionVm: ConnectionViewModel) {
         orchestrator.resetTrip()
-        orchestrator.start(readings, viewModelScope)
+        val profile = sessionManager.activeProfile.value
+        orchestrator.start(
+            readings = readings,
+            scope = viewModelScope,
+            gearCount = profile?.gearCount ?: 6,
+            vehicleType = profile?.vehicleType ?: VehicleType.CAR,
+        )
 
         gearTableJob?.cancel()
         gearTableJob = viewModelScope.launch {

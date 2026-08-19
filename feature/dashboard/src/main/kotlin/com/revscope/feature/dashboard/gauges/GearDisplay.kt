@@ -20,13 +20,15 @@ import com.revscope.feature.dashboard.ui.RevScopeColors
 fun GearDisplay(
     gear: Int,
     isCalibrated: Boolean,
+    gearCount: Int = 6,
     modifier: Modifier = Modifier,
 ) {
     val label = if (gear == 0) "N" else gear.toString()
-    val color = when (gear) {
-        1, 2 -> RevScopeColors.Success
-        3, 4 -> RevScopeColors.Accent
-        5, 6 -> RevScopeColors.Warning
+    val color = when {
+        gear <= 0 -> RevScopeColors.TextMuted
+        gear <= gearCount / 3 -> RevScopeColors.Success
+        gear <= gearCount * 2 / 3 -> RevScopeColors.Accent
+        gear <= gearCount -> RevScopeColors.Warning
         else -> RevScopeColors.TextMuted
     }
 

@@ -320,6 +320,7 @@ fun DashboardScreen(
                 GearDisplay(
                     gear = gear,
                     isCalibrated = gearCalibrated,
+                    gearCount = activeProfile?.gearCount ?: 6,
                     modifier = Modifier.weight(0.6f).then(dimmedIfGpsTrip(isGpsTrip)),
                 )
                 TempGauge(

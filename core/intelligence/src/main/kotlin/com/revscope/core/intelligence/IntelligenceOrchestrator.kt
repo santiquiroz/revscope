@@ -6,6 +6,7 @@ import com.revscope.core.intelligence.dtc.DtcExplanation
 import com.revscope.core.intelligence.dtc.DtcExplainer
 import com.revscope.core.intelligence.efficiency.DriveStyleClassifier
 import com.revscope.core.intelligence.efficiency.TripScore
+import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.intelligence.gear.AdaptiveGearLearner
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.model.ObdReading
@@ -63,10 +64,20 @@ class IntelligenceOrchestrator(
      * Begins observing [readings] and drives all intelligence features.
      * Idempotent: calling again (e.g. on reconnect) cancels the previous session's
      * collectors before launching new ones, so processing is never duplicated.
+     *
+     * [gearCount]/[vehicleType] come from the active vehicle profile — this orchestrator is
+     * a Hilt singleton built before any profile is known, so [gearLearner] only learns the
+     * real gearCount/type here, at session start, via [AdaptiveGearLearner.reconfigure].
      */
-    fun start(readings: Flow<ObdReading>, scope: CoroutineScope) {
+    fun start(
+        readings: Flow<ObdReading>,
+        scope: CoroutineScope,
+        gearCount: Int = 6,
+        vehicleType: VehicleType = VehicleType.CAR,
+    ) {
         readingsJob?.cancel()
         scoreJob?.cancel()
+        gearLearner.reconfigure(gearCount, vehicleType)
 
         readingsJob = scope.launch {
             readings.collect { reading -> processReading(reading) }
