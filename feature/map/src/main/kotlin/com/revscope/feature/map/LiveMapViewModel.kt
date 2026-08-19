@@ -3,8 +3,13 @@ package com.revscope.feature.map
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.LocationManager
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.SunTimes
+import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.PotholeDao
 import com.revscope.core.data.db.dao.SavedPlaceDao
 import com.revscope.core.data.db.dao.SpeedCameraDao
@@ -35,7 +40,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -54,6 +61,7 @@ class LiveMapViewModel @Inject constructor(
     private val locationProvider: MapLocationProvider,
     private val coverageTracker: CameraCoverageTracker,
     private val savedPlaceDao: SavedPlaceDao,
+    private val settings: DataStore<Preferences>,
 ) : ViewModel() {
 
     // ── Navegación paso a paso ───────────────────────────────────────────────
@@ -171,6 +179,40 @@ class LiveMapViewModel @Inject constructor(
     fun onMapVisible() = locationProvider.start()
 
     fun onMapHidden() = locationProvider.stop()
+
+    // ── Modo nocturno ────────────────────────────────────────────────────────
+
+    val nightMode: StateFlow<String> = settings.data
+        .map { it[PreferencesKeys.MAP_NIGHT_MODE] ?: "auto" }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "auto")
+
+    /** Tick de un minuto: en modo auto el atardecer conmuta sin tocar nada. */
+    private val minuteTick = flow {
+        while (true) {
+            emit(Unit)
+            delay(MINUTE_TICK_MS)
+        }
+    }
+
+    val darkTiles: StateFlow<Boolean> = combine(nightMode, liveFix, initialCenter, minuteTick) { mode, fix, center, _ ->
+        when (mode) {
+            "on" -> true
+            "off" -> false
+            else -> {
+                val at = fix ?: center
+                if (at == null) false else SunTimes.isNight(at.lat, at.lon, System.currentTimeMillis())
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun cycleNightMode() {
+        val next = when (nightMode.value) {
+            "auto" -> "on"
+            "on" -> "off"
+            else -> "auto"
+        }
+        viewModelScope.launch { settings.edit { it[PreferencesKeys.MAP_NIGHT_MODE] = next } }
+    }
 
     override fun onCleared() {
         locationProvider.stop()
@@ -343,5 +385,6 @@ class LiveMapViewModel @Inject constructor(
 
     private companion object {
         const val SEARCH_DEBOUNCE_MS = 350L
+        const val MINUTE_TICK_MS = 60_000L
     }
 }

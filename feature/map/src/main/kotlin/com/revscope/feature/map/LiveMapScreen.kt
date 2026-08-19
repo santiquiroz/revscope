@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Explore
@@ -96,6 +97,8 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val speedKmh by viewModel.speedKmh.collectAsState()
     val liveFix by viewModel.liveFix.collectAsState()
     val initialCenter by viewModel.initialCenter.collectAsState()
+    val darkTiles by viewModel.darkTiles.collectAsState()
+    val nightMode by viewModel.nightMode.collectAsState()
     // Durante un viaje la ruta viva ya alimenta puck y efectos a ~1 Hz; pasar también el fix
     // del provider duplicaría los re-writes del dataset completo sin cambio visual (T4 lo enmascara).
     val standaloneFix = if (route.isEmpty()) liveFix else null
@@ -137,7 +140,6 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
-    var darkTiles by remember { mutableStateOf(false) }
     val density = context.resources.displayMetrics.density
 
     // Fase 4 llena esto con el .pmtiles local o el del servidor; hasta entonces cae al tier
@@ -342,12 +344,12 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         Column(Modifier.align(Alignment.BottomEnd).padding(16.dp), horizontalAlignment = Alignment.End) {
             SmallFloatingActionButton(
-                onClick = { darkTiles = !darkTiles },
+                onClick = viewModel::cycleNightMode,
                 containerColor = if (darkTiles) Color(0xFFE8FF00) else Color(0xFF1C1C28),
             ) {
                 Icon(
-                    Icons.Default.DarkMode,
-                    contentDescription = "Mapa nocturno",
+                    if (nightMode == "auto") Icons.Default.BrightnessAuto else Icons.Default.DarkMode,
+                    contentDescription = "Mapa nocturno: $nightMode",
                     tint = if (darkTiles) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                 )
             }

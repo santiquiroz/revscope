@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.timber)
     implementation(libs.androidx.core.ktx)
+    testImplementation(libs.junit)
 }
 
 kotlin {

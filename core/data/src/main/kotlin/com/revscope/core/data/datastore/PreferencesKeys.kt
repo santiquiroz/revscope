@@ -280,4 +280,9 @@ object PreferencesKeys {
 
     /** Token Bearer generado una sola vez (UUID) — requerido en Authorization para /mcp */
     val MCP_TOKEN = stringPreferencesKey("mcp_token")
+
+    // ── Mapa ─────────────────────────────────────────────────────────────────
+
+    /** Modo nocturno del mapa: "auto" (por sol), "on", "off". */
+    val MAP_NIGHT_MODE = stringPreferencesKey("map_night_mode")
 }
