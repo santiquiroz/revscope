@@ -20,6 +20,7 @@ import com.revscope.core.navigation.NavigationRoute
 import com.revscope.core.navigation.NavigationState
 import com.revscope.feature.map.location.MapLocationProvider
 import com.revscope.feature.map.routing.OsrmRouteFetcher
+import com.revscope.feature.map.routing.RerouteDecider
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,17 +58,15 @@ class LiveMapViewModel @Inject constructor(
     /** Estado de la navegación viva. Vive en el controlador, no aquí: sigue con la pantalla apagada. */
     val navigation: StateFlow<NavigationState?> = navigationController.state
 
-    /** Arranca la guía por voz sobre la ruta ya calculada. */
+    /** Arranca la guía por voz sobre la ruta ya calculada. Sin viaje activo, lo inicia. */
     fun startNavigation() {
         val route = _plannedRoute.value ?: return
         val origin = lastKnownPoint() ?: return
         val destination = _destination.value ?: return
-        // El GPS lo entrega el servicio en primer plano, y ese solo corre con un viaje activo.
-        // Sin viaje, la navegación arrancaría y se quedaría muda: mejor decirlo.
-        if (sessionManager.currentSessionId.value == null) {
-            _navigationError.value = "Inicia un viaje para que la navegación reciba el GPS"
-            return
-        }
+        // La navegación recibe el GPS del servicio en primer plano; si no hay viaje,
+        // se arranca uno GPS aquí mismo — un tap, como Google Maps. startGpsSession()
+        // es no-op si ya hay sesión o el OBD está conectando.
+        if (sessionManager.currentSessionId.value == null) sessionManager.startGpsSession()
         val started = navigationController.start(
             route = route,
             origin = LatLon(origin.lat, origin.lon),
@@ -78,12 +77,33 @@ class LiveMapViewModel @Inject constructor(
 
     fun stopNavigation() = navigationController.stop()
 
+    private fun maybeReroute(state: NavigationState) {
+        if (!state.offRoute) { rerouteDecider.shouldReroute(false, System.currentTimeMillis()); return }
+        if (rerouteJob?.isActive == true) return
+        if (!rerouteDecider.shouldReroute(true, System.currentTimeMillis())) return
+        val current = state.snapped ?: lastKnownPoint()?.let { LatLon(it.lat, it.lon) } ?: return
+        val destination = _destination.value ?: return
+        rerouteJob = viewModelScope.launch(Dispatchers.IO) {
+            val fresh = OsrmRouteFetcher.fetch(current.lat, current.lon, destination.lat, destination.lon)
+                ?: return@launch // falla de red: la ruta vieja sigue; el cooldown regula el reintento
+            _plannedRoute.value = fresh
+            navigationController.start(
+                route = fresh,
+                origin = current,
+                destination = LatLon(destination.lat, destination.lon),
+            )
+        }
+    }
+
     private val _navigationError = MutableStateFlow<String?>(null)
     val navigationError: StateFlow<String?> = _navigationError.asStateFlow()
 
     fun clearNavigationError() {
         _navigationError.value = null
     }
+
+    private val rerouteDecider = RerouteDecider()
+    private var rerouteJob: Job? = null
 
     // ── Rodada en grupo ──────────────────────────────────────────────────────
 
@@ -244,6 +264,12 @@ class LiveMapViewModel @Inject constructor(
         // entregan los fixes que antes solo veía durante un viaje activo.
         viewModelScope.launch {
             locationProvider.fix.filterNotNull().collect { coverageTracker.onGpsFix(it.lat, it.lon) }
+        }
+        viewModelScope.launch {
+            navigationController.state.collect { state ->
+                if (state == null) { rerouteDecider.reset(); return@collect }
+                maybeReroute(state)
+            }
         }
     }
 
