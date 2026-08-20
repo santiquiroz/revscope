@@ -211,6 +211,14 @@ fun RevScopeNavGraph(
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                         onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
                         onNavigateToAlDia = { navController.navigate(Screen.AlDia.route) },
+                        onOpenMap = {
+                            // Misma semántica que el tap en la tab "Mapa" del bottom bar.
+                            navController.navigate(Screen.LiveMap.route) {
+                                popUpTo(Screen.Dashboard.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                         connectionVm = connectionVm,
                     )
                 }

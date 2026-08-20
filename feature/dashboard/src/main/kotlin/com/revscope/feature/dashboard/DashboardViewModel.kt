@@ -71,6 +71,11 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    /** True mientras el usuario nunca configuró un adaptador — el dashboard prioriza viaje GPS y mapa. */
+    val gpsOnlyMode: StateFlow<Boolean> = settings.data
+        .map { it[PreferencesKeys.GPS_ONLY_MODE] ?: false }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Default true: en moto la pantalla apagándose a mitad de ruta es peor que la batería. */
     val keepScreenOn: StateFlow<Boolean> = settings.data
         .map { it[PreferencesKeys.KEEP_SCREEN_ON] ?: true }

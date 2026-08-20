@@ -655,6 +655,8 @@ class ObdSessionManager @Inject constructor(
                 prefs[PreferencesKeys.ADAPTER_ADDRESS] = address
                 prefs[PreferencesKeys.ADAPTER_NAME] = name
                 prefs[PreferencesKeys.ADAPTER_TYPE] = currentAdapterType.name
+                // Configurar un adaptador saca al usuario del modo GPS-only del onboarding.
+                prefs[PreferencesKeys.GPS_ONLY_MODE] = false
             }
         }.onFailure { Timber.w(it, "ObdSessionManager: failed to persist last adapter") }
     }

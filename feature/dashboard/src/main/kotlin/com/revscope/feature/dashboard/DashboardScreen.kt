@@ -68,6 +68,7 @@ fun DashboardScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToTrackMode: () -> Unit = {},
     onNavigateToAlDia: () -> Unit = {},
+    onOpenMap: () -> Unit = {},
     connectionVm: ConnectionViewModel = hiltViewModel(),
     dashboardVm: DashboardViewModel = hiltViewModel(),
 ) {
@@ -80,11 +81,16 @@ fun DashboardScreen(
     val update by dashboardVm.updateAvailable.collectAsState()
     val isGpsTrip by connectionVm.isGpsTripActive.collectAsState()
     val speedSourceGps by dashboardVm.speedSourceGps.collectAsState()
+    val gpsOnlyMode by dashboardVm.gpsOnlyMode.collectAsState()
 
     // "Viaje sin adaptador": only offered while there's no live/incoming BT link, so it
     // can never race connectToDevice()'s own GPS-session handover.
     val showGpsTripButton = connectionState is ConnectionState.Disconnected ||
         connectionState is ConnectionState.Error
+
+    // Onboarding eligió "sin adaptador" y sigue sin conexión: invertir jerarquía —
+    // viaje GPS + mapa arriba, gauges (sin datos posibles) abajo con una sola CTA.
+    val gpsHeroMode = gpsOnlyMode && showGpsTripButton
 
     // Start intelligence once connected; restart on reconnect
     LaunchedEffect(connectionState) {
@@ -280,7 +286,16 @@ fun DashboardScreen(
                     onStart = connectionVm::startGpsTrip,
                     onStop = connectionVm::stopGpsTrip,
                 )
+                if (gpsHeroMode) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OpenMapButton(onClick = onOpenMap)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            if (gpsHeroMode) {
+                ConfigureAdapterCta(onClick = onNavigateToAdapterScan)
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
             RpmGauge(
@@ -289,7 +304,7 @@ fun DashboardScreen(
                 redlineRpm = redline.toInt(),
                 modifier = Modifier
                     .padding(vertical = 8.dp)
-                    .then(dimmedIfGpsTrip(isGpsTrip)),
+                    .then(dimmedIfGpsTrip(isGpsTrip || gpsHeroMode)),
             )
 
             if (isGpsTrip) {
@@ -327,11 +342,11 @@ fun DashboardScreen(
                     gear = gear,
                     isCalibrated = gearCalibrated,
                     gearCount = activeProfile?.gearCount ?: 6,
-                    modifier = Modifier.weight(0.6f).then(dimmedIfGpsTrip(isGpsTrip)),
+                    modifier = Modifier.weight(0.6f).then(dimmedIfGpsTrip(isGpsTrip || gpsHeroMode)),
                 )
                 TempGauge(
                     tempCelsius = temp,
-                    modifier = Modifier.weight(0.6f).then(dimmedIfGpsTrip(isGpsTrip)),
+                    modifier = Modifier.weight(0.6f).then(dimmedIfGpsTrip(isGpsTrip || gpsHeroMode)),
                 )
             }
 
@@ -342,7 +357,7 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp)
-                    .then(dimmedIfGpsTrip(isGpsTrip)),
+                    .then(dimmedIfGpsTrip(isGpsTrip || gpsHeroMode)),
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -354,9 +369,9 @@ fun DashboardScreen(
 
 private const val DIMMED_GAUGE_ALPHA = 0.35f
 
-/** No-op when [isGpsTrip] is false, so the connected/OBD path never gains an extra modifier. */
-private fun dimmedIfGpsTrip(isGpsTrip: Boolean): Modifier =
-    if (isGpsTrip) Modifier.alpha(DIMMED_GAUGE_ALPHA) else Modifier
+/** No-op when [dimmed] is false, so the connected/OBD path never gains an extra modifier. */
+private fun dimmedIfGpsTrip(dimmed: Boolean): Modifier =
+    if (dimmed) Modifier.alpha(DIMMED_GAUGE_ALPHA) else Modifier
 
 @Composable
 private fun GpsTripButton(
@@ -374,6 +389,48 @@ private fun GpsTripButton(
         Text(
             text = if (isActive) "Finalizar viaje GPS" else "Iniciar viaje GPS",
             color = RevScopeColors.Background,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/** Modo GPS: acceso directo al mapa, junto al botón de viaje. */
+@Composable
+private fun OpenMapButton(onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
+    ) {
+        Text(
+            text = "Ver mapa",
+            color = RevScopeColors.TextPrimary,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/** Única CTA del grupo de gauges apagados en modo GPS: llevan a vincular un adaptador. */
+@Composable
+private fun ConfigureAdapterCta(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "RPM, temperatura, marcha y boost requieren un adaptador",
+            color = RevScopeColors.TextMuted,
+            fontSize = 12.sp,
+        )
+        Text(
+            text = "Configurar →",
+            color = RevScopeColors.Accent,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
         )
     }
