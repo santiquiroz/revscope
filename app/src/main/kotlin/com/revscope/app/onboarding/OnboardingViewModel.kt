@@ -6,12 +6,16 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.dao.VehicleProfileDao
+import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -23,6 +27,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val settings: DataStore<Preferences>,
+    private val profileDao: VehicleProfileDao,
+    private val sessionManager: ObdSessionManager,
 ) : ViewModel() {
 
     private val _onboardingDone = MutableStateFlow<Boolean?>(null)
@@ -57,6 +63,35 @@ class OnboardingViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { settings.edit { it[PreferencesKeys.GPS_ONLY_MODE] = enabled } }
                 .onFailure { Timber.w(it, "OnboardingViewModel: failed to persist gps-only mode") }
+        }
+    }
+
+    private val _profileCreated = MutableStateFlow(false)
+    val profileCreated: StateFlow<Boolean> = _profileCreated.asStateFlow()
+
+    /** Perfil mínimo del wizard: defaults por tipo (los de sub-proyecto C), sin campos avanzados. */
+    fun createFirstProfile(name: String, type: String, plate: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        val motorcycle = type == "MOTORCYCLE"
+        viewModelScope.launch {
+            runCatching {
+                val profile = VehicleProfileEntity(
+                    name = trimmed,
+                    type = type,
+                    vin = null,
+                    enabledPids = JSONArray(listOf("0C", "0D", "05")).toString(),
+                    gearRatios = null,
+                    createdAt = System.currentTimeMillis(),
+                    maxRpm = if (motorcycle) 12_000 else 8_000,
+                    redlineRpm = if (motorcycle) 10_500 else 6_500,
+                    plate = plate.trim().uppercase(),
+                    gearCount = if (motorcycle) 5 else 6,
+                )
+                val insertedId = profileDao.insert(profile)
+                sessionManager.setActiveProfile(profile.copy(id = insertedId))
+            }.onSuccess { _profileCreated.value = true }
+                .onFailure { Timber.w(it, "OnboardingViewModel: failed to create first profile") }
         }
     }
 

@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +30,10 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -75,7 +79,7 @@ fun OnboardingScreen(
             Box(Modifier.weight(1f)) {
                 when (step) {
                     0 -> Step0Permissions()
-                    1 -> StepPlaceholder("Tu vehículo") // Task 2
+                    1 -> Step1Vehicle(vm)
                     2 -> StepPlaceholder("Adaptador OBD2") // Task 3
                     3 -> StepPlaceholder("Inteligencia") // Task 4
                     else -> Step4Done()
@@ -210,6 +214,97 @@ private fun Step0Permissions() {
         )
     }
 }
+
+@Composable
+private fun Step1Vehicle(vm: OnboardingViewModel) {
+    var name by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("CAR") }
+    var plate by remember { mutableStateOf("") }
+    val profileCreated by vm.profileCreated.collectAsState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Text("Tu vehículo", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Crealo ahora y la app se adapta: gauges, marchas y alertas según sea moto o carro.",
+            color = TextMutedColor,
+            fontSize = 14.sp,
+        )
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Nombre") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = onboardingTextFieldColors(),
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            VehicleTypeChip("Auto", active = type == "CAR", onClick = { type = "CAR" })
+            VehicleTypeChip("Moto", active = type == "MOTORCYCLE", onClick = { type = "MOTORCYCLE" })
+        }
+
+        OutlinedTextField(
+            value = plate,
+            onValueChange = { plate = it },
+            label = { Text("Placa (opcional)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = onboardingTextFieldColors(),
+        )
+
+        Button(
+            onClick = { vm.createFirstProfile(name, type, plate) },
+            colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            modifier = Modifier.height(48.dp),
+        ) {
+            if (profileCreated) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = BgColor)
+                Spacer(Modifier.width(6.dp))
+                Text("Creado", color = BgColor, fontWeight = FontWeight.SemiBold)
+            } else {
+                Text("Crear", color = BgColor, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun VehicleTypeChip(label: String, active: Boolean, onClick: () -> Unit) {
+    Surface(
+        color = if (active) AccentColor else SurfaceColor,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier
+            .height(48.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                label,
+                color = if (active) BgColor else TextPrimaryColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun onboardingTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = TextPrimaryColor,
+    unfocusedTextColor = TextPrimaryColor,
+    focusedContainerColor = SurfaceColor,
+    unfocusedContainerColor = SurfaceColor,
+    focusedBorderColor = AccentColor,
+    unfocusedBorderColor = TextMutedColor,
+    focusedLabelColor = AccentColor,
+    unfocusedLabelColor = TextMutedColor,
+    cursorColor = AccentColor,
+)
 
 @Composable
 private fun StepPlaceholder(title: String) {
