@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -101,6 +102,20 @@ object RankingCalc {
 
     private fun etaMinutes(remainingM: Double, speedKmh: Double): Double =
         (remainingM / METERS_PER_KM) / max(speedKmh, MIN_ETA_SPEED_KMH) * MINUTES_PER_HOUR
+
+    /**
+     * Aplica el orden real de cruce (spec F1, [ArrivalLedger]) al ranking crudo de este tick:
+     * llegados REALES primero, en su orden de cruce (sticky — [ArrivalLedger.Finisher.entry]
+     * congelado, se muestran aunque su Peer ya no esté en [entries]); después cualquier otro
+     * que esté dentro del radio pero sin orden todavía (p. ej. un cruce pre-largada, ver
+     * [ArrivalLedger.step]); por último los pendientes por restante ascendente, igual que [rank].
+     */
+    fun applyArrivalOrder(entries: List<Entry>, ledger: ArrivalLedger.State): List<Entry> {
+        val finisherEntries = ledger.finishers.values.sortedBy { it.order }.map { it.entry }
+        val rest = entries.filterNot { it.name in ledger.finishers }
+        val (restArrived, restPending) = rest.partition { it.arrived }
+        return finisherEntries + restArrived + restPending.sortedWith(compareBy({ it.etaMin == null }, { it.remainingM }))
+    }
 }
 
 /**
@@ -196,7 +211,7 @@ fun Leaderboard(
                 onStopRace = onStopRace,
             )
             if (expanded) {
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.height(4.dp))
                 entries.forEachIndexed { index, entry ->
                     LeaderboardRow(position = index + 1, entry = entry, raceMode = race != null)
                 }

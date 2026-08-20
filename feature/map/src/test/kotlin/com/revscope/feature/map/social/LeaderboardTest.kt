@@ -113,6 +113,52 @@ class LeaderboardTest {
     }
 
     @Test
+    fun `applyArrivalOrder pone los finishers del ledger primero, en su orden real`() {
+        val far = RankingCalc.Entry("lejos", remainingM = 500.0, etaMin = 5.0, arrived = false, isSelf = false)
+        val secondFinisher = RankingCalc.Entry("segundo", remainingM = 10.0, etaMin = null, arrived = true, isSelf = false)
+        val firstFinisher = RankingCalc.Entry("primero", remainingM = 20.0, etaMin = null, arrived = true, isSelf = true)
+        val ledger = ArrivalLedger.State(
+            raceKey = 1L,
+            finishers = mapOf(
+                "primero" to ArrivalLedger.Finisher(1, firstFinisher),
+                "segundo" to ArrivalLedger.Finisher(2, secondFinisher),
+            ),
+        )
+
+        // El orden de inserción en `entries` es justo el opuesto al orden real de llegada —
+        // si applyArrivalOrder usara el de entries en vez del del ledger, este test fallaría.
+        val result = RankingCalc.applyArrivalOrder(listOf(far, secondFinisher, firstFinisher), ledger)
+
+        assertEquals(listOf("primero", "segundo", "lejos"), result.map { it.name })
+    }
+
+    @Test
+    fun `applyArrivalOrder mantiene un finisher aunque ya no este en las entries`() {
+        val stillRacing = RankingCalc.Entry("todavia", remainingM = 200.0, etaMin = 3.0, arrived = false, isSelf = false)
+        val frozenFinisher = RankingCalc.Entry("fantasma", remainingM = 5.0, etaMin = null, arrived = true, isSelf = false)
+        val ledger = ArrivalLedger.State(
+            raceKey = 1L,
+            finishers = mapOf("fantasma" to ArrivalLedger.Finisher(1, frozenFinisher)),
+        )
+
+        // "fantasma" ya no aparece en las entries de este tick (Peer pruneado por stale).
+        val result = RankingCalc.applyArrivalOrder(listOf(stillRacing), ledger)
+
+        assertEquals(listOf("fantasma", "todavia"), result.map { it.name })
+        assertTrue(result.first { it.name == "fantasma" }.arrived)
+    }
+
+    @Test
+    fun `applyArrivalOrder sin ledger se comporta como el ranking crudo`() {
+        val near = RankingCalc.Entry("cerca", remainingM = 50.0, etaMin = 1.0, arrived = false, isSelf = false)
+        val far = RankingCalc.Entry("lejos", remainingM = 500.0, etaMin = 5.0, arrived = false, isSelf = false)
+
+        val result = RankingCalc.applyArrivalOrder(listOf(far, near), ArrivalLedger.State())
+
+        assertEquals(listOf("cerca", "lejos"), result.map { it.name })
+    }
+
+    @Test
     fun `countdown oculto mas alla de 5 segundos antes de largar`() {
         assertNull(RaceCountdown.secondsToShow(startAtMs = 5_001, nowMs = 0))
     }
