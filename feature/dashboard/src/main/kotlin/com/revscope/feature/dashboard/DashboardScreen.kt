@@ -428,7 +428,7 @@ private fun ConfigureAdapterCta(onClick: () -> Unit) {
             fontSize = 12.sp,
         )
         Text(
-            text = "Configurar →",
+            text = "Configurar adaptador →",
             color = RevScopeColors.Accent,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
