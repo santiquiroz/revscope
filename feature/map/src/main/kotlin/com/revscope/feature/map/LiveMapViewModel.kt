@@ -17,6 +17,8 @@ import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SavedPlaceEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.maps.MapDownloadService
+import com.revscope.core.maps.MapDownloadState
 import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
@@ -77,6 +79,7 @@ class LiveMapViewModel @Inject constructor(
     private val coverageTracker: CameraCoverageTracker,
     private val savedPlaceDao: SavedPlaceDao,
     private val settings: DataStore<Preferences>,
+    private val mapDownloadService: MapDownloadService,
 ) : ViewModel() {
 
     // ── Navegación paso a paso ───────────────────────────────────────────────
@@ -403,6 +406,31 @@ class LiveMapViewModel @Inject constructor(
         viewModelScope.launch { settings.edit { it[PreferencesKeys.MAP_NIGHT_MODE] = next } }
     }
 
+    // ── Mapa offline (tier local) ───────────────────────────────────────────
+
+    /** True mientras el `.pmtiles` de Colombia esté descargado y listo — dispara el estilo
+     * vectorial completo en LiveMapScreen. MapDownloadService ya calcula su estado inicial
+     * sincrónicamente desde disco (ver idleStateFromDisk), así que el valor inicial de este
+     * StateFlow no espera ninguna emisión async. */
+    val localMapFileExists: StateFlow<Boolean> = mapDownloadService.state
+        .map(::isLocalMapReady)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), isLocalMapReady(mapDownloadService.state.value))
+
+    private val _offlineMapCorruptedMessage = MutableStateFlow<String?>(null)
+    val offlineMapCorruptedMessage: StateFlow<String?> = _offlineMapCorruptedMessage.asStateFlow()
+
+    /** LiveMapScreen llama esto cuando MapLibre reporta un fallo de carga con el tier 1 (`.pmtiles`
+     * local) activo — el archivo se asume corrupto: se borra (la cascada cae a ráster/servidor
+     * sola, vía [localMapFileExists]) y se avisa para que el usuario re-descargue en Ajustes. */
+    fun onOfflineMapLoadFailed() {
+        mapDownloadService.delete()
+        _offlineMapCorruptedMessage.value = "Mapa offline dañado — re-descargalo en Ajustes"
+    }
+
+    fun clearOfflineMapCorruptedMessage() {
+        _offlineMapCorruptedMessage.value = null
+    }
+
     override fun onCleared() {
         locationProvider.stop()
     }
@@ -642,3 +670,5 @@ class LiveMapViewModel @Inject constructor(
         const val PEER_STALE_CHECK_MS = 10_000L
     }
 }
+
+private fun isLocalMapReady(state: MapDownloadState): Boolean = state is MapDownloadState.Idle && state.exists

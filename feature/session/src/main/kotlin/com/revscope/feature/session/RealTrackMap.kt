@@ -18,6 +18,7 @@ import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.maps.boundsOf
 import com.revscope.core.maps.physicalPxToDp
+import com.revscope.core.maps.readMapLayersAsset
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
@@ -31,6 +32,7 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
+import java.io.File
 
 private const val SEGMENT_SIZE = 8
 private val AttributionColor = Color(0xFF6B7089)
@@ -61,10 +63,19 @@ fun RealTrackMap(
     speeds: List<Float>,
     modifier: Modifier = Modifier,
 ) {
-    val density = LocalContext.current.resources.displayMetrics.density
-    // Sin extracto vectorial propio todavía: el tier ráster mantiene las mismas calles que
-    // mostraba osmdroid. El replay de un viaje no necesita modo oscuro.
-    val styleJson = remember { MapStyleProvider.styleJson(tilesUrl = null, dark = false) }
+    val context = LocalContext.current
+    val density = context.resources.displayMetrics.density
+    // Mismo tier local que LiveMapScreen (T5): si el .pmtiles de Colombia ya está descargado,
+    // el replay usa el estilo vectorial completo; si no, cae al ráster de OSM de siempre. Esta
+    // pantalla es puntual (un viaje ya terminado) — a diferencia de LiveMapScreen no observa
+    // MapDownloadService en vivo, solo lee el disco una vez al componer (aceptado: T5 plan).
+    // El replay de un viaje no necesita modo oscuro.
+    val styleJson = remember {
+        val localFile = File(context.filesDir, "maps/${MapStyleProvider.PMTILES_FILE_NAME}")
+        val tilesUrl = MapStyleProvider.tilesUrl(localFile, null)
+        val layersJson = readMapLayersAsset(context, dark = false)
+        MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = false, layersJson = layersJson)
+    }
 
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleEpoch by remember { mutableStateOf(0) }

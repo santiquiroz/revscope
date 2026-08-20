@@ -63,6 +63,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
+import com.revscope.core.maps.readMapLayersAsset
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.social.RoomClient
@@ -83,6 +84,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.gestures.StandardScaleGestureDetector
 import org.maplibre.android.maps.MapLibreMap
+import java.io.File
 
 private val AttributionColor = Color(0xFF6B7089)
 
@@ -134,6 +136,8 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val initialCenter by viewModel.initialCenter.collectAsState()
     val darkTiles by viewModel.darkTiles.collectAsState()
     val nightMode by viewModel.nightMode.collectAsState()
+    val localMapFileExists by viewModel.localMapFileExists.collectAsState()
+    val offlineMapCorruptedMessage by viewModel.offlineMapCorruptedMessage.collectAsState()
     // Durante un viaje la ruta viva ya alimenta puck y efectos a ~1 Hz; pasar también el fix
     // del provider duplicaría los re-writes del dataset completo sin cambio visual (T4 lo enmascara).
     val standaloneFix = if (route.isEmpty()) liveFix else null
@@ -192,10 +196,16 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         if (navigation != null) followEnabled = true
     }
 
-    // Fase 4 llena esto con el .pmtiles local o el del servidor; hasta entonces cae al tier
-    // ráster de OSM, que son los mismos tiles que servía osmdroid.
-    val styleJson = remember(darkTiles) {
-        MapStyleProvider.styleJson(tilesUrl = null, dark = darkTiles)
+    // Tier server sigue sin wirear (el server hoy no hospeda tiles): tilesUrl solo considera el
+    // .pmtiles local, gobernado por localMapFileExists (MapDownloadService, vía el VM). Cuando
+    // el archivo aparece o desaparece (descarga completa / borrado por corrupción) este remember
+    // recalcula y MapLibreMapView vuelve a cargar el estilo — mismo mecanismo que ya usa el
+    // cambio de tema claro/oscuro.
+    val localMapFile = remember(context) { File(context.filesDir, "maps/${MapStyleProvider.PMTILES_FILE_NAME}") }
+    val layersJson = remember(darkTiles) { readMapLayersAsset(context, dark = darkTiles) }
+    val styleJson = remember(localMapFileExists, darkTiles, layersJson) {
+        val tilesUrl = MapStyleProvider.tilesUrl(if (localMapFileExists) localMapFile else null, null)
+        MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = darkTiles, layersJson = layersJson)
     }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleEpoch by remember { mutableStateOf(0) }
@@ -222,6 +232,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         MapLibreMapView(
             modifier = Modifier.fillMaxSize(),
             styleJson = styleJson,
+            onDidFailLoadingMap = { _ ->
+                // Solo tratamos esto como corrupción del .pmtiles con el tier 1 realmente
+                // activo — un fallo de red del ráster/sprite remoto no debe borrar nada.
+                if (localMapFileExists) viewModel.onOfflineMapLoadFailed()
+            },
         ) { map, style ->
             installLiveMapLayers(style, density, data)
             mapRef = map
@@ -506,23 +521,17 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             )
         }
 
-        navigationError?.let { message ->
-            Surface(
-                color = Color(0xF2121218),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 90.dp),
+        if (offlineMapCorruptedMessage != null || navigationError != null) {
+            Column(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 90.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        message,
-                        color = Color(0xFFE8FF00),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
-                    )
-                    IconButton(onClick = viewModel::clearNavigationError) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
-                    }
+                offlineMapCorruptedMessage?.let { message ->
+                    ErrorBanner(message, onDismiss = viewModel::clearOfflineMapCorruptedMessage)
+                    if (navigationError != null) Spacer(Modifier.height(8.dp))
+                }
+                navigationError?.let { message ->
+                    ErrorBanner(message, onDismiss = viewModel::clearNavigationError)
                 }
             }
         }
@@ -803,6 +812,29 @@ private fun formatRouteSummary(route: NavigationRoute): String {
     val distance = if (km >= 10) "%.0f km".format(km) else "%.1f km".format(km)
     val time = if (minutes >= 60) "${minutes / 60} h ${minutes % 60} min" else "$minutes min"
     return "$distance · $time"
+}
+
+/** Aviso inline dismisseable — mismo look para el error de navegación y el de mapa offline
+ * corrupto, así ambos pueden convivir apilados sin duplicar el Surface/Row/Text/IconButton. */
+@Composable
+private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
+    Surface(
+        color = Color(0xF2121218),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                message,
+                color = Color(0xFFE8FF00),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
+            }
+        }
+    }
 }
 
 /** Rumbo actual a partir de los dos últimos puntos de la ruta viva (0 = norte). */
