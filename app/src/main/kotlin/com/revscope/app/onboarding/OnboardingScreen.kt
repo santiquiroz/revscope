@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
@@ -27,7 +31,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,9 +59,102 @@ private val DeniedColor = Color(0xFFFF4D4D)
 
 @Composable
 fun OnboardingScreen(
-    onFinished: () -> Unit,
+    onFinished: (goToAdapterScan: Boolean) -> Unit,
     vm: OnboardingViewModel = hiltViewModel(),
 ) {
+    val step by vm.step.collectAsState()
+
+    Scaffold(containerColor = BgColor) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(24.dp),
+        ) {
+            StepIndicator(step)
+            Box(Modifier.weight(1f)) {
+                when (step) {
+                    0 -> Step0Permissions()
+                    1 -> StepPlaceholder("Tu vehículo") // Task 2
+                    2 -> StepPlaceholder("Adaptador OBD2") // Task 3
+                    3 -> StepPlaceholder("Inteligencia") // Task 4
+                    else -> Step4Done()
+                }
+            }
+            WizardBar(
+                step = step,
+                onBack = vm::back,
+                onSkip = vm::next,
+                onNext = {
+                    if (step < OnboardingViewModel.TOTAL_STEPS - 1) {
+                        vm.next()
+                    } else {
+                        vm.markDone()
+                        onFinished(false)
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepIndicator(step: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        repeat(OnboardingViewModel.TOTAL_STEPS) { index ->
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(if (index == step) AccentColor else TextMutedColor, CircleShape),
+            )
+        }
+    }
+}
+
+@Composable
+private fun WizardBar(
+    step: Int,
+    onBack: () -> Unit,
+    onSkip: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (step > 0) {
+            TextButton(onClick = onBack) {
+                Text("Atrás", color = TextMutedColor)
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        if (step < OnboardingViewModel.TOTAL_STEPS - 1) {
+            TextButton(onClick = onSkip) {
+                Text("Saltar", color = TextMutedColor)
+            }
+            Spacer(Modifier.width(8.dp))
+        }
+        Button(
+            onClick = onNext,
+            colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+            modifier = Modifier.height(48.dp),
+        ) {
+            Text(
+                if (step == OnboardingViewModel.TOTAL_STEPS - 1) "Empezar" else "Siguiente",
+                color = BgColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun Step0Permissions() {
     val context = LocalContext.current
 
     var locationGranted by remember { mutableStateOf(isLocationGranted(context)) }
@@ -74,61 +173,63 @@ fun OnboardingScreen(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results -> bluetoothGranted = results.values.all { it } }
 
-    Scaffold(containerColor = BgColor) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Spacer(Modifier.height(16.dp))
-            Text("Bienvenido a RevScope", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(
-                "Necesitamos estos permisos para que la app funcione bien. " +
-                    "Puedes cambiarlos luego en Ajustes del sistema.",
-                color = TextMutedColor,
-                fontSize = 14.sp,
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Text("Bienvenido a RevScope", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Necesitamos estos permisos para que la app funcione bien. " +
+                "Puedes cambiarlos luego en Ajustes del sistema.",
+            color = TextMutedColor,
+            fontSize = 14.sp,
+        )
 
-            Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(8.dp))
 
-            PermissionCard(
-                icon = Icons.Default.LocationOn,
-                title = "Ubicación",
-                rationale = "Para grabar tus rutas y avisarte de radares.",
-                granted = locationGranted,
-                onRequest = { locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
-            )
+        PermissionCard(
+            icon = Icons.Default.LocationOn,
+            title = "Ubicación",
+            rationale = "Para grabar tus rutas y avisarte de radares.",
+            granted = locationGranted,
+            onRequest = { locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+        )
 
-            PermissionCard(
-                icon = Icons.Default.Notifications,
-                title = "Notificaciones",
-                rationale = "Para el resumen de viaje y de pico y placa.",
-                granted = notificationsGranted,
-                onRequest = { notificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
-            )
+        PermissionCard(
+            icon = Icons.Default.Notifications,
+            title = "Notificaciones",
+            rationale = "Para el resumen de viaje y de pico y placa.",
+            granted = notificationsGranted,
+            onRequest = { notificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+        )
 
-            PermissionCard(
-                icon = Icons.Default.Bluetooth,
-                title = "Bluetooth",
-                rationale = "Para conectar el adaptador OBD2.",
-                granted = bluetoothGranted,
-                onRequest = { bluetoothLauncher.launch(bluetoothPermissions()) },
-            )
+        PermissionCard(
+            icon = Icons.Default.Bluetooth,
+            title = "Bluetooth",
+            rationale = "Para conectar el adaptador OBD2.",
+            granted = bluetoothGranted,
+            onRequest = { bluetoothLauncher.launch(bluetoothPermissions()) },
+        )
+    }
+}
 
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    vm.markDone()
-                    onFinished()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Empezar", color = BgColor, fontWeight = FontWeight.SemiBold)
-            }
-        }
+@Composable
+private fun StepPlaceholder(title: String) {
+    Column {
+        Spacer(Modifier.height(16.dp))
+        Text(title, color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun Step4Done() {
+    Column {
+        Spacer(Modifier.height(16.dp))
+        Text("Listo", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Podés cambiar todo esto después en Ajustes.",
+            color = TextMutedColor,
+            fontSize = 14.sp,
+        )
     }
 }
 

@@ -16,7 +16,7 @@ import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * Decide si el primer arranque debe mostrar la pantalla de permisos.
+ * Decide si el primer arranque debe mostrar el wizard de onboarding.
  * `onboardingDone` empieza en null (aún cargando) para que el NavGraph no componga
  * su startDestination hasta conocer el valor persistido.
  */
@@ -43,4 +43,22 @@ class OnboardingViewModel @Inject constructor(
                 .onFailure { Timber.w(it, "OnboardingViewModel: failed to persist onboarding flag") }
         }
     }
+
+    private val _step = MutableStateFlow(0)
+    val step: StateFlow<Int> = _step.asStateFlow()
+
+    fun next() { _step.value = (_step.value + 1).coerceAtMost(TOTAL_STEPS - 1) }
+
+    fun back() { _step.value = (_step.value - 1).coerceAtLeast(0) }
+
+    fun goTo(step: Int) { _step.value = step.coerceIn(0, TOTAL_STEPS - 1) }
+
+    fun setGpsOnlyMode(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.GPS_ONLY_MODE] = enabled } }
+                .onFailure { Timber.w(it, "OnboardingViewModel: failed to persist gps-only mode") }
+        }
+    }
+
+    companion object { const val TOTAL_STEPS = 5 }
 }

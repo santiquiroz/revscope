@@ -240,8 +240,11 @@ object PreferencesKeys {
 
     // ── Onboarding ───────────────────────────────────────────────────────────
 
-    /** Se completó la pantalla de permisos del primer arranque (default false) */
+    /** Se completó el wizard de onboarding del primer arranque (default false) */
     val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+
+    /** Modo solo-GPS elegido en el wizard de onboarding — sin adaptador OBD2 (default false) */
+    val GPS_ONLY_MODE = booleanPreferencesKey("gps_only_mode")
 
     // ── Detección de caída ───────────────────────────────────────────────────
 
