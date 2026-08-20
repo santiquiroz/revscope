@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.ObdSessionManager
@@ -284,6 +286,7 @@ fun DashboardScreen(
             RpmGauge(
                 rpm = rpm,
                 maxRpm = gaugeMaxRpm,
+                redlineRpm = redline.toInt(),
                 modifier = Modifier
                     .padding(vertical = 8.dp)
                     .then(dimmedIfGpsTrip(isGpsTrip)),
@@ -308,7 +311,10 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    SpeedGauge(speed = speed)
+                    SpeedGauge(
+                        speed = speed,
+                        maxSpeed = if (activeProfile?.vehicleType == VehicleType.MOTORCYCLE) 299 else 260,
+                    )
                     if (connectionState is ConnectionState.Connected) {
                         Spacer(modifier = Modifier.height(4.dp))
                         SpeedSourceChip(

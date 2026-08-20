@@ -15,6 +15,7 @@ import java.util.Locale
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.R
 import com.revscope.core.obd.legal.CityRulesFormatter
 import com.revscope.core.obd.legal.PicoYPlacaEngine
@@ -30,7 +31,8 @@ import javax.inject.Singleton
 
 private const val DEFAULT_TEMP_MAX_C = 105
 private const val DEFAULT_VOLTAGE_MIN = 11.8f
-private const val DEFAULT_REDLINE_RPM = 10_500
+private const val CAR_DEFAULT_REDLINE_RPM = 6_500
+private const val MOTORCYCLE_DEFAULT_REDLINE_RPM = 10_500
 private const val ALERT_COOLDOWN_MS = 30_000L
 private const val REDLINE_COOLDOWN_MS = 10_000L
 private const val TONE_VOLUME = 90
@@ -40,6 +42,10 @@ private const val LOCAL_INFO_CHANNEL_ID = "revscope_local_info"
 private const val LOCAL_INFO_NOTIFICATION_ID = 2001
 private const val AI_RULES_NOTIFICATION_ID = 2002
 private const val ZONE_BRIEF_NOTIFICATION_ID = 2003
+
+/** Redline fallback when there's no per-profile value — moto redlines run much hotter than car. */
+private fun defaultRedlineRpm(vehicleType: VehicleType): Int =
+    if (vehicleType == VehicleType.MOTORCYCLE) MOTORCYCLE_DEFAULT_REDLINE_RPM else CAR_DEFAULT_REDLINE_RPM
 
 /**
  * Turns telemetry readings into audible/haptic alerts. Audio goes out on the media
@@ -69,7 +75,10 @@ class AlertsEngine @Inject constructor(
     @Volatile private var enabled = true
     @Volatile private var tempMaxC = DEFAULT_TEMP_MAX_C
     @Volatile private var voltageMin = DEFAULT_VOLTAGE_MIN
-    @Volatile private var redlineRpm = DEFAULT_REDLINE_RPM
+
+    /** Type of the last profile seen through [setRedlineOverride] — drives the redline fallback. */
+    @Volatile private var activeVehicleType = VehicleType.CAR
+    @Volatile private var redlineRpm = defaultRedlineRpm(activeVehicleType)
 
     /** Active vehicle profile's redline — takes precedence over the global setting. */
     @Volatile private var redlineOverride: Int? = null
@@ -111,9 +120,10 @@ class AlertsEngine @Inject constructor(
 
     val currentRedlineRpm: Int get() = redlineOverride ?: redlineRpm
 
-    fun setRedlineOverride(rpm: Int?) {
+    fun setRedlineOverride(rpm: Int?, vehicleType: VehicleType = VehicleType.CAR) {
         redlineOverride = rpm
-        Timber.i("AlertsEngine: redline override = $rpm")
+        activeVehicleType = vehicleType
+        Timber.i("AlertsEngine: redline override = $rpm ($vehicleType)")
     }
 
     suspend fun reloadThresholds() {
@@ -122,7 +132,7 @@ class AlertsEngine @Inject constructor(
             enabled = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
             tempMaxC = prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: DEFAULT_TEMP_MAX_C
             voltageMin = prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: DEFAULT_VOLTAGE_MIN
-            redlineRpm = prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: DEFAULT_REDLINE_RPM
+            redlineRpm = prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: defaultRedlineRpm(activeVehicleType)
             ttsEnabled = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
             customRules = CustomAlertRules.parse(prefs[PreferencesKeys.CUSTOM_ALERTS_JSON].orEmpty())
             voiceTemperature = prefs[PreferencesKeys.VOICE_TEMPERATURE] ?: true

@@ -10,6 +10,8 @@ import com.revscope.core.data.db.dao.TelemetryDao
 import com.revscope.core.data.db.entities.GpsPointEntity
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.obd.trip.EcoScoreCalculator
 import com.revscope.core.obd.trip.FuelCostCalculator
@@ -106,15 +108,21 @@ class SessionAggregator(
         val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
             .map { it.timestamp to it.value.toDouble() }
         if (accelLongitudinal.isEmpty() && rpmPoints.isEmpty()) return null
-        val redlineRpm = activeProfileProvider()?.redlineRpm ?: DEFAULT_REDLINE_RPM
+        val profile = activeProfileProvider()
+        val redlineRpm = profile?.redlineRpm ?: defaultRedlineRpm(profile?.vehicleType ?: VehicleType.CAR)
         return EcoScoreCalculator.calculate(accelLongitudinal, rpmPoints, redlineRpm).score
     }
 
     companion object {
         private const val PID_FUEL_RATE = "5E"
         private const val PID_MAF = "10"
-        private const val DEFAULT_REDLINE_RPM = 10_500
+        private const val CAR_DEFAULT_REDLINE_RPM = 6_500
+        private const val MOTORCYCLE_DEFAULT_REDLINE_RPM = 10_500
         private const val EARTH_GRAVITY_MS2 = 9.80665
+
+        /** Redline fallback when there's no active profile — no profile means no known type, so CAR. */
+        private fun defaultRedlineRpm(vehicleType: VehicleType): Int =
+            if (vehicleType == VehicleType.MOTORCYCLE) MOTORCYCLE_DEFAULT_REDLINE_RPM else CAR_DEFAULT_REDLINE_RPM
 
         /** Pure GPS-track fallback for [resolveTripMotion] — no I/O, unit-testable directly. */
         internal fun gpsFallbackMotion(gpsPoints: List<GpsPointEntity>): TripMotion =

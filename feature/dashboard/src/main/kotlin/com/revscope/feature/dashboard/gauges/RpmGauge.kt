@@ -32,6 +32,7 @@ private const val ARC_SWEEP = 270f
 fun RpmGauge(
     rpm: Float,
     maxRpm: Int,
+    redlineRpm: Int,
     modifier: Modifier = Modifier,
     size: Dp = 220.dp,
 ) {
@@ -60,9 +61,12 @@ fun RpmGauge(
                 style = Stroke(width = stroke, cap = StrokeCap.Round)
             )
 
-            val greenSweep = ARC_SWEEP * 0.60f
-            val orangeSweep = ARC_SWEEP * 0.25f
-            val redSweep = ARC_SWEEP * 0.15f
+            val redFrac = (redlineRpm.toFloat() / maxRpm).coerceIn(0.1f, 0.98f)
+            // La banda naranja anuncia la roja: 10% del arco antes del redline real.
+            val orangeFrac = (redFrac - 0.10f).coerceAtLeast(0.05f)
+            val greenSweep = ARC_SWEEP * orangeFrac
+            val orangeSweep = ARC_SWEEP * (redFrac - orangeFrac)
+            val redSweep = ARC_SWEEP * (1f - redFrac)
 
             drawArc(
                 color = RevScopeColors.Success,
@@ -112,8 +116,8 @@ fun RpmGauge(
             // Center dot
             drawCircle(color = RevScopeColors.Accent, radius = 6.dp.toPx(), center = center)
 
-            // Redline tick at 85% (start of danger zone)
-            val redlineAngleDeg = ARC_START + 0.85f * ARC_SWEEP
+            // Redline tick at the real redline (start of danger zone)
+            val redlineAngleDeg = ARC_START + redFrac * ARC_SWEEP
             val redlineAngleRad = Math.toRadians(redlineAngleDeg.toDouble())
             val tickOuter = radius + stroke / 2f
             val tickInner = radius - stroke / 2f
