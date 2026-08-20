@@ -39,6 +39,10 @@ class LiveRouteHolder internal constructor(
     private val _lastSpeedKmh = MutableStateFlow(0f)
     val lastSpeedKmh: StateFlow<Float> = _lastSpeedKmh.asStateFlow()
 
+    // Último rumbo GPS conocido — alimenta el ícono direccional de mi pin en la sala.
+    private val _lastHeadingDeg = MutableStateFlow<Double?>(null)
+    val lastHeadingDeg: StateFlow<Double?> = _lastHeadingDeg.asStateFlow()
+
     private var lastSnapshotMs = 0L
 
     @Synchronized
@@ -59,6 +63,10 @@ class LiveRouteHolder internal constructor(
         _lastSpeedKmh.value = speedKmh
     }
 
+    fun updateHeading(headingDeg: Double?) {
+        _lastHeadingDeg.value = headingDeg
+    }
+
     @Synchronized
     fun clear() {
         route.clear()
@@ -66,6 +74,7 @@ class LiveRouteHolder internal constructor(
         _lastPoint.value = null
         _revision.value = 0L
         _lastSpeedKmh.value = 0f
+        _lastHeadingDeg.value = null
         lastSnapshotMs = 0L
     }
 

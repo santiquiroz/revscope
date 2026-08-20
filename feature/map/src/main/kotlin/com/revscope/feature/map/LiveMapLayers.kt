@@ -3,6 +3,7 @@ package com.revscope.feature.map
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.maps.geodesicCircle
@@ -22,6 +23,7 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
+import kotlin.math.roundToInt
 
 // Anchos heredados de osmdroid, donde strokeWidth eran píxeles FÍSICOS.
 private const val LIVE_ROUTE_PHYSICAL_PX = 8f
@@ -37,21 +39,27 @@ private const val LYR_CIRCLES_FILL = "lyr-circulos-radar-relleno"
 private const val LYR_CIRCLES_LINE = "lyr-circulos-radar-borde"
 private const val SRC_MARKERS = "src-marcadores"
 private const val LYR_MARKERS = "lyr-marcadores"
+private const val LYR_PEER_LABELS = "peer-labels"
 private const val SRC_LIVE = "src-ruta-viva"
 private const val LYR_LIVE = "lyr-ruta-viva"
 
 private const val PROP_STATE = "estado"
 private const val PROP_KIND = "tipo"
+private const val PROP_HEADING = "heading"
+private const val PROP_LABEL = "label"
 private const val STATE_TARGET = "objetivo"
 private const val STATE_NORMAL = "normal"
 private const val STATE_DIMMED = "atenuado"
 
 private const val ICON_DESTINATION = "icono-destino"
 private const val ICON_PEER = "icono-peer"
+private const val ICON_PEER_RUMBO = "icono-peer-rumbo"
 private const val ICON_POTHOLE = "icono-hueco"
 private const val ICON_CAMERA = "icono-radar"
 private const val ICON_CAMERA_TARGET = "icono-radar-objetivo"
 private const val ICON_ME = "icono-yo"
+
+private const val TEXT_FONT = "Noto Sans Regular"
 
 /** Datos que las capas dibujan. Un solo objeto para no arrastrar ocho parámetros. */
 data class LiveMapData(
@@ -137,16 +145,21 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
             PropertyFactory.iconImage(Expression.get(PROP_KIND)),
             PropertyFactory.iconAllowOverlap(true),
             PropertyFactory.iconIgnorePlacement(true),
-            // Los huecos y el marcador propio van centrados en el punto; el resto anclados
-            // abajo, como en osmdroid.
+            // Los huecos, el marcador propio y la flecha de rumbo van centrados en el punto
+            // (la flecha gira sobre su propio eje con iconRotate); el resto anclados abajo,
+            // como en osmdroid.
             PropertyFactory.iconAnchor(
                 Expression.match(
                     Expression.get(PROP_KIND),
                     Expression.literal(Property.ICON_ANCHOR_BOTTOM),
                     Expression.stop(ICON_POTHOLE, Expression.literal(Property.ICON_ANCHOR_CENTER)),
                     Expression.stop(ICON_ME, Expression.literal(Property.ICON_ANCHOR_CENTER)),
+                    Expression.stop(ICON_PEER_RUMBO, Expression.literal(Property.ICON_ANCHOR_CENTER)),
                 ),
             ),
+            // Property "heading" en grados (0 en marcadores sin rumbo, inofensivo: solo la
+            // flecha de rumbo es asimétrica y por lo tanto sensible a la rotación).
+            PropertyFactory.iconRotate(Expression.get(PROP_HEADING)),
             PropertyFactory.iconOpacity(
                 Expression.match(
                     Expression.get(PROP_KIND),
@@ -156,6 +169,22 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
                 ),
             ),
         ),
+    )
+
+    style.addLayer(
+        SymbolLayer(LYR_PEER_LABELS, SRC_MARKERS).withProperties(
+            PropertyFactory.textField(Expression.get(PROP_LABEL)),
+            PropertyFactory.textFont(arrayOf(TEXT_FONT)),
+            PropertyFactory.textSize(12f),
+            // Encima del pin/flecha del peer, no encima de su propio anclaje del marcador.
+            PropertyFactory.textOffset(arrayOf(0f, -2.2f)),
+            PropertyFactory.textAnchor(Property.TEXT_ANCHOR_BOTTOM),
+            PropertyFactory.textColor("#FFFFFF"),
+            PropertyFactory.textHaloColor("#0A0A0F"),
+            PropertyFactory.textHaloWidth(1.5f),
+            PropertyFactory.textAllowOverlap(true),
+            PropertyFactory.textIgnorePlacement(true),
+        ).withFilter(Expression.has(PROP_LABEL)),
     )
 
     style.addSource(GeoJsonSource(SRC_LIVE, liveGeometry(data.route)))
@@ -219,7 +248,10 @@ private fun markerFeatures(data: LiveMapData): FeatureCollection {
     data.destination?.let {
         features += marker(it.lat, it.lon, ICON_DESTINATION)
     }
-    data.peers.forEach { features += marker(it.lat, it.lon, ICON_PEER) }
+    data.peers.forEach { peer ->
+        val icon = if (peer.headingDeg != null) ICON_PEER_RUMBO else ICON_PEER
+        features += marker(peer.lat, peer.lon, icon, heading = peer.headingDeg ?: 0.0, label = peerLabel(peer))
+    }
     data.potholes.forEach { features += marker(it.latitude, it.longitude, ICON_POTHOLE) }
     data.cameras.forEach { cam ->
         val icon = if (cam.osmId == data.approachingId) ICON_CAMERA_TARGET else ICON_CAMERA
@@ -231,8 +263,24 @@ private fun markerFeatures(data: LiveMapData): FeatureCollection {
     return FeatureCollection.fromFeatures(features)
 }
 
-private fun marker(lat: Double, lon: Double, kind: String): Feature =
-    Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply { addStringProperty(PROP_KIND, kind) }
+private fun marker(
+    lat: Double,
+    lon: Double,
+    kind: String,
+    heading: Double = 0.0,
+    label: String? = null,
+): Feature =
+    Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply {
+        addStringProperty(PROP_KIND, kind)
+        addNumberProperty(PROP_HEADING, heading)
+        label?.let { addStringProperty(PROP_LABEL, it) }
+    }
+
+/** "$rider" solo, o "$rider\n$speed km/h" cuando el peer reporta velocidad. */
+private fun peerLabel(peer: RoomClient.Peer): String {
+    val speedKmh = peer.speedKmh ?: return peer.rider
+    return "${peer.rider}\n${speedKmh.roundToInt()} km/h"
+}
 
 /**
  * Íconos dibujados en código: al salir osmdroid desaparecen sus drawables por defecto, y no
@@ -244,6 +292,7 @@ private fun marker(lat: Double, lon: Double, kind: String): Feature =
 private fun registerIcons(style: Style) {
     style.addImage(ICON_DESTINATION, pinBitmap(0xFF00E5FF.toInt()))
     style.addImage(ICON_PEER, pinBitmap(0xFFE8FF00.toInt()))
+    style.addImage(ICON_PEER_RUMBO, arrowBitmap(0xFFE8FF00.toInt()))
     style.addImage(ICON_POTHOLE, dotBitmap(0xFFFFA726.toInt()))
     style.addImage(ICON_CAMERA, pinBitmap(0xFFFF5252.toInt()))
     style.addImage(ICON_CAMERA_TARGET, pinBitmap(0xFFFF1744.toInt()))
@@ -268,6 +317,32 @@ private fun pinBitmap(color: Int): Bitmap {
     canvas.drawCircle(cx, radius + 3f, radius, border)
     // Punta hacia abajo: el anchor BOTTOM la deja sobre la coordenada real.
     canvas.drawCircle(cx, PIN_SIZE_PX - 4f, 3.5f, body)
+    return bmp
+}
+
+/** Flecha apuntando al norte (0°) en reposo: `iconRotate` gira en sentido horario, igual
+ *  convención que el rumbo GPS (0 = norte, 90 = este), así que la rotación queda directa. */
+private fun arrowBitmap(color: Int): Bitmap {
+    val bmp = Bitmap.createBitmap(PIN_SIZE_PX, PIN_SIZE_PX, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val body = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+    val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = 0xFF0A0A0F.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    val tip = 4f
+    val tail = PIN_SIZE_PX - 6f
+    val waist = PIN_SIZE_PX * 0.68f
+    val path = Path().apply {
+        moveTo(PIN_SIZE_PX / 2f, tip)
+        lineTo(tail, tail)
+        lineTo(PIN_SIZE_PX / 2f, waist)
+        lineTo(6f, tail)
+        close()
+    }
+    canvas.drawPath(path, body)
+    canvas.drawPath(path, border)
     return bmp
 }
 

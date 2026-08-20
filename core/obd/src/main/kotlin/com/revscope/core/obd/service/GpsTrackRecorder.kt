@@ -180,7 +180,10 @@ class GpsTrackRecorder(
         routeHolder?.append(location.latitude, location.longitude)
         routeHolder?.updateSpeed(point.speedKmh)
         onSpeed?.invoke(point.speedKmh)
-        if (location.hasBearing()) onBearing?.invoke(location.bearing)
+        if (location.hasBearing()) {
+            routeHolder?.updateHeading(location.bearing.toDouble())
+            onBearing?.invoke(location.bearing)
+        }
         navigation?.onFix(location.toNavigationFix())
     }
 

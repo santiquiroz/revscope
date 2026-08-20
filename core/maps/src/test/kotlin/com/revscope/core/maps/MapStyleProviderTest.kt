@@ -87,4 +87,22 @@ class MapStyleProviderTest {
         val oscuro = MapStyleProvider.styleJson("pmtiles://https://x/y.pmtiles", dark = true)
         assertNotEquals(claro, oscuro)
     }
+
+    @Test
+    fun `el estilo vectorial declara los glyphs para los labels de peers`() {
+        val json = MapStyleProvider.styleJson("pmtiles://https://x/y.pmtiles", dark = false)
+        assertTrue(json.contains("\"glyphs\": \"https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf\""))
+    }
+
+    @Test
+    fun `el estilo raster tambien declara los glyphs`() {
+        val json = MapStyleProvider.styleJson(null, dark = false)
+        assertTrue(json.contains("\"glyphs\""))
+    }
+
+    @Test
+    fun `el estilo solo-fondo tambien declara los glyphs`() {
+        val json = MapStyleProvider.styleJson(null, dark = false, rasterFallback = false)
+        assertTrue(json.contains("\"glyphs\""))
+    }
 }

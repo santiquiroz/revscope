@@ -180,7 +180,7 @@ class RoomClient @Inject constructor(
                     .put("lat", point.lat)
                     .put("lon", point.lon)
                     .put("speed_kmh", routeHolder.lastSpeedKmh.value.toDouble())
-                    .put("heading_deg", JSONObject.NULL) // T3 lo puebla
+                    .put("heading_deg", routeHolder.lastHeadingDeg.value ?: JSONObject.NULL)
                 ws.send(payload.toString())
             }
         }

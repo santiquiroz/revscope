@@ -26,6 +26,10 @@ object MapStyleProvider {
     private const val BACKGROUND_LIGHT = "#f8f4f0"
     private const val BACKGROUND_DARK = "#1c1c28"
 
+    // Fuente remota de glifos para textField (labels de peer-labels): sin red no cargan y las
+    // etiquetas simplemente no se dibujan — el pin sigue mostrándose, degradación aceptada.
+    private const val GLYPHS_URL = "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf"
+
     fun tilesUrl(localFile: File?, serverBaseUrl: String?): String? {
         if (localFile != null && localFile.isFile) {
             // MapLibre exige la URL interna completamente especificada.
@@ -56,6 +60,7 @@ object MapStyleProvider {
     private fun vectorStyle(tilesUrl: String, background: String): String = """
         {
           "version": 8,
+          "glyphs": "$GLYPHS_URL",
           "sources": { "protomaps": { "type": "vector", "url": "$tilesUrl" } },
           "layers": [
             { "id": "fondo", "type": "background",
@@ -78,6 +83,7 @@ object MapStyleProvider {
         return """
             {
               "version": 8,
+              "glyphs": "$GLYPHS_URL",
               "sources": {
                 "osm": {
                   "type": "raster",
@@ -100,6 +106,7 @@ object MapStyleProvider {
     private fun backgroundOnlyStyle(background: String): String = """
         {
           "version": 8,
+          "glyphs": "$GLYPHS_URL",
           "sources": { },
           "layers": [
             { "id": "fondo", "type": "background",
