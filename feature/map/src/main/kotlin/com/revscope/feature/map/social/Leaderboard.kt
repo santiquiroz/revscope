@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.telemetry.TripStatsCalculator
+import kotlin.math.ceil
 import kotlin.math.max
 
 private const val MIN_ETA_SPEED_KMH = 5.0
@@ -35,6 +37,7 @@ private val PanelBg = Color(0xE6121218)
 private val AccentYellow = Color(0xFFE8FF00)
 private val TextPrimary = Color(0xFFF0F0F8)
 private val TextMuted = Color(0xFF6B7089)
+private val DangerRed = Color(0xFFFF5252)
 
 /**
  * Cálculo puro de posiciones y ETAs de la sala respecto de un destino compartido. Sin
@@ -100,12 +103,34 @@ object RankingCalc {
         (remainingM / METERS_PER_KM) / max(speedKmh, MIN_ETA_SPEED_KMH) * MINUTES_PER_HOUR
 }
 
-/** Panel colapsable de posiciones en vivo de la sala respecto del destino compartido. */
+/**
+ * Cuenta regresiva de largada: pura función del reloj local, sin memoria propia — cualquier
+ * cliente que lea el mismo [startAtMs] dibuja el mismo número al mismo tiempo (spec F4, sin
+ * arbitraje de servidor).
+ */
+object RaceCountdown {
+    private const val VISIBLE_BEFORE_MS = 5_000L
+    private const val VISIBLE_AFTER_MS = 2_000L
+
+    /** null = ocultar overlay. 0 = mostrar "¡YA!". 1..5 = segundos restantes para largar. */
+    fun secondsToShow(startAtMs: Long, nowMs: Long): Int? {
+        val remainingMs = startAtMs - nowMs
+        if (remainingMs > VISIBLE_BEFORE_MS || remainingMs <= -VISIBLE_AFTER_MS) return null
+        return if (remainingMs <= 0) 0 else ceil(remainingMs / 1_000.0).toInt()
+    }
+}
+
+/** Panel colapsable de posiciones en vivo de la sala respecto del destino compartido. Pasa a
+ * modo carrera (posiciones prominentes + control de largada/detención) cuando [race] no es null. */
 @Composable
 fun Leaderboard(
     entries: List<RankingCalc.Entry>,
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
+    race: RoomClient.RaceState? = null,
+    selfRiderName: String = "",
+    onStartRace: () -> Unit = {},
+    onStopRace: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Surface(color = PanelBg, shape = RoundedCornerShape(8.dp), modifier = modifier) {
@@ -127,31 +152,68 @@ fun Leaderboard(
                     tint = AccentYellow,
                 )
             }
+            RaceControlRow(
+                race = race,
+                selfRiderName = selfRiderName,
+                onStartRace = onStartRace,
+                onStopRace = onStopRace,
+            )
             if (expanded) {
                 Spacer(Modifier.width(4.dp))
-                entries.forEachIndexed { index, entry -> LeaderboardRow(position = index + 1, entry = entry) }
+                entries.forEachIndexed { index, entry ->
+                    LeaderboardRow(position = index + 1, entry = entry, raceMode = race != null)
+                }
             }
         }
     }
 }
 
+/** Fila de control de carrera: largar (cualquiera), detener (solo quien largó) o estado pasivo. */
 @Composable
-private fun LeaderboardRow(position: Int, entry: RankingCalc.Entry) {
+private fun RaceControlRow(
+    race: RoomClient.RaceState?,
+    selfRiderName: String,
+    onStartRace: () -> Unit,
+    onStopRace: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+    ) {
+        when {
+            race == null -> TextButton(onClick = onStartRace) {
+                Text("🏁 Largar carrera", color = AccentYellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            race.startedBy == selfRiderName -> TextButton(onClick = onStopRace) {
+                Text("Detener carrera", color = DangerRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            else -> Text(
+                "Carrera en curso · largada por ${race.startedBy}",
+                color = TextMuted,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LeaderboardRow(position: Int, entry: RankingCalc.Entry, raceMode: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Text(
-            "$position.",
+            if (raceMode) positionBadge(position) else "$position.",
             color = if (entry.isSelf) AccentYellow else TextMuted,
-            fontSize = 12.sp,
+            fontSize = if (raceMode) 16.sp else 12.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.width(20.dp),
+            modifier = Modifier.width(if (raceMode) 28.dp else 20.dp),
         )
         Text(
             entry.name,
             color = if (entry.isSelf) AccentYellow else TextPrimary,
-            fontSize = 12.sp,
+            fontSize = if (raceMode) 14.sp else 12.sp,
             fontWeight = if (entry.isSelf) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
@@ -159,6 +221,29 @@ private fun LeaderboardRow(position: Int, entry: RankingCalc.Entry) {
             if (entry.arrived) "Llegó ✓" else "${formatRemaining(entry.remainingM)} · ${formatEta(entry.etaMin)}",
             color = TextMuted,
             fontSize = 11.sp,
+        )
+    }
+}
+
+/** Medalla para el podio en modo carrera; el resto sigue con el número plano. */
+private fun positionBadge(position: Int): String = when (position) {
+    1 -> "🥇"
+    2 -> "🥈"
+    3 -> "🥉"
+    else -> "$position."
+}
+
+/** Overlay grande y centrado de cuenta regresiva de largada — [secondsToShow] ya resuelto
+ * por [RaceCountdown.secondsToShow] a partir del reloj local. */
+@Composable
+fun RaceCountdownOverlay(secondsToShow: Int, modifier: Modifier = Modifier) {
+    Surface(color = Color(0xCC0A0A0F), shape = RoundedCornerShape(16.dp), modifier = modifier) {
+        Text(
+            if (secondsToShow > 0) "$secondsToShow" else "¡YA!",
+            color = AccentYellow,
+            fontSize = 56.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 16.dp),
         )
     }
 }

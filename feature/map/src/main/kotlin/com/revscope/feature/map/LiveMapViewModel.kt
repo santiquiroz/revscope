@@ -26,15 +26,18 @@ import com.revscope.core.navigation.LatLon
 import com.revscope.core.navigation.NavigationController
 import com.revscope.core.navigation.NavigationRoute
 import com.revscope.core.navigation.NavigationState
+import com.revscope.core.navigation.NavigationVoice
 import com.revscope.feature.map.location.MapLocationProvider
 import com.revscope.feature.map.routing.OsrmRouteFetcher
 import com.revscope.feature.map.routing.RerouteDecider
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
+import com.revscope.feature.map.social.RaceCountdown
 import com.revscope.feature.map.social.RankingCalc
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -44,12 +47,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LiveMapViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
@@ -59,6 +65,10 @@ class LiveMapViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
     cameraAlerter: SpeedCameraAlerter,
     private val roomClient: RoomClient,
+    // Reusa el mismo canal que la navegación (AlertsEngine, vía NavigationVoiceModule) para
+    // el anuncio de llegada de carrera — es una interfaz de un solo método ya provista a nivel
+    // singleton, así que inyectarla directo acá es más barato que abrir un puerto nuevo en el VM.
+    private val navigationVoice: NavigationVoice,
     private val navigationController: NavigationController,
     private val locationProvider: MapLocationProvider,
     private val coverageTracker: CameraCoverageTracker,
@@ -173,6 +183,53 @@ class LiveMapViewModel @Inject constructor(
             dest = dest,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // ── Carreras de sala (F4) ────────────────────────────────────────────────
+
+    fun startRace() = roomClient.startRace()
+
+    fun stopRace() = roomClient.stopRace()
+
+    /** Tick liviano para el countdown — RaceCountdown.secondsToShow cambia de a 1 s, pero
+     * muestrear a 250 ms evita un "salto" visible al cruzar cada segundo. */
+    private val raceClockTick = flow {
+        while (true) {
+            emit(Unit)
+            delay(RACE_CLOCK_TICK_MS)
+        }
+    }
+
+    /** null = sin overlay. 0 = "¡YA!". 1..5 = segundos restantes para la largada. flatMapLatest
+     * sobre roomState: sin carrera no hay reloj corriendo, así que no se recomputa cada 250 ms
+     * durante toda la sesión de mapa — solo mientras roomState.race no sea null. */
+    val raceCountdown: StateFlow<Int?> = roomState.flatMapLatest { state ->
+        val race = state.race ?: return@flatMapLatest flowOf(null)
+        raceClockTick.map { RaceCountdown.secondsToShow(race.startAtMs, System.currentTimeMillis()) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // "Llegaste, posición N" es estado de ESTA sesión de UI (no de RoomClient/RankingCalc, que
+    // son puros): igual que milAnnouncedThisSession en AlertsEngine, un flag simple evita
+    // repetir el anuncio en cada recomputación del ranking mientras la carrera sigue activa.
+    private var wasSelfArrived = false
+    private var arrivalAnnouncedForRaceKey: Long? = null
+
+    /** [race] llegado en null resetea el flag de "ya llegué" para la próxima carrera; el índice
+     * propio en [entries] al momento del cruce false→true es la posición anunciada. */
+    private fun maybeAnnounceArrival(entries: List<RankingCalc.Entry>, race: RoomClient.RaceState?) {
+        if (race == null) {
+            wasSelfArrived = false
+            arrivalAnnouncedForRaceKey = null
+            return
+        }
+        val selfIndex = entries.indexOfFirst { it.isSelf }
+        if (selfIndex < 0) return
+        val arrived = entries[selfIndex].arrived
+        val justArrived = arrived && !wasSelfArrived
+        wasSelfArrived = arrived
+        if (!justArrived || arrivalAnnouncedForRaceKey == race.startAtMs) return
+        arrivalAnnouncedForRaceKey = race.startAtMs
+        navigationVoice.say("Llegaste, posición ${selfIndex + 1}")
+    }
 
     private val _roomBusy = MutableStateFlow(false)
     val roomBusy: StateFlow<Boolean> = _roomBusy.asStateFlow()
@@ -463,10 +520,15 @@ class LiveMapViewModel @Inject constructor(
                 maybeReroute(state)
             }
         }
+        viewModelScope.launch {
+            combine(ranking, roomState) { entries, state -> entries to state.race }
+                .collect { (entries, race) -> maybeAnnounceArrival(entries, race) }
+        }
     }
 
     private companion object {
         const val SEARCH_DEBOUNCE_MS = 350L
         const val MINUTE_TICK_MS = 60_000L
+        const val RACE_CLOCK_TICK_MS = 250L
     }
 }

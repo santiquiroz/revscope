@@ -67,6 +67,7 @@ import com.revscope.feature.map.navigation.NavCamera
 import com.revscope.feature.map.navigation.NavigationBanner
 import com.revscope.feature.map.navigation.NavigationProgressBar
 import com.revscope.feature.map.social.Leaderboard
+import com.revscope.feature.map.social.RaceCountdownOverlay
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -91,6 +92,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val roomState by viewModel.roomState.collectAsState()
     val sharedDest by viewModel.sharedDest.collectAsState()
     val ranking by viewModel.ranking.collectAsState()
+    val raceCountdown by viewModel.raceCountdown.collectAsState()
     val selfRiderName by viewModel.selfRiderName.collectAsState()
     val destination by viewModel.destination.collectAsState()
     val plannedRoute by viewModel.plannedRoute.collectAsState()
@@ -519,10 +521,18 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                         entries = ranking,
                         expanded = leaderboardExpanded,
                         onToggleExpanded = { leaderboardExpanded = !leaderboardExpanded },
+                        race = roomState.race,
+                        selfRiderName = selfRiderName,
+                        onStartRace = viewModel::startRace,
+                        onStopRace = viewModel::stopRace,
                         modifier = Modifier.width(220.dp),
                     )
                 }
             }
+        }
+
+        raceCountdown?.let { seconds ->
+            RaceCountdownOverlay(secondsToShow = seconds, modifier = Modifier.align(Alignment.Center))
         }
     }
 

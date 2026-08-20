@@ -111,4 +111,38 @@ class LeaderboardTest {
         assertEquals(1, entries.size)
         assertEquals("solo", entries.single().name)
     }
+
+    @Test
+    fun `countdown oculto mas alla de 5 segundos antes de largar`() {
+        assertNull(RaceCountdown.secondsToShow(startAtMs = 5_001, nowMs = 0))
+    }
+
+    @Test
+    fun `countdown muestra 5 justo al entrar a la ventana`() {
+        assertEquals(5, RaceCountdown.secondsToShow(startAtMs = 5_000, nowMs = 0))
+    }
+
+    @Test
+    fun `countdown cuenta 5 4 3 2 1 por segundo`() {
+        assertEquals(5, RaceCountdown.secondsToShow(startAtMs = 4_500, nowMs = 0))
+        assertEquals(4, RaceCountdown.secondsToShow(startAtMs = 3_500, nowMs = 0))
+        assertEquals(3, RaceCountdown.secondsToShow(startAtMs = 2_500, nowMs = 0))
+        assertEquals(2, RaceCountdown.secondsToShow(startAtMs = 1_500, nowMs = 0))
+        assertEquals(1, RaceCountdown.secondsToShow(startAtMs = 500, nowMs = 0))
+    }
+
+    @Test
+    fun `countdown muestra YA representado como 0 justo al largar`() {
+        assertEquals(0, RaceCountdown.secondsToShow(startAtMs = 0, nowMs = 0))
+    }
+
+    @Test
+    fun `countdown sigue en 0 hasta justo antes de los 2 segundos post largada`() {
+        assertEquals(0, RaceCountdown.secondsToShow(startAtMs = 0, nowMs = 1_999))
+    }
+
+    @Test
+    fun `countdown se oculta a los 2 segundos post largada`() {
+        assertNull(RaceCountdown.secondsToShow(startAtMs = 0, nowMs = 2_000))
+    }
 }
