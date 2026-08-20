@@ -28,12 +28,15 @@ import kotlin.math.roundToInt
 // Anchos heredados de osmdroid, donde strokeWidth eran píxeles FÍSICOS.
 private const val LIVE_ROUTE_PHYSICAL_PX = 8f
 private const val PLANNED_ROUTE_PHYSICAL_PX = 10f
+private const val ALT_ROUTE_PHYSICAL_PX = 8f
 private const val CIRCLE_TARGET_PHYSICAL_PX = 4f
 private const val CIRCLE_NORMAL_PHYSICAL_PX = 2f
 private const val CIRCLE_DIMMED_PHYSICAL_PX = 1f
 
 private const val SRC_PLANNED = "src-ruta-planeada"
 private const val LYR_PLANNED = "lyr-ruta-planeada"
+private const val SRC_PLANNED_ALT = "src-rutas-alt"
+private const val LYR_PLANNED_ALT = "lyr-rutas-alt"
 private const val SRC_CIRCLES = "src-circulos-radar"
 private const val LYR_CIRCLES_FILL = "lyr-circulos-radar-relleno"
 private const val LYR_CIRCLES_LINE = "lyr-circulos-radar-borde"
@@ -72,6 +75,9 @@ data class LiveMapData(
     val destination: LiveRouteHolder.RoutePoint?,
     val plannedRoute: NavigationRoute?,
     val liveFix: LiveRouteHolder.RoutePoint? = null,
+    // Rutas de OSRM que NO son la elegida (spec F6) — se dibujan en gris debajo de la
+    // planeada; la elegida nunca aparece acá dos veces (ver alternativeGeometries).
+    val routeAlternatives: List<NavigationRoute> = emptyList(),
 )
 
 /**
@@ -87,6 +93,19 @@ data class LiveMapData(
  */
 fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
     registerIcons(style)
+
+    // Las alternativas grises van DEBAJO de la planeada (se agregan primero): así la elegida
+    // siempre queda encima y visible, aunque dos rutas compartan tramo.
+    style.addSource(GeoJsonSource(SRC_PLANNED_ALT, alternativeGeometries(data)))
+    style.addLayer(
+        LineLayer(LYR_PLANNED_ALT, SRC_PLANNED_ALT).withProperties(
+            PropertyFactory.lineColor("#6B7089"),
+            PropertyFactory.lineWidth(physicalPxToDp(ALT_ROUTE_PHYSICAL_PX, density)),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+            PropertyFactory.lineOpacity(0.6f),
+        ),
+    )
 
     style.addSource(GeoJsonSource(SRC_PLANNED, plannedGeometry(data.plannedRoute)))
     style.addLayer(
@@ -200,6 +219,7 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
 
 /** Reescribe los datos sin recrear capas. Silencioso y seguro si el estilo cambió de abajo. */
 fun updateLiveMapData(style: Style, data: LiveMapData) {
+    style.getSourceAs<GeoJsonSource>(SRC_PLANNED_ALT)?.setGeoJson(alternativeGeometries(data))
     style.getSourceAs<GeoJsonSource>(SRC_PLANNED)?.setGeoJson(plannedGeometry(data.plannedRoute))
     style.getSourceAs<GeoJsonSource>(SRC_CIRCLES)?.setGeoJson(circleFeatures(data))
     style.getSourceAs<GeoJsonSource>(SRC_MARKERS)?.setGeoJson(markerFeatures(data))
@@ -227,6 +247,15 @@ private fun plannedGeometry(planned: NavigationRoute?): LineString =
     LineString.fromLngLats(
         planned?.points?.map { Point.fromLngLat(it.lon, it.lat) } ?: emptyList(),
     )
+
+/** Todas las alternativas MENOS la elegida — comparación estructural, no de instancia:
+ * `_plannedRoute` puede llegar como una copia equivalente y seguiría siendo "la misma". */
+private fun alternativeGeometries(data: LiveMapData): FeatureCollection {
+    val features = data.routeAlternatives
+        .filter { it != data.plannedRoute }
+        .map { route -> Feature.fromGeometry(LineString.fromLngLats(route.points.map { Point.fromLngLat(it.lon, it.lat) })) }
+    return FeatureCollection.fromFeatures(features)
+}
 
 private fun circleFeatures(data: LiveMapData): FeatureCollection {
     val features = data.cameras.map { cam ->

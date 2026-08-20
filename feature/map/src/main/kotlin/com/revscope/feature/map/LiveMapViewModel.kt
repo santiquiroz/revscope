@@ -135,6 +135,8 @@ class LiveMapViewModel @Inject constructor(
             if (!navigationController.isNavigating) return@launch
             if (_destination.value != destination) return@launch
             _plannedRoute.value = fresh
+            // Las alternativas viejas partían de otro origen — ya no aplican a esta ruta.
+            _routeAlternatives.value = emptyList()
             navigationController.swap(
                 route = fresh,
                 origin = current,
@@ -361,8 +363,22 @@ class LiveMapViewModel @Inject constructor(
     private val _plannedRoute = MutableStateFlow<NavigationRoute?>(null)
     val plannedRoute: StateFlow<NavigationRoute?> = _plannedRoute.asStateFlow()
 
+    // Todas las rutas devueltas por OSRM (spec F6) — la elegida es siempre _plannedRoute, que
+    // puede ser cualquiera de estas o, tras un reroute mid-viaje, una recalculada que ya no
+    // pertenece a este set (por eso el reroute las vacía: ver maybeReroute).
+    private val _routeAlternatives = MutableStateFlow<List<NavigationRoute>>(emptyList())
+    val routeAlternatives: StateFlow<List<NavigationRoute>> = _routeAlternatives.asStateFlow()
+
     private val _routing = MutableStateFlow(false)
     val routing: StateFlow<Boolean> = _routing.asStateFlow()
+
+    /** Cambia la ruta activa a una de las alternativas ya calculadas — la navegación y la
+     * carrera siguen leyendo [_plannedRoute], así que apenas cambia acá lo ven de inmediato. */
+    fun selectAlternative(index: Int) {
+        if (navigationController.isNavigating) return
+        val alternative = _routeAlternatives.value.getOrNull(index) ?: return
+        _plannedRoute.value = alternative
+    }
 
     // ── Búsqueda de direcciones ──────────────────────────────────────────────
 
@@ -482,13 +498,16 @@ class LiveMapViewModel @Inject constructor(
         _destination.value = LiveRouteHolder.RoutePoint(lat, lon)
         _destinationName.value = name
         _plannedRoute.value = null
+        _routeAlternatives.value = emptyList()
         _routing.value = true
         viewModelScope.launch {
             val fetched = withContext(Dispatchers.IO) {
-                OsrmRouteFetcher.fetch(origin.lat, origin.lon, lat, lon)
+                OsrmRouteFetcher.fetchAlternatives(origin.lat, origin.lon, lat, lon)
             }
             if (generation != routingGeneration) return@launch
-            _plannedRoute.value = fetched
+            _routeAlternatives.value = fetched
+            // OSRM entrega la recomendada (la más rápida) primero — selección inicial natural.
+            _plannedRoute.value = fetched.firstOrNull()
             _routing.value = false
         }
     }
@@ -499,6 +518,7 @@ class LiveMapViewModel @Inject constructor(
         _destination.value = null
         _destinationName.value = null
         _plannedRoute.value = null
+        _routeAlternatives.value = emptyList()
         _routing.value = false
     }
 

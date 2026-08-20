@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -62,6 +64,7 @@ import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.navigation.LatLon
 import com.revscope.core.navigation.NavigationRoute
+import com.revscope.core.navigation.RouteScoring
 import com.revscope.feature.map.location.InitialCentering
 import com.revscope.feature.map.navigation.NavCamera
 import com.revscope.feature.map.navigation.NavigationBanner
@@ -96,6 +99,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val selfRiderName by viewModel.selfRiderName.collectAsState()
     val destination by viewModel.destination.collectAsState()
     val plannedRoute by viewModel.plannedRoute.collectAsState()
+    val routeAlternatives by viewModel.routeAlternatives.collectAsState()
     val routing by viewModel.routing.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
@@ -189,6 +193,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         destination = destination,
         plannedRoute = plannedRoute,
         liveFix = standaloneFix,
+        routeAlternatives = routeAlternatives,
     )
 
     Box(Modifier.fillMaxSize()) {
@@ -233,7 +238,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         // La ruta viva llega a 18.000 puntos y cada escritura re-indexa el dataset completo,
         // así que se escribe solo cuando la revisión cambia, no en cada recomposición.
-        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute, standaloneFix) {
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute, standaloneFix, routeAlternatives) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
@@ -469,10 +474,12 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             RouteInfoChip(
                 routing = routing,
                 plannedRoute = plannedRoute,
+                routeAlternatives = routeAlternatives,
                 canShare = canShareDestination,
                 onStart = viewModel::startNavigation,
                 onClear = viewModel::clearDestination,
                 onShare = viewModel::shareCurrentDestination,
+                onSelectAlternative = viewModel::selectAlternative,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
             )
         }
@@ -596,15 +603,18 @@ private fun GroupRideDialog(
     )
 }
 
-/** Chip con distancia y ETA de la ruta planeada — o el estado del cálculo. */
+/** Chip con distancia y ETA de la ruta planeada — o el estado del cálculo. Con más de una
+ * alternativa de OSRM, agrega debajo los chips de selección (Rápida/Alt/Curvas — spec F6). */
 @Composable
 private fun RouteInfoChip(
     routing: Boolean,
     plannedRoute: NavigationRoute?,
+    routeAlternatives: List<NavigationRoute>,
     canShare: Boolean,
     onStart: () -> Unit,
     onClear: () -> Unit,
     onShare: () -> Unit,
+    onSelectAlternative: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -612,34 +622,80 @@ private fun RouteInfoChip(
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
         modifier = modifier,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-        ) {
-            Text(
-                when {
-                    routing -> "Calculando ruta…"
-                    plannedRoute != null -> formatRouteSummary(plannedRoute)
-                    else -> "Sin ruta — ¿hay internet?"
-                },
-                color = Color(0xFFE8FF00),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            if (plannedRoute != null) {
-                TextButton(onClick = onStart) {
-                    Text("Navegar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+        Column(modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    when {
+                        routing -> "Calculando ruta…"
+                        plannedRoute != null -> formatRouteSummary(plannedRoute)
+                        else -> "Sin ruta — ¿hay internet?"
+                    },
+                    color = Color(0xFFE8FF00),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (plannedRoute != null) {
+                    TextButton(onClick = onStart) {
+                        Text("Navegar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                    }
+                }
+                if (canShare) {
+                    IconButton(onClick = onShare) {
+                        Icon(Icons.Default.Share, contentDescription = "Compartir con la sala", tint = Color(0xFFE8FF00))
+                    }
+                }
+                IconButton(onClick = onClear) {
+                    Icon(Icons.Default.Close, contentDescription = "Quitar destino", tint = Color(0xFF6B7089))
                 }
             }
-            if (canShare) {
-                IconButton(onClick = onShare) {
-                    Icon(Icons.Default.Share, contentDescription = "Compartir con la sala", tint = Color(0xFFE8FF00))
-                }
-            }
-            IconButton(onClick = onClear) {
-                Icon(Icons.Default.Close, contentDescription = "Quitar destino", tint = Color(0xFF6B7089))
+            if (routeAlternatives.size > 1) {
+                RouteAlternativeChips(
+                    routes = routeAlternatives,
+                    selected = plannedRoute,
+                    onSelect = onSelectAlternative,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
             }
         }
+    }
+}
+
+/** Chips de selección entre rutas alternativas — etiquetadas por [RouteScoring.labelAlternatives]
+ * (Rápida/Alt/Curvas). La activa se resalta comparando por igualdad estructural con [selected],
+ * no por índice: tras un reroute la elegida puede ya no pertenecer a este set. */
+@Composable
+private fun RouteAlternativeChips(
+    routes: List<NavigationRoute>,
+    selected: NavigationRoute?,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val labels = remember(routes) { RouteScoring.labelAlternatives(routes) }
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        routes.forEachIndexed { index, route ->
+            RouteAlternativeChip(
+                label = labels[index],
+                isSelected = route == selected,
+                onClick = { onSelect(index) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RouteAlternativeChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
+    Surface(
+        color = if (isSelected) Color(0xFF00E5FF) else Color(0xFF1C1C26),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp),
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            if (label == "Curvas") "Curvas 🏍️" else label,
+            color = if (isSelected) Color(0xFF0A0A0F) else Color(0xFFB0B0C0),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        )
     }
 }
 
