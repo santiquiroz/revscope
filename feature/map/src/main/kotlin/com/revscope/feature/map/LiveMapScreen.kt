@@ -57,6 +57,7 @@ import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
+import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.navigation.LatLon
 import com.revscope.core.navigation.NavigationRoute
@@ -64,6 +65,7 @@ import com.revscope.feature.map.location.InitialCentering
 import com.revscope.feature.map.navigation.NavCamera
 import com.revscope.feature.map.navigation.NavigationBanner
 import com.revscope.feature.map.navigation.NavigationProgressBar
+import com.revscope.feature.map.social.Leaderboard
 import kotlinx.coroutines.flow.StateFlow
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -85,6 +87,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val roomCode by viewModel.roomCode.collectAsState()
     val peers by viewModel.peers.collectAsState()
     val roomBusy by viewModel.roomBusy.collectAsState()
+    val roomState by viewModel.roomState.collectAsState()
+    val sharedDest by viewModel.sharedDest.collectAsState()
+    val ranking by viewModel.ranking.collectAsState()
+    val selfRiderName by viewModel.selfRiderName.collectAsState()
     val destination by viewModel.destination.collectAsState()
     val plannedRoute by viewModel.plannedRoute.collectAsState()
     val routing by viewModel.routing.collectAsState()
@@ -140,7 +146,15 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
+    var leaderboardExpanded by remember { mutableStateOf(false) }
+    var dismissedDest by remember { mutableStateOf<RoomClient.SharedDest?>(null) }
     val density = context.resources.displayMetrics.density
+    // Destino ajeno recién propuesto: ni el mío propio (server puede hacer eco), ni de un
+    // server legacy (no debería llegar, pero el gate es explícito), ni el que ya descarté.
+    val incomingDest = sharedDest?.takeIf {
+        !roomState.legacyServer && it.rider != selfRiderName && it != dismissedDest
+    }
+    val canShareDestination = roomCode != null && !roomState.legacyServer && destination != null
 
     // Iniciar navegación toma el control de la cámara aunque el usuario venía paneando.
     LaunchedEffect(navigation != null) {
@@ -354,8 +368,22 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
 
-        approaching?.let { target ->
-            ApproachingCameraBanner(target, Modifier.align(Alignment.TopCenter).padding(top = 28.dp))
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            approaching?.let { target -> ApproachingCameraBanner(target) }
+            incomingDest?.let { incoming ->
+                if (approaching != null) Spacer(Modifier.height(8.dp))
+                SharedDestBanner(
+                    dest = incoming,
+                    onAccept = {
+                        viewModel.setDestination(incoming.lat, incoming.lon, incoming.name)
+                        dismissedDest = incoming
+                    },
+                    onDismiss = { dismissedDest = incoming },
+                )
+            }
         }
 
         Column(Modifier.align(Alignment.BottomEnd).padding(16.dp), horizontalAlignment = Alignment.End) {
@@ -436,8 +464,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             RouteInfoChip(
                 routing = routing,
                 plannedRoute = plannedRoute,
+                canShare = canShareDestination,
                 onStart = viewModel::startNavigation,
                 onClear = viewModel::clearDestination,
+                onShare = viewModel::shareCurrentDestination,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
             )
         }
@@ -464,18 +494,31 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         }
 
         if (roomCode != null) {
-            Surface(
-                color = Color(0xE6121218),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
+            Column(
+                Modifier.align(Alignment.TopEnd).padding(12.dp),
+                horizontalAlignment = Alignment.End,
             ) {
-                Text(
-                    "\uD83C\uDFCD\uFE0F Sala $roomCode \u00b7 ${peers.size} en l\u00ednea",
-                    color = Color(0xFFE8FF00),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                )
+                Surface(
+                    color = Color(0xE6121218),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        "\uD83C\uDFCD\uFE0F Sala $roomCode \u00b7 ${peers.size} en l\u00ednea",
+                        color = Color(0xFFE8FF00),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
+                if (sharedDest != null && !roomState.legacyServer) {
+                    Spacer(Modifier.height(8.dp))
+                    Leaderboard(
+                        entries = ranking,
+                        expanded = leaderboardExpanded,
+                        onToggleExpanded = { leaderboardExpanded = !leaderboardExpanded },
+                        modifier = Modifier.width(220.dp),
+                    )
+                }
             }
         }
     }
@@ -545,8 +588,10 @@ private fun GroupRideDialog(
 private fun RouteInfoChip(
     routing: Boolean,
     plannedRoute: NavigationRoute?,
+    canShare: Boolean,
     onStart: () -> Unit,
     onClear: () -> Unit,
+    onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -573,8 +618,46 @@ private fun RouteInfoChip(
                     Text("Navegar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
                 }
             }
+            if (canShare) {
+                TextButton(onClick = onShare) {
+                    Text("Compartir con la sala", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                }
+            }
             IconButton(onClick = onClear) {
                 Icon(Icons.Default.Close, contentDescription = "Quitar destino", tint = Color(0xFF6B7089))
+            }
+        }
+    }
+}
+
+/** Propuesta de destino de otro rider de la sala — aceptar fija ese destino localmente. */
+@Composable
+private fun SharedDestBanner(
+    dest: RoomClient.SharedDest,
+    onAccept: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = Color(0xE6121218),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        modifier = modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        ) {
+            Text(
+                "🎯 ${dest.rider} propone destino: ${dest.name}",
+                color = Color(0xFFF0F0F8),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            TextButton(onClick = onAccept) {
+                Text("Ir", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Descartar propuesta", tint = Color(0xFF6B7089))
             }
         }
     }

@@ -31,6 +31,7 @@ import com.revscope.feature.map.routing.OsrmRouteFetcher
 import com.revscope.feature.map.routing.RerouteDecider
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
+import com.revscope.feature.map.social.RankingCalc
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -144,6 +145,30 @@ class LiveMapViewModel @Inject constructor(
 
     val roomCode: StateFlow<String?> = roomClient.roomCode
     val peers: StateFlow<Map<String, RoomClient.Peer>> = roomClient.peers
+    val roomState: StateFlow<RoomClient.RoomState> = roomClient.roomState
+
+    val sharedDest: StateFlow<RoomClient.SharedDest?> = roomState
+        .map { it.dest }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val selfRiderName: StateFlow<String> = settings.data
+        .map { it[PreferencesKeys.SERVER_RIDER_NAME]?.trim().orEmpty().ifBlank { "Vos" } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "Vos")
+
+    // Recalcula en cada emisión de peers (posiciones ~1 Hz) o de roomState (destino nuevo,
+    // sala legacy) — la posición/velocidad propia se lee como snapshot en ese instante,
+    // igual que hace lastKnownPoint() para el ruteo (M4 no aplica: esto no dispara red).
+    val ranking: StateFlow<List<RankingCalc.Entry>> = combine(peers, roomState) { peersMap, state ->
+        val dest = state.dest
+        if (state.legacyServer || dest == null) return@combine emptyList()
+        val self = lastKnownPoint()?.let { selfRiderName.value to it }
+        RankingCalc.rank(
+            self = self,
+            selfSpeedKmh = speedKmh.value?.toDouble(),
+            peers = peersMap.values,
+            dest = dest,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _roomBusy = MutableStateFlow(false)
     val roomBusy: StateFlow<Boolean> = _roomBusy.asStateFlow()
@@ -159,6 +184,12 @@ class LiveMapViewModel @Inject constructor(
     fun joinRoom(code: String) = roomClient.join(code)
 
     fun leaveRoom() = roomClient.leave()
+
+    /** Propone mi destino fijado a toda la sala — botón "Compartir con la sala" del chip de ruta. */
+    fun shareCurrentDestination() {
+        val dest = _destination.value ?: return
+        roomClient.shareDestination(dest.lat, dest.lon, _destinationName.value ?: "Destino")
+    }
 
     /** Radar hacia el que se dirige el vehículo (cono ±60°, <1 km) — null si ninguno aplica. */
     val approachingCamera: StateFlow<SpeedCameraAlerter.ApproachingCamera?> = cameraAlerter.approaching
@@ -256,6 +287,10 @@ class LiveMapViewModel @Inject constructor(
     private val _destination = MutableStateFlow<LiveRouteHolder.RoutePoint?>(null)
     val destination: StateFlow<LiveRouteHolder.RoutePoint?> = _destination.asStateFlow()
 
+    // Nombre legible del destino fijado, si se conoce (búsqueda, lugar guardado o propuesta
+    // de sala) — null en un long-press del mapa. Solo lo consume shareCurrentDestination().
+    private val _destinationName = MutableStateFlow<String?>(null)
+
     private val _plannedRoute = MutableStateFlow<NavigationRoute?>(null)
     val plannedRoute: StateFlow<NavigationRoute?> = _plannedRoute.asStateFlow()
 
@@ -306,7 +341,7 @@ class LiveMapViewModel @Inject constructor(
     /** Elegir un resultado reusa el mismo camino que el long-press y entra al historial. */
     fun selectSearchResult(place: PlaceResult) {
         clearSearch()
-        setDestination(place.lat, place.lon)
+        setDestination(place.lat, place.lon, place.name)
         viewModelScope.launch {
             savedPlaceDao.recordRecent(
                 SavedPlaceEntity(
@@ -322,7 +357,7 @@ class LiveMapViewModel @Inject constructor(
 
     fun selectSavedPlace(place: SavedPlaceEntity) {
         clearSearch()
-        setDestination(place.lat, place.lon)
+        setDestination(place.lat, place.lon, place.name)
         viewModelScope.launch { savedPlaceDao.touch(place.id, System.currentTimeMillis()) }
     }
 
@@ -364,8 +399,12 @@ class LiveMapViewModel @Inject constructor(
     // fuera de orden — el fetch más viejo se descarta si ya no es la generación vigente (M4).
     private var routingGeneration = 0L
 
-    /** Long-press en el mapa: fija destino y pide la ruta a OSRM desde la posición actual. */
-    fun setDestination(lat: Double, lon: Double) {
+    /**
+     * Fija destino y pide la ruta a OSRM desde la posición actual — long-press del mapa,
+     * selección de búsqueda/lugar guardado, o aceptar la propuesta de un peer. [name] es el
+     * nombre legible del lugar cuando se conoce (null en un long-press).
+     */
+    fun setDestination(lat: Double, lon: Double, name: String? = null) {
         // Navegando no se cambia el destino con un toque: pará la navegación primero.
         if (navigationController.isNavigating) return
         val origin = route.value.lastOrNull() ?: locationProvider.fix.value ?: _initialCenter.value ?: return
@@ -374,6 +413,7 @@ class LiveMapViewModel @Inject constructor(
         // el ++ de acá y la lectura de otro hilo — solo el withContext interno toca IO.
         val generation = ++routingGeneration
         _destination.value = LiveRouteHolder.RoutePoint(lat, lon)
+        _destinationName.value = name
         _plannedRoute.value = null
         _routing.value = true
         viewModelScope.launch {
@@ -390,6 +430,7 @@ class LiveMapViewModel @Inject constructor(
         rerouteJob?.cancel()
         navigationController.stop()
         _destination.value = null
+        _destinationName.value = null
         _plannedRoute.value = null
         _routing.value = false
     }
