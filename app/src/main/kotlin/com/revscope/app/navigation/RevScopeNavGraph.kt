@@ -191,9 +191,12 @@ fun RevScopeNavGraph(
                 composable(Screen.Onboarding.route) {
                     OnboardingScreen(
                         vm = onboardingVm,
-                        onFinished = { _ ->
+                        onFinished = { goToAdapterScan ->
                             navController.navigate(Screen.Dashboard.route) {
                                 popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            }
+                            if (goToAdapterScan) {
+                                navController.navigate(Screen.AdapterScan.route)
                             }
                         },
                     )

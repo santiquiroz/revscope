@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,7 +81,7 @@ fun OnboardingScreen(
                 when (step) {
                     0 -> Step0Permissions()
                     1 -> Step1Vehicle(vm)
-                    2 -> StepPlaceholder("Adaptador OBD2") // Task 3
+                    2 -> Step2Adapter(vm, onFinished)
                     3 -> StepPlaceholder("Inteligencia") // Task 4
                     else -> Step4Done()
                 }
@@ -289,6 +290,116 @@ private fun VehicleTypeChip(label: String, active: Boolean, onClick: () -> Unit)
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
+        }
+    }
+}
+
+@Composable
+private fun Step2Adapter(vm: OnboardingViewModel, onFinished: (goToAdapterScan: Boolean) -> Unit) {
+    var gpsOnlySelected by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Text("¿Tenés adaptador OBD2?", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Un adaptador Bluetooth OBD2 te da datos en vivo del motor: RPM, velocidad, temperatura y más.",
+            color = TextMutedColor,
+            fontSize = 14.sp,
+        )
+
+        AdapterOptionCard(
+            title = "Sí, configurarlo ahora",
+            subtitle = "Te llevamos directo a buscar tu adaptador.",
+            onClick = {
+                vm.setGpsOnlyMode(false)
+                vm.markDone()
+                onFinished(true)
+            },
+        )
+
+        AdapterOptionCard(
+            title = "Sí, pero después",
+            subtitle = "Seguimos con el resto del wizard, lo configurás luego desde Ajustes.",
+            onClick = {
+                vm.setGpsOnlyMode(false)
+                vm.next()
+            },
+        )
+
+        AdapterOptionCard(
+            title = "No tengo — usar solo GPS",
+            subtitle = "RevScope funciona igual con datos de GPS.",
+            selected = gpsOnlySelected,
+            onClick = {
+                gpsOnlySelected = true
+                vm.setGpsOnlyMode(true)
+            },
+        )
+
+        if (gpsOnlySelected) {
+            GpsOnlyFeatureList()
+            Button(
+                onClick = vm::next,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            ) {
+                Text("Continuar", color = BgColor, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdapterOptionCard(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    selected: Boolean = false,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceColor, RoundedCornerShape(12.dp))
+            .then(
+                if (selected) {
+                    Modifier.border(1.dp, AccentColor, RoundedCornerShape(12.dp))
+                } else {
+                    Modifier
+                },
+            )
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(title, color = TextPrimaryColor, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(subtitle, color = TextMutedColor, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun GpsOnlyFeatureList() {
+    val features = listOf(
+        "Mapa con radares automáticos",
+        "Viajes GPS con telemetría de movimiento",
+        "Detección de caída",
+        "Pico y placa",
+        "Historial y reportes",
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceColor, RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        features.forEach { feature ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = AccentColor)
+                Spacer(Modifier.width(12.dp))
+                Text(feature, color = TextPrimaryColor, fontSize = 14.sp)
+            }
         }
     }
 }
