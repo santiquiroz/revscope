@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -63,7 +64,7 @@ class AlDiaViewModel @Inject constructor(
         combine(activeProfile, sumaSesionesKmFlow, maintenanceItemsFlow) { profile, suma, items ->
             val odometro = MaintenanceCalculator.odometroActual(profile?.odometerBaseKm ?: 0.0, suma)
             MaintenanceCalculator.calculate(odometro, items)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        }.stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     private val licenseExpiresAtFlow: Flow<Long?> =
         settings.data.map { it[PreferencesKeys.LICENSE_EXPIRES_AT] }
