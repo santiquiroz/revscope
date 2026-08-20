@@ -66,7 +66,6 @@ private val AiValueBullets = listOf(
 @Composable
 fun AiValueContent(
     onDone: () -> Unit,
-    compact: Boolean = false,
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current

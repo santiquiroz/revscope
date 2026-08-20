@@ -42,6 +42,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -223,9 +224,9 @@ private fun Step0Permissions() {
 
 @Composable
 private fun Step1Vehicle(vm: OnboardingViewModel) {
-    var name by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf("CAR") }
-    var plate by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    var type by rememberSaveable { mutableStateOf("CAR") }
+    var plate by rememberSaveable { mutableStateOf("") }
     val profileCreated by vm.profileCreated.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -302,7 +303,7 @@ private fun VehicleTypeChip(label: String, active: Boolean, onClick: () -> Unit)
 
 @Composable
 private fun Step2Adapter(vm: OnboardingViewModel, onFinished: (goToAdapterScan: Boolean) -> Unit) {
-    var gpsOnlySelected by remember { mutableStateOf(false) }
+    var gpsOnlySelected by rememberSaveable { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(16.dp))
@@ -421,7 +422,7 @@ private fun Step3Ai(vm: OnboardingViewModel) {
             color = TextMutedColor,
             fontSize = 14.sp,
         )
-        AiValueContent(onDone = vm::next, compact = true)
+        AiValueContent(onDone = vm::next)
     }
 }
 
