@@ -15,6 +15,8 @@ import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.LapEntity
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.connection.AdapterType
 import com.revscope.core.obd.connection.BleTransport
@@ -204,7 +206,7 @@ class ObdSessionManager @Inject constructor(
     fun setActiveProfile(profile: VehicleProfileEntity?) {
         val resolvedProfile = withCurrentAdapterLinked(profile)
         _activeProfile.value = resolvedProfile
-        alertsEngine.setRedlineOverride(resolvedProfile?.redlineRpm)
+        alertsEngine.setRedlineOverride(resolvedProfile?.redlineRpm, resolvedProfile?.vehicleType ?: VehicleType.CAR)
         scope.launch {
             persistAdapterLinkIfChanged(profile, resolvedProfile)
             runCatching {
@@ -220,7 +222,7 @@ class ObdSessionManager @Inject constructor(
     fun notifyProfileUpdated(profile: VehicleProfileEntity) {
         if (_activeProfile.value?.id == profile.id) {
             _activeProfile.value = profile
-            alertsEngine.setRedlineOverride(profile.redlineRpm)
+            alertsEngine.setRedlineOverride(profile.redlineRpm, profile.vehicleType)
         }
     }
 
@@ -253,7 +255,7 @@ class ObdSessionManager @Inject constructor(
             val id = settings.data.first()[PreferencesKeys.ACTIVE_PROFILE_ID] ?: return
             profileDao.getById(id)?.let {
                 _activeProfile.value = it
-                alertsEngine.setRedlineOverride(it.redlineRpm)
+                alertsEngine.setRedlineOverride(it.redlineRpm, it.vehicleType)
             }
         }.onFailure { Timber.w(it, "ObdSessionManager: failed to load active profile") }
     }
