@@ -22,6 +22,9 @@ import kotlin.math.abs
  * Until [isCalibrated] returns true the static default table (from [GearDefaults]) is
  * reported. Once calibrated [gearTable] emits a live [List<GearCluster>] for
  * DerivedMetricsEngine.
+ *
+ * No es thread-safe: [observe] y [reconfigure] deben llamarse desde el mismo dispatcher
+ * (hoy Main vía DashboardViewModel).
  */
 class AdaptiveGearLearner(
     gearCount: Int = 6,
@@ -38,6 +41,9 @@ class AdaptiveGearLearner(
             GearDefaults.ratios(gearCount, type).mapIndexed { i, ratio -> GearCluster(gear = i + 1, centerRatio = ratio) }
     }
 
+    private var appliedGearCount = gearCount
+    private var appliedType = type
+
     private val _gearTable = MutableStateFlow(buildClusters(gearCount, type))
     val gearTable: StateFlow<List<GearCluster>> = _gearTable.asStateFlow()
 
@@ -45,11 +51,18 @@ class AdaptiveGearLearner(
     private var latestSpeed: Double? = null
 
     /**
-     * Re-arma la tabla de clusters para el perfil dado sin perder la identidad del learner:
-     * IntelligenceOrchestrator es un singleton construido antes de conocer el perfil activo,
-     * así que los StateFlow externos ya suscritos a [gearTable] deben seguir vivos tras esto.
+     * Re-arma la tabla de clusters para [gearCount]/[type], pero solo si cambiaron desde la
+     * última llamada. Reconectar el BLE no es cambiar de vehículo: IntelligenceOrchestrator
+     * llama esto en cada `start()`, y start() se re-dispara en cada reconexión (rutina en
+     * este hardware) — sin el guard, cada dropout resetearía observationCount a 0 y la
+     * calibración nunca sobreviviría un viaje real. La identidad del learner tampoco cambia
+     * nunca: IntelligenceOrchestrator es un singleton construido antes de conocer el perfil
+     * activo, así que los StateFlow externos ya suscritos a [gearTable] deben seguir vivos.
      */
     fun reconfigure(gearCount: Int, type: VehicleType) {
+        if (gearCount == appliedGearCount && type == appliedType) return
+        appliedGearCount = gearCount
+        appliedType = type
         latestRpm = null
         latestSpeed = null
         _gearTable.value = buildClusters(gearCount, type)
