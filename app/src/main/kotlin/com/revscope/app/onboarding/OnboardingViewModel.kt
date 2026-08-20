@@ -53,11 +53,11 @@ class OnboardingViewModel @Inject constructor(
     private val _step = MutableStateFlow(0)
     val step: StateFlow<Int> = _step.asStateFlow()
 
-    fun next() { _step.value = (_step.value + 1).coerceAtMost(TOTAL_STEPS - 1) }
+    fun next() { _step.value = WizardSteps.next(_step.value) }
 
-    fun back() { _step.value = (_step.value - 1).coerceAtLeast(0) }
+    fun back() { _step.value = WizardSteps.back(_step.value) }
 
-    fun goTo(step: Int) { _step.value = step.coerceIn(0, TOTAL_STEPS - 1) }
+    fun goTo(step: Int) { _step.value = WizardSteps.clamp(step) }
 
     fun setGpsOnlyMode(enabled: Boolean) {
         viewModelScope.launch {
@@ -102,5 +102,5 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    companion object { const val TOTAL_STEPS = 5 }
+    companion object { const val TOTAL_STEPS = WizardSteps.TOTAL }
 }

@@ -25,6 +25,9 @@ import com.revscope.core.intelligence.provider.AI_PROVIDER_OPENAI
 import com.revscope.core.intelligence.provider.AiProviderFactory
 import com.revscope.core.intelligence.provider.AiProviderSelection
 import com.revscope.core.intelligence.provider.AiRequest
+import com.revscope.core.maps.MapDownloadService
+import com.revscope.core.maps.MapDownloadState
+import com.revscope.core.maps.isOnWifi
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.guard.GuardService
 import com.revscope.core.obd.alerts.CustomAlertRules
@@ -69,6 +72,7 @@ class SettingsViewModel @Inject constructor(
     private val mcpTokenStore: McpTokenStore,
     private val mcpServerController: McpServerController,
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
+    private val mapDownloadService: MapDownloadService,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -724,6 +728,21 @@ class SettingsViewModel @Inject constructor(
                 .onFailure { Timber.w(it, "SettingsViewModel: failed to persist auto-backup toggle") }
         }
     }
+
+    // ── Mapa offline de Colombia ─────────────────────────────────────────────
+
+    val mapDownloadState: StateFlow<MapDownloadState> = mapDownloadService.state
+
+    fun downloadOfflineMap(allowCellular: Boolean) = mapDownloadService.download(allowCellular)
+
+    fun cancelOfflineMapDownload() = mapDownloadService.cancel()
+
+    fun deleteOfflineMap() = mapDownloadService.delete()
+
+    /** Lee la conectividad actual para que la UI decida qué diálogo de confirmación mostrar
+     * antes de llamar a [downloadOfflineMap] — MapDownloadService igual re-chequea WiFi al
+     * arrancar la descarga, esto solo evita mostrarle al usuario el diálogo equivocado. */
+    fun isOnWifiNow(): Boolean = isOnWifi(appContext)
 
     // ── Pantalla ─────────────────────────────────────────────────────────────
 

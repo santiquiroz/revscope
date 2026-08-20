@@ -36,6 +36,19 @@ object OsrmRouteFetcher {
             .getOrNull()
     }
 
+    /** Hasta 3 rutas de OSRM (`alternatives=true`) — para el chip de rutas. El reroute mid-viaje
+     * sigue usando [fetch] tal cual, sin alternativas: acá no le tocamos el camino. */
+    fun fetchAlternatives(fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): List<NavigationRoute> {
+        val url = String.format(
+            Locale.US,
+            "%s/%f,%f;%f,%f?overview=full&geometries=%s&steps=true&alternatives=true",
+            BASE_URL, fromLon, fromLat, toLon, toLat, GEOMETRY_FORMAT,
+        )
+        return runCatching { OsrmRouteParser.parseAll(httpGet(url), GEOMETRY_PRECISION) }
+            .onFailure { Timber.w(it, "OsrmRouteFetcher: alternatives fetch failed") }
+            .getOrDefault(emptyList())
+    }
+
     private fun httpGet(url: String): String {
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {

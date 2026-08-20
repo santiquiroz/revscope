@@ -1,6 +1,7 @@
 package com.revscope.core.obd.service
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,5 +51,23 @@ class LiveRouteHolderTest {
         holder.clear()
 
         assertTrue(holder.revision.value < revisionBeforeClear)
+    }
+
+    @Test
+    fun `el rumbo empieza en null`() {
+        assertNull(holder.lastHeadingDeg.value)
+    }
+
+    @Test
+    fun `updateHeading actualiza el rumbo`() {
+        holder.updateHeading(87.5)
+        assertEquals(87.5, holder.lastHeadingDeg.value!!, 0.0001)
+    }
+
+    @Test
+    fun `clear vuelve el rumbo a null`() {
+        holder.updateHeading(180.0)
+        holder.clear()
+        assertNull(holder.lastHeadingDeg.value)
     }
 }

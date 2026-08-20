@@ -11,6 +11,7 @@ import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.legal.RestrictionRulesSource
@@ -76,6 +77,26 @@ class DashboardViewModel @Inject constructor(
         .map { it[PreferencesKeys.GPS_ONLY_MODE] ?: false }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /** D2: sin adaptador vinculado nunca — debe disparar el mismo hero mode que la elección explícita del wizard. */
+    private val adapterNotConfigured: StateFlow<Boolean> = settings.data
+        .map { it[PreferencesKeys.ADAPTER_ADDRESS].isNullOrEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    /** Sin conexión OBD activa ni en curso — evita que el hero mode parpadee mientras conecta. */
+    private val obdConnectionIdle: StateFlow<Boolean> = sessionManager.connectionState
+        .map { it is ConnectionState.Disconnected || it is ConnectionState.Error }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    /**
+     * D2: hero mode del dashboard (viaje GPS + mapa por delante de los gauges) cuando el
+     * usuario eligió "sin adaptador" en el wizard O nunca vinculó uno — inferencia por
+     * ausencia de [PreferencesKeys.ADAPTER_ADDRESS] — y no hay conexión OBD activa.
+     */
+    val gpsHeroMode: StateFlow<Boolean> = combine(
+        gpsOnlyMode, adapterNotConfigured, obdConnectionIdle,
+    ) { onlyMode, noAdapter, idle -> (onlyMode || noAdapter) && idle }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Default true: en moto la pantalla apagándose a mitad de ruta es peor que la batería. */
     val keepScreenOn: StateFlow<Boolean> = settings.data
         .map { it[PreferencesKeys.KEEP_SCREEN_ON] ?: true }
@@ -85,7 +106,7 @@ class DashboardViewModel @Inject constructor(
     val tripScore = orchestrator.tripScore
 
     val gearCalibrated: StateFlow<Boolean> = orchestrator.gearLearner.gearTable
-        .map { table -> table.all { it.observationCount >= 30 } }
+        .map { table -> table.all { it.observationCount >= com.revscope.core.intelligence.gear.AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Re-emits every minute so the banner re-evaluates across day/pico-y-placa boundaries. */

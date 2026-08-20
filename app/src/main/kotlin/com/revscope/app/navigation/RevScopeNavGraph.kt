@@ -193,8 +193,15 @@ fun RevScopeNavGraph(
                     OnboardingScreen(
                         vm = onboardingVm,
                         onFinished = { goToAdapterScan ->
-                            navController.navigate(Screen.Dashboard.route) {
-                                popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            // M8: re-run desde Settings deja [Dashboard, Settings] debajo —
+                            // solo el arranque en frío (Onboarding es el startDestination,
+                            // sin entrada previa) necesita navigate+popUpTo a Dashboard.
+                            if (navController.previousBackStackEntry != null) {
+                                navController.popBackStack()
+                            } else {
+                                navController.navigate(Screen.Dashboard.route) {
+                                    popUpTo(Screen.Onboarding.route) { inclusive = true }
+                                }
                             }
                             if (goToAdapterScan) {
                                 navController.navigate(Screen.AdapterScan.route)

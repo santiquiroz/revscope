@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -24,7 +26,16 @@ dependencies {
     implementation(libs.maplibre)
     implementation(libs.maplibre.turf)
     implementation(libs.timber)
+    // Descarga streaming del .pmtiles offline (MapDownloadService).
+    implementation(libs.okhttp)
+    implementation(libs.coroutines.android)
+    // DI del singleton MapDownloadService (MapsModule) — mismo patrón que core/obd/di/ObdModule.
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
+    // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
+    testImplementation(libs.org.json)
+    testImplementation(libs.coroutines.test)
 }
 
 kotlin {

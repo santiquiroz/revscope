@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.intelligence.IntelligenceOrchestrator
+import com.revscope.core.intelligence.gear.AdaptiveGearLearner
 import com.revscope.core.intelligence.gear.GearCluster
 import javax.inject.Inject
 
@@ -44,11 +45,14 @@ private val WarningColor = Color(0xFFFF8C00)
 private val TextPrimaryColor = Color(0xFFF0F0F8)
 private val TextMutedColor = Color(0xFF6B7089)
 
-private val gearColors = listOf(
-    SuccessColor, SuccessColor,
-    AccentColor, AccentColor,
-    WarningColor, WarningColor,
-)
+/** Thirds-based gear color logic matching GearDisplay */
+private fun gearColorByThirds(gear: Int, gearCount: Int): Color = when {
+    gear <= 0 -> TextMutedColor
+    gear <= gearCount / 3 -> SuccessColor
+    gear <= gearCount * 2 / 3 -> AccentColor
+    gear <= gearCount -> WarningColor
+    else -> TextMutedColor
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +60,7 @@ fun GearAnalyzerScreen(
     orchestrator: IntelligenceOrchestrator = hiltViewModel<GearAnalyzerViewModel>().orchestrator,
 ) {
     val gearTable by orchestrator.gearLearner.gearTable.collectAsState()
-    val isCalibrated = gearTable.all { it.observationCount >= 30 }
+    val isCalibrated = gearTable.all { it.observationCount >= AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR }
 
     Column(
         modifier = Modifier
@@ -85,7 +89,7 @@ fun GearAnalyzerScreen(
                     fontSize = 14.sp,
                 )
                 val totalObs = gearTable.sumOf { it.observationCount }
-                val needed = gearTable.size * 30
+                val needed = gearTable.size * AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR
                 Text(
                     text = "$totalObs / $needed obs",
                     color = TextMutedColor,
@@ -105,7 +109,7 @@ fun GearAnalyzerScreen(
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(gearTable) { cluster ->
-                    GearClusterRow(cluster = cluster, gearColor = gearColors.getOrElse(cluster.gear - 1) { TextMutedColor })
+                    GearClusterRow(cluster = cluster, gearColor = gearColorByThirds(cluster.gear, gearTable.size))
                 }
             }
         }
@@ -156,7 +160,7 @@ private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
                 )
             }
             Spacer(Modifier.height(4.dp))
-            val progress = (cluster.observationCount / 30f).coerceIn(0f, 1f)
+            val progress = (cluster.observationCount / AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR.toFloat()).coerceIn(0f, 1f)
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier

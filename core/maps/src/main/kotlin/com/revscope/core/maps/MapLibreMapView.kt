@@ -29,16 +29,23 @@ import org.maplibre.android.maps.Style
  * [onStyleInstalled] corre en la carga inicial Y en cada cambio de [styleJson]. El
  * consumidor DEBE reinstalar ahí sus fuentes y capas: al recargar el estilo las viejas
  * quedan `detached` y `setGeoJson()` retorna en silencio, sin excepción ni log.
+ *
+ * [onDidFailLoadingMap] expone `MapView.OnDidFailLoadingMapListener` (único callback de fallo
+ * de carga que ofrece el SDK — cubre estilo mal formado, fuente inválida, etc.). Registrado una
+ * sola vez por [mapView], no por cambio de estilo: el caller decide qué hacer con cada mensaje
+ * de error a través de un lambda siempre actualizado ([rememberUpdatedState]).
  */
 @Composable
 fun MapLibreMapView(
     modifier: Modifier = Modifier,
     styleJson: String,
+    onDidFailLoadingMap: ((String) -> Unit)? = null,
     onStyleInstalled: (MapLibreMap, Style) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnStyleInstalled by rememberUpdatedState(onStyleInstalled)
+    val currentOnDidFailLoadingMap by rememberUpdatedState(onDidFailLoadingMap)
 
     // El bloque `update` corre en CADA recomposición. Sin este centinela se llamaría
     // setStyle todo el tiempo, y cada recarga deja detached las fuentes agregadas a mano.
@@ -75,6 +82,12 @@ fun MapLibreMapView(
             mapView.onStop()
             mapView.onDestroy()
         }
+    }
+
+    DisposableEffect(mapView) {
+        val listener = MapView.OnDidFailLoadingMapListener { error -> currentOnDidFailLoadingMap?.invoke(error) }
+        mapView.addOnDidFailLoadingMapListener(listener)
+        onDispose { mapView.removeOnDidFailLoadingMapListener(listener) }
     }
 
     AndroidView(

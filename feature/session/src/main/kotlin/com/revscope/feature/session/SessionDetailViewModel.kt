@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -59,7 +60,7 @@ class SessionDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        .stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     data class TripReport(
         val session: SessionEntity,

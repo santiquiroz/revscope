@@ -33,7 +33,7 @@ class AdaptiveGearLearner(
 
     companion object {
         private const val LEARNING_RATE = 0.05
-        private const val MIN_OBSERVATIONS_PER_GEAR = 30
+        const val MIN_OBSERVATIONS_PER_GEAR = 30
         private const val MIN_RPM = 500.0
         private const val MIN_SPEED_KMH = 3.0
 

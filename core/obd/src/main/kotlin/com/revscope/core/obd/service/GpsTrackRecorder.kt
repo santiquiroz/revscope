@@ -78,7 +78,17 @@ class GpsTrackRecorder(
         val locationManager =
             context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return
 
-        val newListener = LocationListener { location -> onLocation(sessionId, location) }
+        // API 26-29: la interfaz de plataforma aún declara estos métodos abstractos (defaults
+        // llegaron en API 30) — sin overrides explícitos el framework crashea con AbstractMethodError.
+        val newListener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                onLocation(sessionId, location)
+            }
+            @Suppress("OVERRIDE_DEPRECATION")
+            override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
+            override fun onProviderEnabled(provider: String) = Unit
+            override fun onProviderDisabled(provider: String) = Unit
+        }
         try {
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
@@ -170,7 +180,10 @@ class GpsTrackRecorder(
         routeHolder?.append(location.latitude, location.longitude)
         routeHolder?.updateSpeed(point.speedKmh)
         onSpeed?.invoke(point.speedKmh)
-        if (location.hasBearing()) onBearing?.invoke(location.bearing)
+        if (location.hasBearing()) {
+            routeHolder?.updateHeading(location.bearing.toDouble())
+            onBearing?.invoke(location.bearing)
+        }
         navigation?.onFix(location.toNavigationFix())
     }
 

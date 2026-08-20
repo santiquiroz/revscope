@@ -12,10 +12,21 @@ import org.json.JSONObject
  */
 object OsrmRouteParser {
 
-    fun parse(body: String, precision: Int): NavigationRoute? {
-        val json = runCatching { JSONObject(body) }.getOrNull() ?: return null
-        if (json.optString("code") != "Ok") return null
-        val route = json.optJSONArray("routes")?.optJSONObject(0) ?: return null
+    fun parse(body: String, precision: Int): NavigationRoute? = parseAll(body, precision).firstOrNull()
+
+    /** Todas las `routes` del cuerpo — hasta 3 cuando se pidió `alternatives=true`. [parse]
+     * sigue devolviendo solo la primera, para no tocar el camino de reroute (single-route). */
+    fun parseAll(body: String, precision: Int): List<NavigationRoute> {
+        val json = runCatching { JSONObject(body) }.getOrNull() ?: return emptyList()
+        if (json.optString("code") != "Ok") return emptyList()
+        val routesJson = json.optJSONArray("routes") ?: return emptyList()
+        return (0 until routesJson.length()).mapNotNull { index ->
+            parseRoute(routesJson.optJSONObject(index), precision)
+        }
+    }
+
+    private fun parseRoute(route: JSONObject?, precision: Int): NavigationRoute? {
+        if (route == null) return null
         val points = PolylineDecoder.decode(route.optString("geometry"), precision)
         if (points.isEmpty()) return null
         return NavigationRoute(

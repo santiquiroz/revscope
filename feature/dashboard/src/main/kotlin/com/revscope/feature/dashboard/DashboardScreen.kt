@@ -81,16 +81,16 @@ fun DashboardScreen(
     val update by dashboardVm.updateAvailable.collectAsState()
     val isGpsTrip by connectionVm.isGpsTripActive.collectAsState()
     val speedSourceGps by dashboardVm.speedSourceGps.collectAsState()
-    val gpsOnlyMode by dashboardVm.gpsOnlyMode.collectAsState()
 
     // "Viaje sin adaptador": only offered while there's no live/incoming BT link, so it
     // can never race connectToDevice()'s own GPS-session handover.
     val showGpsTripButton = connectionState is ConnectionState.Disconnected ||
         connectionState is ConnectionState.Error
 
-    // Onboarding eligió "sin adaptador" y sigue sin conexión: invertir jerarquía —
-    // viaje GPS + mapa arriba, gauges (sin datos posibles) abajo con una sola CTA.
-    val gpsHeroMode = gpsOnlyMode && showGpsTripButton
+    // D2: elegido en el wizard o inferido por ausencia de adaptador configurado (VM) — sin
+    // conexión OBD activa: invertir jerarquía — viaje GPS + mapa arriba, gauges (sin datos
+    // posibles) abajo con una sola CTA.
+    val gpsHeroMode by dashboardVm.gpsHeroMode.collectAsState()
 
     // Start intelligence once connected; restart on reconnect
     LaunchedEffect(connectionState) {
@@ -307,7 +307,8 @@ fun DashboardScreen(
                     .then(dimmedIfGpsTrip(isGpsTrip || gpsHeroMode)),
             )
 
-            if (isGpsTrip) {
+            // M7: en gpsHeroMode, ConfigureAdapterCta ya dice lo mismo — no duplicar el mensaje.
+            if (isGpsTrip && !gpsHeroMode) {
                 Text(
                     "RPM · temperatura · marcha · boost — requieren adaptador",
                     color = RevScopeColors.TextMuted,

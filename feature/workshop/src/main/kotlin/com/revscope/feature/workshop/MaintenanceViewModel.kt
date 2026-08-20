@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
@@ -54,7 +55,7 @@ class MaintenanceViewModel @Inject constructor(
 
     val items: StateFlow<List<MaintenanceItemEntity>> = profileIdFlow
         .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else maintenanceDao.observeForProfile(id) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        .stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     private val sumaSesionesFlow: Flow<Double> = profileIdFlow
         .flatMapLatest { id -> if (id == null) flowOf(0.0) else sessionDao.observeSumDistanceKmForProfile(id) }
@@ -65,7 +66,7 @@ class MaintenanceViewModel @Inject constructor(
     val odometroActual: StateFlow<Double> =
         combine(activeProfile, sumaSesionesFlow, _odometroOverrideKm) { profile, suma, override ->
             override ?: MaintenanceCalculator.odometroActual(profile?.odometerBaseKm ?: 0.0, suma)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+        }.stateInSafe(viewModelScope, 0.0, started = SharingStarted.Eagerly)
 
     val estados: StateFlow<List<MaintenanceCalculator.ItemStatus>> =
         combine(odometroActual, items) { odometro, items -> MaintenanceCalculator.calculate(odometro, items) }

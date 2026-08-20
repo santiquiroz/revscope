@@ -2,6 +2,7 @@ package com.revscope.feature.session
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.SessionEntity
@@ -28,7 +29,7 @@ class SessionViewModel @Inject constructor(
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        .stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     private val _filter = MutableStateFlow(sessionManager.activeProfile.value?.id)
     val filter: StateFlow<Long?> = _filter.asStateFlow()
@@ -36,7 +37,7 @@ class SessionViewModel @Inject constructor(
     private var userTouchedFilter = false
 
     private val allSessions: StateFlow<List<SessionEntity>> = sessionDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        .stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     val sessions: StateFlow<List<SessionEntity>> = combine(allSessions, _filter) { all, selectedFilter ->
         filterSessions(all, selectedFilter)
