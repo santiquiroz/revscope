@@ -21,8 +21,14 @@ class InitialCenteringTest {
     }
 
     @Test
-    fun `lastKnown null no centra`() {
-        assertNull(InitialCentering().onLastKnown(null))
+    fun `lastKnown null no consume el estado`() {
+        val c = InitialCentering()
+        assertNull(c.onLastKnown(null))
+        val action = c.onLastKnown(medellin)
+        assertEquals(
+            CenterAction(medellin.lat, medellin.lon, InitialCentering.IDLE_ZOOM),
+            action,
+        )
     }
 
     @Test
@@ -67,5 +73,13 @@ class InitialCenteringTest {
             CenterAction(envigado.lat, envigado.lon, InitialCentering.INITIAL_ZOOM),
             c.onLiveFix(envigado),
         )
+    }
+
+    @Test
+    fun `pan entre lastKnown y liveFix cancela el liveFix`() {
+        val c = InitialCentering()
+        c.onLastKnown(medellin)
+        c.onUserPan()
+        assertNull(c.onLiveFix(envigado))
     }
 }
