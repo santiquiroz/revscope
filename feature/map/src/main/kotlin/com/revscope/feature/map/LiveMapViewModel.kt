@@ -369,12 +369,17 @@ class LiveMapViewModel @Inject constructor(
         // Navegando no se cambia el destino con un toque: pará la navegación primero.
         if (navigationController.isNavigating) return
         val origin = route.value.lastOrNull() ?: locationProvider.fix.value ?: _initialCenter.value ?: return
+        // Incremento y comparación deben quedar los dos main-confined: si el launch entero
+        // corre en Dispatchers.IO (como antes) no hay edge de visibilidad garantizado entre
+        // el ++ de acá y la lectura de otro hilo — solo el withContext interno toca IO.
         val generation = ++routingGeneration
         _destination.value = LiveRouteHolder.RoutePoint(lat, lon)
         _plannedRoute.value = null
         _routing.value = true
-        viewModelScope.launch(Dispatchers.IO) {
-            val fetched = OsrmRouteFetcher.fetch(origin.lat, origin.lon, lat, lon)
+        viewModelScope.launch {
+            val fetched = withContext(Dispatchers.IO) {
+                OsrmRouteFetcher.fetch(origin.lat, origin.lon, lat, lon)
+            }
             if (generation != routingGeneration) return@launch
             _plannedRoute.value = fetched
             _routing.value = false

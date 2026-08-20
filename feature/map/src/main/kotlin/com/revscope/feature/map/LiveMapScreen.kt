@@ -218,6 +218,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
+        // Nav "idle" = sin navegación o ya llegado — en ambos casos NavCamera dejó de dictar el
+        // bearing, así que la des-rotación (abajo) y el de-tilt (más abajo) pueden actuar.
+        val navIdle = navigation == null || navigation?.arrived == true
+
         LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, standaloneFix, initialCenter, navigation) {
             val map = mapRef ?: return@LaunchedEffect
             // Navegando: cámara dedicada — course-up, inclinada, zoom por velocidad y maniobra.
@@ -252,10 +256,12 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                                 .build(),
                         ),
                     )
-                } else if (!headingUp && map.cameraPosition.bearing != 0.0 && nav == null) {
+                } else if (!headingUp && map.cameraPosition.bearing != 0.0 && navIdle) {
                     // Apagar rumbo-arriba des-rota de inmediato, sin esperar revisión — pero no
-                    // con nav activa y follow off: ahí el bearing lo sigue dictando NavCamera,
-                    // y des-rotar acá movería la cámara sola en la siguiente emisión (M1).
+                    // con nav activa (y no arrived) y follow off: ahí el bearing lo sigue
+                    // dictando NavCamera, y des-rotar acá movería la cámara sola en la
+                    // siguiente emisión (M1). Al llegar (arrived) NavCamera ya no manda, así
+                    // que un rumbo residual sí debe poder des-rotarse acá.
                     map.animateCamera(
                         CameraUpdateFactory.newCameraPosition(
                             CameraPosition.Builder().bearing(0.0).build(),
@@ -283,8 +289,8 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         // Fin de navegación O llegada: quitar la inclinación; zoom y centro quedan como estaban.
         // "arrived" deja el NavigationBanner en pantalla (nav sigue no-null) pero la cámara ya
-        // no debe quedar inclinada a 50° mientras se muestra ese estado final (M3).
-        val navIdle = navigation == null || navigation?.arrived == true
+        // no debe quedar inclinada a 50° mientras se muestra ese estado final (M3). navIdle
+        // declarado arriba, compartido con la guarda de de-rotación.
         LaunchedEffect(navIdle) {
             if (navIdle) {
                 mapRef?.let { map ->
