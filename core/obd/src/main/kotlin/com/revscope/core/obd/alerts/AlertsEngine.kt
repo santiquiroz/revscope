@@ -120,7 +120,7 @@ class AlertsEngine @Inject constructor(
 
     val currentRedlineRpm: Int get() = redlineOverride ?: redlineRpm
 
-    fun setRedlineOverride(rpm: Int?, vehicleType: VehicleType = VehicleType.CAR) {
+    fun setRedlineOverride(rpm: Int?, vehicleType: VehicleType) {
         redlineOverride = rpm
         activeVehicleType = vehicleType
         Timber.i("AlertsEngine: redline override = $rpm ($vehicleType)")

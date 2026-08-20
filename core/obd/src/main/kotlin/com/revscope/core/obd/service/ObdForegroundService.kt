@@ -50,9 +50,9 @@ private const val NOTIFICATION_UPDATE_MS = 5_000L
 // C1: a real crash severs the OBD link too (adapter jarred loose, tip-over cuts ignition),
 // so losing the session is not proof the ride is over — give crash detection a grace window
 // fed by GPS + IMU alone before tearing the subsystem down.
-// NEW-3: 90s, not 3 min — CrashDetector's immobility window (IMMOBILITY_DURATION_MS) is only
-// 30s and the impact necessarily precedes the link loss, so 90s covers TRIGGERED with margin
-// at half the battery cost of the previous 180s window.
+// NEW-3: 90s, not 3 min — CrashDetector's immobility window (CrashThresholds.immobilityDurationMs)
+// is only 30s and the impact necessarily precedes the link loss, so 90s covers TRIGGERED with
+// margin at half the battery cost of the previous 180s window.
 private const val CRASH_GRACE_PERIOD_MS = 90_000L
 private const val CRASH_GRACE_MOTION_LOOKBACK_MS = 60_000L
 private const val ALARM_DRAIN_TIMEOUT_MS = 180_000L

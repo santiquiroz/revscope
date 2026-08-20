@@ -102,19 +102,22 @@ class DashboardViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private var gearTableJob: Job? = null
+    private var profileReconfigureJob: Job? = null
 
     fun stopIntelligence() {
         orchestrator.stop()
         gearTableJob?.cancel()
         gearTableJob = null
+        profileReconfigureJob?.cancel()
+        profileReconfigureJob = null
     }
 
     /**
-     * Wires [readings] into the intelligence orchestrator and feeds calibrated gear
-     * ratios back into [connectionVm] once [AdaptiveGearLearner] converges.
+     * Wires [readings] into the intelligence orchestrator and feeds gear ratios back into
+     * [connectionVm] on every [AdaptiveGearLearner] table update.
      *
      * Safe to call multiple times (e.g. on reconnect) — subsequent calls reset the
-     * orchestrator session and replace the previous gear-table collector.
+     * orchestrator session and replace the previous gear-table and profile collectors.
      */
     fun startIntelligence(readings: Flow<ObdReading>, connectionVm: ConnectionViewModel) {
         orchestrator.resetTrip()
@@ -126,13 +129,26 @@ class DashboardViewModel @Inject constructor(
             vehicleType = profile?.vehicleType ?: VehicleType.CAR,
         )
 
+        // I1: activeProfile can flip 1-3s after Connected (VIN auto-resolution resolves after
+        // the profile read above), so keep the learner locked to whichever profile ends up
+        // active for the rest of the session instead of a one-shot read. reconfigure()'s own
+        // guard makes repeat/no-op emissions (reconnects, same-profile updates) free.
+        profileReconfigureJob?.cancel()
+        profileReconfigureJob = viewModelScope.launch {
+            sessionManager.activeProfile.collect { activeProfile ->
+                orchestrator.gearLearner.reconfigure(
+                    activeProfile?.gearCount ?: 6,
+                    activeProfile?.vehicleType ?: VehicleType.CAR,
+                )
+            }
+        }
+
         gearTableJob?.cancel()
         gearTableJob = viewModelScope.launch {
-            orchestrator.gearLearner.gearTable.collect { table ->
-                val calibrated = table.all { it.observationCount >= 30 }
-                if (calibrated) {
-                    connectionVm.setGearTable(orchestrator.gearLearner.toRatioTable())
-                }
+            orchestrator.gearLearner.gearTable.collect {
+                // I2: push unconditionally — pre-calibration this feeds per-type defaults,
+                // which also fixes motos reading gear "1" against CAR defaults after a switch.
+                connectionVm.setGearTable(orchestrator.gearLearner.toRatioTable())
             }
         }
     }
