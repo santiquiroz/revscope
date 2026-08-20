@@ -24,9 +24,13 @@ dependencies {
     implementation(libs.maplibre)
     implementation(libs.maplibre.turf)
     implementation(libs.timber)
+    // Descarga streaming del .pmtiles offline (MapDownloadService).
+    implementation(libs.okhttp)
+    implementation(libs.coroutines.android)
     testImplementation(libs.junit)
     // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
     testImplementation(libs.org.json)
+    testImplementation(libs.coroutines.test)
 }
 
 kotlin {
