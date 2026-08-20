@@ -172,8 +172,10 @@ class LiveMapViewModel @Inject constructor(
     }
 
     /** Peers de la sala con staleness re-evaluada cada [PEER_STALE_CHECK_MS] — flatMapLatest
-     * sobre roomCode: el tick solo corre con sala activa, y WhileSubscribed ya corta en
-     * background. Los llegados del ArrivalLedger (F1) son sticky y no dependen de esto. */
+     * sobre roomCode: el tick solo corre con sala activa. El collector permanente del ranking
+     * (init) lo mantiene vivo también en background mientras haya sala — a propósito: el TTS
+     * de llegada debe sonar con pantalla apagada y necesita el prune activo (costo: un filter
+     * cada 10s). Los llegados del ArrivalLedger (F1) son sticky y no dependen de esto. */
     val peers: StateFlow<Map<String, RoomClient.Peer>> = roomCode.flatMapLatest { code ->
         if (code == null) flowOf(emptyMap())
         else combine(roomClient.peers, peerStaleTick) { map, _ -> pruneStalePeers(map) }
@@ -278,14 +280,18 @@ class LiveMapViewModel @Inject constructor(
      * collector en init{}) — el número anunciado es ese orden real, no un índice de lista.
      * Sin posición propia todavía (carrera activa pero sin fix GPS) se salta el tick entero en
      * vez de sembrar un `arrived = false` que podría ser falso. */
-    private fun maybeAnnounceArrival(entries: List<RankingCalc.Entry>, race: RoomClient.RaceState?) {
+    private fun maybeAnnounceArrival(
+        entries: List<RankingCalc.Entry>,
+        race: RoomClient.RaceState?,
+        nowMs: Long,
+    ) {
         val self = entries.firstOrNull { it.isSelf }
         if (race != null && self == null) return
         val (nextState, shouldAnnounce) = RaceArrival.step(
             state = raceArrivalState,
             raceStartAtMs = race?.startAtMs,
             arrived = self?.arrived ?: false,
-            nowMs = System.currentTimeMillis(),
+            nowMs = nowMs,
         )
         raceArrivalState = nextState
         if (!shouldAnnounce) return
@@ -611,15 +617,20 @@ class LiveMapViewModel @Inject constructor(
         viewModelScope.launch {
             combine(rawRanking, roomState) { entries, state -> entries to state.race }
                 .collect { (entries, race) ->
+                    // Un único nowMs para ambos reducers: con relojes distintos en el mismo
+                    // tick, un cruce en la ventana de ms alrededor de startAtMs podía quedar
+                    // pre-largada para el ledger y post-largada para RaceArrival, tragándose
+                    // el anuncio con `announced` ya consumido.
+                    val nowMs = System.currentTimeMillis()
                     arrivalLedgerState = ArrivalLedger.step(
                         state = arrivalLedgerState,
                         entries = entries,
                         raceKey = race?.startAtMs,
-                        nowMs = System.currentTimeMillis(),
+                        nowMs = nowMs,
                     )
                     val ranked = RankingCalc.applyArrivalOrder(entries, arrivalLedgerState)
                     _ranking.value = ranked
-                    maybeAnnounceArrival(ranked, race)
+                    maybeAnnounceArrival(ranked, race, nowMs)
                 }
         }
     }
