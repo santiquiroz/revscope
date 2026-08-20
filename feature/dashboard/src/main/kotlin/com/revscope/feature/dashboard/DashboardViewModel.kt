@@ -106,7 +106,7 @@ class DashboardViewModel @Inject constructor(
     val tripScore = orchestrator.tripScore
 
     val gearCalibrated: StateFlow<Boolean> = orchestrator.gearLearner.gearTable
-        .map { table -> table.all { it.observationCount >= 30 } }
+        .map { table -> table.all { it.observationCount >= com.revscope.core.intelligence.gear.AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Re-emits every minute so the banner re-evaluates across day/pico-y-placa boundaries. */

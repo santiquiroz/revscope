@@ -22,7 +22,7 @@ private val DEFAULT_GEAR_TABLE = GearDefaults.ratios(6, VehicleType.CAR).mapInde
  *
  * Emits [ObdReading] with synthetic PIDs:
  *   "BOOST"  kPa  — MAP - 101 (negative = intake vacuum on NA engines)
- *   "GEAR"   ""   — estimated gear 1–6, or 0 when stopped/neutral
+ *   "GEAR"   ""   — estimated gear 1..gearCount, or 0 when stopped/neutral
  *   "POWER"  kW   — torque_ref_Nm × torque_pct% × rpm / 9549
  *
  * Call [setGearTable] to replace the static defaults with vehicle-calibrated
