@@ -88,6 +88,8 @@ private val TextMutedColor = Color(0xFF6B7089)
 @Composable
 fun SettingsScreen(
     onNavigateToVehicleProfiles: () -> Unit = {},
+    onOpenAiValue: () -> Unit = {},
+    onRerunOnboarding: () -> Unit = {},
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val aiProvider by vm.aiProvider.collectAsState()
@@ -665,6 +667,9 @@ fun SettingsScreen(
                 color = TextMutedColor,
                 fontSize = 12.sp,
             )
+            TextButton(onClick = onOpenAiValue) {
+                Text("Ver qué ganás con una key", color = AccentColor)
+            }
             AiProviderDropdown(selected = aiProvider, onSelected = vm::updateAiProvider)
             OutlinedTextField(
                 value = aiApiKey,
@@ -905,6 +910,10 @@ fun SettingsScreen(
                 onClick = vm::checkForUpdates,
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
             ) { Text("Buscar actualizaciones", color = TextPrimaryColor) }
+            Button(
+                onClick = onRerunOnboarding,
+                colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
+            ) { Text("Volver a ver configuración inicial", color = TextPrimaryColor) }
 
             Spacer(Modifier.height(24.dp))
         }

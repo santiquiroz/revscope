@@ -33,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,6 +61,7 @@ private val TextMutedColor = Color(0xFF6B7089)
 fun MechanicChatScreen(
     onNavigateBack: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onOpenAiValue: () -> Unit,
     vm: MechanicChatViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -72,7 +74,7 @@ fun MechanicChatScreen(
             ChatTopBar(onNavigateBack)
             when (state.hasProvider) {
                 null -> LoadingState()
-                false -> NoProviderState(onNavigateToSettings)
+                false -> NoProviderState(onNavigateToSettings, onOpenAiValue)
                 true -> ChatContent(state = state, onSend = vm::sendMessage)
             }
         }
@@ -106,7 +108,7 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun NoProviderState(onNavigateToSettings: () -> Unit) {
+private fun NoProviderState(onNavigateToSettings: () -> Unit, onOpenAiValue: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -123,6 +125,9 @@ private fun NoProviderState(onNavigateToSettings: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor, contentColor = Color.Black),
         ) {
             Text("Ir a Ajustes", fontWeight = FontWeight.Bold)
+        }
+        TextButton(onClick = onOpenAiValue) {
+            Text("Configurar IA", color = AccentColor)
         }
     }
 }

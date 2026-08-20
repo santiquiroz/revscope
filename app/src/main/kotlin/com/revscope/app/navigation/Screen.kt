@@ -2,6 +2,7 @@ package com.revscope.app.navigation
 
 sealed class Screen(val route: String) {
     object Onboarding : Screen("onboarding")
+    object AiValue : Screen("ai_value")
     object Dashboard : Screen("dashboard")
     object Workshop : Screen("workshop")
     object AlDia : Screen("al_dia")

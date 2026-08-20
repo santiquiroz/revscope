@@ -82,7 +82,7 @@ fun OnboardingScreen(
                     0 -> Step0Permissions()
                     1 -> Step1Vehicle(vm)
                     2 -> Step2Adapter(vm, onFinished)
-                    3 -> StepPlaceholder("Inteligencia") // Task 4
+                    3 -> Step3Ai(vm)
                     else -> Step4Done()
                 }
             }
@@ -405,6 +405,21 @@ private fun GpsOnlyFeatureList() {
 }
 
 @Composable
+private fun Step3Ai(vm: OnboardingViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Text("¿Querés la capa de inteligencia?", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Con una API key gratis de Gemini activás el mecánico IA, el debrief de viaje, " +
+                "pico y placa por IA y la explicación de códigos de falla.",
+            color = TextMutedColor,
+            fontSize = 14.sp,
+        )
+        AiValueContent(onDone = vm::next, compact = true)
+    }
+}
+
+@Composable
 private fun onboardingTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = TextPrimaryColor,
     unfocusedTextColor = TextPrimaryColor,
@@ -416,14 +431,6 @@ private fun onboardingTextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedLabelColor = TextMutedColor,
     cursorColor = AccentColor,
 )
-
-@Composable
-private fun StepPlaceholder(title: String) {
-    Column {
-        Spacer(Modifier.height(16.dp))
-        Text(title, color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    }
-}
 
 @Composable
 private fun Step4Done() {

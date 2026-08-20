@@ -40,6 +40,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.revscope.app.onboarding.AiValueScreen
 import com.revscope.app.onboarding.OnboardingScreen
 import com.revscope.app.onboarding.OnboardingViewModel
 import com.revscope.app.safety.CrashAlertDialog
@@ -201,6 +202,9 @@ fun RevScopeNavGraph(
                         },
                     )
                 }
+                composable(Screen.AiValue.route) {
+                    AiValueScreen(onBack = { navController.popBackStack() })
+                }
                 composable(Screen.Dashboard.route) {
                     DashboardScreen(
                         onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },
@@ -233,6 +237,7 @@ fun RevScopeNavGraph(
                     MechanicChatScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
                     )
                 }
                 composable(Screen.Odometer.route) {
@@ -314,6 +319,8 @@ fun RevScopeNavGraph(
                 composable(Screen.Settings.route) {
                     SettingsScreen(
                         onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
+                        onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
+                        onRerunOnboarding = { navController.navigate(Screen.Onboarding.route) },
                     )
                 }
                 composable(Screen.TrackMode.route) {
