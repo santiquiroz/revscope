@@ -32,7 +32,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -207,14 +206,15 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     // cambio de tema claro/oscuro.
     val localMapFile = remember(context) { MapStyleProvider.localMapFile(context.filesDir) }
     // El asset de capas pesa ~240 KB: leerlo síncrono en composición bloquearía el frame. Corre
-    // en IO y cachea en memoria por tema (readMapLayersAsset). El initialValue se siembra desde
-    // ese mismo cache (peekMapLayersAsset, sin IO): con el tema ya leído antes, el toggle
-    // día/noche entrega el estilo final en el mismo frame, sin el flash de placeholder + reload
-    // que daba resetear siempre a null. Solo un cache-miss real (primera vez que se ve ese
-    // tema en el proceso) pasa por null y resuelve async, como antes.
-    val layersJson by produceState<String?>(initialValue = peekMapLayersAsset(darkTiles), darkTiles) {
-        if (value == null) {
-            value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = darkTiles) }
+    // en IO y cachea en memoria por tema (readMapLayersAsset). El seed viene del cache
+    // (peekMapLayersAsset, sin IO): con el tema ya leído antes, el toggle día/noche entrega el
+    // estilo final en el mismo frame. NO usar produceState acá: su remember interno no tiene
+    // keys, así que al cambiar darkTiles conservaría el JSON del tema viejo para siempre (el
+    // guard de null nunca dispararía) — remember(darkTiles) sí resetea el state por tema.
+    var layersJson by remember(darkTiles) { mutableStateOf(peekMapLayersAsset(darkTiles)) }
+    if (layersJson == null) {
+        LaunchedEffect(darkTiles) {
+            layersJson = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = darkTiles) }
         }
     }
     val styleJson = remember(localMapFileExists, darkTiles, layersJson) {

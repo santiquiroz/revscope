@@ -171,7 +171,10 @@ class MapDownloadService(
             )
         } catch (e: IllegalArgumentException) {
             // Algún filesystem no soporta ATOMIC_MOVE + REPLACE_EXISTING juntas en la misma
-            // llamada (documentado como posible en Files.move) — fallback a moverlas por separado.
+            // llamada — Files.move lo documenta como UnsupportedOperationException, pero hay
+            // providers que tiran IllegalArgumentException por combos de opciones: cubrir ambas.
+            moveAtomicThenManualReplace()
+        } catch (e: UnsupportedOperationException) {
             moveAtomicThenManualReplace()
         }
     }
