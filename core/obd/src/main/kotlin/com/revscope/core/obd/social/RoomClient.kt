@@ -64,7 +64,7 @@ class RoomClient @Inject constructor(
         .pingInterval(20, TimeUnit.SECONDS)
         .build()
 
-    private var socket: WebSocket? = null
+    @Volatile private var socket: WebSocket? = null
     private var feedJob: Job? = null
     private var helloTimeoutJob: Job? = null
     @Volatile private var lastSentMs = 0L
@@ -238,10 +238,15 @@ class RoomClient @Inject constructor(
 
     private val listener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            // Usa el webSocket del callback, no el campo `socket` — sigue siendo correcto
+            // aunque `socket` todavía no se haya asignado (la asignación es posterior al
+            // return de newWebSocket). No necesita el guard de identidad de abajo porque
+            // no toca estado compartido destructivo, solo arma el timeout de hello.
             sendHelloAndArmTimeout(webSocket)
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
+            if (webSocket !== socket) return // mensaje de una conexión vieja (leave+rejoin rápido) — se ignora
             when (val message = RoomMessageParser.parse(text)) {
                 is RoomMessage.Pos -> onPos(message)
                 is RoomMessage.Dest -> onDest(message)
@@ -252,11 +257,13 @@ class RoomClient @Inject constructor(
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            if (webSocket !== socket) return // falla de una conexión vieja ya reemplazada — se ignora
             Timber.i("RoomClient: socket caído (${t.message}) — rodada terminada en silencio")
             scope.launch { leaveInternal() }
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            if (webSocket !== socket) return // cierre de una conexión vieja ya reemplazada — se ignora
             scope.launch { leaveInternal() }
         }
     }
