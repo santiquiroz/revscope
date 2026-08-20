@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessAuto
@@ -32,9 +33,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.Alignment
@@ -81,6 +86,22 @@ import org.maplibre.android.maps.MapLibreMap
 
 private val AttributionColor = Color(0xFF6B7089)
 
+/** RoomClient.SharedDest no es Parcelable/Serializable — rememberSaveable necesita un Saver
+ * explícito para sobrevivir un cambio de configuración (rotación) sin perder qué destino ya
+ * descartó el usuario del banner. */
+private val SharedDestSaver = listSaver<RoomClient.SharedDest?, Any>(
+    save = { dest -> dest?.let { listOf(it.rider, it.lat, it.lon, it.name) } ?: emptyList() },
+    restore = { saved ->
+        if (saved.isEmpty()) null
+        else RoomClient.SharedDest(
+            rider = saved[0] as String,
+            lat = saved[1] as Double,
+            lon = saved[2] as Double,
+            name = saved[3] as String,
+        )
+    },
+)
+
 @Composable
 fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val route by viewModel.route.collectAsState()
@@ -96,7 +117,8 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val sharedDest by viewModel.sharedDest.collectAsState()
     val ranking by viewModel.ranking.collectAsState()
     val raceCountdown by viewModel.raceCountdown.collectAsState()
-    val selfRiderName by viewModel.selfRiderName.collectAsState()
+    val effectiveSelfName by viewModel.effectiveSelfName.collectAsState()
+    val ghost by viewModel.ghost.collectAsState()
     val destination by viewModel.destination.collectAsState()
     val plannedRoute by viewModel.plannedRoute.collectAsState()
     val routeAlternatives by viewModel.routeAlternatives.collectAsState()
@@ -154,14 +176,14 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
     var leaderboardExpanded by remember { mutableStateOf(false) }
-    var dismissedDest by remember { mutableStateOf<RoomClient.SharedDest?>(null) }
+    var dismissedDest by rememberSaveable(stateSaver = SharedDestSaver) { mutableStateOf<RoomClient.SharedDest?>(null) }
     val density = context.resources.displayMetrics.density
     // Destino ajeno recién propuesto: ni el mío propio (server puede hacer eco), ni de un
     // server legacy (no debería llegar, pero el gate es explícito), ni el que ya descarté.
     // Navegando el "Ir" quedaría como no-op silencioso (setDestination no cambia nada con
     // navigationController.isNavigating) — igual que RouteInfoChip, se oculta con nav activa.
     val incomingDest = sharedDest?.takeIf {
-        navigation == null && !roomState.legacyServer && it.rider != selfRiderName && it != dismissedDest
+        navigation == null && !roomState.legacyServer && it.rider != effectiveSelfName && it != dismissedDest
     }
     val canShareDestination = roomCode != null && !roomState.legacyServer && destination != null
 
@@ -529,7 +551,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                         expanded = leaderboardExpanded,
                         onToggleExpanded = { leaderboardExpanded = !leaderboardExpanded },
                         race = roomState.race,
-                        selfRiderName = selfRiderName,
+                        selfRiderName = effectiveSelfName,
                         onStartRace = viewModel::startRace,
                         onStopRace = viewModel::stopRace,
                         modifier = Modifier.width(220.dp),
@@ -547,6 +569,9 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         GroupRideDialog(
             activeCode = roomCode,
             busy = roomBusy,
+            legacyServer = roomState.legacyServer,
+            ghostEnabled = ghost,
+            onToggleGhost = viewModel::setGhost,
             onCreate = { viewModel.createRoom { showRoomDialog = false } },
             onJoin = { code -> viewModel.joinRoom(code); showRoomDialog = false },
             onLeave = { viewModel.leaveRoom(); showRoomDialog = false },
@@ -559,6 +584,9 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 private fun GroupRideDialog(
     activeCode: String?,
     busy: Boolean,
+    legacyServer: Boolean = false,
+    ghostEnabled: Boolean = false,
+    onToggleGhost: (Boolean) -> Unit = {},
     onCreate: () -> Unit,
     onJoin: (String) -> Unit,
     onLeave: () -> Unit,
@@ -573,6 +601,16 @@ private fun GroupRideDialog(
             Column {
                 if (activeCode != null) {
                     Text("Est\u00e1s en la sala $activeCode. Comparte el c\u00f3digo con tu parche.", color = Color(0xFF6B7089), fontSize = 13.sp)
+                    if (legacyServer) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "El servidor necesita actualizarse para las funciones sociales (destino compartido, carreras).",
+                            color = Color(0xFFFF5252),
+                            fontSize = 12.sp,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    GhostModeToggle(enabled = ghostEnabled, onToggle = onToggleGhost)
                 } else {
                     Text("Crea una sala y comparte el c\u00f3digo, o \u00fanete a la de un parcero. Ver\u00e1s sus posiciones en el mapa en vivo.", color = Color(0xFF6B7089), fontSize = 13.sp)
                     Spacer(Modifier.height(12.dp))
@@ -601,6 +639,33 @@ private fun GroupRideDialog(
             }
         },
     )
+}
+
+/** F3: deja la sala sin retransmitir mi posición (RoomClient.setGhost) — el resto sigue viendo
+ * las posiciones de los demás normalmente, solo la mía deja de salir. Sin persistencia. */
+@Composable
+private fun GhostModeToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Modo fantasma", color = Color(0xFFF0F0F8), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Ves a la sala, pero tu posición no se comparte.",
+                color = Color(0xFF6B7089),
+                fontSize = 11.sp,
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color(0xFF0A0A0F),
+                checkedTrackColor = Color(0xFFE8FF00),
+            ),
+        )
+    }
 }
 
 /** Chip con distancia y ETA de la ruta planeada — o el estado del cálculo. Con más de una

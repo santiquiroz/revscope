@@ -32,6 +32,7 @@ import com.revscope.feature.map.routing.OsrmRouteFetcher
 import com.revscope.feature.map.routing.RerouteDecider
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
+import com.revscope.feature.map.social.ArrivalLedger
 import com.revscope.feature.map.social.RaceArrival
 import com.revscope.feature.map.social.RaceCountdown
 import com.revscope.feature.map.social.RankingCalc
@@ -158,28 +159,66 @@ class LiveMapViewModel @Inject constructor(
     // ── Rodada en grupo ──────────────────────────────────────────────────────
 
     val roomCode: StateFlow<String?> = roomClient.roomCode
-    val peers: StateFlow<Map<String, RoomClient.Peer>> = roomClient.peers
+
+    /** Tick liviano SOLO para re-evaluar staleness de peers (F5) — RoomClient re-filtra su
+     * mapa al recibir un `pos` nuevo, pero si TODOS se detienen (p. ej. llegaron y
+     * estacionaron) nadie dispara ese filtro nunca más y un peer muerto queda "vivo" para
+     * siempre en el mapa y en el ranking. */
+    private val peerStaleTick = flow {
+        while (true) {
+            emit(Unit)
+            delay(PEER_STALE_CHECK_MS)
+        }
+    }
+
+    /** Peers de la sala con staleness re-evaluada cada [PEER_STALE_CHECK_MS] — flatMapLatest
+     * sobre roomCode: el tick solo corre con sala activa, y WhileSubscribed ya corta en
+     * background. Los llegados del ArrivalLedger (F1) son sticky y no dependen de esto. */
+    val peers: StateFlow<Map<String, RoomClient.Peer>> = roomCode.flatMapLatest { code ->
+        if (code == null) flowOf(emptyMap())
+        else combine(roomClient.peers, peerStaleTick) { map, _ -> pruneStalePeers(map) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    private fun pruneStalePeers(map: Map<String, RoomClient.Peer>): Map<String, RoomClient.Peer> {
+        val now = System.currentTimeMillis()
+        return map.filterValues { now - it.seenAtMs < RoomClient.PEER_STALE_MS }
+    }
+
     val roomState: StateFlow<RoomClient.RoomState> = roomClient.roomState
+
+    /** Modo fantasma (F3): mientras esté activo, mi posición no se retransmite a la sala. Sin
+     * persistencia — vive en RoomClient, se resetea con el proceso como el resto de su estado. */
+    val ghost: StateFlow<Boolean> = roomClient.ghost
+
+    fun setGhost(enabled: Boolean) = roomClient.setGhost(enabled)
 
     val sharedDest: StateFlow<RoomClient.SharedDest?> = roomState
         .map { it.dest }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // Mismo fallback "rider" que ServerClient.config() — si difiere, el filtro de "dest
-    // propio" del banner (LiveMapScreen) nunca matchea para quien no configuró apodo. El
-    // nombre asignado real por el server (con sufijo si hay colisión) queda pendiente de
-    // que RoomClient lo exponga — mejora de protocolo fuera de este scope.
+    // propio" del banner (LiveMapScreen) nunca matchea para quien no configuró apodo.
     val selfRiderName: StateFlow<String> = settings.data
         .map { it[PreferencesKeys.SERVER_RIDER_NAME]?.trim().orEmpty().ifBlank { "rider" } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "rider")
 
+    /** Nombre real asignado por el server (F6) — trae el sufijo si hubo colisión con otro
+     * rider ya en la sala. Cae a [selfRiderName] con un server viejo que todavía no manda
+     * `you` en `room_state`. Reemplaza a selfRiderName en toda comparación de identidad de
+     * sala (ranking propio, botón Detener carrera, filtro del banner de destino). */
+    val effectiveSelfName: StateFlow<String> = combine(roomState, selfRiderName) { state, local ->
+        state.you ?: local
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "rider")
+
     // Recalcula en cada emisión de peers (posiciones ~1 Hz) o de roomState (destino nuevo,
     // sala legacy) — la posición/velocidad propia se lee como snapshot en ese instante,
     // igual que hace lastKnownPoint() para el ruteo (M4 no aplica: esto no dispara red).
-    val ranking: StateFlow<List<RankingCalc.Entry>> = combine(peers, roomState) { peersMap, state ->
+    // Crudo: sin memoria de carrera, es el insumo del ArrivalLedger (F1) — no se expone
+    // directo, ver `ranking` más abajo.
+    private val rawRanking: StateFlow<List<RankingCalc.Entry>> = combine(peers, roomState) { peersMap, state ->
         val dest = state.dest
         if (state.legacyServer || dest == null) return@combine emptyList()
-        val self = lastKnownPoint()?.let { selfRiderName.value to it }
+        val self = lastKnownPoint()?.let { (state.you ?: selfRiderName.value) to it }
         RankingCalc.rank(
             self = self,
             selfSpeedKmh = speedKmh.value?.toDouble(),
@@ -187,6 +226,14 @@ class LiveMapViewModel @Inject constructor(
             dest = dest,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _ranking = MutableStateFlow<List<RankingCalc.Entry>>(emptyList())
+
+    /** Posiciones de la sala respecto del destino compartido, CON el orden real de cruce
+     * aplicado (F1: ArrivalLedger) — llegados reales primero en su orden real, sticky durante
+     * toda la carrera. Se recalcula en el mismo collector que alimenta [arrivalLedgerState],
+     * ver el init{} de más abajo. */
+    val ranking: StateFlow<List<RankingCalc.Entry>> = _ranking.asStateFlow()
 
     // ── Carreras de sala (F4) ────────────────────────────────────────────────
 
@@ -222,21 +269,28 @@ class LiveMapViewModel @Inject constructor(
     // el último estado devuelto, igual de simple que milAnnouncedThisSession en AlertsEngine.
     private var raceArrivalState = RaceArrival.State()
 
-    /** El índice propio en [entries] al momento del cruce false→true es la posición anunciada;
-     * sin posición propia todavía (carrera activa pero sin fix GPS) se salta el tick entero en
+    // Registro real de orden de llegada (F1) — mismo patrón que raceArrivalState: el reductor
+    // (ArrivalLedger.step) es puro y testeado, acá solo vive el último estado devuelto. Se
+    // pisa en el mismo collector que recalcula `ranking`, ver init{} más abajo.
+    private var arrivalLedgerState = ArrivalLedger.State()
+
+    /** [entries] ya viene con el orden real de cruce aplicado (F1: ArrivalLedger, ver el
+     * collector en init{}) — el número anunciado es ese orden real, no un índice de lista.
+     * Sin posición propia todavía (carrera activa pero sin fix GPS) se salta el tick entero en
      * vez de sembrar un `arrived = false` que podría ser falso. */
     private fun maybeAnnounceArrival(entries: List<RankingCalc.Entry>, race: RoomClient.RaceState?) {
-        val selfIndex = entries.indexOfFirst { it.isSelf }
-        if (race != null && selfIndex < 0) return
-        val arrived = selfIndex >= 0 && entries[selfIndex].arrived
+        val self = entries.firstOrNull { it.isSelf }
+        if (race != null && self == null) return
         val (nextState, shouldAnnounce) = RaceArrival.step(
             state = raceArrivalState,
             raceStartAtMs = race?.startAtMs,
-            arrived = arrived,
+            arrived = self?.arrived ?: false,
             nowMs = System.currentTimeMillis(),
         )
         raceArrivalState = nextState
-        if (shouldAnnounce) navigationVoice.say("Llegaste, posición ${selfIndex + 1}")
+        if (!shouldAnnounce) return
+        val position = arrivalLedgerState.finishers[self?.name]?.order ?: return
+        navigationVoice.say("Llegaste, posición $position")
     }
 
     private val _roomBusy = MutableStateFlow(false)
@@ -513,6 +567,10 @@ class LiveMapViewModel @Inject constructor(
     }
 
     fun clearDestination() {
+        // Bumpea la generación como cualquier otro cambio de destino (ver setDestination):
+        // sin esto, un fetchAlternatives en vuelo que resuelve después de limpiar resucita
+        // ruta y chips con el destino viejo.
+        ++routingGeneration
         rerouteJob?.cancel()
         navigationController.stop()
         _destination.value = null
@@ -546,9 +604,23 @@ class LiveMapViewModel @Inject constructor(
                 maybeReroute(state)
             }
         }
+        // Único punto que pisa arrivalLedgerState (F1): step() con las entries crudas de este
+        // tick, aplica el orden real resultante sobre `ranking` (lo que ve la UI) y recién
+        // ahí decide si corresponde anunciar la llegada propia — maybeAnnounceArrival necesita
+        // el ledger ya actualizado para resolver la posición real, no un índice.
         viewModelScope.launch {
-            combine(ranking, roomState) { entries, state -> entries to state.race }
-                .collect { (entries, race) -> maybeAnnounceArrival(entries, race) }
+            combine(rawRanking, roomState) { entries, state -> entries to state.race }
+                .collect { (entries, race) ->
+                    arrivalLedgerState = ArrivalLedger.step(
+                        state = arrivalLedgerState,
+                        entries = entries,
+                        raceKey = race?.startAtMs,
+                        nowMs = System.currentTimeMillis(),
+                    )
+                    val ranked = RankingCalc.applyArrivalOrder(entries, arrivalLedgerState)
+                    _ranking.value = ranked
+                    maybeAnnounceArrival(ranked, race)
+                }
         }
     }
 
@@ -556,5 +628,6 @@ class LiveMapViewModel @Inject constructor(
         const val SEARCH_DEBOUNCE_MS = 350L
         const val MINUTE_TICK_MS = 60_000L
         const val RACE_CLOCK_TICK_MS = 250L
+        const val PEER_STALE_CHECK_MS = 10_000L
     }
 }
