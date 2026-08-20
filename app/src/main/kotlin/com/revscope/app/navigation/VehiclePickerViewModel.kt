@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
@@ -16,7 +17,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -30,7 +30,7 @@ class VehiclePickerViewModel @Inject constructor(
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        .stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     private val _askOnStart = MutableStateFlow(true)
     val askOnStart: StateFlow<Boolean> = _askOnStart.asStateFlow()

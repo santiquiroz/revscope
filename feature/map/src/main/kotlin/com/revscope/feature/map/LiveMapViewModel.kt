@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.SunTimes
+import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.PotholeDao
 import com.revscope.core.data.db.dao.SavedPlaceDao
@@ -391,13 +392,13 @@ class LiveMapViewModel @Inject constructor(
     // Flow y no one-shot: este ViewModel sobrevive los cambios de tab (restoreState),
     // así que una lectura única dejaba el mapa ciego a descargas posteriores.
     val cameras: StateFlow<List<SpeedCameraEntity>> = cameraDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateInSafe(viewModelScope, emptyList())
 
     val potholes: StateFlow<List<PotholeEntity>> = potholeDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateInSafe(viewModelScope, emptyList())
 
     val savedPlaces: StateFlow<List<SavedPlaceEntity>> = savedPlaceDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateInSafe(viewModelScope, emptyList())
 
     init {
         // loadLastKnownLocation() ya corrió en el init{} de más arriba (antes de darkTiles).

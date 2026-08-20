@@ -2,6 +2,7 @@ package com.revscope.feature.vehicle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.connection.ConnectionState
@@ -15,7 +16,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import javax.inject.Inject
@@ -28,7 +28,7 @@ class VehicleViewModel @Inject constructor(
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        .stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     val availablePids: List<PidDefinition> = registry.allDefinitions().sortedBy { it.nameEs }
 
