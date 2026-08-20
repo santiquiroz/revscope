@@ -66,7 +66,7 @@ class MaintenanceViewModel @Inject constructor(
     val odometroActual: StateFlow<Double> =
         combine(activeProfile, sumaSesionesFlow, _odometroOverrideKm) { profile, suma, override ->
             override ?: MaintenanceCalculator.odometroActual(profile?.odometerBaseKm ?: 0.0, suma)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+        }.stateInSafe(viewModelScope, 0.0, started = SharingStarted.Eagerly)
 
     val estados: StateFlow<List<MaintenanceCalculator.ItemStatus>> =
         combine(odometroActual, items) { odometro, items -> MaintenanceCalculator.calculate(odometro, items) }
