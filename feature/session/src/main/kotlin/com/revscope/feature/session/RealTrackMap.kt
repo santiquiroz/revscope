@@ -19,6 +19,7 @@ import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.maps.boundsOf
 import com.revscope.core.maps.physicalPxToDp
+import com.revscope.core.maps.peekMapLayersAsset
 import com.revscope.core.maps.readMapLayersAsset
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -76,9 +77,13 @@ fun RealTrackMap(
         MapStyleProvider.tilesUrl(MapStyleProvider.localMapFile(context.filesDir), null)
     }
     // El asset de capas pesa ~240 KB: leerlo síncrono en composición bloquearía el frame — corre
-    // en IO, igual que LiveMapScreen (dark fijo false acá, así que sin key adicional).
-    val layersJson by produceState<String?>(initialValue = null) {
-        value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = false) }
+    // en IO, igual que LiveMapScreen (dark fijo false acá, así que sin key adicional). Sembrado
+    // desde el cache (peekMapLayersAsset, sin IO): si LiveMapScreen ya leyó el tema claro en
+    // este proceso, esta pantalla arranca con el estilo final de una, sin frame de placeholder.
+    val layersJson by produceState<String?>(initialValue = peekMapLayersAsset(dark = false)) {
+        if (value == null) {
+            value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = false) }
+        }
     }
     val styleJson = remember(layersJson) {
         MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = false, layersJson = layersJson)

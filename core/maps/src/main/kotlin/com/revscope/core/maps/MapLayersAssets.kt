@@ -33,3 +33,16 @@ fun readMapLayersAsset(context: Context, dark: Boolean): String? {
     synchronized(cacheLock) { cache[dark] = result }
     return result
 }
+
+/**
+ * Mira el cache en memoria SIN tocar IO — para sembrar `produceState` sincrónicamente cuando el
+ * tema pedido ya se leyó antes en este proceso. Sin esto, cada toggle día/noche resetea
+ * `layersJson` a null (cache miss "aparente" desde el punto de vista del composable), lo que
+ * arma un estilo placeholder + un segundo `setStyle`/reload apenas resuelve el IO — flicker
+ * visible aunque el dato ya estuviera en memoria.
+ *
+ * null tanto si el tema nunca se leyó (cache miss real) como si la única lectura previa falló
+ * (falla cacheada) — en ambos casos el caller debe resolverlo async con [readMapLayersAsset];
+ * ahí un cache-miss real toca disco y una falla cacheada retorna null de inmediato sin IO.
+ */
+fun peekMapLayersAsset(dark: Boolean): String? = synchronized(cacheLock) { cache[dark] }

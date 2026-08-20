@@ -27,6 +27,7 @@ import com.revscope.core.intelligence.provider.AiProviderSelection
 import com.revscope.core.intelligence.provider.AiRequest
 import com.revscope.core.maps.MapDownloadService
 import com.revscope.core.maps.MapDownloadState
+import com.revscope.core.maps.isOnWifi
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.guard.GuardService
 import com.revscope.core.obd.alerts.CustomAlertRules
@@ -741,13 +742,7 @@ class SettingsViewModel @Inject constructor(
     /** Lee la conectividad actual para que la UI decida qué diálogo de confirmación mostrar
      * antes de llamar a [downloadOfflineMap] — MapDownloadService igual re-chequea WiFi al
      * arrancar la descarga, esto solo evita mostrarle al usuario el diálogo equivocado. */
-    fun isOnWifiNow(): Boolean {
-        val connectivityManager = appContext.getSystemService(Context.CONNECTIVITY_SERVICE)
-            as? android.net.ConnectivityManager ?: return false
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
-    }
+    fun isOnWifiNow(): Boolean = isOnWifi(appContext)
 
     // ── Pantalla ─────────────────────────────────────────────────────────────
 

@@ -1,10 +1,9 @@
 package com.revscope.core.maps.di
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import com.revscope.core.maps.MapDownloadService
 import com.revscope.core.maps.MapStyleProvider
+import com.revscope.core.maps.isOnWifi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,13 +26,5 @@ object MapsModule {
             mapsDir = mapsDir,
             isOnWifi = { isOnWifi(context) },
         )
-    }
-
-    private fun isOnWifi(context: Context): Boolean {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }
 }

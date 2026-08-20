@@ -64,6 +64,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
+import com.revscope.core.maps.peekMapLayersAsset
 import com.revscope.core.maps.readMapLayersAsset
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
@@ -206,10 +207,15 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     // cambio de tema claro/oscuro.
     val localMapFile = remember(context) { MapStyleProvider.localMapFile(context.filesDir) }
     // El asset de capas pesa ~240 KB: leerlo síncrono en composición bloquearía el frame. Corre
-    // en IO y cachea en memoria por tema (readMapLayersAsset); mientras value es null el estilo
-    // sale sin layersJson (fondo/ráster) un frame, hasta que la lectura resuelve.
-    val layersJson by produceState<String?>(initialValue = null, darkTiles) {
-        value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = darkTiles) }
+    // en IO y cachea en memoria por tema (readMapLayersAsset). El initialValue se siembra desde
+    // ese mismo cache (peekMapLayersAsset, sin IO): con el tema ya leído antes, el toggle
+    // día/noche entrega el estilo final en el mismo frame, sin el flash de placeholder + reload
+    // que daba resetear siempre a null. Solo un cache-miss real (primera vez que se ve ese
+    // tema en el proceso) pasa por null y resuelve async, como antes.
+    val layersJson by produceState<String?>(initialValue = peekMapLayersAsset(darkTiles), darkTiles) {
+        if (value == null) {
+            value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = darkTiles) }
+        }
     }
     val styleJson = remember(localMapFileExists, darkTiles, layersJson) {
         val tilesUrl = MapStyleProvider.tilesUrl(if (localMapFileExists) localMapFile else null, null)
