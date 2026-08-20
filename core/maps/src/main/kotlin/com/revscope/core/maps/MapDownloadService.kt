@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * Gestiona el `.pmtiles` offline de Colombia en disco: descarga streaming con progreso, borrado
@@ -136,13 +139,51 @@ class MapDownloadService(
     }
 
     private fun promote(myJob: Job?) {
-        val renameOk = partFile.renameTo(targetFile)
-        when (MapDownloadDecider.promoteOutcome(renameOk)) {
+        when (MapDownloadDecider.promoteOutcome(renameOk = promoteAtomically())) {
             MapDownloadPromoteOutcome.PROMOTED -> publishState(myJob, idleStateFromDisk())
             MapDownloadPromoteOutcome.RENAME_FAILED -> {
                 partFile.delete()
                 publishState(myJob, MapDownloadState.Error("No se pudo finalizar la descarga del mapa offline"))
             }
+        }
+    }
+
+    /**
+     * `File.renameTo` falla silenciosamente con destino existente en la JVM de Windows (donde
+     * corren los unit tests) — sin fallar ahí, una re-descarga sobre un mapa ya instalado nunca
+     * promovía. `Files.move` con ATOMIC_MOVE + REPLACE_EXISTING da atomicidad y reemplazo en
+     * ambas plataformas.
+     */
+    private fun promoteAtomically(): Boolean = try {
+        moveReplacingTarget()
+        true
+    } catch (e: Exception) {
+        false
+    }
+
+    private fun moveReplacingTarget() {
+        try {
+            Files.move(
+                partFile.toPath(),
+                targetFile.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+        } catch (e: IllegalArgumentException) {
+            // Algún filesystem no soporta ATOMIC_MOVE + REPLACE_EXISTING juntas en la misma
+            // llamada (documentado como posible en Files.move) — fallback a moverlas por separado.
+            moveAtomicThenManualReplace()
+        }
+    }
+
+    private fun moveAtomicThenManualReplace() {
+        try {
+            Files.move(partFile.toPath(), targetFile.toPath(), StandardCopyOption.ATOMIC_MOVE)
+        } catch (e: FileAlreadyExistsException) {
+            // Ventana no atómica mínima aceptada: sin esto, un ATOMIC_MOVE sin REPLACE_EXISTING
+            // no puede pisar un mapa ya descargado.
+            Files.deleteIfExists(targetFile.toPath())
+            Files.move(partFile.toPath(), targetFile.toPath(), StandardCopyOption.ATOMIC_MOVE)
         }
     }
 

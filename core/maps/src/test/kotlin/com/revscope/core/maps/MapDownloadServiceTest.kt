@@ -52,7 +52,7 @@ class MapDownloadServiceTest {
     }
 
     @Test
-    fun `error de red deja Error y borra el part`() = runBlocking {
+    fun `error de red antes de escribir bytes deja Error sin crear el part`() = runBlocking {
         val dir = tempMapsDir()
         val service = service(
             dir,
@@ -63,6 +63,37 @@ class MapDownloadServiceTest {
         val state = awaitState<MapDownloadState.Error>(service)
 
         assertTrue(state.message.isNotBlank())
+        assertFalse(partFile(dir).exists())
+    }
+
+    @Test
+    fun `error de red a mitad de la descarga borra el part con bytes reales escritos`() = runBlocking {
+        val dir = tempMapsDir()
+        // 2 de 4 chunks escritos (200 de 400 bytes reales en disco) antes de que la fuente tire —
+        // a diferencia del failWith sin failAfterChunks, acá el .part existe de verdad al fallar.
+        val service = service(
+            dir,
+            bytesSource = FakeMapBytesSource(totalBytes = 400L, chunkBytes = 100L, failAfterChunks = 2),
+        )
+
+        service.download(allowCellular = true)
+        val state = awaitState<MapDownloadState.Error>(service)
+
+        assertTrue(state.message.isNotBlank())
+        assertFalse(partFile(dir).exists())
+    }
+
+    @Test
+    fun `redescarga sobre un mapa ya existente reemplaza el archivo target`() = runBlocking {
+        val dir = tempMapsDir()
+        targetFile(dir).apply { parentFile?.mkdirs(); writeBytes(ByteArray(999) { 1 }) }
+        val service = service(dir, bytesSource = FakeMapBytesSource(totalBytes = 400L, chunkBytes = 100L))
+
+        service.download(allowCellular = true)
+        val finalState = awaitState<MapDownloadState.Idle>(service)
+
+        assertTrue(finalState.exists)
+        assertEquals(400L, finalState.sizeBytes)
         assertFalse(partFile(dir).exists())
     }
 
