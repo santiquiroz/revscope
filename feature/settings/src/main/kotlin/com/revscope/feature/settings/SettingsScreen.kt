@@ -486,6 +486,10 @@ fun SettingsScreen(
             ) { Text("Guardar radio", color = BgColor) }
 
             Spacer(Modifier.height(8.dp))
+            SectionTitle("Mapa")
+            OfflineMapSection(vm, snackbarHostState)
+
+            Spacer(Modifier.height(8.dp))
             SectionTitle("Avisos en segundo plano")
             BackgroundDeliverySettings()
 
