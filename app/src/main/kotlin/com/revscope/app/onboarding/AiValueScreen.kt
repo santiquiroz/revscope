@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.intelligence.provider.AI_PROVIDER_GEMINI
 import com.revscope.feature.settings.SettingsViewModel
+import kotlinx.coroutines.flow.first
 
 private val BgColor = Color(0xFF0A0A0F)
 private val SurfaceColor = Color(0xFF12121A)
@@ -62,7 +63,6 @@ private val AiValueBullets = listOf(
     "Explicación de códigos de falla (DTC)",
 )
 
-/** compact = true lo embebe el wizard sin botón "Después" (usa el Saltar de WizardBar). */
 @Composable
 fun AiValueContent(
     onDone: () -> Unit,
@@ -74,7 +74,12 @@ fun AiValueContent(
     val aiTesting by vm.aiTesting.collectAsState()
     val testResult by vm.lastSaveResult.collectAsState()
 
-    LaunchedEffect(Unit) { vm.updateAiProvider(AI_PROVIDER_GEMINI) }
+    // Espera a que el init del VM termine de cargar el provider persistido antes de
+    // forzar Gemini — si no, la carga async puede pisar este valor después de fijarlo.
+    LaunchedEffect(Unit) {
+        vm.aiFieldsLoaded.first { it }
+        vm.updateAiProvider(AI_PROVIDER_GEMINI)
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -126,10 +131,8 @@ fun AiValueContent(
             }
         }
 
-        if (!compact) {
-            TextButton(onClick = onDone) {
-                Text("Después", color = TextMutedColor)
-            }
+        TextButton(onClick = onDone) {
+            Text("Después", color = TextMutedColor)
         }
     }
 }

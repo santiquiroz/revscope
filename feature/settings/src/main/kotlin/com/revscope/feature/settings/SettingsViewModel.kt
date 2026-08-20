@@ -90,6 +90,9 @@ class SettingsViewModel @Inject constructor(
     private val _aiTesting = MutableStateFlow(false)
     val aiTesting: StateFlow<Boolean> = _aiTesting.asStateFlow()
 
+    private val _aiFieldsLoaded = MutableStateFlow(false)
+    val aiFieldsLoaded: StateFlow<Boolean> = _aiFieldsLoaded.asStateFlow()
+
     private val _customPidsJson = MutableStateFlow("")
     val customPidsJson: StateFlow<String> = _customPidsJson.asStateFlow()
 
@@ -322,6 +325,7 @@ class SettingsViewModel @Inject constructor(
                 _serverToken.value = prefs[PreferencesKeys.SERVER_AUTH_TOKEN].orEmpty()
                 _riderName.value = prefs[PreferencesKeys.SERVER_RIDER_NAME].orEmpty()
                 _aiPicoPlaca.value = prefs[PreferencesKeys.AI_PICO_PLACA_ENABLED] ?: false
+                _aiFieldsLoaded.value = true
             }.onFailure { Timber.w(it, "SettingsViewModel: failed to load settings") }
         }
     }

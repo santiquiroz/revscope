@@ -98,6 +98,7 @@ fun OnboardingScreen(
                         onFinished(false)
                     }
                 },
+                showAdvance = step != 3,
             )
         }
     }
@@ -127,6 +128,7 @@ private fun WizardBar(
     onBack: () -> Unit,
     onSkip: () -> Unit,
     onNext: () -> Unit,
+    showAdvance: Boolean = true,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -138,22 +140,24 @@ private fun WizardBar(
             }
         }
         Spacer(Modifier.weight(1f))
-        if (step < OnboardingViewModel.TOTAL_STEPS - 1) {
-            TextButton(onClick = onSkip) {
-                Text("Saltar", color = TextMutedColor)
+        if (showAdvance) {
+            if (step < OnboardingViewModel.TOTAL_STEPS - 1) {
+                TextButton(onClick = onSkip) {
+                    Text("Saltar", color = TextMutedColor)
+                }
+                Spacer(Modifier.width(8.dp))
             }
-            Spacer(Modifier.width(8.dp))
-        }
-        Button(
-            onClick = onNext,
-            colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            modifier = Modifier.height(48.dp),
-        ) {
-            Text(
-                if (step == OnboardingViewModel.TOTAL_STEPS - 1) "Empezar" else "Siguiente",
-                color = BgColor,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Button(
+                onClick = onNext,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+                modifier = Modifier.height(48.dp),
+            ) {
+                Text(
+                    if (step == OnboardingViewModel.TOTAL_STEPS - 1) "Empezar" else "Siguiente",
+                    color = BgColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }

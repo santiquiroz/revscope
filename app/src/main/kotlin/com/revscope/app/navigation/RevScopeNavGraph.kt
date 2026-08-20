@@ -320,7 +320,10 @@ fun RevScopeNavGraph(
                     SettingsScreen(
                         onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
                         onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
-                        onRerunOnboarding = { navController.navigate(Screen.Onboarding.route) },
+                        onRerunOnboarding = {
+                            onboardingVm.goTo(0)
+                            navController.navigate(Screen.Onboarding.route)
+                        },
                     )
                 }
                 composable(Screen.TrackMode.route) {
