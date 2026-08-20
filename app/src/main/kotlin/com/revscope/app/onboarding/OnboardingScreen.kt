@@ -170,9 +170,10 @@ private fun Step0Permissions() {
     var notificationsGranted by remember { mutableStateOf(isNotificationsGranted(context)) }
     var bluetoothGranted by remember { mutableStateOf(isBluetoothGranted(context)) }
 
+    // Android 12+ ignora un request de FINE sin COARSE en el mismo diálogo.
     val locationLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> locationGranted = granted }
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { results -> locationGranted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true }
 
     val notificationsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -199,7 +200,7 @@ private fun Step0Permissions() {
             title = "Ubicación",
             rationale = "Para grabar tus rutas y avisarte de radares.",
             granted = locationGranted,
-            onRequest = { locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+            onRequest = { locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
         )
 
         PermissionCard(
