@@ -32,6 +32,7 @@ import com.revscope.feature.map.routing.OsrmRouteFetcher
 import com.revscope.feature.map.routing.RerouteDecider
 import com.revscope.feature.map.search.PhotonGeocoder
 import com.revscope.feature.map.search.PlaceResult
+import com.revscope.feature.map.social.RaceArrival
 import com.revscope.feature.map.social.RaceCountdown
 import com.revscope.feature.map.social.RankingCalc
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -200,35 +202,39 @@ class LiveMapViewModel @Inject constructor(
     }
 
     /** null = sin overlay. 0 = "¡YA!". 1..5 = segundos restantes para la largada. flatMapLatest
-     * sobre roomState: sin carrera no hay reloj corriendo, así que no se recomputa cada 250 ms
-     * durante toda la sesión de mapa — solo mientras roomState.race no sea null. */
+     * sobre roomState: sin carrera no hay reloj corriendo. El inner flow además se completa solo
+     * — vía RaceCountdown.isFinished — apenas se pasa la ventana de visibilidad, así que tampoco
+     * queda tiqueando cada 250 ms el resto de una carrera larga que nadie detuvo todavía; el
+     * último valor emitido (null) es justamente el que deja el overlay oculto. */
     val raceCountdown: StateFlow<Int?> = roomState.flatMapLatest { state ->
-        val race = state.race ?: return@flatMapLatest flowOf(null)
-        raceClockTick.map { RaceCountdown.secondsToShow(race.startAtMs, System.currentTimeMillis()) }
+        val race = state.race ?: return@flatMapLatest flowOf<Int?>(null)
+        raceClockTick.transformWhile {
+            val now = System.currentTimeMillis()
+            emit(RaceCountdown.secondsToShow(race.startAtMs, now))
+            !RaceCountdown.isFinished(race.startAtMs, now)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    // "Llegaste, posición N" es estado de ESTA sesión de UI (no de RoomClient/RankingCalc, que
-    // son puros): igual que milAnnouncedThisSession en AlertsEngine, un flag simple evita
-    // repetir el anuncio en cada recomputación del ranking mientras la carrera sigue activa.
-    private var wasSelfArrived = false
-    private var arrivalAnnouncedForRaceKey: Long? = null
+    // Estado de ESTA sesión de UI para "Llegaste, posición N" (no de RoomClient/RankingCalc,
+    // que son puros) — el reductor en sí (RaceArrival.step) es puro y testeado; acá solo vive
+    // el último estado devuelto, igual de simple que milAnnouncedThisSession en AlertsEngine.
+    private var raceArrivalState = RaceArrival.State()
 
-    /** [race] llegado en null resetea el flag de "ya llegué" para la próxima carrera; el índice
-     * propio en [entries] al momento del cruce false→true es la posición anunciada. */
+    /** El índice propio en [entries] al momento del cruce false→true es la posición anunciada;
+     * sin posición propia todavía (carrera activa pero sin fix GPS) se salta el tick entero en
+     * vez de sembrar un `arrived = false` que podría ser falso. */
     private fun maybeAnnounceArrival(entries: List<RankingCalc.Entry>, race: RoomClient.RaceState?) {
-        if (race == null) {
-            wasSelfArrived = false
-            arrivalAnnouncedForRaceKey = null
-            return
-        }
         val selfIndex = entries.indexOfFirst { it.isSelf }
-        if (selfIndex < 0) return
-        val arrived = entries[selfIndex].arrived
-        val justArrived = arrived && !wasSelfArrived
-        wasSelfArrived = arrived
-        if (!justArrived || arrivalAnnouncedForRaceKey == race.startAtMs) return
-        arrivalAnnouncedForRaceKey = race.startAtMs
-        navigationVoice.say("Llegaste, posición ${selfIndex + 1}")
+        if (race != null && selfIndex < 0) return
+        val arrived = selfIndex >= 0 && entries[selfIndex].arrived
+        val (nextState, shouldAnnounce) = RaceArrival.step(
+            state = raceArrivalState,
+            raceStartAtMs = race?.startAtMs,
+            arrived = arrived,
+            nowMs = System.currentTimeMillis(),
+        )
+        raceArrivalState = nextState
+        if (shouldAnnounce) navigationVoice.say("Llegaste, posición ${selfIndex + 1}")
     }
 
     private val _roomBusy = MutableStateFlow(false)

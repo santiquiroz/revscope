@@ -145,4 +145,101 @@ class LeaderboardTest {
     fun `countdown se oculta a los 2 segundos post largada`() {
         assertNull(RaceCountdown.secondsToShow(startAtMs = 0, nowMs = 2_000))
     }
+
+    @Test
+    fun `countdown no termino mientras todavia no entro a la ventana`() {
+        assertFalse(RaceCountdown.isFinished(startAtMs = 10_000, nowMs = 0))
+    }
+
+    @Test
+    fun `countdown no termino dentro de la ventana`() {
+        assertFalse(RaceCountdown.isFinished(startAtMs = 0, nowMs = 1_000))
+    }
+
+    @Test
+    fun `countdown termino pasados los 2 segundos post largada`() {
+        assertTrue(RaceCountdown.isFinished(startAtMs = 0, nowMs = 2_000))
+    }
+
+    @Test
+    fun `arribo armado con arrived true no anuncia esa llegada`() {
+        val startAtMs = 10_000L
+        val seeded = RaceArrival.step(
+            state = RaceArrival.State(),
+            raceStartAtMs = startAtMs,
+            arrived = true,
+            nowMs = startAtMs,
+        )
+
+        assertFalse("un rider ya en destino al armarse la carrera no genera un cruce", seeded.second)
+
+        val stillThere = RaceArrival.step(seeded.first, raceStartAtMs = startAtMs, arrived = true, nowMs = startAtMs + 5_000)
+        assertFalse(stillThere.second)
+    }
+
+    @Test
+    fun `arribo cruce real tras la largada anuncia una sola vez`() {
+        val startAtMs = 10_000L
+        var state = RaceArrival.State()
+
+        val beforeStart = RaceArrival.step(state, raceStartAtMs = startAtMs, arrived = false, nowMs = 0)
+        state = beforeStart.first
+        assertFalse(beforeStart.second)
+
+        val crossing = RaceArrival.step(state, raceStartAtMs = startAtMs, arrived = true, nowMs = startAtMs + 100)
+        state = crossing.first
+        assertTrue("cruce false->true despues de la largada debe anunciar", crossing.second)
+
+        val stillArrived = RaceArrival.step(state, raceStartAtMs = startAtMs, arrived = true, nowMs = startAtMs + 5_000)
+        assertFalse("no debe repetir el anuncio en la misma carrera", stillArrived.second)
+    }
+
+    @Test
+    fun `arribo cruce antes de la largada no anuncia y no se reactiva despues`() {
+        val startAtMs = 10_000L
+        var state = RaceArrival.State()
+
+        val seeded = RaceArrival.step(state, raceStartAtMs = startAtMs, arrived = false, nowMs = 0)
+        state = seeded.first
+
+        val earlyCross = RaceArrival.step(state, raceStartAtMs = startAtMs, arrived = true, nowMs = startAtMs - 500)
+        state = earlyCross.first
+        assertFalse("cruzar antes de la largada no debe anunciar", earlyCross.second)
+
+        val afterStart = RaceArrival.step(state, raceStartAtMs = startAtMs, arrived = true, nowMs = startAtMs + 500)
+        assertFalse("ya estaba adentro al largar, no es un cruce nuevo", afterStart.second)
+    }
+
+    @Test
+    fun `arribo carrera nueva resetea el estado de la anterior`() {
+        val firstRaceStart = 10_000L
+        val secondRaceStart = 50_000L
+
+        val afterFirstArrival = RaceArrival.step(
+            state = RaceArrival.State(raceKey = firstRaceStart, wasArrived = true, announced = true),
+            raceStartAtMs = secondRaceStart,
+            arrived = true,
+            nowMs = secondRaceStart,
+        )
+
+        assertFalse(
+            "un rider que ya llegó a la carrera anterior sigue arrived=true en el snapshot; la carrera " +
+                "nueva debe tratarlo como sembrado (sin cruce), no como si ya estuviera anunciado",
+            afterFirstArrival.second,
+        )
+        assertEquals(secondRaceStart, afterFirstArrival.first.raceKey)
+    }
+
+    @Test
+    fun `arribo sin carrera no anuncia`() {
+        val (state, announced) = RaceArrival.step(
+            state = RaceArrival.State(raceKey = 10_000L, wasArrived = true, announced = true),
+            raceStartAtMs = null,
+            arrived = true,
+            nowMs = 20_000L,
+        )
+
+        assertFalse(announced)
+        assertEquals(RaceArrival.State(), state)
+    }
 }

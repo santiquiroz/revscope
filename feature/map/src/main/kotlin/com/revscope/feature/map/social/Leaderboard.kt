@@ -118,6 +118,43 @@ object RaceCountdown {
         if (remainingMs > VISIBLE_BEFORE_MS || remainingMs <= -VISIBLE_AFTER_MS) return null
         return if (remainingMs <= 0) 0 else ceil(remainingMs / 1_000.0).toInt()
     }
+
+    /** true una vez pasada la ventana de visibilidad (más de [VISIBLE_AFTER_MS] tras la
+     * largada) — señal para que el llamador deje de tiquear el reloj hasta la próxima carrera.
+     * false tanto antes de entrar a la ventana como dentro de ella: el ticker debe seguir vivo
+     * en ambos casos, solo se apaga cuando ya no hay nada más que mostrar. */
+    fun isFinished(startAtMs: Long, nowMs: Long): Boolean = startAtMs - nowMs <= -VISIBLE_AFTER_MS
+}
+
+/**
+ * Anuncio de llegada propia: reduce puro de una emisión de ranking a (nuevo estado, ¿anunciar
+ * ahora?). Cruce real, no posición de largada — spec F4: un rider que ya está a <40 m del
+ * destino cuando arman la carrera (rematch) no "llega", porque nunca cruzó nada.
+ */
+object RaceArrival {
+
+    data class State(
+        val raceKey: Long? = null,
+        val wasArrived: Boolean = false,
+        val announced: Boolean = false,
+    )
+
+    /**
+     * [raceStartAtMs] null = sin carrera (resetea todo). Al ver un [raceStartAtMs] nuevo se
+     * siembra `wasArrived = arrived` tal cual está en ese instante — así quien ya está en el
+     * destino al armarse la carrera no genera un falso cruce false→true. El anuncio en sí
+     * exige además haber pasado la largada ([nowMs] >= [raceStartAtMs]): un cruce durante el
+     * countdown se registra en el estado pero no se anuncia hasta que la carrera arrancó, y no
+     * puede "reaparecer" después porque [wasArrived] ya quedó en true.
+     */
+    fun step(state: State, raceStartAtMs: Long?, arrived: Boolean, nowMs: Long): Pair<State, Boolean> {
+        if (raceStartAtMs == null) return State() to false
+        val baseline = if (state.raceKey == raceStartAtMs) state else State(raceKey = raceStartAtMs, wasArrived = arrived)
+        val crossedNow = arrived && !baseline.wasArrived
+        val shouldAnnounce = crossedNow && nowMs >= raceStartAtMs && !baseline.announced
+        val next = baseline.copy(wasArrived = arrived, announced = baseline.announced || shouldAnnounce)
+        return next to shouldAnnounce
+    }
 }
 
 /** Panel colapsable de posiciones en vivo de la sala respecto del destino compartido. Pasa a
