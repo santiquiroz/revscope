@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -32,7 +33,8 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
-import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val SEGMENT_SIZE = 8
 private val AttributionColor = Color(0xFF6B7089)
@@ -70,10 +72,15 @@ fun RealTrackMap(
     // pantalla es puntual (un viaje ya terminado) — a diferencia de LiveMapScreen no observa
     // MapDownloadService en vivo, solo lee el disco una vez al componer (aceptado: T5 plan).
     // El replay de un viaje no necesita modo oscuro.
-    val styleJson = remember {
-        val localFile = File(context.filesDir, "maps/${MapStyleProvider.PMTILES_FILE_NAME}")
-        val tilesUrl = MapStyleProvider.tilesUrl(localFile, null)
-        val layersJson = readMapLayersAsset(context, dark = false)
+    val tilesUrl = remember(context) {
+        MapStyleProvider.tilesUrl(MapStyleProvider.localMapFile(context.filesDir), null)
+    }
+    // El asset de capas pesa ~240 KB: leerlo síncrono en composición bloquearía el frame — corre
+    // en IO, igual que LiveMapScreen (dark fijo false acá, así que sin key adicional).
+    val layersJson by produceState<String?>(initialValue = null) {
+        value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = false) }
+    }
+    val styleJson = remember(layersJson) {
         MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = false, layersJson = layersJson)
     }
 

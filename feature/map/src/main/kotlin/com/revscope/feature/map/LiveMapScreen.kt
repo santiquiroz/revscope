@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -84,7 +85,8 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.gestures.MoveGestureDetector
 import org.maplibre.android.gestures.StandardScaleGestureDetector
 import org.maplibre.android.maps.MapLibreMap
-import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val AttributionColor = Color(0xFF6B7089)
 
@@ -197,12 +199,18 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     }
 
     // Tier server sigue sin wirear (el server hoy no hospeda tiles): tilesUrl solo considera el
-    // .pmtiles local, gobernado por localMapFileExists (MapDownloadService, vía el VM). Cuando
-    // el archivo aparece o desaparece (descarga completa / borrado por corrupción) este remember
+    // .pmtiles local, gobernado por localMapFileExists (MapDownloadService, vía el VM — con la
+    // semántica correcta de LocalMapReadiness: una RE-descarga en curso no lo apaga). Cuando el
+    // archivo aparece o desaparece (descarga completa / borrado por corrupción) este remember
     // recalcula y MapLibreMapView vuelve a cargar el estilo — mismo mecanismo que ya usa el
     // cambio de tema claro/oscuro.
-    val localMapFile = remember(context) { File(context.filesDir, "maps/${MapStyleProvider.PMTILES_FILE_NAME}") }
-    val layersJson = remember(darkTiles) { readMapLayersAsset(context, dark = darkTiles) }
+    val localMapFile = remember(context) { MapStyleProvider.localMapFile(context.filesDir) }
+    // El asset de capas pesa ~240 KB: leerlo síncrono en composición bloquearía el frame. Corre
+    // en IO y cachea en memoria por tema (readMapLayersAsset); mientras value es null el estilo
+    // sale sin layersJson (fondo/ráster) un frame, hasta que la lectura resuelve.
+    val layersJson by produceState<String?>(initialValue = null, darkTiles) {
+        value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = darkTiles) }
+    }
     val styleJson = remember(localMapFileExists, darkTiles, layersJson) {
         val tilesUrl = MapStyleProvider.tilesUrl(if (localMapFileExists) localMapFile else null, null)
         MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = darkTiles, layersJson = layersJson)

@@ -17,8 +17,9 @@ import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SavedPlaceEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.maps.LocalMapReadiness
 import com.revscope.core.maps.MapDownloadService
-import com.revscope.core.maps.MapDownloadState
+import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
@@ -55,6 +56,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
@@ -408,13 +410,20 @@ class LiveMapViewModel @Inject constructor(
 
     // ── Mapa offline (tier local) ───────────────────────────────────────────
 
-    /** True mientras el `.pmtiles` de Colombia esté descargado y listo — dispara el estilo
-     * vectorial completo en LiveMapScreen. MapDownloadService ya calcula su estado inicial
-     * sincrónicamente desde disco (ver idleStateFromDisk), así que el valor inicial de este
-     * StateFlow no espera ninguna emisión async. */
+    /** True mientras el `.pmtiles` de Colombia esté usable en disco — dispara el estilo
+     * vectorial completo en LiveMapScreen. Deriva de MapDownloadService.state con
+     * [LocalMapReadiness] (pura, testeada en core/maps): Idle es autoritativo, pero
+     * Downloading/Error CONSERVAN el valor previo — una RE-descarga no borra el `.pmtiles`
+     * viejo hasta el rename atómico final, así que leer `state is Idle && exists` en cada
+     * emisión degradaba el mapa a ráster durante toda la descarga con un archivo perfectamente
+     * usable en disco. El seed lee el disco directo (no el state en memoria): si este VM se
+     * crea con una descarga ya en curso (pantalla reabierta), el state por sí solo no dice si
+     * ya había un mapa previo instalado. */
     val localMapFileExists: StateFlow<Boolean> = mapDownloadService.state
-        .map(::isLocalMapReady)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), isLocalMapReady(mapDownloadService.state.value))
+        .scan(localMapFileSeed()) { prev, state -> LocalMapReadiness.step(prev, state) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), localMapFileSeed())
+
+    private fun localMapFileSeed(): Boolean = MapStyleProvider.localMapFile(appContext.filesDir).isFile
 
     private val _offlineMapCorruptedMessage = MutableStateFlow<String?>(null)
     val offlineMapCorruptedMessage: StateFlow<String?> = _offlineMapCorruptedMessage.asStateFlow()
@@ -670,5 +679,3 @@ class LiveMapViewModel @Inject constructor(
         const val PEER_STALE_CHECK_MS = 10_000L
     }
 }
-
-private fun isLocalMapReady(state: MapDownloadState): Boolean = state is MapDownloadState.Idle && state.exists

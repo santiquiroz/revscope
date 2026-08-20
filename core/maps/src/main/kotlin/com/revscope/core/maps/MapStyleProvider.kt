@@ -19,6 +19,15 @@ object MapStyleProvider {
 
     const val PMTILES_FILE_NAME = "colombia.pmtiles"
 
+    /** Subdirectorio de `filesDir` donde vive el `.pmtiles` — único literal, compartido por
+     * MapsModule (mapsDir de MapDownloadService) y [localMapFile]. */
+    const val MAPS_DIR_NAME = "maps"
+
+    /** Path canónico del `.pmtiles` local dentro de `filesDir` — antes triplicado a mano
+     * (MapsModule, LiveMapScreen, RealTrackMap); ahora un solo sitio. Sigue sin recibir
+     * Context: [filesDir] es lo que el caller ya tiene vía `context.filesDir`. */
+    fun localMapFile(filesDir: File): File = File(filesDir, "$MAPS_DIR_NAME/$PMTILES_FILE_NAME")
+
     /** Mismo servidor de tiles que usa osmdroid hoy vía TileSourceFactory.MAPNIK. */
     private const val OSM_RASTER_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
     private const val OSM_ATTRIBUTION = "© OpenStreetMap contributors"
