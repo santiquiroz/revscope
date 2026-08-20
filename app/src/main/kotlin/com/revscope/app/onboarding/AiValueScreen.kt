@@ -78,7 +78,9 @@ fun AiValueContent(
     // forzar Gemini — si no, la carga async puede pisar este valor después de fijarlo.
     LaunchedEffect(Unit) {
         vm.aiFieldsLoaded.first { it }
-        vm.updateAiProvider(AI_PROVIDER_GEMINI)
+        if (vm.aiProvider.value != AI_PROVIDER_GEMINI) {
+            vm.updateAiProvider(AI_PROVIDER_GEMINI)
+        }
     }
 
     Column(
@@ -100,7 +102,9 @@ fun AiValueContent(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GEMINI_API_KEY_URL))) }) {
+        TextButton(onClick = {
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GEMINI_API_KEY_URL))) }
+        }) {
             Text("Obtener key gratis", color = AccentColor)
         }
 

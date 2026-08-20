@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -79,6 +80,7 @@ private val dateFormat = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale("es"))
 @Composable
 fun SessionDetailScreen(
     onNavigateBack: () -> Unit = {},
+    onOpenAiValue: () -> Unit = {},
     vm: SessionDetailViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -166,6 +168,7 @@ fun SessionDetailScreen(
                 report = s.report,
                 profiles = profiles,
                 vm = vm,
+                onOpenAiValue = onOpenAiValue,
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -228,6 +231,7 @@ private fun ReportContent(
     report: SessionDetailViewModel.TripReport,
     profiles: List<VehicleProfileEntity>,
     vm: SessionDetailViewModel,
+    onOpenAiValue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val session = report.session
@@ -295,7 +299,7 @@ private fun ReportContent(
             EcoCard(score = ecoScore, desglose = report.ecoDesglose)
         }
 
-        DebriefCard(vm)
+        DebriefCard(vm, onOpenAiValue)
 
         if (session.best0to60Ms != null || session.best0to100Ms != null) {
             Row(
@@ -522,7 +526,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 
 /** Análisis IA del viaje: agregados locales → una llamada corta al proveedor configurado. */
 @Composable
-private fun DebriefCard(vm: SessionDetailViewModel) {
+private fun DebriefCard(vm: SessionDetailViewModel, onOpenAiValue: () -> Unit) {
     val debrief by vm.debrief.collectAsState()
     Column(
         modifier = Modifier
@@ -554,10 +558,12 @@ private fun DebriefCard(vm: SessionDetailViewModel) {
                 d.text, color = TextPrimaryColor, fontSize = 13.sp,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            is SessionDetailViewModel.DebriefState.Error -> Text(
-                d.message, color = Color(0xFFFF5252), fontSize = 12.sp,
-                modifier = Modifier.padding(top = 8.dp),
-            )
+            is SessionDetailViewModel.DebriefState.Error -> Column(modifier = Modifier.padding(top = 8.dp)) {
+                Text(d.message, color = Color(0xFFFF5252), fontSize = 12.sp)
+                TextButton(onClick = onOpenAiValue, contentPadding = PaddingValues(0.dp)) {
+                    Text("Configurar IA", color = AccentColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
             else -> Text(
                 "Resumen y consejos de tu coach IA con los datos de este viaje, comparados con tu historial.",
                 color = TextMutedColor, fontSize = 11.sp,

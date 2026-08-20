@@ -667,8 +667,10 @@ fun SettingsScreen(
                 color = TextMutedColor,
                 fontSize = 12.sp,
             )
-            TextButton(onClick = onOpenAiValue) {
-                Text("Ver qué ganás con una key", color = AccentColor)
+            if (aiApiKey.isBlank()) {
+                TextButton(onClick = onOpenAiValue) {
+                    Text("Ver qué ganás con una key", color = AccentColor)
+                }
             }
             AiProviderDropdown(selected = aiProvider, onSelected = vm::updateAiProvider)
             OutlinedTextField(

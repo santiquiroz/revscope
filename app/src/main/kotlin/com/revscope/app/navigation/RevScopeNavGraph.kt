@@ -290,7 +290,10 @@ fun RevScopeNavGraph(
                     SensorGraphScreen(connectionVm = connectionVm)
                 }
                 composable(Screen.Dtc.route) {
-                    DtcScreen(connectionVm = connectionVm)
+                    DtcScreen(
+                        connectionVm = connectionVm,
+                        onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
+                    )
                 }
                 composable(Screen.Sessions.route) {
                     SessionHistoryScreen(
@@ -319,6 +322,7 @@ fun RevScopeNavGraph(
                 ) {
                     SessionDetailScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
                     )
                 }
                 composable(Screen.VehicleProfile.route) {

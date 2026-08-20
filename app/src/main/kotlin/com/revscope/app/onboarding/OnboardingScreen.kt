@@ -261,6 +261,7 @@ private fun Step1Vehicle(vm: OnboardingViewModel) {
 
         Button(
             onClick = { vm.createFirstProfile(name, type, plate) },
+            enabled = !profileCreated,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             modifier = Modifier.height(48.dp),
         ) {

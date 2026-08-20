@@ -69,10 +69,15 @@ class OnboardingViewModel @Inject constructor(
     private val _profileCreated = MutableStateFlow(false)
     val profileCreated: StateFlow<Boolean> = _profileCreated.asStateFlow()
 
-    /** Perfil mínimo del wizard: defaults por tipo (los de sub-proyecto C), sin campos avanzados. */
+    /**
+     * Perfil mínimo del wizard: defaults por tipo (los de sub-proyecto C), sin campos avanzados.
+     * Marca [profileCreated] de forma optimista y síncrona para bloquear taps repetidos del botón
+     * "Crear" antes de que termine el insert; si falla, se revierte para permitir reintentar.
+     */
     fun createFirstProfile(name: String, type: String, plate: String) {
         val trimmed = name.trim()
-        if (trimmed.isEmpty()) return
+        if (trimmed.isEmpty() || _profileCreated.value) return
+        _profileCreated.value = true
         val motorcycle = type == "MOTORCYCLE"
         viewModelScope.launch {
             runCatching {
@@ -90,8 +95,10 @@ class OnboardingViewModel @Inject constructor(
                 )
                 val insertedId = profileDao.insert(profile)
                 sessionManager.setActiveProfile(profile.copy(id = insertedId))
-            }.onSuccess { _profileCreated.value = true }
-                .onFailure { Timber.w(it, "OnboardingViewModel: failed to create first profile") }
+            }.onFailure {
+                Timber.w(it, "OnboardingViewModel: failed to create first profile")
+                _profileCreated.value = false
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -74,6 +76,7 @@ private fun FreezeFrameCard(items: List<FreezeFrameItem>) {
 @Composable
 fun DtcScreen(
     connectionVm: ConnectionViewModel = hiltViewModel(),
+    onOpenAiValue: () -> Unit = {},
     vm: DtcViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsState()
@@ -126,7 +129,7 @@ fun DtcScreen(
                             if (freezeFrame.isNotEmpty()) {
                                 item(key = "freeze_frame") { FreezeFrameCard(freezeFrame) }
                             }
-                            items(s.codes) { item -> DtcItem(item) }
+                            items(s.codes) { item -> DtcItem(item, onOpenAiValue) }
                         }
                     }
                 }
@@ -189,7 +192,7 @@ private fun StatusContent(message: String, color: Color) {
 }
 
 @Composable
-private fun DtcItem(item: DtcCodeUi) {
+private fun DtcItem(item: DtcCodeUi, onOpenAiValue: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -237,6 +240,9 @@ private fun DtcItem(item: DtcCodeUi) {
             }
             else -> {
                 Text("Sin explicación disponible.", color = TextMutedColor, fontSize = 12.sp)
+                TextButton(onClick = onOpenAiValue, contentPadding = PaddingValues(0.dp)) {
+                    Text("Configurar IA", color = AccentColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
