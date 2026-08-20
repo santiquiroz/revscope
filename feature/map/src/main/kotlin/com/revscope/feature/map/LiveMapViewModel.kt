@@ -151,9 +151,13 @@ class LiveMapViewModel @Inject constructor(
         .map { it.dest }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    // Mismo fallback "rider" que ServerClient.config() — si difiere, el filtro de "dest
+    // propio" del banner (LiveMapScreen) nunca matchea para quien no configuró apodo. El
+    // nombre asignado real por el server (con sufijo si hay colisión) queda pendiente de
+    // que RoomClient lo exponga — mejora de protocolo fuera de este scope.
     val selfRiderName: StateFlow<String> = settings.data
-        .map { it[PreferencesKeys.SERVER_RIDER_NAME]?.trim().orEmpty().ifBlank { "Vos" } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "Vos")
+        .map { it[PreferencesKeys.SERVER_RIDER_NAME]?.trim().orEmpty().ifBlank { "rider" } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "rider")
 
     // Recalcula en cada emisión de peers (posiciones ~1 Hz) o de roomState (destino nuevo,
     // sala legacy) — la posición/velocidad propia se lee como snapshot en ese instante,

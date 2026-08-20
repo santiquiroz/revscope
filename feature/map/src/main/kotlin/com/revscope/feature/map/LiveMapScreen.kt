@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -151,8 +152,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val density = context.resources.displayMetrics.density
     // Destino ajeno recién propuesto: ni el mío propio (server puede hacer eco), ni de un
     // server legacy (no debería llegar, pero el gate es explícito), ni el que ya descarté.
+    // Navegando el "Ir" quedaría como no-op silencioso (setDestination no cambia nada con
+    // navigationController.isNavigating) — igual que RouteInfoChip, se oculta con nav activa.
     val incomingDest = sharedDest?.takeIf {
-        !roomState.legacyServer && it.rider != selfRiderName && it != dismissedDest
+        navigation == null && !roomState.legacyServer && it.rider != selfRiderName && it != dismissedDest
     }
     val canShareDestination = roomCode != null && !roomState.legacyServer && destination != null
 
@@ -619,8 +622,8 @@ private fun RouteInfoChip(
                 }
             }
             if (canShare) {
-                TextButton(onClick = onShare) {
-                    Text("Compartir con la sala", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                IconButton(onClick = onShare) {
+                    Icon(Icons.Default.Share, contentDescription = "Compartir con la sala", tint = Color(0xFFE8FF00))
                 }
             }
             IconButton(onClick = onClear) {

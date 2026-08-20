@@ -33,19 +33,22 @@ class LeaderboardTest {
     }
 
     @Test
-    fun `llegados quedan primero en orden de insercion`() {
-        val arrivedFirst = peerAt("uno", 0.00005, 40.0) // ~5.6 m -> llegó
-        val arrivedSecond = peerAt("dos", 0.0002, 40.0) // ~22 m -> llegó
+    fun `llegados quedan primero en orden de insercion, no por distancia`() {
+        // "dos" está MÁS LEJOS que "uno" pero se inserta primero: si el ranking ordenara a
+        // los llegados por distancia (en vez de preservar el orden de inserción) este test
+        // fallaría, porque esperaríamos a "uno" primero.
+        val fartherButInsertedFirst = peerAt("dos", 0.0002, 40.0) // ~22 m -> llegó
+        val closerButInsertedSecond = peerAt("uno", 0.00005, 40.0) // ~5.6 m -> llegó
         val pending = peerAt("tres", 0.002, 40.0) // ~222 m -> pendiente
 
         val entries = RankingCalc.rank(
             self = null,
             selfSpeedKmh = null,
-            peers = listOf(pending, arrivedFirst, arrivedSecond),
+            peers = listOf(pending, fartherButInsertedFirst, closerButInsertedSecond),
             dest = dest,
         )
 
-        assertEquals(listOf("uno", "dos", "tres"), entries.map { it.name })
+        assertEquals(listOf("dos", "uno", "tres"), entries.map { it.name })
         assertTrue(entries[0].arrived)
         assertTrue(entries[1].arrived)
         assertFalse(entries[2].arrived)
