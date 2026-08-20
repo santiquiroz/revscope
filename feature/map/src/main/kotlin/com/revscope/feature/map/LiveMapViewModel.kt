@@ -76,8 +76,20 @@ class LiveMapViewModel @Inject constructor(
         val destination = _destination.value ?: return
         // La navegación recibe el GPS del servicio en primer plano; si no hay viaje,
         // se arranca uno GPS aquí mismo — un tap, como Google Maps. startGpsSession()
-        // es no-op si ya hay sesión o el OBD está conectando.
-        if (sessionManager.currentSessionId.value == null) sessionManager.startGpsSession()
+        // es no-op si ya hay sesión o el OBD está conectando/conectado.
+        if (sessionManager.currentSessionId.value == null) {
+            sessionManager.startGpsSession()
+            // startGpsSession() marca isGpsSessionActive de forma SÍNCRONA (antes de su
+            // scope.launch interno) pero currentSessionId recién queda seteado async, tras
+            // el insert suspend en Room — comprobar solo currentSessionId acá daría un falso
+            // "no arrancó" en el camino feliz (primer viaje, sin sesión previa). isGpsSessionActive
+            // sí distingue ese caso de un no-op real (OBD Connecting/Connected — ver
+            // ObdSessionManager.startGpsSession), que es cuando la nav arrancaría muda.
+            if (sessionManager.currentSessionId.value == null && !sessionManager.isGpsSessionActive.value) {
+                _navigationError.value = "Esperando el GPS — reintentá en unos segundos"
+                return
+            }
+        }
         val started = navigationController.start(
             route = route,
             origin = LatLon(origin.lat, origin.lon),
@@ -174,6 +186,11 @@ class LiveMapViewModel @Inject constructor(
         }
     }
 
+    // Debe correr ANTES de que se construya darkTiles (más abajo): su stateIn lee
+    // initialCenter.value de forma síncrona para el valor inicial (M6) — los init{}
+    // corren en orden textual, así que este bloque tiene que preceder esa declaración.
+    init { loadLastKnownLocation() }
+
     // ── GPS vivo sin viaje ───────────────────────────────────────────────────
 
     /** Fix del provider del mapa — null sin permiso, sin señal o con el mapa cerrado. */
@@ -206,7 +223,15 @@ class LiveMapViewModel @Inject constructor(
                 if (at == null) false else SunTimes.isNight(at.lat, at.lon, System.currentTimeMillis())
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        // nightMode arranca en "auto" (ver default de arriba): si ya hay lastKnown disponible
+        // (loadLastKnownLocation corrió antes, ver init{} de arriba) evaluamos SunTimes ya
+        // mismo y evitamos el flash claro al abrir de noche. "on" persistido en DataStore
+        // igual tarda una emisión del combine — aceptado, documentado (M6).
+        initialCenter.value?.let { SunTimes.isNight(it.lat, it.lon, System.currentTimeMillis()) } ?: false,
+    )
 
     fun cycleNightMode() {
         val next = when (nightMode.value) {
@@ -334,16 +359,22 @@ class LiveMapViewModel @Inject constructor(
     private fun lastKnownPoint(): LiveRouteHolder.RoutePoint? =
         route.value.lastOrNull() ?: locationProvider.fix.value ?: _initialCenter.value
 
+    // Incrementada en cada setDestination(); guarda contra dos selects rápidos aterrizando
+    // fuera de orden — el fetch más viejo se descarta si ya no es la generación vigente (M4).
+    private var routingGeneration = 0L
+
     /** Long-press en el mapa: fija destino y pide la ruta a OSRM desde la posición actual. */
     fun setDestination(lat: Double, lon: Double) {
         // Navegando no se cambia el destino con un toque: pará la navegación primero.
         if (navigationController.isNavigating) return
         val origin = route.value.lastOrNull() ?: locationProvider.fix.value ?: _initialCenter.value ?: return
+        val generation = ++routingGeneration
         _destination.value = LiveRouteHolder.RoutePoint(lat, lon)
         _plannedRoute.value = null
         _routing.value = true
         viewModelScope.launch(Dispatchers.IO) {
             val fetched = OsrmRouteFetcher.fetch(origin.lat, origin.lon, lat, lon)
+            if (generation != routingGeneration) return@launch
             _plannedRoute.value = fetched
             _routing.value = false
         }
@@ -369,7 +400,7 @@ class LiveMapViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
-        loadLastKnownLocation()
+        // loadLastKnownLocation() ya corrió en el init{} de más arriba (antes de darkTiles).
         // El tracker ya trae throttle/cooldown/chequeo de cobertura: acá solo se le
         // entregan los fixes que antes solo veía durante un viaje activo.
         viewModelScope.launch {

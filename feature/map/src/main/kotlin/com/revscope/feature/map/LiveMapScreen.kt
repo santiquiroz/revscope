@@ -252,8 +252,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                                 .build(),
                         ),
                     )
-                } else if (!headingUp && map.cameraPosition.bearing != 0.0) {
-                    // Apagar rumbo-arriba des-rota de inmediato, sin esperar revisión.
+                } else if (!headingUp && map.cameraPosition.bearing != 0.0 && nav == null) {
+                    // Apagar rumbo-arriba des-rota de inmediato, sin esperar revisión — pero no
+                    // con nav activa y follow off: ahí el bearing lo sigue dictando NavCamera,
+                    // y des-rotar acá movería la cámara sola en la siguiente emisión (M1).
                     map.animateCamera(
                         CameraUpdateFactory.newCameraPosition(
                             CameraPosition.Builder().bearing(0.0).build(),
@@ -279,9 +281,12 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             }
         }
 
-        // Fin de navegación: quitar la inclinación; zoom y centro quedan como estaban.
-        LaunchedEffect(navigation == null) {
-            if (navigation == null) {
+        // Fin de navegación O llegada: quitar la inclinación; zoom y centro quedan como estaban.
+        // "arrived" deja el NavigationBanner en pantalla (nav sigue no-null) pero la cámara ya
+        // no debe quedar inclinada a 50° mientras se muestra ese estado final (M3).
+        val navIdle = navigation == null || navigation?.arrived == true
+        LaunchedEffect(navIdle) {
+            if (navIdle) {
                 mapRef?.let { map ->
                     if (map.cameraPosition.tilt != 0.0) {
                         map.animateCamera(
@@ -354,7 +359,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             ) {
                 Icon(
                     if (nightMode == "auto") Icons.Default.BrightnessAuto else Icons.Default.DarkMode,
-                    contentDescription = "Mapa nocturno: $nightMode",
+                    contentDescription = "Mapa nocturno: " + when (nightMode) {
+                        "auto" -> "automático"
+                        "on" -> "encendido"
+                        else -> "apagado"
+                    },
                     tint = if (darkTiles) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                 )
             }
