@@ -107,6 +107,24 @@ class RoomMessageTest {
     }
 
     @Test
+    fun `parses room_state you when present`() {
+        val json = """{"type":"room_state","dest":null,"race":null,"you":"ana-2"}"""
+
+        val state = RoomMessageParser.parse(json) as RoomMessage.RoomStateMsg
+
+        assertEquals("ana-2", state.you)
+    }
+
+    @Test
+    fun `parses room_state you as null when absent`() {
+        val json = """{"type":"room_state","dest":null,"race":null}"""
+
+        val state = RoomMessageParser.parse(json) as RoomMessage.RoomStateMsg
+
+        assertNull("un server viejo que todavia no manda you no debe romper el parseo", state.you)
+    }
+
+    @Test
     fun `garbage returns null`() {
         assertNull(RoomMessageParser.parse("not json"))
     }

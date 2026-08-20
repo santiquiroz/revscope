@@ -30,6 +30,7 @@ sealed interface RoomMessage {
     data class RoomStateMsg(
         val dest: Dest?,
         val race: Race?,
+        val you: String? = null,
     ) : RoomMessage
 }
 
@@ -74,6 +75,7 @@ object RoomMessageParser {
     private fun parseRoomState(o: JSONObject) = RoomMessage.RoomStateMsg(
         dest = o.optJSONObject("dest")?.let(::parseDest),
         race = o.optJSONObject("race")?.let(::parseRace),
+        you = o.optString("you").takeIf { it.isNotBlank() },
     )
 
     private fun JSONObject.doubleOrNull(key: String): Double? =

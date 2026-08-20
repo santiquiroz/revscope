@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val PEER_STALE_MS = 30_000L
 private const val SEND_THROTTLE_MS = 1_000L
 private const val HELLO_TIMEOUT_MS = 3_000L
 private const val RACE_COUNTDOWN_MS = 5_000L
@@ -39,6 +38,13 @@ class RoomClient @Inject constructor(
     private val serverClient: ServerClient,
     private val routeHolder: LiveRouteHolder,
 ) {
+
+    companion object {
+        /** Un peer sin `pos` en esta ventana se considera desconectado. Pública: quien
+         * recalcule staleness fuera de RoomClient (p. ej. el tick periódico de F5 en el
+         * ViewModel) debe usar el mismo umbral, no una copia. */
+        const val PEER_STALE_MS = 30_000L
+    }
 
     data class Peer(
         val rider: String,
@@ -57,6 +63,9 @@ class RoomClient @Inject constructor(
         val dest: SharedDest? = null,
         val race: RaceState? = null,
         val legacyServer: Boolean = false,
+        // Nombre asignado por el server (con sufijo si hubo colisión con otro rider de la
+        // sala) — null con un server viejo que todavía no manda `you` en room_state (F6).
+        val you: String? = null,
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -215,6 +224,7 @@ class RoomClient @Inject constructor(
                 dest = state.dest?.toSharedDest(),
                 race = state.race?.toRaceStateOrNull(),
                 legacyServer = false,
+                you = state.you,
             )
         }
     }
