@@ -74,6 +74,7 @@ import com.revscope.core.navigation.NavigationRoute
 import com.revscope.core.navigation.RouteScoring
 import com.revscope.feature.map.location.InitialCentering
 import com.revscope.feature.map.navigation.NavCamera
+import com.revscope.feature.map.navigation.NavCameraInputs
 import com.revscope.feature.map.navigation.NavigationBanner
 import com.revscope.feature.map.navigation.NavigationProgressBar
 import com.revscope.feature.map.social.Leaderboard
@@ -89,6 +90,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private val AttributionColor = Color(0xFF6B7089)
+
+/** Duración explícita de la animación de cámara en navegación (antes usaba el default del SDK). */
+private const val NAV_CAMERA_ANIMATION_MS = 300
 
 /** RoomClient.SharedDest no es Parcelable/Serializable — rememberSaveable necesita un Saver
  * explícito para sobrevivir un cambio de configuración (rotación) sin perder qué destino ya
@@ -182,6 +186,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
+    // Hint de búsqueda para NavBearing.courseUpBearing: reusar el índice del tick anterior evita
+    // el escaneo lineal completo y, en rutas que se auto-cruzan, evita saltar hacia atrás a un
+    // match viejo. Una ruta nueva (o un reroute) trae índices que no corresponden a los de la
+    // ruta anterior, así que remember(plannedRoute) lo resetea a 0 cuando la instancia cambia.
+    var navBearingHint by remember(plannedRoute) { mutableStateOf(0) }
     var leaderboardExpanded by remember { mutableStateOf(false) }
     var dismissedDest by rememberSaveable(stateSaver = SharedDestSaver) { mutableStateOf<RoomClient.SharedDest?>(null) }
     val density = context.resources.displayMetrics.density
@@ -230,6 +239,20 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     // por eso la señal es la revisión y no el tamaño).
     var lastCenteredRevision by remember { mutableStateOf(-1L) }
 
+    // Curso-arriba real durante la navegación (activa, sin llegar): única fuente de verdad
+    // para la cámara (el LaunchedEffect de abajo) y el rumbo del puck (bearingDeg de
+    // LiveMapData) — calcularlo dos veces podría desincronizar cámara y puck en el mismo tick.
+    val navBearingResolved = navigation?.takeIf { !it.arrived }?.let { nav ->
+        NavCameraInputs.resolve(
+            snapped = nav.snapped,
+            liveFix = liveFix?.let { LatLon(it.lat, it.lon) },
+            routeLastPoint = route.lastOrNull()?.let { LatLon(it.lat, it.lon) },
+            routePoints = plannedRoute?.points ?: emptyList(),
+            fallbackBearingDeg = currentBearingDegrees(route),
+            fromIndex = navBearingHint,
+        )
+    }
+
     val data = LiveMapData(
         route = route,
         cameras = cameras,
@@ -242,10 +265,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         liveFix = standaloneFix,
         routeAlternatives = routeAlternatives,
         vehicleType = puckVehicleType,
-        // Rumbo de los dos últimos puntos de la ruta viva — mismo cálculo que ya usa la
-        // cámara de navegación (ver currentBearingDegrees más abajo en este archivo). 0°
-        // (norte, apuntando "arriba" como está dibujado el ícono) sin ruta todavía.
-        bearingDeg = currentBearingDegrees(route),
+        // Con navegación activa, el mismo course-up que dicta la cámara (navBearingResolved,
+        // arriba) — no el rumbo del track GPS crudo, que tiene lag y jitter. Sin nav, cae al
+        // rumbo de los dos últimos puntos de la ruta viva; 0° (norte) sin ruta todavía.
+        bearingDeg = navBearingResolved?.bearingDeg ?: currentBearingDegrees(route),
     )
 
     Box(Modifier.fillMaxSize()) {
@@ -308,17 +331,23 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             // Navegando: cámara dedicada — course-up, inclinada, zoom por velocidad y maniobra.
             val nav = navigation
             if (nav != null && !nav.arrived && followEnabled) {
-                val target = nav.snapped ?: route.lastOrNull()?.let { LatLon(it.lat, it.lon) }
-                if (target != null) {
+                // navBearingResolved (arriba): misma cadena de target — snapped manda; si la
+                // navegación recién arrancó y todavía no hay snap, el fix crudo del GPS engancha
+                // la cámara de inmediato en vez de esperar al próximo snap. route.lastOrNull()
+                // es el último respaldo. Mismo objeto que ya alimentó el bearingDeg del puck.
+                val resolved = navBearingResolved
+                if (resolved != null) {
+                    navBearingHint = resolved.nearestIndex
                     map.animateCamera(
                         CameraUpdateFactory.newCameraPosition(
                             CameraPosition.Builder()
-                                .target(LatLng(target.lat, target.lon))
-                                .bearing(currentBearingDegrees(route))
+                                .target(LatLng(resolved.target.lat, resolved.target.lon))
+                                .bearing(resolved.bearingDeg)
                                 .zoom(NavCamera.zoom(speedKmh, nav.distanceToManeuverM))
                                 .tilt(NavCamera.PITCH)
                                 .build(),
                         ),
+                        NAV_CAMERA_ANIMATION_MS,
                     )
                 }
                 return@LaunchedEffect
