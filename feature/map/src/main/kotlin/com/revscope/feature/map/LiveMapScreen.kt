@@ -312,6 +312,12 @@ fun LiveMapScreen(
         if (wasDownloadingMap && current is MapDownloadState.Idle && current.exists) {
             snackbarHostState.showSnackbar("Mapa offline listo")
         }
+        // Sin esto, una descarga que falla (caída de celular en moto — el caso que el confirm
+        // de datos móviles habilita) hacía desaparecer el banner de progreso sin una palabra,
+        // con la promo ya consumida y sin vía de retry visible en el mapa.
+        if (wasDownloadingMap && current is MapDownloadState.Error) {
+            snackbarHostState.showSnackbar("Descarga del mapa falló: ${current.message} — reintentá desde Ajustes")
+        }
         wasDownloadingMap = current is MapDownloadState.Downloading
     }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }

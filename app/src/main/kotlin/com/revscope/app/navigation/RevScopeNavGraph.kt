@@ -295,7 +295,17 @@ fun RevScopeNavGraph(
                         // Único uso de onNavigateToSettings dentro de LiveMapScreen es el CTA
                         // del diálogo de descarga de mapa offline — abre Ajustes con la sección
                         // Mapa ya expandida en vez de aterrizar en la lista colapsada.
-                        onNavigateToSettings = { navController.navigate(Screen.Settings.withExpand("mapa")) },
+                        // navOptions de tab (popUpTo+saveState+launchSingleTop): un push liso
+                        // dejaba a Settings PEGADO al chunk restaurable del tab Mapa — tocar la
+                        // tab "Mapa" después restauraba [map, settings] y aterrizaba en Ajustes
+                        // otra vez, en loop. Con semántica de tab, Settings es destino de tab
+                        // normal y la tab Mapa vuelve al mapa.
+                        onNavigateToSettings = {
+                            navController.navigate(Screen.Settings.withExpand("mapa")) {
+                                popUpTo(Screen.Dashboard.route) { saveState = true }
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
                 composable(Screen.AdapterScan.route) {
