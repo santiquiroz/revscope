@@ -17,6 +17,8 @@ import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SavedPlaceEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.maps.LocalMapReadiness
 import com.revscope.core.maps.MapDownloadService
 import com.revscope.core.maps.MapStyleProvider
@@ -448,14 +450,22 @@ class LiveMapViewModel @Inject constructor(
         .map { (it["0D"] ?: it["GPS_SPEED"])?.value?.toInt() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** Tipo del vehículo activo, para el ícono del puck (LiveMapLayers.puckIcon) — null sin
+     * perfil configurado, mismo fallback que usa el gear learner (ver DashboardViewModel). */
+    val puckVehicleType: StateFlow<VehicleType?> = sessionManager.activeProfile
+        .map { it?.vehicleType }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), sessionManager.activeProfile.value?.vehicleType)
+
     // ── Ruta a destino (OSRM) ────────────────────────────────────────────────
 
     private val _destination = MutableStateFlow<LiveRouteHolder.RoutePoint?>(null)
     val destination: StateFlow<LiveRouteHolder.RoutePoint?> = _destination.asStateFlow()
 
     // Nombre legible del destino fijado, si se conoce (búsqueda, lugar guardado o propuesta
-    // de sala) — null en un long-press del mapa. Solo lo consume shareCurrentDestination().
+    // de sala) — null en un long-press del mapa. Alimenta shareCurrentDestination() y la
+    // tarjeta descriptiva de tap sobre el marcador de destino (fix D).
     private val _destinationName = MutableStateFlow<String?>(null)
+    val destinationName: StateFlow<String?> = _destinationName.asStateFlow()
 
     private val _plannedRoute = MutableStateFlow<NavigationRoute?>(null)
     val plannedRoute: StateFlow<NavigationRoute?> = _plannedRoute.asStateFlow()

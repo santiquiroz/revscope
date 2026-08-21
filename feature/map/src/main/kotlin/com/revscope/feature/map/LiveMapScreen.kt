@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.DisposableEffect
@@ -74,6 +75,7 @@ import com.revscope.core.navigation.NavigationRoute
 import com.revscope.core.navigation.RouteScoring
 import com.revscope.feature.map.location.InitialCentering
 import com.revscope.feature.map.navigation.NavCamera
+import com.revscope.feature.map.navigation.NavCameraInputs
 import com.revscope.feature.map.navigation.NavigationBanner
 import com.revscope.feature.map.navigation.NavigationProgressBar
 import com.revscope.feature.map.social.Leaderboard
@@ -89,6 +91,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private val AttributionColor = Color(0xFF6B7089)
+
+/** Duración explícita de la animación de cámara en navegación (antes usaba el default del SDK). */
+private const val NAV_CAMERA_ANIMATION_MS = 300
 
 /** RoomClient.SharedDest no es Parcelable/Serializable — rememberSaveable necesita un Saver
  * explícito para sobrevivir un cambio de configuración (rotación) sin perder qué destino ya
@@ -124,6 +129,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val effectiveSelfName by viewModel.effectiveSelfName.collectAsState()
     val ghost by viewModel.ghost.collectAsState()
     val destination by viewModel.destination.collectAsState()
+    val destinationName by viewModel.destinationName.collectAsState()
     val plannedRoute by viewModel.plannedRoute.collectAsState()
     val routeAlternatives by viewModel.routeAlternatives.collectAsState()
     val routing by viewModel.routing.collectAsState()
@@ -134,6 +140,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val navigation by viewModel.navigation.collectAsState()
     val navigationError by viewModel.navigationError.collectAsState()
     val speedKmh by viewModel.speedKmh.collectAsState()
+    val puckVehicleType by viewModel.puckVehicleType.collectAsState()
     val liveFix by viewModel.liveFix.collectAsState()
     val initialCenter by viewModel.initialCenter.collectAsState()
     val darkTiles by viewModel.darkTiles.collectAsState()
@@ -181,8 +188,15 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     var showRoomDialog by remember { mutableStateOf(false) }
     var followEnabled by remember { mutableStateOf(true) }
     var headingUp by remember { mutableStateOf(false) }
+    // Hint de búsqueda para NavBearing.courseUpBearing: reusar el índice del tick anterior evita
+    // el escaneo lineal completo y, en rutas que se auto-cruzan, evita saltar hacia atrás a un
+    // match viejo. Una ruta nueva (o un reroute) trae índices que no corresponden a los de la
+    // ruta anterior, así que remember(plannedRoute) lo resetea a 0 cuando la instancia cambia.
+    var navBearingHint by remember(plannedRoute) { mutableStateOf(0) }
     var leaderboardExpanded by remember { mutableStateOf(false) }
     var dismissedDest by rememberSaveable(stateSaver = SharedDestSaver) { mutableStateOf<RoomClient.SharedDest?>(null) }
+    // Descripción del último ícono tocado en el mapa (fix D) — null = sin tarjeta abierta.
+    var tappedFeature by remember { mutableStateOf<MapFeatureDescription?>(null) }
     val density = context.resources.displayMetrics.density
     // Destino ajeno recién propuesto: ni el mío propio (server puede hacer eco), ni de un
     // server legacy (no debería llegar, pero el gate es explícito), ni el que ya descarté.
@@ -193,9 +207,17 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     }
     val canShareDestination = roomCode != null && !roomState.legacyServer && destination != null
 
-    // Iniciar navegación toma el control de la cámara aunque el usuario venía paneando.
+    // Iniciar navegación toma el control de la cámara aunque el usuario venía paneando. También
+    // resetea el hint de NavBearing: stopNavigation no limpia plannedRoute (queda visible tras
+    // llegar), así que remember(plannedRoute) solo no alcanza — re-arrancar con "Ir" sobre la
+    // MISMA instancia de ruta reusaría un hint que quedó adelantado del viaje anterior, y la
+    // ventana de búsqueda monotónica (backtrack de solo 5 puntos) no lo corrige si el nuevo
+    // origen queda atrás de ese índice viejo.
     LaunchedEffect(navigation != null) {
-        if (navigation != null) followEnabled = true
+        if (navigation != null) {
+            followEnabled = true
+            navBearingHint = 0
+        }
     }
 
     // Tier server sigue sin wirear (el server hoy no hospeda tiles): tilesUrl solo considera el
@@ -229,6 +251,20 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     // por eso la señal es la revisión y no el tamaño).
     var lastCenteredRevision by remember { mutableStateOf(-1L) }
 
+    // Curso-arriba real durante la navegación (activa, sin llegar): única fuente de verdad
+    // para la cámara (el LaunchedEffect de abajo) y el rumbo del puck (bearingDeg de
+    // LiveMapData) — calcularlo dos veces podría desincronizar cámara y puck en el mismo tick.
+    val navBearingResolved = navigation?.takeIf { !it.arrived }?.let { nav ->
+        NavCameraInputs.resolve(
+            snapped = nav.snapped,
+            liveFix = liveFix?.let { LatLon(it.lat, it.lon) },
+            routeLastPoint = route.lastOrNull()?.let { LatLon(it.lat, it.lon) },
+            routePoints = plannedRoute?.points ?: emptyList(),
+            fallbackBearingDeg = currentBearingDegrees(route),
+            fromIndex = navBearingHint,
+        )
+    }
+
     val data = LiveMapData(
         route = route,
         cameras = cameras,
@@ -237,9 +273,15 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         approachingId = approaching?.osmId,
         alertRadiusM = alertRadiusM,
         destination = destination,
+        destinationName = destinationName,
         plannedRoute = plannedRoute,
         liveFix = standaloneFix,
         routeAlternatives = routeAlternatives,
+        vehicleType = puckVehicleType,
+        // Con navegación activa, el mismo course-up que dicta la cámara (navBearingResolved,
+        // arriba) — no el rumbo del track GPS crudo, que tiene lag y jitter. Sin nav, cae al
+        // rumbo de los dos últimos puntos de la ruta viva; 0° (norte) sin ruta todavía.
+        bearingDeg = navBearingResolved?.bearingDeg ?: currentBearingDegrees(route),
     )
 
     Box(Modifier.fillMaxSize()) {
@@ -267,6 +309,13 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 viewModel.setDestination(latLng.latitude, latLng.longitude)
                 true
             }
+            // Tap corto sobre un ícono → tarjeta descriptiva (fix D). Un tap que no cae sobre
+            // ningún marcador cierra la tarjeta que estuviera abierta (resolveTappedFeature
+            // devuelve null en ese caso).
+            map.addOnMapClickListener { latLng ->
+                tappedFeature = resolveTappedFeature(map, latLng)
+                true
+            }
             map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
                 // Cualquier gesto del usuario apaga el follow; el FAB lo devuelve.
                 override fun onMoveBegin(detector: MoveGestureDetector) {
@@ -289,7 +338,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         // La ruta viva llega a 18.000 puntos y cada escritura re-indexa el dataset completo,
         // así que se escribe solo cuando la revisión cambia, no en cada recomposición.
-        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, plannedRoute, standaloneFix, routeAlternatives) {
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, destinationName, plannedRoute, standaloneFix, routeAlternatives) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
@@ -297,22 +346,42 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         // bearing, así que la des-rotación (abajo) y el de-tilt (más abajo) pueden actuar.
         val navIdle = navigation == null || navigation?.arrived == true
 
+        // Avanza el hint SIEMPRE que cambie el nearestIndex resuelto, sin importar followEnabled:
+        // navBearingResolved (arriba) se recalcula en cada recomposición usando navBearingHint
+        // como fromIndex, así que si el hint se congelara mientras el follow está apagado, esa
+        // misma búsqueda seguiría alimentándose del hint viejo indefinidamente — en una ruta que
+        // se auto-cruza, la ventana de backtrack (5 puntos) desde un hint congelado puede dejar
+        // elegible un match viejo detrás de la posición real, y el puck quedaría apuntando para
+        // atrás sin límite de tiempo (justo la regresión que el hint existe para evitar). Este
+        // efecto es independiente del que anima la cámara: la animación sí respeta followEnabled,
+        // el seguimiento del índice no debe.
+        LaunchedEffect(navBearingResolved?.nearestIndex) {
+            navBearingResolved?.let { navBearingHint = it.nearestIndex }
+        }
+
         LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, standaloneFix, initialCenter, navigation) {
             val map = mapRef ?: return@LaunchedEffect
             // Navegando: cámara dedicada — course-up, inclinada, zoom por velocidad y maniobra.
             val nav = navigation
             if (nav != null && !nav.arrived && followEnabled) {
-                val target = nav.snapped ?: route.lastOrNull()?.let { LatLon(it.lat, it.lon) }
-                if (target != null) {
+                // navBearingResolved (arriba): misma cadena de target — snapped manda; si la
+                // navegación recién arrancó y todavía no hay snap, el fix crudo del GPS engancha
+                // la cámara de inmediato en vez de esperar al próximo snap. route.lastOrNull()
+                // es el último respaldo. Mismo objeto que ya alimentó el bearingDeg del puck. El
+                // avance del hint vive en el efecto de arriba, no acá: no debe depender de
+                // followEnabled.
+                val resolved = navBearingResolved
+                if (resolved != null) {
                     map.animateCamera(
                         CameraUpdateFactory.newCameraPosition(
                             CameraPosition.Builder()
-                                .target(LatLng(target.lat, target.lon))
-                                .bearing(currentBearingDegrees(route))
+                                .target(LatLng(resolved.target.lat, resolved.target.lon))
+                                .bearing(resolved.bearingDeg)
                                 .zoom(NavCamera.zoom(speedKmh, nav.distanceToManeuverM))
                                 .tilt(NavCamera.PITCH)
                                 .build(),
                         ),
+                        NAV_CAMERA_ANIMATION_MS,
                     )
                 }
                 return@LaunchedEffect
@@ -429,24 +498,6 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
 
         SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
 
-        Column(
-            Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            approaching?.let { target -> ApproachingCameraBanner(target) }
-            incomingDest?.let { incoming ->
-                if (approaching != null) Spacer(Modifier.height(8.dp))
-                SharedDestBanner(
-                    dest = incoming,
-                    onAccept = {
-                        viewModel.setDestination(incoming.lat, incoming.lon, incoming.name)
-                        dismissedDest = incoming
-                    },
-                    onDismiss = { dismissedDest = incoming },
-                )
-            }
-        }
-
         Column(Modifier.align(Alignment.BottomEnd).padding(16.dp), horizontalAlignment = Alignment.End) {
             SmallFloatingActionButton(
                 onClick = viewModel::cycleNightMode,
@@ -462,16 +513,20 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                     tint = if (darkTiles) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            SmallFloatingActionButton(
-                onClick = { headingUp = !headingUp },
-                containerColor = if (headingUp) Color(0xFFE8FF00) else Color(0xFF1C1C28),
-            ) {
-                Icon(
-                    Icons.Default.Explore,
-                    contentDescription = "Rumbo arriba",
-                    tint = if (headingUp) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
-                )
+            // Oculto con navegación activa (y no arrived): ahí la cámara la dicta NavCamera y
+            // el toggle de rumbo-arriba solo confundía (fix C, regla 3).
+            if (navIdle) {
+                Spacer(Modifier.height(8.dp))
+                SmallFloatingActionButton(
+                    onClick = { headingUp = !headingUp },
+                    containerColor = if (headingUp) Color(0xFFE8FF00) else Color(0xFF1C1C28),
+                ) {
+                    Icon(
+                        Icons.Default.Explore,
+                        contentDescription = "Rumbo arriba",
+                        tint = if (headingUp) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
+                    )
+                }
             }
             Spacer(Modifier.height(8.dp))
             SmallFloatingActionButton(
@@ -509,20 +564,53 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             }
         }
 
-        navigation?.let { live ->
-            NavigationBanner(
-                state = live,
-                onStop = viewModel::stopNavigation,
-                modifier = Modifier.align(Alignment.TopCenter).padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-            NavigationProgressBar(
-                state = live,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 24.dp),
-            )
+        // Un solo banner secundario a la vez, siempre DEBAJO del NavigationBanner de maniobra
+        // (nunca superpuesto) cuando hay nav activa; solo, arriba, sin ella (fix C, regla 1).
+        val secondaryBanner = pickSecondaryBanner(
+            mapCorruptedMessage = offlineMapCorruptedMessage,
+            navigationErrorMessage = navigationError,
+            approachingRadar = approaching,
+            incomingSharedDest = incomingDest,
+        )
+        Column(
+            Modifier.align(Alignment.TopCenter).padding(top = if (navigation != null) 8.dp else 28.dp, start = 12.dp, end = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            navigation?.let { live ->
+                NavigationBanner(state = live, onStop = viewModel::stopNavigation)
+                if (secondaryBanner != null) Spacer(Modifier.height(8.dp))
+            }
+            secondaryBanner?.let { banner ->
+                SecondaryBannerContent(
+                    banner = banner,
+                    onDismissMapCorrupted = viewModel::clearOfflineMapCorruptedMessage,
+                    onDismissNavError = viewModel::clearNavigationError,
+                    onAcceptSharedDest = { dest ->
+                        viewModel.setDestination(dest.lat, dest.lon, dest.name)
+                        dismissedDest = dest
+                    },
+                    onDismissSharedDest = { dest -> dismissedDest = dest },
+                )
+            }
         }
 
-        if (destination != null && navigation == null) {
-            RouteInfoChip(
+        // Slot inferior único: la tarjeta de tap (fix D) tiene prioridad y reemplaza
+        // momentáneamente lo que ahí mostraría la navegación o la selección de destino — nunca
+        // se apilan, y la tarjeta nunca tapa el NavigationBanner (vive arriba, en el Column de
+        // encima) ni la NavigationProgressBar (la sustituye, no la cubre).
+        val navLive = navigation
+        val tapped = tappedFeature
+        when {
+            tapped != null -> MapFeatureCard(
+                description = tapped,
+                onDismiss = { tappedFeature = null },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 24.dp),
+            )
+            navLive != null -> NavigationProgressBar(
+                state = navLive,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 24.dp),
+            )
+            destination != null -> RouteInfoChip(
                 routing = routing,
                 plannedRoute = plannedRoute,
                 routeAlternatives = routeAlternatives,
@@ -535,25 +623,25 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             )
         }
 
-        if (offlineMapCorruptedMessage != null || navigationError != null) {
-            Column(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 90.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                offlineMapCorruptedMessage?.let { message ->
-                    ErrorBanner(message, onDismiss = viewModel::clearOfflineMapCorruptedMessage)
-                    if (navigationError != null) Spacer(Modifier.height(8.dp))
-                }
-                navigationError?.let { message ->
-                    ErrorBanner(message, onDismiss = viewModel::clearNavigationError)
-                }
-            }
-        }
-
         if (roomCode != null) {
+            // TopStart, no TopEnd: con muchos peers el panel expandido de Leaderboard crece
+            // sin límite hacia abajo y, anclado a la derecha, terminaba compitiendo por espacio
+            // con la columna de FABs (también a la derecha) en pantallas cortas (fix C, regla
+            // 4). El lado izquierdo solo tiene la atribución de OSM (9sp, esquina) — sin choque
+            // (28dp de top ya la deja atrás con margen).
+            //
+            // Con un banner activo arriba (NavigationBanner y/o el secundario elegido por
+            // pickSecondaryBanner, ambos TopCenter) el leaderboard debe arrancar más abajo para
+            // no invadir esa banda — el SharedDestBanner (texto libre de rider+destino) era el
+            // caso real que la alcanzaba en anchos de 360-412dp. 96dp fijo cubre el caso de un
+            // solo banner (la altura conocida de una fila tipo NavigationBanner/SecondaryBanner,
+            // no una suposición sobre el ancho de pantalla); con NavigationBanner Y el
+            // secundario apilados a la vez el offset es más ajustado — no se profundizó porque
+            // el reporte de campo fue específicamente Leaderboard×SharedDestBanner solo.
+            val leaderboardTopPadding = if (navigation != null || secondaryBanner != null) 96.dp else 28.dp
             Column(
-                Modifier.align(Alignment.TopEnd).padding(12.dp),
-                horizontalAlignment = Alignment.End,
+                Modifier.align(Alignment.TopStart).padding(top = leaderboardTopPadding, start = 12.dp),
+                horizontalAlignment = Alignment.Start,
             ) {
                 Surface(
                     color = Color(0xE6121218),
@@ -787,9 +875,10 @@ private fun RouteAlternativeChip(label: String, isSelected: Boolean, onClick: ()
     }
 }
 
-/** Propuesta de destino de otro rider de la sala — aceptar fija ese destino localmente. */
+/** Propuesta de destino de otro rider de la sala — aceptar fija ese destino localmente.
+ * internal: la usa también SecondaryBannerContent en OverlayPriority.kt (fix C). */
 @Composable
-private fun SharedDestBanner(
+internal fun SharedDestBanner(
     dest: RoomClient.SharedDest,
     onAccept: () -> Unit,
     onDismiss: () -> Unit,
@@ -798,7 +887,11 @@ private fun SharedDestBanner(
     Surface(
         color = Color(0xE6121218),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-        modifier = modifier,
+        // Rider y nombre de destino son texto libre — sin este tope el banner (TopCenter) puede
+        // ensancharse hasta invadir la banda del Leaderboard (TopStart, 220dp) en pantallas
+        // angostas (360-412dp). Determinista: no depende del ancho real de pantalla, el texto
+        // largo elipsa en vez de forzar el Surface a crecer.
+        modifier = modifier.widthIn(max = 260.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -809,6 +902,9 @@ private fun SharedDestBanner(
                 color = Color(0xFFF0F0F8),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
             TextButton(onClick = onAccept) {
                 Text("Ir", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
@@ -829,12 +925,14 @@ private fun formatRouteSummary(route: NavigationRoute): String {
 }
 
 /** Aviso inline dismisseable — mismo look para el error de navegación y el de mapa offline
- * corrupto, así ambos pueden convivir apilados sin duplicar el Surface/Row/Text/IconButton. */
+ * corrupto (fix C: ahora nunca conviven, pickSecondaryBanner elige uno). internal: la usa
+ * también SecondaryBannerContent en OverlayPriority.kt. */
 @Composable
-private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
+internal fun ErrorBanner(message: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         color = Color(0xF2121218),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        modifier = modifier,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -859,9 +957,25 @@ private fun currentBearingDegrees(route: List<LiveRouteHolder.RoutePoint>): Doub
     return TripStatsCalculator.initialBearingDegrees(prev.lat, prev.lon, last.lat, last.lon)
 }
 
-/** Banner del radar al que el vehículo se dirige — solo ese, nunca los de otras calles. */
+/** Ícono O label tocado (fix D) → su descripción, o null si el tap no cayó sobre ningún
+ * marcador/label o el que tocó no tiene tarjeta (describeFeature). LYR_MARKERS_ROTANTES entra
+ * porque el puck y la flecha de rumbo de un peer viven ahí, separados de los pines
+ * (LYR_MARKERS) desde el split por alignment MAP — sin esto tocar la flecha de un peer dejaría
+ * de resolver su tarjeta. LYR_PEER_LABELS entra también: el nombre/velocidad de un peer se
+ * dibuja como texto por encima de su ícono (offset -2.2em), así que tocar el nombre cae fuera
+ * del hit-test de los íconos solos — misma fuente (SRC_MARKERS), mismas properties, sin caso
+ * especial en describeFeature. */
+private fun resolveTappedFeature(map: MapLibreMap, latLng: LatLng): MapFeatureDescription? {
+    val screenPoint = map.projection.toScreenLocation(latLng)
+    val feature = map.queryRenderedFeatures(screenPoint, LYR_MARKERS, LYR_MARKERS_ROTANTES, LYR_PEER_LABELS).firstOrNull() ?: return null
+    val (kind, properties) = describableProperties(feature)
+    return describeFeature(kind, properties)
+}
+
+/** Banner del radar al que el vehículo se dirige — solo ese, nunca los de otras calles.
+ * internal: la usa también SecondaryBannerContent en OverlayPriority.kt (fix C). */
 @Composable
-private fun ApproachingCameraBanner(
+internal fun ApproachingCameraBanner(
     target: SpeedCameraAlerter.ApproachingCamera,
     modifier: Modifier = Modifier,
 ) {
