@@ -192,6 +192,10 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
             // Property "heading" en grados (0 en marcadores sin rumbo, inofensivo: solo la
             // flecha de rumbo es asimétrica y por lo tanto sensible a la rotación).
             PropertyFactory.iconRotate(Expression.get(PROP_HEADING)),
+            // Default es "auto" (viewport con placement de punto): con course-up el mapa rota
+            // pero el icono no, y el puck/flecha de rumbo terminan apuntando de costado. "map"
+            // rota el icono junto con el mapa.
+            PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
             PropertyFactory.iconOpacity(
                 Expression.match(
                     Expression.get(PROP_KIND),

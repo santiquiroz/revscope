@@ -74,6 +74,26 @@ class NavBearingTest {
     }
 
     @Test
+    fun `en el fin de la ruta usa el rumbo del segmento entrante en vez de norte fantasma`() {
+        // En el ultimo punto pointAheadOnRoute no tiene "adelante": sin manejo especial,
+        // bearing(p,p) = atan2(0,0) = 0.0, o sea course-up saltaria a norte en la recta final
+        // sin importar hacia donde venga la ruta. Elegimos devolver el rumbo del tramo entrante
+        // (nunca null: el guard de <2 puntos ya garantiza que existe un punto anterior) para no
+        // reintroducir el jitter del fallback a GPS crudo del caller (LiveMapScreen cae a
+        // currentBearingDegrees(route) cuando esto es null). La ruta es oeste->este, asi que el
+        // resultado sano es ~90 grados, nunca 0.
+        val route = eastRoute(count = 10)
+
+        val atLastPoint = NavBearing.courseUpBearing(route, route.last())
+        val pastLastPoint = NavBearing.courseUpBearing(route, route.last().copy(lon = route.last().lon + 0.001))
+
+        assertEquals(route.lastIndex, atLastPoint!!.nearestIndex)
+        assertEquals(90.0, atLastPoint.bearingDeg, 1.0)
+        assertEquals(route.lastIndex, pastLastPoint!!.nearestIndex)
+        assertEquals(90.0, pastLastPoint.bearingDeg, 1.0)
+    }
+
+    @Test
     fun `menos de 2 puntos da null`() {
         assertNull(NavBearing.courseUpBearing(emptyList(), LatLon(BASE_LAT, BASE_LON)))
         assertNull(NavBearing.courseUpBearing(listOf(LatLon(BASE_LAT, BASE_LON)), LatLon(BASE_LAT, BASE_LON)))

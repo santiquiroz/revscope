@@ -25,10 +25,27 @@ object NavBearing {
     ): CourseUp? {
         if (routePoints.size < 2) return null
         val nearestIndex = nearestPointIndex(routePoints, position, fromIndex)
+        if (nearestIndex == routePoints.lastIndex) return incomingSegmentBearing(routePoints, nearestIndex)
         val target = pointAheadOnRoute(routePoints, nearestIndex, lookaheadM)
         val nearest = routePoints[nearestIndex]
         val bearing = TripStatsCalculator.initialBearingDegrees(nearest.lat, nearest.lon, target.lat, target.lon)
         return CourseUp(bearing, nearestIndex)
+    }
+
+    /**
+     * En el último punto no hay "adelante" que mirar — [pointAheadOnRoute] degeneraría al mismo
+     * punto y daría `initialBearingDegrees(p, p)` = atan2(0,0) = 0.0, o sea un salto fantasma a
+     * norte en la recta final. En vez de eso devolvemos el rumbo del tramo con el que se llega
+     * (el anterior siempre existe: el guard de <2 puntos ya descartó rutas sin él). Nunca es
+     * null a propósito — el caller (LiveMapScreen) cae a `currentBearingDegrees(route)` del
+     * track GPS crudo cuando esto es null, que es justo el jitter que NavBearing existe para
+     * evitar; el segmento entrante sigue siendo geometría de ruta, no track crudo.
+     */
+    private fun incomingSegmentBearing(routePoints: List<LatLon>, lastIndex: Int): CourseUp {
+        val previous = routePoints[lastIndex - 1]
+        val last = routePoints[lastIndex]
+        val bearing = TripStatsCalculator.initialBearingDegrees(previous.lat, previous.lon, last.lat, last.lon)
+        return CourseUp(bearing, lastIndex)
     }
 
     /**
