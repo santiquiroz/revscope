@@ -430,7 +430,9 @@ fun LiveMapScreen(
 
         // X3: chip "Recentrar" — nav activa (no idle) y el usuario paneó (follow apagado). No
         // usar navigation?.arrived directo: !navIdle ya expresa exactamente "hay nav Y no llegó".
-        val showRecenterChip = !navIdle && !followEnabled
+        // Con una MapFeatureCard abierta el slot inferior crece más alto que la barra de stats
+        // (88dp podía rozarla) y el usuario está mirando la tarjeta — el chip espera a que cierre.
+        val showRecenterChip = !navIdle && !followEnabled && tappedFeature == null
 
         // Avanza el hint SIEMPRE que cambie el nearestIndex resuelto, sin importar followEnabled:
         // navBearingResolved (arriba) se recalcula en cada recomposición usando navBearingHint
