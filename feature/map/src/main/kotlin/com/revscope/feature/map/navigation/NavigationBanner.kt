@@ -91,17 +91,19 @@ fun NavigationProgressBar(state: NavigationState, speedKmh: Int? = null, modifie
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            speedKmh?.let { ProgressField("$it km/h", "velocidad") }
-            ProgressField(formatDistance(state.distanceRemainingM), "restante")
-            ProgressField(formatDuration(state.durationRemainingS), "en camino")
-            ProgressField(arrivalClock(state.durationRemainingS), "llegada")
+            // weight(fill=false): con 4 celdas en 320dp el Row sin pesos mide con ancho ilimitado
+            // y el Surface CLIPEA la última celda en silencio; con pesos, reparten y nada se corta.
+            speedKmh?.let { ProgressField("$it km/h", "velocidad", Modifier.weight(1f, fill = false)) }
+            ProgressField(formatDistance(state.distanceRemainingM), "restante", Modifier.weight(1f, fill = false))
+            ProgressField(formatDuration(state.durationRemainingS), "en camino", Modifier.weight(1f, fill = false))
+            ProgressField(arrivalClock(state.durationRemainingS), "llegada", Modifier.weight(1f, fill = false))
         }
     }
 }
 
 @Composable
-private fun ProgressField(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun ProgressField(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Text(value, color = ACCENT, fontSize = 19.sp, fontWeight = FontWeight.Bold)
         Text(label, color = MUTED, fontSize = 11.sp)
     }
