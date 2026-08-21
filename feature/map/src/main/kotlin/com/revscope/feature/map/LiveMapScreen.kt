@@ -207,9 +207,17 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     }
     val canShareDestination = roomCode != null && !roomState.legacyServer && destination != null
 
-    // Iniciar navegación toma el control de la cámara aunque el usuario venía paneando.
+    // Iniciar navegación toma el control de la cámara aunque el usuario venía paneando. También
+    // resetea el hint de NavBearing: stopNavigation no limpia plannedRoute (queda visible tras
+    // llegar), así que remember(plannedRoute) solo no alcanza — re-arrancar con "Ir" sobre la
+    // MISMA instancia de ruta reusaría un hint que quedó adelantado del viaje anterior, y la
+    // ventana de búsqueda monotónica (backtrack de solo 5 puntos) no lo corrige si el nuevo
+    // origen queda atrás de ese índice viejo.
     LaunchedEffect(navigation != null) {
-        if (navigation != null) followEnabled = true
+        if (navigation != null) {
+            followEnabled = true
+            navBearingHint = 0
+        }
     }
 
     // Tier server sigue sin wirear (el server hoy no hospeda tiles): tilesUrl solo considera el
@@ -950,13 +958,16 @@ private fun currentBearingDegrees(route: List<LiveRouteHolder.RoutePoint>): Doub
 }
 
 /** Ícono O label tocado (fix D) → su descripción, o null si el tap no cayó sobre ningún
- * marcador/label o el que tocó no tiene tarjeta (describeFeature). LYR_PEER_LABELS entra
- * también: el nombre/velocidad de un peer se dibuja como texto por encima de su ícono (offset
- * -2.2em), así que tocar el nombre cae fuera del hit-test de LYR_MARKERS solo — misma fuente
- * (SRC_MARKERS), mismas properties, sin caso especial en describeFeature. */
+ * marcador/label o el que tocó no tiene tarjeta (describeFeature). LYR_MARKERS_ROTANTES entra
+ * porque el puck y la flecha de rumbo de un peer viven ahí, separados de los pines
+ * (LYR_MARKERS) desde el split por alignment MAP — sin esto tocar la flecha de un peer dejaría
+ * de resolver su tarjeta. LYR_PEER_LABELS entra también: el nombre/velocidad de un peer se
+ * dibuja como texto por encima de su ícono (offset -2.2em), así que tocar el nombre cae fuera
+ * del hit-test de los íconos solos — misma fuente (SRC_MARKERS), mismas properties, sin caso
+ * especial en describeFeature. */
 private fun resolveTappedFeature(map: MapLibreMap, latLng: LatLng): MapFeatureDescription? {
     val screenPoint = map.projection.toScreenLocation(latLng)
-    val feature = map.queryRenderedFeatures(screenPoint, LYR_MARKERS, LYR_PEER_LABELS).firstOrNull() ?: return null
+    val feature = map.queryRenderedFeatures(screenPoint, LYR_MARKERS, LYR_MARKERS_ROTANTES, LYR_PEER_LABELS).firstOrNull() ?: return null
     val (kind, properties) = describableProperties(feature)
     return describeFeature(kind, properties)
 }

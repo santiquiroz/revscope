@@ -45,6 +45,9 @@ private const val SRC_MARKERS = "src-marcadores"
 // internal: LiveMapScreen consulta esta capa con queryRenderedFeatures al tocar un ícono
 // (fix D, tarjeta descriptiva).
 internal const val LYR_MARKERS = "lyr-marcadores"
+// internal: resolveTappedFeature (LiveMapScreen.kt) también la consulta — puck y flecha de
+// rumbo de peers viven acá, separados de LYR_MARKERS (ver comentario en installLiveMapLayers).
+internal const val LYR_MARKERS_ROTANTES = "lyr-marcadores-rotantes"
 // internal: resolveTappedFeature (LiveMapScreen.kt) también consulta esta capa — el nombre/
 // velocidad de un peer vive en su label de texto (offset -2.2em), fuera del hit-test del ícono.
 internal const val LYR_PEER_LABELS = "peer-labels"
@@ -184,27 +187,16 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
             PropertyFactory.iconImage(Expression.get(PROP_KIND)),
             PropertyFactory.iconAllowOverlap(true),
             PropertyFactory.iconIgnorePlacement(true),
-            // Los huecos, el marcador propio y la flecha de rumbo van centrados en el punto
-            // (la flecha gira sobre su propio eje con iconRotate); el resto anclados abajo,
-            // como en osmdroid.
+            // Los huecos van centrados en el punto; el resto (destino, peer, radares) anclados
+            // abajo, como en osmdroid — todos con alignment "auto" (default, sin especificar):
+            // son pines simétricos con heading 0, así que da igual si el mapa rota bajo ellos.
             PropertyFactory.iconAnchor(
                 Expression.match(
                     Expression.get(PROP_KIND),
                     Expression.literal(Property.ICON_ANCHOR_BOTTOM),
                     Expression.stop(ICON_POTHOLE, Expression.literal(Property.ICON_ANCHOR_CENTER)),
-                    Expression.stop(ICON_ME, Expression.literal(Property.ICON_ANCHOR_CENTER)),
-                    Expression.stop(ICON_ME_MOTO, Expression.literal(Property.ICON_ANCHOR_CENTER)),
-                    Expression.stop(ICON_ME_AUTO, Expression.literal(Property.ICON_ANCHOR_CENTER)),
-                    Expression.stop(ICON_PEER_RUMBO, Expression.literal(Property.ICON_ANCHOR_CENTER)),
                 ),
             ),
-            // Property "heading" en grados (0 en marcadores sin rumbo, inofensivo: solo la
-            // flecha de rumbo es asimétrica y por lo tanto sensible a la rotación).
-            PropertyFactory.iconRotate(Expression.get(PROP_HEADING)),
-            // Default es "auto" (viewport con placement de punto): con course-up el mapa rota
-            // pero el icono no, y el puck/flecha de rumbo terminan apuntando de costado. "map"
-            // rota el icono junto con el mapa.
-            PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
             PropertyFactory.iconOpacity(
                 Expression.match(
                     Expression.get(PROP_KIND),
@@ -213,7 +205,25 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
                     Expression.stop(ICON_CAMERA, Expression.literal(0.75f)),
                 ),
             ),
-        ),
+        ).withFilter(Expression.not(rotatingMarkerKindFilter())),
+    )
+
+    // Puck y flecha de rumbo de peers: los únicos íconos con heading real, así que son los
+    // únicos que deben rotar junto con el mapa (alignment "map"). Compartían capa con los
+    // pines (LYR_MARKERS) hasta que ese alignment quedó aplicado a la capa entera: en
+    // course-up o headingUp los pines (anchor BOTTOM) rotaban alrededor de su punta y el
+    // cuerpo terminaba colgando de costado o boca abajo según el bearing. Separados en su
+    // propia capa, agregada DESPUÉS de LYR_MARKERS para que el puck quede visible por encima
+    // de los pines si coinciden en pantalla.
+    style.addLayer(
+        SymbolLayer(LYR_MARKERS_ROTANTES, SRC_MARKERS).withProperties(
+            PropertyFactory.iconImage(Expression.get(PROP_KIND)),
+            PropertyFactory.iconAllowOverlap(true),
+            PropertyFactory.iconIgnorePlacement(true),
+            PropertyFactory.iconAnchor(Property.ICON_ANCHOR_CENTER),
+            PropertyFactory.iconRotate(Expression.get(PROP_HEADING)),
+            PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+        ).withFilter(rotatingMarkerKindFilter()),
     )
 
     style.addLayer(
@@ -253,6 +263,15 @@ fun updateLiveMapData(style: Style, data: LiveMapData) {
     // defensiva extra, y esta línea llega a 18.000 puntos.
     style.getSourceAs<GeoJsonSource>(SRC_LIVE)?.setGeoJson(liveGeometry(data.route))
 }
+
+/** "tipo" del puck (según vehículo) o de la flecha de rumbo de un peer — ver LYR_MARKERS_ROTANTES. */
+private fun rotatingMarkerKindFilter(): Expression =
+    Expression.any(
+        Expression.eq(Expression.get(PROP_KIND), ICON_ME),
+        Expression.eq(Expression.get(PROP_KIND), ICON_ME_MOTO),
+        Expression.eq(Expression.get(PROP_KIND), ICON_ME_AUTO),
+        Expression.eq(Expression.get(PROP_KIND), ICON_PEER_RUMBO),
+    )
 
 /** `toColor` explícito: los stops son strings y las propiedades de color esperan color. */
 private fun matchState(target: String, normal: String, dimmed: String): Expression =
