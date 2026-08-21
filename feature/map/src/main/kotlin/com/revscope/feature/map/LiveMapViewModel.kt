@@ -21,7 +21,9 @@ import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.maps.LocalMapReadiness
 import com.revscope.core.maps.MapDownloadService
+import com.revscope.core.maps.MapDownloadState
 import com.revscope.core.maps.MapStyleProvider
+import com.revscope.core.maps.isOnWifi
 import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
@@ -454,6 +456,21 @@ class LiveMapViewModel @Inject constructor(
     fun markRemoteMapBannerShown() {
         viewModelScope.launch { settings.edit { it[PreferencesKeys.REMOTE_MAP_BANNER_SHOWN] = true } }
     }
+
+    // ── Mapa offline: descarga directa desde el banner del mapa (X4) ────────
+
+    /** Mismo MapDownloadService que ya gobierna localMapFileExists arriba — expuesto acá para
+     * que el CTA "Descargar" del banner del mapa dispare la descarga directo, sin pasar por
+     * Ajustes (antes navegaba ahí y el usuario tenía que buscar la sección). */
+    val mapDownloadState: StateFlow<MapDownloadState> = mapDownloadService.state
+
+    fun downloadOfflineMap(allowCellular: Boolean) = mapDownloadService.download(allowCellular)
+
+    fun cancelOfflineMapDownload() = mapDownloadService.cancel()
+
+    /** Mismo isOnWifi(Context) compartido que ya usa SettingsViewModel — decide qué texto
+     * mostrar en el confirm inline antes de arrancar la descarga. */
+    fun isOnWifiNow(): Boolean = isOnWifi(appContext)
 
     override fun onCleared() {
         locationProvider.stop()
