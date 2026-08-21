@@ -112,7 +112,13 @@ private val SharedDestSaver = listSaver<RoomClient.SharedDest?, Any>(
 )
 
 @Composable
-fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
+fun LiveMapScreen(
+    viewModel: LiveMapViewModel = hiltViewModel(),
+    // La navegación activa también debe ocultar chrome que vive FUERA de este composable (el
+    // chip de perfil de vehículo, montado por RevScopeNavGraph junto al resto de pantallas de
+    // bottom-nav) — se lo avisamos al padre en vez de acoplar ese chip al ViewModel del mapa.
+    onNavigationActiveChanged: (Boolean) -> Unit = {},
+) {
     val route by viewModel.route.collectAsState()
     val routeRevision by viewModel.routeRevision.collectAsState()
     val cameras by viewModel.cameras.collectAsState()
@@ -449,6 +455,22 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             }
         }
 
+        // Brújula propia de MapLibre (uiSettings, nunca deshabilitada hasta ahora): con nav
+        // activa el course-up ya indica el rumbo y el LaunchedEffect de cámara (arriba) reaplica
+        // el bearing en cada tick — un tap sobre la brújula (que resetea a norte) quedaría en un
+        // parpadeo sin efecto real. Se apaga solo mientras se navega y no se llegó; en cualquier
+        // otro momento (idle, o headingUp manual sin nav) queda con su comportamiento default.
+        LaunchedEffect(mapRef, navIdle) {
+            mapRef?.uiSettings?.isCompassEnabled = navIdle
+        }
+
+        // El chip de perfil de vehículo (VehicleSwitcherPill) lo monta RevScopeNavGraph, fuera
+        // de este composable — el padre necesita saber cuándo hay nav activa para ocultarlo
+        // (fix W2, regla 1) sin acoplar ese chip al ViewModel del mapa.
+        LaunchedEffect(navIdle) {
+            onNavigationActiveChanged(!navIdle)
+        }
+
         Text(
             "© OpenStreetMap contributors",
             color = AttributionColor,
@@ -482,23 +504,41 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             }
         }
 
-        SearchOverlay(
-            query = searchQuery,
-            results = searchResults,
-            searching = searching,
-            savedPlaces = savedPlaces,
-            onQueryChange = viewModel::updateSearchQuery,
-            onClear = viewModel::clearSearch,
-            onSelect = viewModel::selectSearchResult,
-            onSelectSaved = viewModel::selectSavedPlace,
-            onSaveFavorite = viewModel::saveFavorite,
-            onRemoveSaved = viewModel::removePlace,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 68.dp, start = 12.dp, end = 12.dp),
-        )
+        // Con nav activa (y no arrived) esta barra y el chip de perfil de vehículo (fuera de
+        // este composable, ver onNavigationActiveChanged) quedan tapados por el banner de
+        // maniobra — se ocultan y vuelven al salir de nav (fix W2, regla 1).
+        if (navIdle) {
+            SearchOverlay(
+                query = searchQuery,
+                results = searchResults,
+                searching = searching,
+                savedPlaces = savedPlaces,
+                onQueryChange = viewModel::updateSearchQuery,
+                onClear = viewModel::clearSearch,
+                onSelect = viewModel::selectSearchResult,
+                onSelectSaved = viewModel::selectSavedPlace,
+                onSaveFavorite = viewModel::saveFavorite,
+                onRemoveSaved = viewModel::removePlace,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 68.dp, start = 12.dp, end = 12.dp),
+            )
+        }
 
-        SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
+        // El badge suelto de velocidad se oculta durante nav activa: la barra de stats de abajo
+        // (NavigationProgressBar) ya la muestra como primera celda (fix W2, regla 2).
+        if (navIdle) {
+            SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
+        }
 
-        Column(Modifier.align(Alignment.BottomEnd).padding(16.dp), horizontalAlignment = Alignment.End) {
+        // Con nav activa la barra de stats de abajo (NavigationProgressBar) es casi ancho
+        // completo y su borde superior queda a ~80dp del fondo (24dp de margen propio + ~56dp
+        // de alto real, mismo cálculo que ya se usaba para leaderboardTopPadding más abajo) —
+        // la columna de FABs necesita ese mismo margen inferior para no quedar tapada detrás
+        // (antes 16dp fijos dejaban el último FAB medio oculto, fix W2 regla 3).
+        val fabColumnBottomPadding = if (navIdle) 16.dp else 84.dp
+        Column(
+            Modifier.align(Alignment.BottomEnd).padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = fabColumnBottomPadding),
+            horizontalAlignment = Alignment.End,
+        ) {
             SmallFloatingActionButton(
                 onClick = viewModel::cycleNightMode,
                 containerColor = if (darkTiles) Color(0xFFE8FF00) else Color(0xFF1C1C28),
@@ -551,6 +591,10 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 )
             }
             Spacer(Modifier.height(12.dp))
+            // Sin containerColor propio caía al primaryContainer default de Material3 (violeta
+            // de la paleta base, nunca elegido a propósito) — quedaba fuera de tono contra el
+            // resto de la columna, estilada a mano en amarillo/oscuro (fix W2 regla 3, "botón
+            // morado"). Mismo estilo "inactivo" que los demás: no tiene un estado on/off propio.
             FloatingActionButton(
                 onClick = {
                     openExternalNavigation(
@@ -559,8 +603,9 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                         turnByTurn = destination != null,
                     )
                 },
+                containerColor = Color(0xFF1C1C28),
             ) {
-                Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps")
+                Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps", tint = Color(0xFFF0F0F8))
             }
         }
 
@@ -608,6 +653,9 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             )
             navLive != null -> NavigationProgressBar(
                 state = navLive,
+                // Solo con nav realmente activa: en "arrived" el SpeedOverlay suelto ya
+                // reaparece (navIdle), y duplicar la velocidad acá no aporta nada.
+                speedKmh = speedKmh.takeIf { !navIdle },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 24.dp),
             )
             destination != null -> RouteInfoChip(

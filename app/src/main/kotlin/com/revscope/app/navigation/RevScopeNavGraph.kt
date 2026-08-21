@@ -135,6 +135,12 @@ fun RevScopeNavGraph(
         }
     }
 
+    // El chip de perfil de vehículo (VehicleSwitcherPill, abajo) vive acá porque se comparte
+    // entre todas las pantallas de bottom-nav, pero con navegación activa en el mapa el banner
+    // de maniobra lo tapa — LiveMapScreen nos avisa por callback (fix W2 regla 1) en vez de
+    // acoplar este chip al ViewModel del mapa, que es screen-scoped.
+    var mapNavigationActive by remember { mutableStateOf(false) }
+
     var showVehiclePicker by rememberSaveable { mutableStateOf(false) }
     var vehiclePickerIsStartupPrompt by rememberSaveable { mutableStateOf(false) }
     var hasOfferedVehiclePicker by rememberSaveable { mutableStateOf(false) }
@@ -283,7 +289,9 @@ fun RevScopeNavGraph(
                 composable(Screen.Mode06.route) {
                     Mode06Screen(onNavigateBack = { navController.popBackStack() })
                 }
-                composable(Screen.LiveMap.route) { LiveMapScreen() }
+                composable(Screen.LiveMap.route) {
+                    LiveMapScreen(onNavigationActiveChanged = { mapNavigationActive = it })
+                }
                 composable(Screen.AdapterScan.route) {
                     AdapterScanScreen(
                         onNavigateBack = { navController.popBackStack() },
@@ -357,7 +365,8 @@ fun RevScopeNavGraph(
                     )
                 }
             }
-            if (currentRoute in bottomNavRoutes) {
+            val hideVehiclePill = currentRoute == Screen.LiveMap.route && mapNavigationActive
+            if (currentRoute in bottomNavRoutes && !hideVehiclePill) {
                 val connState by connectionVm.connectionState.collectAsState()
                 Box(
                     Modifier

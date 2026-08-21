@@ -80,15 +80,18 @@ fun NavigationBanner(state: NavigationState, onStop: () -> Unit, modifier: Modif
     }
 }
 
-/** Lo que falta del viaje, al pie: distancia, tiempo y hora de llegada. */
+/** Lo que falta del viaje, al pie: velocidad actual (si se conoce), distancia, tiempo y hora
+ * de llegada — velocidad como primera celda para no necesitar un badge suelto aparte durante
+ * la navegación (ver SpeedOverlay en LiveMapScreen, que se oculta mientras esta barra manda). */
 @Composable
-fun NavigationProgressBar(state: NavigationState, modifier: Modifier = Modifier) {
-    Surface(color = PANEL, shape = RoundedCornerShape(10.dp), modifier = modifier) {
+fun NavigationProgressBar(state: NavigationState, speedKmh: Int? = null, modifier: Modifier = Modifier) {
+    Surface(color = PANEL, shape = RoundedCornerShape(10.dp), modifier = modifier.fillMaxWidth()) {
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
+            speedKmh?.let { ProgressField("$it km/h", "velocidad") }
             ProgressField(formatDistance(state.distanceRemainingM), "restante")
             ProgressField(formatDuration(state.durationRemainingS), "en camino")
             ProgressField(arrivalClock(state.durationRemainingS), "llegada")
