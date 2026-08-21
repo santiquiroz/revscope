@@ -17,6 +17,8 @@ import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SavedPlaceEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.maps.LocalMapReadiness
 import com.revscope.core.maps.MapDownloadService
 import com.revscope.core.maps.MapStyleProvider
@@ -447,6 +449,12 @@ class LiveMapViewModel @Inject constructor(
     val speedKmh: StateFlow<Int?> = sessionManager.readings
         .map { (it["0D"] ?: it["GPS_SPEED"])?.value?.toInt() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Tipo del vehículo activo, para el ícono del puck (LiveMapLayers.puckIcon) — null sin
+     * perfil configurado, mismo fallback que usa el gear learner (ver DashboardViewModel). */
+    val puckVehicleType: StateFlow<VehicleType?> = sessionManager.activeProfile
+        .map { it?.vehicleType }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), sessionManager.activeProfile.value?.vehicleType)
 
     // ── Ruta a destino (OSRM) ────────────────────────────────────────────────
 

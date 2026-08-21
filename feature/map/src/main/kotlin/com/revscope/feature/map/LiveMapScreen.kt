@@ -134,6 +134,7 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
     val navigation by viewModel.navigation.collectAsState()
     val navigationError by viewModel.navigationError.collectAsState()
     val speedKmh by viewModel.speedKmh.collectAsState()
+    val puckVehicleType by viewModel.puckVehicleType.collectAsState()
     val liveFix by viewModel.liveFix.collectAsState()
     val initialCenter by viewModel.initialCenter.collectAsState()
     val darkTiles by viewModel.darkTiles.collectAsState()
@@ -240,6 +241,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         plannedRoute = plannedRoute,
         liveFix = standaloneFix,
         routeAlternatives = routeAlternatives,
+        vehicleType = puckVehicleType,
+        // Rumbo de los dos últimos puntos de la ruta viva — mismo cálculo que ya usa la
+        // cámara de navegación (ver currentBearingDegrees más abajo en este archivo). 0°
+        // (norte, apuntando "arriba" como está dibujado el ícono) sin ruta todavía.
+        bearingDeg = currentBearingDegrees(route),
     )
 
     Box(Modifier.fillMaxSize()) {

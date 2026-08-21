@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.maps.geodesicCircle
 import com.revscope.core.maps.physicalPxToDp
 import com.revscope.core.obd.service.LiveRouteHolder
@@ -60,7 +61,11 @@ private const val ICON_PEER_RUMBO = "icono-peer-rumbo"
 private const val ICON_POTHOLE = "icono-hueco"
 private const val ICON_CAMERA = "icono-radar"
 private const val ICON_CAMERA_TARGET = "icono-radar-objetivo"
-private const val ICON_ME = "icono-yo"
+// internal (no private): la selección de ícono del puck (puckIcon) tiene test unitario chico
+// en el mismo módulo y necesita comparar contra estos valores.
+internal const val ICON_ME = "icono-yo"
+internal const val ICON_ME_MOTO = "icono-yo-moto"
+internal const val ICON_ME_AUTO = "icono-yo-auto"
 
 private const val TEXT_FONT = "Noto Sans Regular"
 
@@ -78,6 +83,12 @@ data class LiveMapData(
     // Rutas de OSRM que NO son la elegida (spec F6) — se dibujan en gris debajo de la
     // planeada; la elegida nunca aparece acá dos veces (ver alternativeGeometries).
     val routeAlternatives: List<NavigationRoute> = emptyList(),
+    // Tipo de vehículo del perfil activo — null sin perfil configurado, cae al dot plano
+    // (ver puckIcon). La capa no lee storage: el dato viaja desde el caller (LiveMapScreen).
+    val vehicleType: VehicleType? = null,
+    // Rumbo del puck en grados (0 = norte) — hoy currentBearingDegrees(route) desde el
+    // caller; un futuro NavBearing puede alimentar esta misma property sin tocar la capa.
+    val bearingDeg: Double = 0.0,
 )
 
 /**
@@ -173,6 +184,8 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
                     Expression.literal(Property.ICON_ANCHOR_BOTTOM),
                     Expression.stop(ICON_POTHOLE, Expression.literal(Property.ICON_ANCHOR_CENTER)),
                     Expression.stop(ICON_ME, Expression.literal(Property.ICON_ANCHOR_CENTER)),
+                    Expression.stop(ICON_ME_MOTO, Expression.literal(Property.ICON_ANCHOR_CENTER)),
+                    Expression.stop(ICON_ME_AUTO, Expression.literal(Property.ICON_ANCHOR_CENTER)),
                     Expression.stop(ICON_PEER_RUMBO, Expression.literal(Property.ICON_ANCHOR_CENTER)),
                 ),
             ),
@@ -287,9 +300,18 @@ private fun markerFeatures(data: LiveMapData): FeatureCollection {
         features += marker(cam.latitude, cam.longitude, icon)
     }
     // Con viaje activo el puck sigue la ruta viva; sin viaje, el fix del provider del mapa.
-    (data.route.lastOrNull() ?: data.liveFix)?.let { features += marker(it.lat, it.lon, ICON_ME) }
+    (data.route.lastOrNull() ?: data.liveFix)?.let {
+        features += marker(it.lat, it.lon, puckIcon(data.vehicleType), heading = data.bearingDeg)
+    }
 
     return FeatureCollection.fromFeatures(features)
+}
+
+/** Ícono del puck según el vehículo activo — sin perfil configurado cae al dot plano. */
+internal fun puckIcon(vehicleType: VehicleType?): String = when (vehicleType) {
+    VehicleType.MOTORCYCLE -> ICON_ME_MOTO
+    VehicleType.CAR -> ICON_ME_AUTO
+    null -> ICON_ME
 }
 
 private fun marker(
@@ -326,6 +348,8 @@ private fun registerIcons(style: Style) {
     style.addImage(ICON_CAMERA, pinBitmap(0xFFFF5252.toInt()))
     style.addImage(ICON_CAMERA_TARGET, pinBitmap(0xFFFF1744.toInt()))
     style.addImage(ICON_ME, dotBitmap(0xFFE8FF00.toInt()))
+    style.addImage(ICON_ME_MOTO, motoBitmap(0xFFE8FF00.toInt()))
+    style.addImage(ICON_ME_AUTO, autoBitmap(0xFFE8FF00.toInt()))
 }
 
 private const val PIN_SIZE_PX = 48
@@ -372,6 +396,80 @@ private fun arrowBitmap(color: Int): Bitmap {
     }
     canvas.drawPath(path, body)
     canvas.drawPath(path, border)
+    return bmp
+}
+
+/**
+ * Silueta de moto deportiva vista desde arriba, apuntando al norte (arriba del bitmap) en
+ * reposo — morro afilado, cintura angosta y cola partida en dos aletas en flecha (silueta
+ * ORIGINAL tipo "speeder", no un calco de ninguna franquicia). El acento cian cerca del morro
+ * marca la posición del piloto y suma la paleta neón de la app sin depender de un segundo color
+ * de parámetro. */
+private fun motoBitmap(color: Int): Bitmap {
+    val bmp = Bitmap.createBitmap(PIN_SIZE_PX, PIN_SIZE_PX, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val body = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+    val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = 0xFF0A0A0F.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    val canopy = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = 0xFF00E5FF.toInt() }
+    val cx = PIN_SIZE_PX / 2f
+    val path = Path().apply {
+        moveTo(cx, 3f)
+        lineTo(cx + 6f, 15f)
+        lineTo(cx + 3f, 21f)
+        lineTo(cx + 11f, 34f)
+        lineTo(cx + 1f, 29f)
+        lineTo(cx, 41f)
+        lineTo(cx - 1f, 29f)
+        lineTo(cx - 11f, 34f)
+        lineTo(cx - 3f, 21f)
+        lineTo(cx - 6f, 15f)
+        close()
+    }
+    canvas.drawPath(path, body)
+    canvas.drawPath(path, border)
+    canvas.drawCircle(cx, 13f, 2.5f, canopy)
+    return bmp
+}
+
+/**
+ * Silueta de auto deportivo visto desde arriba, apuntando al norte en reposo — morro
+ * redondeado y angosto, hombros y cola más anchos (postura ancha "de pista"). El trapecio cian
+ * marca el parabrisas/cabina y da lectura de "auto" incluso al tamaño de un pin de mapa. */
+private fun autoBitmap(color: Int): Bitmap {
+    val bmp = Bitmap.createBitmap(PIN_SIZE_PX, PIN_SIZE_PX, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val body = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+    val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = 0xFF0A0A0F.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    val cabin = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = 0xFF00E5FF.toInt() }
+    val cx = PIN_SIZE_PX / 2f
+    val path = Path().apply {
+        moveTo(cx, 5f)
+        quadTo(cx + 11f, 8f, cx + 12f, 20f)
+        quadTo(cx + 13f, 30f, cx + 16f, 38f)
+        quadTo(cx + 17f, 44f, cx + 9f, 45f)
+        lineTo(cx - 9f, 45f)
+        quadTo(cx - 17f, 44f, cx - 16f, 38f)
+        quadTo(cx - 13f, 30f, cx - 12f, 20f)
+        quadTo(cx - 11f, 8f, cx, 5f)
+        close()
+    }
+    canvas.drawPath(path, body)
+    canvas.drawPath(path, border)
+    val cabinPath = Path().apply {
+        moveTo(cx, 12f)
+        lineTo(cx + 7f, 24f)
+        lineTo(cx - 7f, 24f)
+        close()
+    }
+    canvas.drawPath(cabinPath, cabin)
     return bmp
 }
 
