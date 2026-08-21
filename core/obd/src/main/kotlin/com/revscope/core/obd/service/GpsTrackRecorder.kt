@@ -69,6 +69,12 @@ class GpsTrackRecorder(
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
+    // X1 (fix de arranque frío del GPS): a diferencia de MapLocationProvider (solo pinta el
+    // mapa), esta clase alimenta el track persistido, cameraAlerter, cityAlerter, potholeAlerter,
+    // trackModeEngine (vueltas) y NavigationController con CADA fix — sembrar acá un
+    // getLastKnownLocation potencialmente viejo escribiría un punto GPS falso en el viaje y
+    // podría disparar un aviso de radar o desalinear el matching de ruta con una posición que
+    // no es la real de arranque. No es "barato" como en el mapa: se deja sin sembrar a propósito.
     fun start(scope: CoroutineScope, sessionId: Long) {
         if (listener != null) return
         if (!hasPermission()) {
