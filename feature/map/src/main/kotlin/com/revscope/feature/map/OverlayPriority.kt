@@ -2,6 +2,7 @@ package com.revscope.feature.map
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.revscope.core.maps.MapDownloadState
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
 
@@ -10,14 +11,17 @@ import com.revscope.core.obd.social.RoomClient
  * ellas"). Prioridad de campo: un mapa offline corrupto bloquea la app entera y gana siempre;
  * un error de navegación es la próxima señal más urgente (la ruta dejó de ser confiable); un
  * radar acercándose es tiempo-crítico pero acotado a esa calle; un destino compartido puede
- * esperar sin riesgo si hay algo más urgente en pantalla; la promo del tier remoto (fix W1) es
- * puramente informativa — la de MENOR prioridad, nunca debe tapar nada de lo anterior.
+ * esperar sin riesgo si hay algo más urgente en pantalla; la descarga del mapa en curso y la
+ * promo del tier remoto (fix W1, X4) son puramente informativas — la MENOR prioridad, nunca
+ * deben tapar nada de lo anterior. Entre esas dos, la descarga en curso gana: una vez el usuario
+ * confirmó bajar el mapa no tiene sentido seguir invitándolo a hacerlo (mismo slot, sub-orden).
  */
 internal sealed interface SecondaryBanner {
     data class MapCorrupted(val message: String) : SecondaryBanner
     data class NavError(val message: String) : SecondaryBanner
     data class Radar(val target: SpeedCameraAlerter.ApproachingCamera) : SecondaryBanner
     data class SharedDest(val dest: RoomClient.SharedDest) : SecondaryBanner
+    data class MapDownloadProgress(val state: MapDownloadState.Downloading) : SecondaryBanner
     data object RemoteMapPromo : SecondaryBanner
 }
 
@@ -27,11 +31,13 @@ internal fun pickSecondaryBanner(
     approachingRadar: SpeedCameraAlerter.ApproachingCamera?,
     incomingSharedDest: RoomClient.SharedDest?,
     showRemoteMapPromo: Boolean = false,
+    mapDownloadProgress: MapDownloadState.Downloading? = null,
 ): SecondaryBanner? = when {
     mapCorruptedMessage != null -> SecondaryBanner.MapCorrupted(mapCorruptedMessage)
     navigationErrorMessage != null -> SecondaryBanner.NavError(navigationErrorMessage)
     approachingRadar != null -> SecondaryBanner.Radar(approachingRadar)
     incomingSharedDest != null -> SecondaryBanner.SharedDest(incomingSharedDest)
+    mapDownloadProgress != null -> SecondaryBanner.MapDownloadProgress(mapDownloadProgress)
     showRemoteMapPromo -> SecondaryBanner.RemoteMapPromo
     else -> null
 }
@@ -47,6 +53,7 @@ internal fun SecondaryBannerContent(
     onDismissSharedDest: (RoomClient.SharedDest) -> Unit,
     onDismissRemoteMapPromo: () -> Unit = {},
     onDownloadRemoteMapPromo: () -> Unit = {},
+    onCancelMapDownload: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     when (banner) {
@@ -57,6 +64,11 @@ internal fun SecondaryBannerContent(
             dest = banner.dest,
             onAccept = { onAcceptSharedDest(banner.dest) },
             onDismiss = { onDismissSharedDest(banner.dest) },
+            modifier = modifier,
+        )
+        is SecondaryBanner.MapDownloadProgress -> MapDownloadProgressBanner(
+            state = banner.state,
+            onCancel = onCancelMapDownload,
             modifier = modifier,
         )
         is SecondaryBanner.RemoteMapPromo -> RemoteMapPromoBanner(

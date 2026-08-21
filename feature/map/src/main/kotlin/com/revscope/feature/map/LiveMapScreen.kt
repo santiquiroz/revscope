@@ -37,7 +37,10 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextButton
@@ -62,6 +65,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.revscope.core.maps.MapDownloadState
 import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.maps.peekMapLayersAsset
@@ -164,6 +168,7 @@ fun LiveMapScreen(
     val localMapFileExists by viewModel.localMapFileExists.collectAsState()
     val offlineMapCorruptedMessage by viewModel.offlineMapCorruptedMessage.collectAsState()
     val remoteMapBannerShown by viewModel.remoteMapBannerShown.collectAsState()
+    val mapDownloadState by viewModel.mapDownloadState.collectAsState()
     // Durante un viaje la ruta viva ya alimenta puck y efectos a ~1 Hz; pasar también el fix
     // del provider duplicaría los re-writes del dataset completo sin cambio visual (T4 lo enmascara).
     val standaloneFix = if (route.isEmpty()) liveFix else null
@@ -293,6 +298,28 @@ fun LiveMapScreen(
     var promoLatched by remember { mutableStateOf(false) }
     val promoEligible = tilesTier == TilesTier.REMOTE && !remoteMapBannerShown && !remoteBannerLocallyDismissed
     val showRemoteMapPromo = !remoteBannerLocallyDismissed && (promoEligible || promoLatched)
+    // X4: CTA "Descargar" del banner de promo abre este confirm inline (mismo contenido que
+    // OfflineMapSection en feature/settings) en vez de navegar a Ajustes.
+    var showMapDownloadConfirm by remember { mutableStateOf(false) }
+    val downloadingMapState = mapDownloadState as? MapDownloadState.Downloading
+    // Snackbar "Mapa offline listo" al completar (mismo patrón que OfflineMapSection): detecta
+    // la transición Downloading → Idle(exists) en vez de reaccionar a cualquier Idle, para no
+    // disparar en el arranque de pantalla con un mapa ya descargado de antes.
+    val snackbarHostState = remember { SnackbarHostState() }
+    var wasDownloadingMap by remember { mutableStateOf(false) }
+    LaunchedEffect(mapDownloadState) {
+        val current = mapDownloadState
+        if (wasDownloadingMap && current is MapDownloadState.Idle && current.exists) {
+            snackbarHostState.showSnackbar("Mapa offline listo")
+        }
+        // Sin esto, una descarga que falla (caída de celular en moto — el caso que el confirm
+        // de datos móviles habilita) hacía desaparecer el banner de progreso sin una palabra,
+        // con la promo ya consumida y sin vía de retry visible en el mapa.
+        if (wasDownloadingMap && current is MapDownloadState.Error) {
+            snackbarHostState.showSnackbar("Descarga del mapa falló: ${current.message} — reintentá desde Ajustes")
+        }
+        wasDownloadingMap = current is MapDownloadState.Downloading
+    }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleEpoch by remember { mutableStateOf(0) }
 
@@ -395,13 +422,23 @@ fun LiveMapScreen(
 
         // La ruta viva llega a 18.000 puntos y cada escritura re-indexa el dataset completo,
         // así que se escribe solo cuando la revisión cambia, no en cada recomposición.
-        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, destinationName, plannedRoute, standaloneFix, routeAlternatives) {
+        // puckVehicleType es clave (X2): sin él, cuando el perfil activo resuelve DESPUÉS del
+        // primer install del estilo (carga async desde DataStore/Room, típico en frío) el puck
+        // queda pegado al dot hasta que alguna OTRA key cambie por su cuenta (p. ej. GPS
+        // moviéndose 3m+) — con la moto parada eso podía no pasar nunca.
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, destinationName, plannedRoute, standaloneFix, routeAlternatives, puckVehicleType) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
         // Nav "idle" = sin navegación o ya llegado — en ambos casos NavCamera dejó de dictar el
         // bearing, así que la des-rotación (abajo) y el de-tilt (más abajo) pueden actuar.
         val navIdle = navigation == null || navigation?.arrived == true
+
+        // X3: chip "Recentrar" — nav activa (no idle) y el usuario paneó (follow apagado). No
+        // usar navigation?.arrived directo: !navIdle ya expresa exactamente "hay nav Y no llegó".
+        // Con una MapFeatureCard abierta el slot inferior crece más alto que la barra de stats
+        // (88dp podía rozarla) y el usuario está mirando la tarjeta — el chip espera a que cierre.
+        val showRecenterChip = !navIdle && !followEnabled && tappedFeature == null
 
         // Avanza el hint SIEMPRE que cambie el nearestIndex resuelto, sin importar followEnabled:
         // navBearingResolved (arriba) se recalcula en cada recomposición usando navBearingHint
@@ -676,6 +713,7 @@ fun LiveMapScreen(
             approachingRadar = approaching,
             incomingSharedDest = incomingDest,
             showRemoteMapPromo = showRemoteMapPromo,
+            mapDownloadProgress = downloadingMapState,
         )
         // El latch (y el flag persistido) se prenden SOLO cuando pickSecondaryBanner REALMENTE
         // eligió RemoteMapPromo — no en cuanto era "elegible" (fix ola final CRITICAL, ver el
@@ -708,10 +746,12 @@ fun LiveMapScreen(
                     },
                     onDismissSharedDest = { dest -> dismissedDest = dest },
                     onDismissRemoteMapPromo = { remoteBannerLocallyDismissed = true },
-                    onDownloadRemoteMapPromo = {
-                        remoteBannerLocallyDismissed = true
-                        onNavigateToSettings()
-                    },
+                    // X4: abre el confirm inline — NO apaga el banner acá. Si el usuario
+                    // confirma, el diálogo mismo lo apaga (remoteBannerLocallyDismissed = true)
+                    // para que el slot pase a mostrar el progreso en vez de la promo; si
+                    // cancela, la promo sigue de pie como si nada.
+                    onDownloadRemoteMapPromo = { showMapDownloadConfirm = true },
+                    onCancelMapDownload = viewModel::cancelOfflineMapDownload,
                 )
             }
         }
@@ -801,6 +841,36 @@ fun LiveMapScreen(
         raceCountdown?.let { seconds ->
             RaceCountdownOverlay(secondsToShow = seconds, modifier = Modifier.align(Alignment.Center))
         }
+
+        // X3: elemento APARTE flotando sobre el slot inferior (tarjeta > progress > chip de
+        // ruta, más arriba) — no es una rama más de ese when, así que se declara y dibuja acá,
+        // al final del Box, para quedar por encima de todo lo demás. 88dp = los ~80dp
+        // documentados donde arranca el borde superior de NavigationProgressBar (ver
+        // fabColumnBottomPadding más arriba) más un respiro de 8dp — nunca la tapa.
+        if (showRecenterChip) {
+            RecenterChip(
+                onClick = { followEnabled = true },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp),
+            )
+        }
+
+        SnackbarHost(snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter))
+    }
+
+    if (showMapDownloadConfirm) {
+        MapDownloadConfirmDialog(
+            isOnWifi = viewModel.isOnWifiNow(),
+            onConfirm = { allowCellular ->
+                showMapDownloadConfirm = false
+                remoteBannerLocallyDismissed = true
+                viewModel.downloadOfflineMap(allowCellular)
+            },
+            onGoToSettings = {
+                showMapDownloadConfirm = false
+                onNavigateToSettings()
+            },
+            onDismiss = { showMapDownloadConfirm = false },
+        )
     }
 
     if (showRoomDialog) {
@@ -1154,6 +1224,113 @@ internal fun RemoteMapPromoBanner(onDownload: () -> Unit, onDismiss: () -> Unit,
                     Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
                 }
             }
+        }
+    }
+}
+
+/** X4: sustituto compacto de [RemoteMapPromoBanner] en el mismo slot mientras la descarga
+ * directa está en curso — progreso + cancelar. internal: la usa también SecondaryBannerContent
+ * en OverlayPriority.kt. */
+@Composable
+internal fun MapDownloadProgressBanner(
+    state: MapDownloadState.Downloading,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val percent = (state.progress * 100).toInt()
+    Surface(
+        color = Color(0xE6121218),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        modifier = modifier.widthIn(max = 280.dp),
+    ) {
+        Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 4.dp)) {
+            Text("Descargando mapa offline… $percent%", color = Color(0xFFF0F0F8), fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { state.progress },
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFFE8FF00),
+                trackColor = Color(0xFF1C1C28),
+            )
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onCancel) {
+                    Text("Cancelar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
+/** X4: confirm inline del CTA "Descargar" del banner de promo — mismo contenido/decisión que
+ * DownloadConfirmDialog en feature/settings/OfflineMapSection.kt, pero DUPLICADO acá a
+ * propósito en vez de extraído a un módulo común: feature/settings y feature/map son módulos
+ * hermanos sin dependencia entre sí, y core/maps (el único módulo común a ambos) ni siquiera
+ * declara Compose Material3 hoy — sumar esa dependencia solo para hospedar un AlertDialog de
+ * ~20 líneas acopla peor de lo que resuelve. La decisión real de bloqueo (WiFi/celular/espacio)
+ * sigue viviendo una sola vez en MapDownloadDecider (core/maps), consumida por
+ * MapDownloadService — este diálogo solo elige qué TEXTO mostrar antes de llamar a
+ * downloadOfflineMap; no duplica esa lógica. */
+@Composable
+private fun MapDownloadConfirmDialog(
+    isOnWifi: Boolean,
+    onConfirm: (allowCellular: Boolean) -> Unit,
+    onGoToSettings: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF12121A),
+        title = {
+            Text(
+                if (isOnWifi) "Descargar mapa offline" else "Sin WiFi",
+                color = Color(0xFFF0F0F8),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    if (isOnWifi) {
+                        "Se descargará el mapa offline de Colombia (~913 MB)."
+                    } else {
+                        "Sin WiFi — ¿usar datos móviles? (~913 MB)"
+                    },
+                    color = Color(0xFF6B7089),
+                    fontSize = 13.sp,
+                )
+                TextButton(onClick = onGoToSettings) {
+                    Text("Ir a Ajustes", color = Color(0xFF6B7089), fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(!isOnWifi) }) {
+                Text(if (isOnWifi) "Descargar" else "Usar datos móviles", color = Color(0xFFE8FF00))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color(0xFF6B7089)) }
+        },
+    )
+}
+
+/** X3: chip flotante "Recentrar" (estilo Google Maps) — visible con nav activa mientras el
+ * usuario paneó el mapa (follow apagado); un tap re-engancha el follow, que ya hace que la
+ * cámara vuelva sola (mismo mecanismo existente del LaunchedEffect de cámara). */
+@Composable
+private fun RecenterChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        color = Color(0xFFE8FF00),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        modifier = modifier.clickable(onClick = onClick),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+        ) {
+            Icon(Icons.Default.Navigation, contentDescription = null, tint = Color(0xFF0A0A0F))
+            Spacer(Modifier.width(6.dp))
+            Text("Recentrar", color = Color(0xFF0A0A0F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

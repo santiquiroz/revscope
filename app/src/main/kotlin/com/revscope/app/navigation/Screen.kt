@@ -1,6 +1,10 @@
 package com.revscope.app.navigation
 
 sealed class Screen(val route: String) {
+    /** Ruta real a navegar cuando no hay argumentos que completar — por defecto igual a
+     * [route], pero una screen con args opcionales (ver [Settings]) la sobreescribe porque
+     * [route] ahí es el patrón `{arg}` que solo NavHost debe usar para registrar el destino. */
+    open val navRoute: String get() = route
     object Onboarding : Screen("onboarding")
     object AiValue : Screen("ai_value")
     object Dashboard : Screen("dashboard")
@@ -20,7 +24,13 @@ sealed class Screen(val route: String) {
     object Odometer : Screen("odometer")
     object SpeedComparison : Screen("speed_comparison")
     object MechanicChat : Screen("mechanic_chat")
-    object Settings : Screen("settings")
+    object Settings : Screen("settings?expand={expand}") {
+        const val ARG_EXPAND = "expand"
+        override val navRoute: String = "settings"
+
+        /** [section] es el nombre (case-insensitive) de un SettingsSectionId, ej. "mapa". */
+        fun withExpand(section: String): String = "settings?expand=$section"
+    }
     object AdapterScan : Screen("adapter_scan")
     object Mode22Scanner : Screen("mode22_scanner")
     object TrackMode : Screen("track_mode")

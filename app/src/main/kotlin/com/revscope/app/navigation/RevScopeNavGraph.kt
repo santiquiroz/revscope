@@ -167,7 +167,7 @@ fun RevScopeNavGraph(
                             selected = currentRoute == item.screen.route,
                             onClick = {
                                 if (currentRoute != item.screen.route) {
-                                    navController.navigate(item.screen.route) {
+                                    navController.navigate(item.screen.navRoute) {
                                         popUpTo(Screen.Dashboard.route) { saveState = true }
                                         launchSingleTop = true
                                         restoreState = true
@@ -221,7 +221,7 @@ fun RevScopeNavGraph(
                 composable(Screen.Dashboard.route) {
                     DashboardScreen(
                         onNavigateToAdapterScan = { navController.navigate(Screen.AdapterScan.route) },
-                        onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        onNavigateToSettings = { navController.navigate(Screen.Settings.navRoute) },
                         onNavigateToTrackMode = { navController.navigate(Screen.TrackMode.route) },
                         onNavigateToAlDia = { navController.navigate(Screen.AlDia.route) },
                         onOpenMap = {
@@ -257,7 +257,7 @@ fun RevScopeNavGraph(
                 composable(Screen.MechanicChat.route) {
                     MechanicChatScreen(
                         onNavigateBack = { navController.popBackStack() },
-                        onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        onNavigateToSettings = { navController.navigate(Screen.Settings.navRoute) },
                         onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
                     )
                 }
@@ -292,7 +292,20 @@ fun RevScopeNavGraph(
                 composable(Screen.LiveMap.route) {
                     LiveMapScreen(
                         onNavigationActiveChanged = { mapNavigationActive = it },
-                        onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                        // Único uso de onNavigateToSettings dentro de LiveMapScreen es el CTA
+                        // del diálogo de descarga de mapa offline — abre Ajustes con la sección
+                        // Mapa ya expandida en vez de aterrizar en la lista colapsada.
+                        // navOptions de tab (popUpTo+saveState+launchSingleTop): un push liso
+                        // dejaba a Settings PEGADO al chunk restaurable del tab Mapa — tocar la
+                        // tab "Mapa" después restauraba [map, settings] y aterrizaba en Ajustes
+                        // otra vez, en loop. Con semántica de tab, Settings es destino de tab
+                        // normal y la tab Mapa vuelve al mapa.
+                        onNavigateToSettings = {
+                            navController.navigate(Screen.Settings.withExpand("mapa")) {
+                                popUpTo(Screen.Dashboard.route) { saveState = true }
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
                 composable(Screen.AdapterScan.route) {
@@ -346,7 +359,16 @@ fun RevScopeNavGraph(
                 composable(Screen.VehicleProfile.route) {
                     VehicleProfileScreen(connectionVm = connectionVm)
                 }
-                composable(Screen.Settings.route) {
+                composable(
+                    route = Screen.Settings.route,
+                    arguments = listOf(
+                        navArgument(Screen.Settings.ARG_EXPAND) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
+                ) { backStackEntry ->
                     SettingsScreen(
                         onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
                         onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
@@ -354,6 +376,7 @@ fun RevScopeNavGraph(
                             onboardingVm.goTo(0)
                             navController.navigate(Screen.Onboarding.route)
                         },
+                        initialExpandedSection = backStackEntry.arguments?.getString(Screen.Settings.ARG_EXPAND),
                     )
                 }
                 composable(Screen.TrackMode.route) {
