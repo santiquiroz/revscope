@@ -146,13 +146,17 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
             PropertyFactory.fillColor(
                 matchState("#FF1744", "#FF5252", "#FF5252"),
             ),
+            // Relleno casi transparente: el borde (LYR_CIRCLES_LINE) es quien dibuja el anillo;
+            // con más alpha acá el círculo se ve como una mancha sólida en vez de un aro fino,
+            // sobre todo en radios grandes. Proporción entre estados sin cambiar (target sigue
+            // destacando el radar al que te acercas; dimmed sigue el más apagado).
             PropertyFactory.fillOpacity(
                 Expression.match(
                     Expression.get(PROP_STATE),
-                    Expression.literal(0.13f),
-                    Expression.stop(STATE_TARGET, Expression.literal(0.27f)),
-                    Expression.stop(STATE_NORMAL, Expression.literal(0.13f)),
-                    Expression.stop(STATE_DIMMED, Expression.literal(0.05f)),
+                    Expression.literal(0.08f),
+                    Expression.stop(STATE_TARGET, Expression.literal(0.17f)),
+                    Expression.stop(STATE_NORMAL, Expression.literal(0.08f)),
+                    Expression.stop(STATE_DIMMED, Expression.literal(0.03f)),
                 ),
             ),
         ),
@@ -419,13 +423,18 @@ private fun registerIcons(style: Style) {
     style.addImage(ICON_POTHOLE, dotBitmap(0xFFFFA726.toInt()))
     style.addImage(ICON_CAMERA, pinBitmap(0xFFFF5252.toInt()))
     style.addImage(ICON_CAMERA_TARGET, pinBitmap(0xFFFF1744.toInt()))
-    style.addImage(ICON_ME, dotBitmap(0xFFE8FF00.toInt()))
-    style.addImage(ICON_ME_MOTO, motoBitmap(0xFFE8FF00.toInt()))
-    style.addImage(ICON_ME_AUTO, autoBitmap(0xFFE8FF00.toInt()))
+    style.addImage(ICON_ME, dotBitmap(0xFFE8FF00.toInt(), PUCK_DOT_SIZE_PX))
+    style.addImage(ICON_ME_MOTO, motoBitmap(0xFFE8FF00.toInt(), PUCK_PIN_SIZE_PX))
+    style.addImage(ICON_ME_AUTO, autoBitmap(0xFFE8FF00.toInt(), PUCK_PIN_SIZE_PX))
 }
 
 private const val PIN_SIZE_PX = 48
 private const val DOT_SIZE_PX = 28
+
+// El puck (mi posición) se dibuja ~30% más grande que el resto de íconos que comparten estas
+// mismas funciones (pines, huecos) — visibilidad en marcha, sin tocar el tamaño de nada más.
+private const val PUCK_PIN_SIZE_PX = 62
+private const val PUCK_DOT_SIZE_PX = 36
 
 private fun pinBitmap(color: Int): Bitmap {
     val bmp = Bitmap.createBitmap(PIN_SIZE_PX, PIN_SIZE_PX, Bitmap.Config.ARGB_8888)
@@ -477,9 +486,12 @@ private fun arrowBitmap(color: Int): Bitmap {
  * ORIGINAL tipo "speeder", no un calco de ninguna franquicia). El acento cian cerca del morro
  * marca la posición del piloto y suma la paleta neón de la app sin depender de un segundo color
  * de parámetro. */
-private fun motoBitmap(color: Int): Bitmap {
-    val bmp = Bitmap.createBitmap(PIN_SIZE_PX, PIN_SIZE_PX, Bitmap.Config.ARGB_8888)
+private fun motoBitmap(color: Int, sizePx: Int = PIN_SIZE_PX): Bitmap {
+    val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
+    // El path de abajo está dibujado a mano para un lienzo de PIN_SIZE_PX (48); escalar el
+    // canvas reusa esas mismas coordenadas para el puck (sizePx=62) sin reescribirlas.
+    canvas.scale(sizePx / PIN_SIZE_PX.toFloat(), sizePx / PIN_SIZE_PX.toFloat())
     val body = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
     val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFF0A0A0F.toInt()
@@ -511,9 +523,11 @@ private fun motoBitmap(color: Int): Bitmap {
  * Silueta de auto deportivo visto desde arriba, apuntando al norte en reposo — morro
  * redondeado y angosto, hombros y cola más anchos (postura ancha "de pista"). El trapecio cian
  * marca el parabrisas/cabina y da lectura de "auto" incluso al tamaño de un pin de mapa. */
-private fun autoBitmap(color: Int): Bitmap {
-    val bmp = Bitmap.createBitmap(PIN_SIZE_PX, PIN_SIZE_PX, Bitmap.Config.ARGB_8888)
+private fun autoBitmap(color: Int, sizePx: Int = PIN_SIZE_PX): Bitmap {
+    val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
+    // Mismo motivo que motoBitmap: reusar el path de 48px escalando el canvas para el puck.
+    canvas.scale(sizePx / PIN_SIZE_PX.toFloat(), sizePx / PIN_SIZE_PX.toFloat())
     val body = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
     val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFF0A0A0F.toInt()
@@ -545,8 +559,8 @@ private fun autoBitmap(color: Int): Bitmap {
     return bmp
 }
 
-private fun dotBitmap(color: Int): Bitmap {
-    val bmp = Bitmap.createBitmap(DOT_SIZE_PX, DOT_SIZE_PX, Bitmap.Config.ARGB_8888)
+private fun dotBitmap(color: Int, sizePx: Int = DOT_SIZE_PX): Bitmap {
+    val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bmp)
     val body = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
     val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -554,7 +568,7 @@ private fun dotBitmap(color: Int): Bitmap {
         style = Paint.Style.STROKE
         strokeWidth = 3f
     }
-    val c = DOT_SIZE_PX / 2f
+    val c = sizePx / 2f
     canvas.drawCircle(c, c, c - 3f, body)
     canvas.drawCircle(c, c, c - 3f, border)
     return bmp
