@@ -98,8 +98,9 @@ private const val NAV_CAMERA_ANIMATION_MS = 300
 /** Tier de tiles realmente activo en el estilo cargado (fix W1) — distingue qué hacer con un
  * fallo de MapLibre (onDidFailLoadingMap): LOCAL asume el `.pmtiles` corrupto y lo borra; REMOTE
  * es un fallo de red/GitHub y solo degrada a ráster (nada que borrar, nunca se descargó nada);
- * NONE (ya en ráster) no dispara ninguna acción especial. */
-private enum class TilesTier { LOCAL, REMOTE, NONE }
+ * NONE (ya en ráster) no dispara ninguna acción especial. internal: TilesFailureClassifier.kt y
+ * su test (mismo módulo, otro source set) necesitan referenciarlo. */
+internal enum class TilesTier { LOCAL, REMOTE, NONE }
 
 /** RoomClient.SharedDest no es Parcelable/Serializable — rememberSaveable necesita un Saver
  * explícito para sobrevivir un cambio de configuración (rotación) sin perder qué destino ya
@@ -330,16 +331,16 @@ fun LiveMapScreen(
         MapLibreMapView(
             modifier = Modifier.fillMaxSize(),
             styleJson = styleJson,
-            onDidFailLoadingMap = { _ ->
-                // La distinción de tier evita dos bugs: borrar el .pmtiles local por un fallo de
-                // red del tier remoto (nunca se descargó nada acá, no hay archivo que borrar) y
-                // mostrar "mapa dañado" cuando en realidad falló GitHub/la red. Con NONE (ya en
-                // ráster) un fallo es del propio ráster o de sus sprites/glyphs remotos — nunca
-                // corrupción, no hay nada que hacer.
-                when (tilesTier) {
-                    TilesTier.LOCAL -> viewModel.onOfflineMapLoadFailed()
-                    TilesTier.REMOTE -> remoteTilesFailed = true
-                    TilesTier.NONE -> Unit
+            // El tag viaja con el estilo y vuelve en onDidFailLoadingMap correlacionado con lo
+            // que MapLibreMapView REALMENTE tenía aplicado al fallar — nunca leer `tilesTier`
+            // (el de esta composición) dentro del callback: fix W1 CRITICAL, ver
+            // TilesFailureClassifier.kt.
+            styleTag = tilesTier.name,
+            onDidFailLoadingMap = { _, failedTag ->
+                when (classifyTilesFailure(parseTilesTier(failedTag))) {
+                    TilesFailureAction.DELETE_LOCAL -> viewModel.onOfflineMapLoadFailed()
+                    TilesFailureAction.DEGRADE_REMOTE -> remoteTilesFailed = true
+                    TilesFailureAction.IGNORE -> Unit
                 }
             },
         ) { map, style ->
