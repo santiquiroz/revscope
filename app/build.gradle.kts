@@ -14,8 +14,8 @@ android {
         applicationId = "com.revscope.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.16.0"
+        versionCode = 21
+        versionName = "1.17.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // MapLibre y Ferrostar traen .so por arquitectura: con las cuatro, el APK pesa 80 MB
         // y 25 de esos son x86, que solo sirve en emulador. Esta app necesita adaptador OBD
