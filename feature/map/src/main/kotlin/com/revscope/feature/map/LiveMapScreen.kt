@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.DisposableEffect
@@ -618,9 +619,20 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
             // TopStart, no TopEnd: con muchos peers el panel expandido de Leaderboard crece
             // sin límite hacia abajo y, anclado a la derecha, terminaba compitiendo por espacio
             // con la columna de FABs (también a la derecha) en pantallas cortas (fix C, regla
-            // 4). El lado izquierdo solo tiene la atribución de OSM (9sp, esquina) — sin choque.
+            // 4). El lado izquierdo solo tiene la atribución de OSM (9sp, esquina) — sin choque
+            // (28dp de top ya la deja atrás con margen).
+            //
+            // Con un banner activo arriba (NavigationBanner y/o el secundario elegido por
+            // pickSecondaryBanner, ambos TopCenter) el leaderboard debe arrancar más abajo para
+            // no invadir esa banda — el SharedDestBanner (texto libre de rider+destino) era el
+            // caso real que la alcanzaba en anchos de 360-412dp. 96dp fijo cubre el caso de un
+            // solo banner (la altura conocida de una fila tipo NavigationBanner/SecondaryBanner,
+            // no una suposición sobre el ancho de pantalla); con NavigationBanner Y el
+            // secundario apilados a la vez el offset es más ajustado — no se profundizó porque
+            // el reporte de campo fue específicamente Leaderboard×SharedDestBanner solo.
+            val leaderboardTopPadding = if (navigation != null || secondaryBanner != null) 96.dp else 28.dp
             Column(
-                Modifier.align(Alignment.TopStart).padding(top = 28.dp, start = 12.dp),
+                Modifier.align(Alignment.TopStart).padding(top = leaderboardTopPadding, start = 12.dp),
                 horizontalAlignment = Alignment.Start,
             ) {
                 Surface(
@@ -867,7 +879,11 @@ internal fun SharedDestBanner(
     Surface(
         color = Color(0xE6121218),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-        modifier = modifier,
+        // Rider y nombre de destino son texto libre — sin este tope el banner (TopCenter) puede
+        // ensancharse hasta invadir la banda del Leaderboard (TopStart, 220dp) en pantallas
+        // angostas (360-412dp). Determinista: no depende del ancho real de pantalla, el texto
+        // largo elipsa en vez de forzar el Surface a crecer.
+        modifier = modifier.widthIn(max = 260.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -878,6 +894,9 @@ internal fun SharedDestBanner(
                 color = Color(0xFFF0F0F8),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
             TextButton(onClick = onAccept) {
                 Text("Ir", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
@@ -930,11 +949,14 @@ private fun currentBearingDegrees(route: List<LiveRouteHolder.RoutePoint>): Doub
     return TripStatsCalculator.initialBearingDegrees(prev.lat, prev.lon, last.lat, last.lon)
 }
 
-/** Ícono tocado (fix D) → su descripción, o null si el tap no cayó sobre ningún marcador o el
- * marcador tocado no tiene tarjeta (describeFeature). */
+/** Ícono O label tocado (fix D) → su descripción, o null si el tap no cayó sobre ningún
+ * marcador/label o el que tocó no tiene tarjeta (describeFeature). LYR_PEER_LABELS entra
+ * también: el nombre/velocidad de un peer se dibuja como texto por encima de su ícono (offset
+ * -2.2em), así que tocar el nombre cae fuera del hit-test de LYR_MARKERS solo — misma fuente
+ * (SRC_MARKERS), mismas properties, sin caso especial en describeFeature. */
 private fun resolveTappedFeature(map: MapLibreMap, latLng: LatLng): MapFeatureDescription? {
     val screenPoint = map.projection.toScreenLocation(latLng)
-    val feature = map.queryRenderedFeatures(screenPoint, LYR_MARKERS).firstOrNull() ?: return null
+    val feature = map.queryRenderedFeatures(screenPoint, LYR_MARKERS, LYR_PEER_LABELS).firstOrNull() ?: return null
     val (kind, properties) = describableProperties(feature)
     return describeFeature(kind, properties)
 }

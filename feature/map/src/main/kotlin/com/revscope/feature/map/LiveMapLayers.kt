@@ -45,7 +45,9 @@ private const val SRC_MARKERS = "src-marcadores"
 // internal: LiveMapScreen consulta esta capa con queryRenderedFeatures al tocar un ícono
 // (fix D, tarjeta descriptiva).
 internal const val LYR_MARKERS = "lyr-marcadores"
-private const val LYR_PEER_LABELS = "peer-labels"
+// internal: resolveTappedFeature (LiveMapScreen.kt) también consulta esta capa — el nombre/
+// velocidad de un peer vive en su label de texto (offset -2.2em), fuera del hit-test del ícono.
+internal const val LYR_PEER_LABELS = "peer-labels"
 private const val SRC_LIVE = "src-ruta-viva"
 private const val LYR_LIVE = "lyr-ruta-viva"
 
