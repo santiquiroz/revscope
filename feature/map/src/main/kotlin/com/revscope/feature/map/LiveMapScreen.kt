@@ -279,13 +279,20 @@ fun LiveMapScreen(
     // diferencia de los ~913 MB de la descarga completa — se acepta sin gate de WiFi, a
     // diferencia de MapDownloadService.download (que sí lo exige por defecto).
     var remoteBannerLocallyDismissed by remember { mutableStateOf(false) }
-    val showRemoteMapPromo = tilesTier == TilesTier.REMOTE && !remoteMapBannerShown && !remoteBannerLocallyDismissed
-    // Se marca "ya mostrado" apenas se vuelve visible, no recién al descartarlo/tocar Descargar:
-    // así el flag persiste sin importar CÓMO el usuario sale de la pantalla con el banner en
-    // pantalla (back del sistema, cambio de tab, etc.), no solo por sus dos botones.
-    LaunchedEffect(showRemoteMapPromo) {
-        if (showRemoteMapPromo) viewModel.markRemoteMapBannerShown()
-    }
+    // Latch de visita (fix ola final CRITICAL): antes el banner se prendía apenas era
+    // ELEGIBLE (tier REMOTE + !remoteMapBannerShown) y ese mismo booleano disparaba el
+    // LaunchedEffect que marcaba el flag en DataStore — dos bugs. (a) "elegible" no es
+    // "realmente mostrado": si algo de mayor prioridad lo tapaba en pickSecondaryBanner la
+    // primera vez, el flag igual se quemaba y el usuario nunca llegó a verlo. (b) la escritura
+    // a DataStore es async — apenas resolvía, remoteMapBannerShown pasaba a true y
+    // showRemoteMapPromo se apagaba solo, a los ~30-200ms, sin que nadie lo leyera. El latch
+    // (más abajo, junto a `secondaryBanner`) solo se prende cuando pickSecondaryBanner REALMENTE
+    // elige RemoteMapPromo — desde ahí, `promoEligible || promoLatched` lo mantiene visible el
+    // resto de la visita a esta pantalla pase lo que pase con el flag de DataStore. Dismiss
+    // local lo sigue cerrando de inmediato (envuelve a ambos términos).
+    var promoLatched by remember { mutableStateOf(false) }
+    val promoEligible = tilesTier == TilesTier.REMOTE && !remoteMapBannerShown && !remoteBannerLocallyDismissed
+    val showRemoteMapPromo = !remoteBannerLocallyDismissed && (promoEligible || promoLatched)
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleEpoch by remember { mutableStateOf(0) }
 
@@ -548,10 +555,13 @@ fun LiveMapScreen(
             }
         }
 
-        // Con nav activa (y no arrived) esta barra y el chip de perfil de vehículo (fuera de
-        // este composable, ver onNavigationActiveChanged) quedan tapados por el banner de
-        // maniobra — se ocultan y vuelven al salir de nav (fix W2, regla 1).
-        if (navIdle) {
+        // Gated en navigation == null, NO navIdle (re-keyeado en la ola final — regresión de
+        // "arrived"): con arrived=true, navIdle ya es true pero el NavigationBanner de "Llegó"
+        // y la NavigationProgressBar (ver navLive != null más abajo) SIGUEN de pie hasta que el
+        // usuario cierra la navegación — con navIdle esta barra reaparecía encima de ese banner.
+        // El chip de perfil de vehículo (fuera de este composable, ver onNavigationActiveChanged)
+        // sigue atado a navIdle — ese no tiene el problema de solape (fix W2, regla 1).
+        if (navigation == null) {
             SearchOverlay(
                 query = searchQuery,
                 results = searchResults,
@@ -567,18 +577,23 @@ fun LiveMapScreen(
             )
         }
 
-        // El badge suelto de velocidad se oculta durante nav activa: la barra de stats de abajo
-        // (NavigationProgressBar) ya la muestra como primera celda (fix W2, regla 2).
-        if (navIdle) {
+        // Gated en navigation == null, mismo re-keyeado que SearchOverlay arriba: la barra de
+        // stats de abajo (NavigationProgressBar) sigue de pie mientras navigation no sea null
+        // — arrived incluido, ella ahora recibe la velocidad siempre que se muestra (ver
+        // navLive != null más abajo) — con navIdle este badge reaparecía superpuesto a ella
+        // durante "Llegó" (fix W2, regla 2).
+        if (navigation == null) {
             SpeedOverlay(viewModel.speedKmh, Modifier.align(Alignment.BottomStart).padding(16.dp))
         }
 
-        // Con nav activa la barra de stats de abajo (NavigationProgressBar) es casi ancho
-        // completo y su borde superior queda a ~80dp del fondo (24dp de margen propio + ~56dp
-        // de alto real, mismo cálculo que ya se usaba para leaderboardTopPadding más abajo) —
-        // la columna de FABs necesita ese mismo margen inferior para no quedar tapada detrás
-        // (antes 16dp fijos dejaban el último FAB medio oculto, fix W2 regla 3).
-        val fabColumnBottomPadding = if (navIdle) 16.dp else 84.dp
+        // La barra de stats de abajo (NavigationProgressBar) es casi ancho completo (fillMaxWidth)
+        // y su borde superior queda a ~80dp del fondo (24dp de margen propio + ~56dp de alto
+        // real, mismo cálculo que ya se usaba para leaderboardTopPadding más abajo) — la columna
+        // de FABs necesita ese mismo margen inferior mientras ESA BARRA siga de pie, que es
+        // navigation != null (arrived incluido, "Llegó" no la retira), no !navIdle (re-keyeado
+        // en la ola final: con arrived, navIdle volvía a 16dp fijos con la barra fillMaxWidth
+        // todavía encima de los FABs, comiéndose sus taps — regresión nueva de un fix anterior).
+        val fabColumnBottomPadding = if (navigation != null) 84.dp else 16.dp
         Column(
             Modifier.align(Alignment.BottomEnd).padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = fabColumnBottomPadding),
             horizontalAlignment = Alignment.End,
@@ -662,6 +677,18 @@ fun LiveMapScreen(
             incomingSharedDest = incomingDest,
             showRemoteMapPromo = showRemoteMapPromo,
         )
+        // El latch (y el flag persistido) se prenden SOLO cuando pickSecondaryBanner REALMENTE
+        // eligió RemoteMapPromo — no en cuanto era "elegible" (fix ola final CRITICAL, ver el
+        // comentario junto a promoLatched más arriba). Key = el booleano, no `secondaryBanner`
+        // entero: solo debe relanzar al CAMBIAR si es o no el elegido, no en cada recomposición
+        // que lo mantiene elegido.
+        val promoIsPicked = secondaryBanner is SecondaryBanner.RemoteMapPromo
+        LaunchedEffect(promoIsPicked) {
+            if (promoIsPicked) {
+                promoLatched = true
+                viewModel.markRemoteMapBannerShown()
+            }
+        }
         Column(
             Modifier.align(Alignment.TopCenter).padding(top = if (navigation != null) 8.dp else 28.dp, start = 12.dp, end = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -703,9 +730,11 @@ fun LiveMapScreen(
             )
             navLive != null -> NavigationProgressBar(
                 state = navLive,
-                // Solo con nav realmente activa: en "arrived" el SpeedOverlay suelto ya
-                // reaparece (navIdle), y duplicar la velocidad acá no aporta nada.
-                speedKmh = speedKmh.takeIf { !navIdle },
+                // Siempre que la barra se muestra (navLive != null), arrived incluido — ya no
+                // hay un SpeedOverlay standalone compitiendo por ese espacio (re-keyeado arriba
+                // a navigation == null), así que mostrar la velocidad acá durante "Llegó" está
+                // bien (antes se suprimía con navIdle, dejando la celda vacía sin necesidad).
+                speedKmh = speedKmh,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 24.dp),
             )
             destination != null -> RouteInfoChip(
