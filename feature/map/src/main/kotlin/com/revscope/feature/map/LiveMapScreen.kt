@@ -395,7 +395,11 @@ fun LiveMapScreen(
 
         // La ruta viva llega a 18.000 puntos y cada escritura re-indexa el dataset completo,
         // así que se escribe solo cuando la revisión cambia, no en cada recomposición.
-        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, destinationName, plannedRoute, standaloneFix, routeAlternatives) {
+        // puckVehicleType es clave (X2): sin él, cuando el perfil activo resuelve DESPUÉS del
+        // primer install del estilo (carga async desde DataStore/Room, típico en frío) el puck
+        // queda pegado al dot hasta que alguna OTRA key cambie por su cuenta (p. ej. GPS
+        // moviéndose 3m+) — con la moto parada eso podía no pasar nunca.
+        LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, destinationName, plannedRoute, standaloneFix, routeAlternatives, puckVehicleType) {
             mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
         }
 
