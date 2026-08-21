@@ -51,6 +51,9 @@ fun SettingsScreen(
     onNavigateToVehicleProfiles: () -> Unit = {},
     onOpenAiValue: () -> Unit = {},
     onRerunOnboarding: () -> Unit = {},
+    // Deep-link opcional (nav arg `expand`, ver Screen.Settings.withExpand): nombre de un
+    // SettingsSectionId a expandir al abrir — ej. "mapa" desde el diálogo de descarga de mapa.
+    initialExpandedSection: String? = null,
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val saveResult by vm.lastSaveResult.collectAsState()
@@ -93,9 +96,15 @@ fun SettingsScreen(
         onImportRequested = { uri -> pendingImportUri = uri },
     )
 
+    val deepLinkSection = remember(initialExpandedSection) {
+        settingsSectionFromDeepLinkKey(initialExpandedSection)
+    }
     val sectionExpansion = SettingsSectionId.entries.associateWith { section ->
         rememberSaveable(key = section.name) {
-            mutableStateOf(section == SettingsSectionId.AVANZADO_DIAGNOSTICO && vm.guardAlarmActive.value)
+            mutableStateOf(
+                section == deepLinkSection ||
+                    (section == SettingsSectionId.AVANZADO_DIAGNOSTICO && vm.guardAlarmActive.value),
+            )
         }
     }
 

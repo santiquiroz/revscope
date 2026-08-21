@@ -49,3 +49,13 @@ internal object SettingsSearch {
         return diacriticsRegex.replace(decomposed, "").lowercase()
     }
 }
+
+/**
+ * Resuelve la sección a expandir cuando SettingsScreen se abre por deep-link (ej. desde el
+ * diálogo de descarga de mapa: `settings?expand=mapa`). [key] es el nombre del enum
+ * [SettingsSectionId] sin importar mayúsculas/acentos — `null` o sin match devuelve `null`.
+ */
+internal fun settingsSectionFromDeepLinkKey(key: String?): SettingsSectionId? {
+    if (key.isNullOrBlank()) return null
+    return SettingsSectionId.entries.firstOrNull { it.name.equals(key, ignoreCase = true) }
+}

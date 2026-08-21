@@ -130,4 +130,37 @@ class SettingsSearchTest {
         val result = SettingsSearch.filter("noexisteestapalabra", entries)
         assertTrue(result.isEmpty())
     }
+
+    @Test
+    fun `deep link key null no resuelve seccion`() {
+        assertEquals(null, settingsSectionFromDeepLinkKey(null))
+    }
+
+    @Test
+    fun `deep link key en blanco no resuelve seccion`() {
+        assertEquals(null, settingsSectionFromDeepLinkKey("   "))
+    }
+
+    @Test
+    fun `deep link key sin match devuelve null`() {
+        assertEquals(null, settingsSectionFromDeepLinkKey("no_existe"))
+    }
+
+    @Test
+    fun `deep link key en minusculas resuelve la seccion`() {
+        assertEquals(SettingsSectionId.MAPA, settingsSectionFromDeepLinkKey("mapa"))
+    }
+
+    @Test
+    fun `deep link key ignora mayusculas y minusculas`() {
+        assertEquals(SettingsSectionId.MAPA, settingsSectionFromDeepLinkKey("MaPa"))
+    }
+
+    @Test
+    fun `deep link key resuelve otra seccion por nombre exacto del enum`() {
+        assertEquals(
+            SettingsSectionId.AVANZADO_DIAGNOSTICO,
+            settingsSectionFromDeepLinkKey("AVANZADO_DIAGNOSTICO"),
+        )
+    }
 }
