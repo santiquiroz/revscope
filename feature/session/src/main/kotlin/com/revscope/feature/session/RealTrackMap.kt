@@ -53,6 +53,11 @@ private const val PROP_COLOR = "color"
 
 private const val BOUNDS_PADDING_DP = 24
 
+// Tags de MapLibreMapView.styleTag (fix W1 CRITICAL) — String plano porque este módulo no
+// conoce TilesTier (vive en feature/map). Ver el comentario largo en RealTrackMap más abajo.
+private const val TILE_TAG_LOCAL = "LOCAL"
+private const val TILE_TAG_REMOTE = "REMOTE"
+
 /**
  * El recorrido del viaje sobre calles reales de OpenStreetMap. Los segmentos se gradúan por
  * velocidad como la racing line offline: azul lento → amarillo → rojo rápido.
@@ -68,13 +73,39 @@ fun RealTrackMap(
 ) {
     val context = LocalContext.current
     val density = context.resources.displayMetrics.density
-    // Mismo tier local que LiveMapScreen (T5): si el .pmtiles de Colombia ya está descargado,
-    // el replay usa el estilo vectorial completo; si no, cae al ráster de OSM de siempre. Esta
-    // pantalla es puntual (un viaje ya terminado) — a diferencia de LiveMapScreen no observa
-    // MapDownloadService en vivo, solo lee el disco una vez al componer (aceptado: T5 plan).
-    // El replay de un viaje no necesita modo oscuro.
-    val tilesUrl = remember(context) {
-        MapStyleProvider.tilesUrl(MapStyleProvider.localMapFile(context.filesDir), null)
+    // Misma cascada que LiveMapScreen (T5 + fix W1): local (.pmtiles ya descargado) → remoto
+    // (release tiles-v1 de GitHub, streamed por HTTP range) → ráster. Esta pantalla es puntual
+    // (un viaje ya terminado) — a diferencia de LiveMapScreen no observa MapDownloadService en
+    // vivo ni muestra el banner de promo ni el de "mapa dañado" acá (sin ViewModel propio para
+    // persistir nada de eso), solo lee el disco una vez al componer (aceptado: T5 plan).
+    //
+    // remoteTilesFailed SÍ hace falta pese a lo anterior: a diferencia del tier ráster (cada
+    // tile falla solo, en silencio, sin tocar el resto del estilo), el tier vectorial remoto
+    // necesita resolver la metadata del `.pmtiles` antes de poder dibujar nada — sin red, la
+    // fuente entera falla y el estilo completo (incluidas las capas del track que agrega este
+    // composable más abajo) no llega a instalarse. Sin este flag, un replay sin red y sin
+    // `.pmtiles` local quedaría en blanco para siempre, sin ni siquiera el trazado. Local,
+    // de sesión de esta pantalla (remember sin key), igual que remoteTilesFailed en
+    // LiveMapScreen — nunca reintenta el tier remoto en loop dentro de la misma visita.
+    var remoteTilesFailed by remember { mutableStateOf(false) }
+    val localMapFile = remember(context) { MapStyleProvider.localMapFile(context.filesDir) }
+    // Tag del tier activo EN ESTA COMPOSICIÓN — se le pasa a MapLibreMapView como styleTag y
+    // NUNCA se vuelve a leer dentro de onDidFailLoadingMap (fix W1 CRITICAL, mismo bug que
+    // LiveMapScreen): el callback recibe de vuelta el tag que MapLibreMapView correlacionó con
+    // el estilo que REALMENTE tenía aplicado al fallar, que puede ser un tier viejo si esta
+    // composición ya avanzó a otro mientras tanto (p. ej. el .pmtiles terminó de descargarse
+    // desde Ajustes en otra pantalla, mid-flight del tier remoto de acá).
+    val activeTilesTag = when {
+        localMapFile.isFile -> TILE_TAG_LOCAL
+        !remoteTilesFailed -> TILE_TAG_REMOTE
+        else -> null
+    }
+    val tilesUrl = remember(activeTilesTag) {
+        MapStyleProvider.tilesUrl(
+            localFile = if (activeTilesTag == TILE_TAG_LOCAL) localMapFile else null,
+            serverBaseUrl = null,
+            remoteUrl = if (activeTilesTag == TILE_TAG_REMOTE) MapStyleProvider.REMOTE_PMTILES_URL else null,
+        )
     }
     // El asset de capas pesa ~240 KB: leerlo síncrono en composición bloquearía el frame — corre
     // en IO, igual que LiveMapScreen (dark fijo false acá, así que sin key adicional). Sembrado
@@ -85,7 +116,7 @@ fun RealTrackMap(
             value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = false) }
         }
     }
-    val styleJson = remember(layersJson) {
+    val styleJson = remember(tilesUrl, layersJson) {
         MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = false, layersJson = layersJson)
     }
 
@@ -96,6 +127,16 @@ fun RealTrackMap(
         MapLibreMapView(
             modifier = modifier,
             styleJson = styleJson,
+            styleTag = activeTilesTag,
+            onDidFailLoadingMap = { _, failedTag ->
+                // failedTag es el tag que MapLibreMapView tenía REALMENTE aplicado al fallar
+                // (fix W1 CRITICAL) — leer activeTilesTag acá en vez del parámetro recibido
+                // reintroduciría el mismo bug que LiveMapScreen (ver TilesFailureClassifier.kt
+                // ahí). Local corrupto: sin ViewModel acá para borrar/avisar (gap aceptado, ver
+                // comentario de arriba) — no hay nada seguro que hacer, solo el tier remoto
+                // reacciona.
+                if (failedTag == TILE_TAG_REMOTE) remoteTilesFailed = true
+            },
         ) { map, style ->
             // Las capas se crean vacías: el track llega asíncrono del ViewModel, así que en la
             // primera composición todavía no está. Poblarlas acá y salir dejaría el mapa sin

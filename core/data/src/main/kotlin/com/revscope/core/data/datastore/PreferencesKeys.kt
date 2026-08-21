@@ -288,4 +288,8 @@ object PreferencesKeys {
 
     /** Modo nocturno del mapa: "auto" (por sol), "on", "off". */
     val MAP_NIGHT_MODE = stringPreferencesKey("map_night_mode")
+
+    /** Se mostró alguna vez el aviso "mapa premium activo por internet, descargalo" (fix W1;
+     * default false — el banner solo aparece una vez en la vida de la instalación). */
+    val REMOTE_MAP_BANNER_SHOWN = booleanPreferencesKey("remote_map_banner_shown")
 }

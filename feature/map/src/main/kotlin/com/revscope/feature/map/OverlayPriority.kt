@@ -10,13 +10,15 @@ import com.revscope.core.obd.social.RoomClient
  * ellas"). Prioridad de campo: un mapa offline corrupto bloquea la app entera y gana siempre;
  * un error de navegación es la próxima señal más urgente (la ruta dejó de ser confiable); un
  * radar acercándose es tiempo-crítico pero acotado a esa calle; un destino compartido puede
- * esperar sin riesgo si hay algo más urgente en pantalla.
+ * esperar sin riesgo si hay algo más urgente en pantalla; la promo del tier remoto (fix W1) es
+ * puramente informativa — la de MENOR prioridad, nunca debe tapar nada de lo anterior.
  */
 internal sealed interface SecondaryBanner {
     data class MapCorrupted(val message: String) : SecondaryBanner
     data class NavError(val message: String) : SecondaryBanner
     data class Radar(val target: SpeedCameraAlerter.ApproachingCamera) : SecondaryBanner
     data class SharedDest(val dest: RoomClient.SharedDest) : SecondaryBanner
+    data object RemoteMapPromo : SecondaryBanner
 }
 
 internal fun pickSecondaryBanner(
@@ -24,11 +26,13 @@ internal fun pickSecondaryBanner(
     navigationErrorMessage: String?,
     approachingRadar: SpeedCameraAlerter.ApproachingCamera?,
     incomingSharedDest: RoomClient.SharedDest?,
+    showRemoteMapPromo: Boolean = false,
 ): SecondaryBanner? = when {
     mapCorruptedMessage != null -> SecondaryBanner.MapCorrupted(mapCorruptedMessage)
     navigationErrorMessage != null -> SecondaryBanner.NavError(navigationErrorMessage)
     approachingRadar != null -> SecondaryBanner.Radar(approachingRadar)
     incomingSharedDest != null -> SecondaryBanner.SharedDest(incomingSharedDest)
+    showRemoteMapPromo -> SecondaryBanner.RemoteMapPromo
     else -> null
 }
 
@@ -41,6 +45,8 @@ internal fun SecondaryBannerContent(
     onDismissNavError: () -> Unit,
     onAcceptSharedDest: (RoomClient.SharedDest) -> Unit,
     onDismissSharedDest: (RoomClient.SharedDest) -> Unit,
+    onDismissRemoteMapPromo: () -> Unit = {},
+    onDownloadRemoteMapPromo: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     when (banner) {
@@ -51,6 +57,11 @@ internal fun SecondaryBannerContent(
             dest = banner.dest,
             onAccept = { onAcceptSharedDest(banner.dest) },
             onDismiss = { onDismissSharedDest(banner.dest) },
+            modifier = modifier,
+        )
+        is SecondaryBanner.RemoteMapPromo -> RemoteMapPromoBanner(
+            onDownload = onDownloadRemoteMapPromo,
+            onDismiss = onDismissRemoteMapPromo,
             modifier = modifier,
         )
     }

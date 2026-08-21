@@ -42,15 +42,33 @@ object MapStyleProvider {
     private const val SPRITE_URL_LIGHT = "https://protomaps.github.io/basemaps-assets/sprites/v4/light"
     private const val SPRITE_URL_DARK = "https://protomaps.github.io/basemaps-assets/sprites/v4/dark"
 
+    /** Asset del release `tiles-v1` en GitHub — mismo extracto que [MapDownloadService] descarga
+     * a disco, pero MapLibre puede streamearlo directo por HTTP range requests (el asset expone
+     * `Accept-Ranges: bytes`, verificado al subirlo): estilo vectorial premium con red, sin que
+     * el usuario descargue nada primero. Fuente única del literal — MapDownloadService.PMTILES_URL
+     * lo referencia en vez de duplicarlo. */
+    const val REMOTE_PMTILES_URL =
+        "https://github.com/santiquiroz/revscope/releases/download/tiles-v1/colombia.pmtiles"
+
     // Detecta si el array de capas ya trae su propia capa de background (siempre la trae en los
     // assets reales generados por @protomaps/basemaps), sin parsear/reserializar el JSON — eso
     // preservaría el orden y formato original de las capas tal cual llegan.
     private val BACKGROUND_TYPE_REGEX = Regex("\"type\"\\s*:\\s*\"background\"")
 
-    fun tilesUrl(localFile: File?, serverBaseUrl: String?): String? {
+    /**
+     * Cascada: [localFile] (si existe) > [remoteUrl] (fix W1: tier remoto por internet, p. ej.
+     * [REMOTE_PMTILES_URL]) > [serverBaseUrl] (revscope-server; sigue sin wirear en los call
+     * sites reales, que le pasan null) > null (sin origen, cae a ráster/fondo en [styleJson]).
+     * [remoteUrl] es la URL COMPLETA al `.pmtiles` (no un base como [serverBaseUrl]).
+     */
+    fun tilesUrl(localFile: File?, serverBaseUrl: String?, remoteUrl: String? = null): String? {
         if (localFile != null && localFile.isFile) {
             // MapLibre exige la URL interna completamente especificada.
             return "pmtiles://file://${localFile.absolutePath}"
+        }
+        val remote = remoteUrl?.trim()
+        if (!remote.isNullOrEmpty()) {
+            return "pmtiles://$remote"
         }
         val base = serverBaseUrl?.trim()?.trimEnd('/')
         if (base.isNullOrEmpty()) return null

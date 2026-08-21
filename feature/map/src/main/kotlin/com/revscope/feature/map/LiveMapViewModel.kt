@@ -442,6 +442,19 @@ class LiveMapViewModel @Inject constructor(
         _offlineMapCorruptedMessage.value = null
     }
 
+    // ── Mapa offline (tier remoto) ───────────────────────────────────────────
+
+    /** True si el banner "mapa premium activo por internet — descargalo" ya se mostró alguna
+     * vez — persistido en DataStore para no repetirlo en cada visita a la pantalla (a diferencia
+     * de remoteTilesFailed, que es de sesión de ESTA pantalla y vive en el Composable). */
+    val remoteMapBannerShown: StateFlow<Boolean> = settings.data
+        .map { it[PreferencesKeys.REMOTE_MAP_BANNER_SHOWN] ?: false }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun markRemoteMapBannerShown() {
+        viewModelScope.launch { settings.edit { it[PreferencesKeys.REMOTE_MAP_BANNER_SHOWN] = true } }
+    }
+
     override fun onCleared() {
         locationProvider.stop()
     }

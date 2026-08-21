@@ -34,12 +34,24 @@ import org.maplibre.android.maps.Style
  * de carga que ofrece el SDK — cubre estilo mal formado, fuente inválida, etc.). Registrado una
  * sola vez por [mapView], no por cambio de estilo: el caller decide qué hacer con cada mensaje
  * de error a través de un lambda siempre actualizado ([rememberUpdatedState]).
+ *
+ * [onDidFailLoadingMap] recibe también [styleTag] — el tag que tenía [styleJson] EN EL MOMENTO
+ * en que este composable llamó a `setStyle` con él, no el que el caller tiene "ahora" (fix W1
+ * CRITICAL). El listener del SDK no dice qué intento de carga falló, y `rememberUpdatedState`
+ * siempre reenvía a la lambda MÁS RECIENTE del caller — sin esta correlación, un fallo tardío de
+ * un estilo viejo (p. ej. el tier remoto, mientras su red compite con una descarga en curso) se
+ * clasifica con el estado YA ACTUALIZADO del caller (p. ej. tier local, si esa descarga terminó
+ * mientras tanto), no con el estilo que realmente falló. [appliedStyleTag] se pisa en el MISMO
+ * punto que [appliedStyle] (solo cuando `setStyle` se llama de verdad), así que durante la
+ * ventana entre "el caller ya recompuso con un tier nuevo" y "este composable todavía no volvió
+ * a llamar `setStyle`", sigue reportando el tag del estilo REALMENTE en vuelo.
  */
 @Composable
 fun MapLibreMapView(
     modifier: Modifier = Modifier,
     styleJson: String,
-    onDidFailLoadingMap: ((String) -> Unit)? = null,
+    styleTag: String? = null,
+    onDidFailLoadingMap: ((error: String, styleTag: String?) -> Unit)? = null,
     onStyleInstalled: (MapLibreMap, Style) -> Unit,
 ) {
     val context = LocalContext.current
@@ -50,6 +62,8 @@ fun MapLibreMapView(
     // El bloque `update` corre en CADA recomposición. Sin este centinela se llamaría
     // setStyle todo el tiempo, y cada recarga deja detached las fuentes agregadas a mano.
     val appliedStyle = remember { mutableStateOf<String?>(null) }
+    // Tag correlacionado con appliedStyle — ver el fix W1 CRITICAL documentado arriba.
+    val appliedStyleTag = remember { mutableStateOf<String?>(null) }
 
     // getInstance DEBE correr antes de construir el MapView, o el constructor lanza
     // MapLibreConfigurationException.
@@ -85,7 +99,9 @@ fun MapLibreMapView(
     }
 
     DisposableEffect(mapView) {
-        val listener = MapView.OnDidFailLoadingMapListener { error -> currentOnDidFailLoadingMap?.invoke(error) }
+        val listener = MapView.OnDidFailLoadingMapListener { error ->
+            currentOnDidFailLoadingMap?.invoke(error, appliedStyleTag.value)
+        }
         mapView.addOnDidFailLoadingMapListener(listener)
         onDispose { mapView.removeOnDidFailLoadingMapListener(listener) }
     }
@@ -96,6 +112,7 @@ fun MapLibreMapView(
         update = { view ->
             if (appliedStyle.value != styleJson) {
                 appliedStyle.value = styleJson
+                appliedStyleTag.value = styleTag
                 view.getMapAsync { map ->
                     // MapLibre dibuja su logo y un botón de info abajo a la izquierda, justo
                     // donde va el badge de velocidad. La app ya muestra su propia atribución

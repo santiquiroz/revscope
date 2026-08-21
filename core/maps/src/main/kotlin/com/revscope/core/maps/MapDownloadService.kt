@@ -34,8 +34,8 @@ class MapDownloadService(
 ) {
 
     companion object {
-        const val PMTILES_URL =
-            "https://github.com/santiquiroz/revscope/releases/download/tiles-v1/colombia.pmtiles"
+        // Fuente única del literal: MapStyleProvider.REMOTE_PMTILES_URL (fix W1, tier remoto).
+        const val PMTILES_URL = MapStyleProvider.REMOTE_PMTILES_URL
 
         /** Tamaño real del extracto (ver docs/superpowers/plans/2026-08-20-pmtiles-colombia.md).
          * Solo se usa para el chequeo de espacio previo — el progreso real usa Content-Length. */
