@@ -61,6 +61,30 @@ class MapStyleProviderTest {
     }
 
     @Test
+    fun `el archivo local gana sobre el remoto`() {
+        val local = File.createTempFile("colombia", ".pmtiles").apply { deleteOnExit() }
+        val url = MapStyleProvider.tilesUrl(local, null, remoteUrl = "https://cdn.example/colombia.pmtiles")
+        assertEquals("pmtiles://file://${local.absolutePath}", url)
+    }
+
+    @Test
+    fun `sin archivo local usa el remoto`() {
+        val url = MapStyleProvider.tilesUrl(null, null, remoteUrl = "https://cdn.example/colombia.pmtiles")
+        assertEquals("pmtiles://https://cdn.example/colombia.pmtiles", url)
+    }
+
+    @Test
+    fun `el remoto gana sobre el servidor cuando ambos estan presentes`() {
+        val url = MapStyleProvider.tilesUrl(null, "https://servidor.example", remoteUrl = "https://cdn.example/colombia.pmtiles")
+        assertEquals("pmtiles://https://cdn.example/colombia.pmtiles", url)
+    }
+
+    @Test
+    fun `sin archivo local ni remoto ni servidor no hay origen`() {
+        assertNull(MapStyleProvider.tilesUrl(null, null, remoteUrl = null))
+    }
+
+    @Test
     fun `sin origen vectorial cae al raster de OSM para no perder las calles`() {
         val json = MapStyleProvider.styleJson(null, dark = false)
         assertTrue(json.contains("\"type\": \"raster\""))

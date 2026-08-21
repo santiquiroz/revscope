@@ -290,7 +290,10 @@ fun RevScopeNavGraph(
                     Mode06Screen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(Screen.LiveMap.route) {
-                    LiveMapScreen(onNavigationActiveChanged = { mapNavigationActive = it })
+                    LiveMapScreen(
+                        onNavigationActiveChanged = { mapNavigationActive = it },
+                        onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    )
                 }
                 composable(Screen.AdapterScan.route) {
                     AdapterScanScreen(

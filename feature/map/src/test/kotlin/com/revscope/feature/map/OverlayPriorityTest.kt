@@ -76,4 +76,40 @@ class OverlayPriorityTest {
         )
         assertNull(result)
     }
+
+    @Test
+    fun `promo de mapa remoto solo cuando no hay nada mas urgente`() {
+        val result = pickSecondaryBanner(
+            mapCorruptedMessage = null,
+            navigationErrorMessage = null,
+            approachingRadar = null,
+            incomingSharedDest = null,
+            showRemoteMapPromo = true,
+        )
+        assertTrue(result is SecondaryBanner.RemoteMapPromo)
+    }
+
+    @Test
+    fun `destino compartido gana sobre la promo de mapa remoto`() {
+        val result = pickSecondaryBanner(
+            mapCorruptedMessage = null,
+            navigationErrorMessage = null,
+            approachingRadar = null,
+            incomingSharedDest = sharedDest,
+            showRemoteMapPromo = true,
+        )
+        assertTrue(result is SecondaryBanner.SharedDest)
+    }
+
+    @Test
+    fun `sin promo de mapa remoto y sin nada mas no hay banner`() {
+        val result = pickSecondaryBanner(
+            mapCorruptedMessage = null,
+            navigationErrorMessage = null,
+            approachingRadar = null,
+            incomingSharedDest = null,
+            showRemoteMapPromo = false,
+        )
+        assertNull(result)
+    }
 }

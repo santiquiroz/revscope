@@ -95,6 +95,12 @@ private val AttributionColor = Color(0xFF6B7089)
 /** Duración explícita de la animación de cámara en navegación (antes usaba el default del SDK). */
 private const val NAV_CAMERA_ANIMATION_MS = 300
 
+/** Tier de tiles realmente activo en el estilo cargado (fix W1) — distingue qué hacer con un
+ * fallo de MapLibre (onDidFailLoadingMap): LOCAL asume el `.pmtiles` corrupto y lo borra; REMOTE
+ * es un fallo de red/GitHub y solo degrada a ráster (nada que borrar, nunca se descargó nada);
+ * NONE (ya en ráster) no dispara ninguna acción especial. */
+private enum class TilesTier { LOCAL, REMOTE, NONE }
+
 /** RoomClient.SharedDest no es Parcelable/Serializable — rememberSaveable necesita un Saver
  * explícito para sobrevivir un cambio de configuración (rotación) sin perder qué destino ya
  * descartó el usuario del banner. */
@@ -118,6 +124,9 @@ fun LiveMapScreen(
     // chip de perfil de vehículo, montado por RevScopeNavGraph junto al resto de pantallas de
     // bottom-nav) — se lo avisamos al padre en vez de acoplar ese chip al ViewModel del mapa.
     onNavigationActiveChanged: (Boolean) -> Unit = {},
+    // CTA del banner de promo del tier remoto (fix W1) — mismo patrón que DashboardScreen y
+    // MechanicChatScreen: RevScopeNavGraph lo cablea a navController.navigate(Screen.Settings.route).
+    onNavigateToSettings: () -> Unit = {},
 ) {
     val route by viewModel.route.collectAsState()
     val routeRevision by viewModel.routeRevision.collectAsState()
@@ -153,6 +162,7 @@ fun LiveMapScreen(
     val nightMode by viewModel.nightMode.collectAsState()
     val localMapFileExists by viewModel.localMapFileExists.collectAsState()
     val offlineMapCorruptedMessage by viewModel.offlineMapCorruptedMessage.collectAsState()
+    val remoteMapBannerShown by viewModel.remoteMapBannerShown.collectAsState()
     // Durante un viaje la ruta viva ya alimenta puck y efectos a ~1 Hz; pasar también el fix
     // del provider duplicaría los re-writes del dataset completo sin cambio visual (T4 lo enmascara).
     val standaloneFix = if (route.isEmpty()) liveFix else null
@@ -226,13 +236,24 @@ fun LiveMapScreen(
         }
     }
 
-    // Tier server sigue sin wirear (el server hoy no hospeda tiles): tilesUrl solo considera el
-    // .pmtiles local, gobernado por localMapFileExists (MapDownloadService, vía el VM — con la
-    // semántica correcta de LocalMapReadiness: una RE-descarga en curso no lo apaga). Cuando el
-    // archivo aparece o desaparece (descarga completa / borrado por corrupción) este remember
-    // recalcula y MapLibreMapView vuelve a cargar el estilo — mismo mecanismo que ya usa el
-    // cambio de tema claro/oscuro.
+    // Cascada de tiles (fix W1): local (.pmtiles descargado, gobernado por localMapFileExists —
+    // MapDownloadService vía el VM, con la semántica correcta de LocalMapReadiness: una
+    // RE-descarga en curso no lo apaga) → remoto (release tiles-v1 de GitHub, MapLibre lo
+    // streamea por HTTP range requests, sin que el usuario descargue nada) → ráster. Tier
+    // server real sigue sin wirear (el server hoy no hospeda tiles).
+    //
+    // remoteTilesFailed es one-way por sesión de ESTA pantalla (remember sin key: solo se
+    // resetea si el composable se recrea desde cero, es decir saliendo y reentrando a Mapa) —
+    // un fallo de red del tier remoto no debe reintentarse en loop cada vez que el estilo se
+    // recarga por otro motivo (cambio de tema, etc.); degrada a ráster por el resto de la
+    // visita. Sin red, el ráster también falla, pero eso no vuelve a tocar este flag.
     val localMapFile = remember(context) { MapStyleProvider.localMapFile(context.filesDir) }
+    var remoteTilesFailed by remember { mutableStateOf(false) }
+    val tilesTier = when {
+        localMapFileExists -> TilesTier.LOCAL
+        !remoteTilesFailed -> TilesTier.REMOTE
+        else -> TilesTier.NONE
+    }
     // El asset de capas pesa ~240 KB: leerlo síncrono en composición bloquearía el frame. Corre
     // en IO y cachea en memoria por tema (readMapLayersAsset). El seed viene del cache
     // (peekMapLayersAsset, sin IO): con el tema ya leído antes, el toggle día/noche entrega el
@@ -245,9 +266,24 @@ fun LiveMapScreen(
             layersJson = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = darkTiles) }
         }
     }
-    val styleJson = remember(localMapFileExists, darkTiles, layersJson) {
-        val tilesUrl = MapStyleProvider.tilesUrl(if (localMapFileExists) localMapFile else null, null)
+    val styleJson = remember(tilesTier, darkTiles, layersJson) {
+        val tilesUrl = MapStyleProvider.tilesUrl(
+            localFile = if (localMapFileExists) localMapFile else null,
+            serverBaseUrl = null,
+            remoteUrl = if (remoteTilesFailed) null else MapStyleProvider.REMOTE_PMTILES_URL,
+        )
         MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = darkTiles, layersJson = layersJson)
+    }
+    // Datos móviles (fix W1): streamear el tier remoto consume por-tile (~50-200 KB/tile), a
+    // diferencia de los ~913 MB de la descarga completa — se acepta sin gate de WiFi, a
+    // diferencia de MapDownloadService.download (que sí lo exige por defecto).
+    var remoteBannerLocallyDismissed by remember { mutableStateOf(false) }
+    val showRemoteMapPromo = tilesTier == TilesTier.REMOTE && !remoteMapBannerShown && !remoteBannerLocallyDismissed
+    // Se marca "ya mostrado" apenas se vuelve visible, no recién al descartarlo/tocar Descargar:
+    // así el flag persiste sin importar CÓMO el usuario sale de la pantalla con el banner en
+    // pantalla (back del sistema, cambio de tab, etc.), no solo por sus dos botones.
+    LaunchedEffect(showRemoteMapPromo) {
+        if (showRemoteMapPromo) viewModel.markRemoteMapBannerShown()
     }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleEpoch by remember { mutableStateOf(0) }
@@ -295,9 +331,16 @@ fun LiveMapScreen(
             modifier = Modifier.fillMaxSize(),
             styleJson = styleJson,
             onDidFailLoadingMap = { _ ->
-                // Solo tratamos esto como corrupción del .pmtiles con el tier 1 realmente
-                // activo — un fallo de red del ráster/sprite remoto no debe borrar nada.
-                if (localMapFileExists) viewModel.onOfflineMapLoadFailed()
+                // La distinción de tier evita dos bugs: borrar el .pmtiles local por un fallo de
+                // red del tier remoto (nunca se descargó nada acá, no hay archivo que borrar) y
+                // mostrar "mapa dañado" cuando en realidad falló GitHub/la red. Con NONE (ya en
+                // ráster) un fallo es del propio ráster o de sus sprites/glyphs remotos — nunca
+                // corrupción, no hay nada que hacer.
+                when (tilesTier) {
+                    TilesTier.LOCAL -> viewModel.onOfflineMapLoadFailed()
+                    TilesTier.REMOTE -> remoteTilesFailed = true
+                    TilesTier.NONE -> Unit
+                }
             },
         ) { map, style ->
             installLiveMapLayers(style, density, data)
@@ -616,6 +659,7 @@ fun LiveMapScreen(
             navigationErrorMessage = navigationError,
             approachingRadar = approaching,
             incomingSharedDest = incomingDest,
+            showRemoteMapPromo = showRemoteMapPromo,
         )
         Column(
             Modifier.align(Alignment.TopCenter).padding(top = if (navigation != null) 8.dp else 28.dp, start = 12.dp, end = 12.dp),
@@ -635,6 +679,11 @@ fun LiveMapScreen(
                         dismissedDest = dest
                     },
                     onDismissSharedDest = { dest -> dismissedDest = dest },
+                    onDismissRemoteMapPromo = { remoteBannerLocallyDismissed = true },
+                    onDownloadRemoteMapPromo = {
+                        remoteBannerLocallyDismissed = true
+                        onNavigateToSettings()
+                    },
                 )
             }
         }
@@ -1043,6 +1092,38 @@ internal fun ApproachingCameraBanner(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
             )
+        }
+    }
+}
+
+/** Aviso de una sola vez (fix W1) cuando el mapa carga con el tier remoto (vectorial premium
+ * streameado por internet, sin descarga) — invita a bajarlo para verlo sin datos. internal: la
+ * usa también SecondaryBannerContent en OverlayPriority.kt. */
+@Composable
+internal fun RemoteMapPromoBanner(onDownload: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        color = Color(0xE6121218),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        // Texto fijo pero largo (68 caracteres): sin tope se ensancha hasta invadir el
+        // Leaderboard (TopStart) en pantallas angostas (360-412dp) — mismo motivo que
+        // SharedDestBanner.widthIn. Envuelve en vez de elipsar: acá no hay riesgo de texto
+        // libre de largo impredecible, así que dos líneas legibles ganan a truncar el mensaje.
+        modifier = modifier.widthIn(max = 280.dp),
+    ) {
+        Column(modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 4.dp)) {
+            Text(
+                "Mapa premium activo por internet — descargalo para usarlo sin datos",
+                color = Color(0xFFF0F0F8),
+                fontSize = 12.sp,
+            )
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDownload) {
+                    Text("Descargar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
+                }
+            }
         }
     }
 }
