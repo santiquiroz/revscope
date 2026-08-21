@@ -462,8 +462,10 @@ class LiveMapViewModel @Inject constructor(
     val destination: StateFlow<LiveRouteHolder.RoutePoint?> = _destination.asStateFlow()
 
     // Nombre legible del destino fijado, si se conoce (búsqueda, lugar guardado o propuesta
-    // de sala) — null en un long-press del mapa. Solo lo consume shareCurrentDestination().
+    // de sala) — null en un long-press del mapa. Alimenta shareCurrentDestination() y la
+    // tarjeta descriptiva de tap sobre el marcador de destino (fix D).
     private val _destinationName = MutableStateFlow<String?>(null)
+    val destinationName: StateFlow<String?> = _destinationName.asStateFlow()
 
     private val _plannedRoute = MutableStateFlow<NavigationRoute?>(null)
     val plannedRoute: StateFlow<NavigationRoute?> = _plannedRoute.asStateFlow()

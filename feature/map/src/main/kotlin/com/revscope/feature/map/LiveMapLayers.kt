@@ -42,7 +42,9 @@ private const val SRC_CIRCLES = "src-circulos-radar"
 private const val LYR_CIRCLES_FILL = "lyr-circulos-radar-relleno"
 private const val LYR_CIRCLES_LINE = "lyr-circulos-radar-borde"
 private const val SRC_MARKERS = "src-marcadores"
-private const val LYR_MARKERS = "lyr-marcadores"
+// internal: LiveMapScreen consulta esta capa con queryRenderedFeatures al tocar un ícono
+// (fix D, tarjeta descriptiva).
+internal const val LYR_MARKERS = "lyr-marcadores"
 private const val LYR_PEER_LABELS = "peer-labels"
 private const val SRC_LIVE = "src-ruta-viva"
 private const val LYR_LIVE = "lyr-ruta-viva"
@@ -55,12 +57,14 @@ private const val STATE_TARGET = "objetivo"
 private const val STATE_NORMAL = "normal"
 private const val STATE_DIMMED = "atenuado"
 
-private const val ICON_DESTINATION = "icono-destino"
-private const val ICON_PEER = "icono-peer"
-private const val ICON_PEER_RUMBO = "icono-peer-rumbo"
-private const val ICON_POTHOLE = "icono-hueco"
-private const val ICON_CAMERA = "icono-radar"
-private const val ICON_CAMERA_TARGET = "icono-radar-objetivo"
+// internal (no private): describeFeature (fix D) compara el "tipo" de un Feature tocado
+// contra estos valores para decidir el contenido de la tarjeta descriptiva.
+internal const val ICON_DESTINATION = "icono-destino"
+internal const val ICON_PEER = "icono-peer"
+internal const val ICON_PEER_RUMBO = "icono-peer-rumbo"
+internal const val ICON_POTHOLE = "icono-hueco"
+internal const val ICON_CAMERA = "icono-radar"
+internal const val ICON_CAMERA_TARGET = "icono-radar-objetivo"
 // internal (no private): la selección de ícono del puck (puckIcon) tiene test unitario chico
 // en el mismo módulo y necesita comparar contra estos valores.
 internal const val ICON_ME = "icono-yo"
@@ -78,6 +82,9 @@ data class LiveMapData(
     val approachingId: Long?,
     val alertRadiusM: Int,
     val destination: LiveRouteHolder.RoutePoint?,
+    // Nombre legible del destino, si se conoce — solo alimenta la tarjeta descriptiva de tap
+    // (fix D), no se dibuja como texto sobre el mapa (a diferencia de PROP_LABEL de los peers).
+    val destinationName: String? = null,
     val plannedRoute: NavigationRoute?,
     val liveFix: LiveRouteHolder.RoutePoint? = null,
     // Rutas de OSRM que NO son la elegida (spec F6) — se dibujan en gris debajo de la
@@ -292,16 +299,25 @@ private fun markerFeatures(data: LiveMapData): FeatureCollection {
     val features = mutableListOf<Feature>()
 
     data.destination?.let {
-        features += marker(it.lat, it.lon, ICON_DESTINATION)
+        val extra = data.destinationName?.let { name -> mapOf(FEATURE_PROP_NAME to name) } ?: emptyMap()
+        features += marker(it.lat, it.lon, ICON_DESTINATION, extra = extra)
     }
     data.peers.forEach { peer ->
         val icon = if (peer.headingDeg != null) ICON_PEER_RUMBO else ICON_PEER
-        features += marker(peer.lat, peer.lon, icon, heading = peer.headingDeg ?: 0.0, label = peerLabel(peer))
+        val extra = buildMap<String, Any?> {
+            put(FEATURE_PROP_NAME, peer.rider)
+            peer.speedKmh?.let { put(FEATURE_PROP_SPEED_KMH, it) }
+        }
+        features += marker(peer.lat, peer.lon, icon, heading = peer.headingDeg ?: 0.0, label = peerLabel(peer), extra = extra)
     }
-    data.potholes.forEach { features += marker(it.latitude, it.longitude, ICON_POTHOLE) }
+    data.potholes.forEach {
+        val extra = mapOf(FEATURE_PROP_HITS to it.hits, FEATURE_PROP_LAST_HIT_MS to it.lastHitAt)
+        features += marker(it.latitude, it.longitude, ICON_POTHOLE, extra = extra)
+    }
     data.cameras.forEach { cam ->
         val icon = if (cam.osmId == data.approachingId) ICON_CAMERA_TARGET else ICON_CAMERA
-        features += marker(cam.latitude, cam.longitude, icon)
+        val extra = cam.maxSpeedKmh?.let { mapOf(FEATURE_PROP_SPEED_LIMIT_KMH to it) } ?: emptyMap()
+        features += marker(cam.latitude, cam.longitude, icon, extra = extra)
     }
     // Con viaje activo el puck sigue la ruta viva; sin viaje, el fix del provider del mapa.
     (data.route.lastOrNull() ?: data.liveFix)?.let {
@@ -324,18 +340,49 @@ private fun marker(
     kind: String,
     heading: Double = 0.0,
     label: String? = null,
+    // Metadata SOLO para la tarjeta descriptiva de tap (fix D, ver describableProperties más
+    // abajo) — nunca se dibuja sobre el mapa, a diferencia de label/PROP_LABEL.
+    extra: Map<String, Any?> = emptyMap(),
 ): Feature =
     Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply {
         addStringProperty(PROP_KIND, kind)
         addNumberProperty(PROP_HEADING, heading)
         label?.let { addStringProperty(PROP_LABEL, it) }
+        extra.forEach { (key, value) -> addExtraProperty(key, value) }
     }
+
+private fun Feature.addExtraProperty(key: String, value: Any?) {
+    when (value) {
+        is String -> addStringProperty(key, value)
+        is Number -> addNumberProperty(key, value)
+        else -> Unit
+    }
+}
 
 /** "$rider" solo, o "$rider\n$speed km/h" cuando el peer reporta velocidad. */
 private fun peerLabel(peer: RoomClient.Peer): String {
     val speedKmh = peer.speedKmh ?: return peer.rider
     return "${peer.rider}\n${speedKmh.roundToInt()} km/h"
 }
+
+/**
+ * Adaptador entre el Feature de GeoJSON tocado en el mapa (fix D) y [describeFeature], que es
+ * puro y no conoce MapLibre/GeoJSON — este es el único punto del módulo donde se leen las
+ * properties "extra" que [marker] agregó más arriba.
+ */
+internal fun describableProperties(feature: Feature): Pair<String?, Map<String, Any?>> {
+    val kind = feature.getStringProperty(PROP_KIND)
+    val properties = buildMap<String, Any?> {
+        feature.getStringProperty(FEATURE_PROP_NAME)?.let { put(FEATURE_PROP_NAME, it) }
+        feature.numberPropertyOrNull(FEATURE_PROP_SPEED_LIMIT_KMH)?.let { put(FEATURE_PROP_SPEED_LIMIT_KMH, it) }
+        feature.numberPropertyOrNull(FEATURE_PROP_SPEED_KMH)?.let { put(FEATURE_PROP_SPEED_KMH, it) }
+        feature.numberPropertyOrNull(FEATURE_PROP_HITS)?.let { put(FEATURE_PROP_HITS, it) }
+        feature.numberPropertyOrNull(FEATURE_PROP_LAST_HIT_MS)?.let { put(FEATURE_PROP_LAST_HIT_MS, it) }
+    }
+    return kind to properties
+}
+
+private fun Feature.numberPropertyOrNull(key: String): Number? = if (hasProperty(key)) getNumberProperty(key) else null
 
 /**
  * Íconos dibujados en código: al salir osmdroid desaparecen sus drawables por defecto, y no
