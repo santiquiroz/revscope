@@ -106,6 +106,53 @@ class NavCameraInputsTest {
         assertEquals(7, result.nearestIndex)
     }
 
+    @Test
+    fun `encadenar el nearestIndex entre resolves sucesivos rastrea la posicion real en ruta auto-cruzada`() {
+        // El mismo punto aparece en los indices 0 y 21 de una ruta que se aleja y vuelve. Si el
+        // caller SIEMPRE encadena nearestIndex como el fromIndex del siguiente resolve (que es
+        // lo que exige no congelar el hint aunque la cámara no anime), la ventana de búsqueda
+        // avanza junto con la posición real y el segundo paso por el punto repetido elige el
+        // índice 21, no vuelve a saltar al 0.
+        val target = LatLon(BASE_LAT, BASE_LON)
+        val route = selfCrossingRoute(target)
+
+        val first = NavCameraInputs.resolve(
+            snapped = target,
+            liveFix = null,
+            routeLastPoint = null,
+            routePoints = route,
+            fallbackBearingDeg = 0.0,
+            fromIndex = 0,
+        )
+        val second = NavCameraInputs.resolve(
+            snapped = route[15],
+            liveFix = null,
+            routeLastPoint = null,
+            routePoints = route,
+            fallbackBearingDeg = 0.0,
+            fromIndex = first!!.nearestIndex,
+        )
+        val third = NavCameraInputs.resolve(
+            snapped = target,
+            liveFix = null,
+            routeLastPoint = null,
+            routePoints = route,
+            fallbackBearingDeg = 0.0,
+            fromIndex = second!!.nearestIndex,
+        )
+
+        assertEquals(0, first.nearestIndex)
+        assertEquals(15, second.nearestIndex)
+        assertEquals(21, third!!.nearestIndex)
+    }
+
+    /** Punto [target] repetido en los indices 0 y 21, separados por tramos lejanos entre si. */
+    private fun selfCrossingRoute(target: LatLon): List<LatLon> =
+        listOf(target) +
+            (0 until 20).map { LatLon(10.0 + it * 0.01, 10.0) } +
+            listOf(target) +
+            (0 until 5).map { LatLon(20.0 + it * 0.01, 20.0) }
+
     private fun northRoute(): List<LatLon> =
         (0 until 10).map { LatLon(BASE_LAT + it * LAT_STEP_DEG, BASE_LON) }
 }

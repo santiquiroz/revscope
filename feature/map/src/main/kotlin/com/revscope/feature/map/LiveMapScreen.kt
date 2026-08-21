@@ -326,6 +326,19 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
         // bearing, así que la des-rotación (abajo) y el de-tilt (más abajo) pueden actuar.
         val navIdle = navigation == null || navigation?.arrived == true
 
+        // Avanza el hint SIEMPRE que cambie el nearestIndex resuelto, sin importar followEnabled:
+        // navBearingResolved (arriba) se recalcula en cada recomposición usando navBearingHint
+        // como fromIndex, así que si el hint se congelara mientras el follow está apagado, esa
+        // misma búsqueda seguiría alimentándose del hint viejo indefinidamente — en una ruta que
+        // se auto-cruza, la ventana de backtrack (5 puntos) desde un hint congelado puede dejar
+        // elegible un match viejo detrás de la posición real, y el puck quedaría apuntando para
+        // atrás sin límite de tiempo (justo la regresión que el hint existe para evitar). Este
+        // efecto es independiente del que anima la cámara: la animación sí respeta followEnabled,
+        // el seguimiento del índice no debe.
+        LaunchedEffect(navBearingResolved?.nearestIndex) {
+            navBearingResolved?.let { navBearingHint = it.nearestIndex }
+        }
+
         LaunchedEffect(mapRef, styleEpoch, routeRevision, followEnabled, headingUp, standaloneFix, initialCenter, navigation) {
             val map = mapRef ?: return@LaunchedEffect
             // Navegando: cámara dedicada — course-up, inclinada, zoom por velocidad y maniobra.
@@ -334,10 +347,11 @@ fun LiveMapScreen(viewModel: LiveMapViewModel = hiltViewModel()) {
                 // navBearingResolved (arriba): misma cadena de target — snapped manda; si la
                 // navegación recién arrancó y todavía no hay snap, el fix crudo del GPS engancha
                 // la cámara de inmediato en vez de esperar al próximo snap. route.lastOrNull()
-                // es el último respaldo. Mismo objeto que ya alimentó el bearingDeg del puck.
+                // es el último respaldo. Mismo objeto que ya alimentó el bearingDeg del puck. El
+                // avance del hint vive en el efecto de arriba, no acá: no debe depender de
+                // followEnabled.
                 val resolved = navBearingResolved
                 if (resolved != null) {
-                    navBearingHint = resolved.nearestIndex
                     map.animateCamera(
                         CameraUpdateFactory.newCameraPosition(
                             CameraPosition.Builder()
