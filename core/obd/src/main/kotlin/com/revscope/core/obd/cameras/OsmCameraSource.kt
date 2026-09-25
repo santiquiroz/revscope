@@ -42,7 +42,11 @@ object OsmCameraSource {
             readTimeout = READ_TIMEOUT_MS
             doOutput = true
         }
-        connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-        return connection.inputStream.bufferedReader().use { it.readText() }
+        return try {
+            connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
     }
 }

@@ -51,6 +51,10 @@ object AnsvCameraSource {
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
         }
-        return connection.inputStream.bufferedReader().use { it.readText() }
+        return try {
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
     }
 }
