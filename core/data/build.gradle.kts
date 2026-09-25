@@ -53,6 +53,9 @@ dependencies {
     implementation(libs.timber)
 
     testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
+    // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
+    testImplementation(libs.org.json)
     testImplementation(libs.robolectric)
     testImplementation(libs.room.testing)
     testImplementation(libs.androidx.test.core)

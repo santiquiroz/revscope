@@ -27,10 +27,18 @@ object PreferencesBackupCodec {
     private const val TYPE_DOUBLE = "double"
     private const val TYPE_STRING = "string"
 
+    // Secretos propios de este dispositivo: no viajan en el zip y restore no los pisa.
+    private val DEVICE_SECRET_KEYS = listOf(
+        PreferencesKeys.CLAUDE_API_KEY,
+        PreferencesKeys.MCP_TOKEN,
+        PreferencesKeys.SERVER_AUTH_TOKEN,
+    )
+    private val DEVICE_SECRET_NAMES = DEVICE_SECRET_KEYS.map { it.name }.toSet()
+
     fun encode(preferences: Preferences): String {
         val root = JSONObject()
         preferences.asMap().forEach { (key, value) ->
-            if (key.name == PreferencesKeys.CLAUDE_API_KEY.name) return@forEach
+            if (key.name in DEVICE_SECRET_NAMES) return@forEach
             encodeEntry(value)?.let { root.put(key.name, it) }
         }
         return root.toString()
@@ -39,13 +47,18 @@ object PreferencesBackupCodec {
     suspend fun restore(json: String, settings: DataStore<Preferences>) {
         val root = JSONObject(json)
         settings.edit { mutablePrefs ->
+            val localSecrets = deviceSecrets(mutablePrefs)
             mutablePrefs.clear()
             root.keys().forEach { keyName ->
-                if (keyName == PreferencesKeys.CLAUDE_API_KEY.name) return@forEach
+                if (keyName in DEVICE_SECRET_NAMES) return@forEach
                 applyEntry(mutablePrefs, keyName, root.getJSONObject(keyName))
             }
+            mutablePrefs.putAll(*localSecrets.toTypedArray())
         }
     }
+
+    private fun deviceSecrets(preferences: Preferences): List<Preferences.Pair<String>> =
+        DEVICE_SECRET_KEYS.mapNotNull { key -> preferences[key]?.let { key to it } }
 
     private fun encodeEntry(value: Any): JSONObject? = when (value) {
         is Boolean -> jsonEntry(TYPE_BOOLEAN, value)

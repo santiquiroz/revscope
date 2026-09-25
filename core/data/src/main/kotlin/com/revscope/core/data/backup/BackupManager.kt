@@ -31,6 +31,7 @@ private const val IMPORT_TEMP_DIR_PREFIX = "backup_import_"
  *
  * La API key de Claude (EncryptedSharedPreferences) NUNCA se incluye: no es portable
  * entre instalaciones y su cifrado depende del Keystore de este dispositivo.
+ * Tampoco viajan MCP_TOKEN ni SERVER_AUTH_TOKEN, y el import conserva los de este dispositivo.
  *
  * Tras un import exitoso, AppDatabase queda cerrada — el caller DEBE reiniciar el proceso.
  */
