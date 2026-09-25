@@ -37,6 +37,9 @@ keystore.properties
 # Session logs from adb debugging
 logs/
 
+# Build logs
+*.log
+
 backups/
 
 .kotlin/
