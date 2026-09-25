@@ -8,7 +8,7 @@ This page targets contributors. English/Spanish mixed is fine here — the app U
 
 ## Módulos
 
-Multi-module Gradle project, declared in `settings.gradle.kts`:
+Multi-module Gradle project, declared in `settings.gradle.kts` (18 módulos):
 
 | Módulo | Contenido |
 |---|---|
@@ -17,8 +17,10 @@ Multi-module Gradle project, declared in `settings.gradle.kts`:
 | `:core:data` | Room (`AppDatabase`, entities, DAOs, migraciones), DataStore preferences, backup |
 | `:core:intelligence` | Proveedores de IA, detección de anomalías, eficiencia de conducción |
 | `:core:obd` | Todo el pipeline OBD2/GPS/IMU: transporte Bluetooth, `PidScheduler`, `ObdSessionManager`, alertas, pico y placa, MCP, safety (caída) |
+| `:core:maps` | Motor de mapas MapLibre: estilos, cascada de tiles (`.pmtiles` local > `.pmtiles` remoto > ráster OSM) y descarga del mapa offline de Colombia |
+| `:core:navigation` | Navegación turn-by-turn sobre Ferrostar: parseo de rutas OSRM, maniobras y voz |
 | `:feature:dashboard` | Pantalla Conducir, escáner de adaptador, Modo Pista |
-| `:feature:map` | Pestaña Mapa (osmdroid) |
+| `:feature:map` | Pestaña Mapa (MapLibre): mapa en vivo, búsqueda (Photon), rutas (OSRM), navegación, mapa social |
 | `:feature:workshop` | Pestaña Taller — las 14 herramientas, "Vehículo al día", chat con IA |
 | `:feature:session` | Historial y reporte de viajes (pestaña Viajes) |
 | `:feature:vehicle` | Perfiles de vehículo |
@@ -29,7 +31,7 @@ Multi-module Gradle project, declared in `settings.gradle.kts`:
 
 ## Stack
 
-Kotlin 2.0 · Jetpack Compose (Material 3) · Hilt 2.51 para DI · Room 2.7 con migraciones reales · Vico 2.1 (gráficas) · osmdroid 6.1 (mapas OSM) · NanoHTTPD 2.3 (servidor MCP embebido) · exp4j (evaluación de fórmulas de PIDs) · coroutines/`StateFlow` en todo el estado reactivo.
+Versiones en `gradle/libs.versions.toml`: Kotlin 2.2.21 con KSP · AGP 8.10.1 · Jetpack Compose (BOM 2025.05.00, Material 3) · Hilt 2.56.2 para DI · Room 2.7 con migraciones reales · Vico 2.1 (gráficas) · MapLibre Android 13.4.1 (variante OpenGL) con tiles vectoriales PMTiles · Ferrostar 0.53.0 (solo `core`, navegación turn-by-turn) · OkHttp 4.12 (WebSocket de rodadas en grupo) · NanoHTTPD 2.3 (servidor MCP embebido) · exp4j (evaluación de fórmulas de PIDs) · coroutines/`StateFlow` en todo el estado reactivo. compileSdk 36, minSdk 26 (reloj: 30).
 
 ## Compilar
 
@@ -46,7 +48,7 @@ Para depurar builds rotos rápido, dirígete al módulo específico primero (`:c
 
 ## Tests
 
-**400+ pruebas unitarias** (`@Test` de JUnit4), la gran mayoría en `core/obd/src/test/kotlin/...` — es el módulo con toda la lógica pura y offline (motores de PIDs, pico y placa, diagnóstico, detección de caída, cálculo de eco-score, etc.), más un puñado en `core/intelligence/src/test` y `feature/workshop/src/test`.
+**890+ pruebas unitarias JVM** (`@Test` de JUnit4, `./gradlew testDebugUnitTest`), más de la mitad en `core/obd/src/test/kotlin/...` — es el módulo con toda la lógica pura y offline (motores de PIDs, pico y placa, diagnóstico, detección de caída, cálculo de eco-score, etc.). El resto está en `feature/map`, `core/navigation`, `core/maps`, `core/intelligence`, `feature/settings`, `core/data`, `core/common`, `feature/workshop` y `app`. Los pocos tests de `androidTest` necesitan emulador o dispositivo.
 
 Convenciones:
 - **`org.junit.Assert`** (`assertEquals`, `assertTrue`, `assertNull`…) como base, no Truth ni Kotest — sigue el estilo de los tests ya existentes en el módulo antes de escribir uno nuevo.

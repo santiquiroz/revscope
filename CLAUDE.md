@@ -4,7 +4,7 @@ Instrucciones de proyecto para asistentes AI. Contexto de arquitectura y estado 
 
 ## Qué es RevScope
 
-App Android de telemetría OBD2 en tiempo real, UI estilo HUD racing, open source (Apache 2.0). Se conecta a cualquier adaptador OBD2 (Bluetooth Classic, BLE, WiFi) y muestra RPM, velocidad, boost, torque, marcha estimada, fuel trims y códigos de falla — con una capa de IA que **aprende el vehículo específico** con el uso.
+App Android de telemetría OBD2 en tiempo real, UI estilo HUD racing, open source (Apache 2.0). Se conecta a adaptadores OBD2 ELM327 por Bluetooth Classic o BLE y muestra RPM, velocidad, boost, torque, marcha estimada, fuel trims y códigos de falla — con una capa de IA que **aprende el vehículo específico** con el uso.
 
 - Adaptador primario: Vgate iCar Pro 2S (Classic BT `Android-Vlink`, PIN 1234).
 - Vehículos objetivo: Mazda CX-30 GT, Renault Kardian, Nissan March, TVS Apache 160 4V FI.
@@ -17,33 +17,51 @@ App Android de telemetría OBD2 en tiempo real, UI estilo HUD racing, open sourc
 
 ## Stack
 
-Kotlin 2.0 · Jetpack Compose 1.7+ · MVVM + Clean Architecture · Hilt (DI) · Coroutines + StateFlow/SharedFlow · Room · Vico (gráficas Compose-native) · BluetoothSocket RFCOMM (Classic) + blessed-android-coroutines (BLE) · Min SDK API 26.
+Versiones según `gradle/libs.versions.toml`:
+
+Kotlin 2.2.21 (KSP 2.2.21-2.0.5) · AGP 8.10.1 · Gradle 8.11.1 (wrapper) · JDK 17 · Jetpack Compose (BOM 2025.05.00, Material 3) · MVVM + Clean Architecture · Hilt 2.56.2 (vía KSP) · Coroutines 1.9 + StateFlow/SharedFlow · Room 2.7.1 · DataStore · WorkManager · Vico 2.1.2 (gráficas) · exp4j (fórmulas de PIDs) · MapLibre Android 13.4.1 (variante OpenGL) + PMTiles · Ferrostar 0.53.0 (solo `core`, navegación turn-by-turn) · OkHttp 4.12 (WebSocket) · NanoHTTPD 2.3.1 (servidor MCP) · Car App Library 1.4.0 · Wear Compose 1.4.0 + Health Services · BluetoothSocket RFCOMM (Classic) + blessed-android-coroutines 0.4.2 (BLE) · compileSdk 36, targetSdk 35, minSdk 26 (reloj: minSdk 30).
 
 ## Layout (multi-módulo Gradle)
 
+Los 18 módulos de `settings.gradle.kts`:
+
 | Módulo | Responsabilidad |
 |---|---|
-| `:app` | Entry point, navegación, wiring Hilt |
-| `:core:obd` | Transport (BT/BLE/WiFi), protocolo ELM327, PidRegistry (fórmulas con exp4j) |
-| `:core:data` | Room (sesiones, trips), repos |
-| `:core:common` | Utilidades compartidas |
-| `:core:intelligence` | Gear learner, anomaly detector (Welford), modelos adaptativos |
-| `:feature:dashboard` `:gear` `:sensors` `:dtc` `:session` `:vehicle` `:settings` | Pantallas Compose por feature |
+| `:app` | Entry point, navegación (`RevScopeNavGraph`), onboarding, wiring Hilt, trabajos periódicos de WorkManager |
+| `:core:common` | Utilidades compartidas (User-Agent HTTP `RevScopeHttp`, formato, export CSV) |
+| `:core:data` | Room (`AppDatabase`, entities, DAOs, migraciones), DataStore, backup |
+| `:core:intelligence` | Proveedores de IA, gear learner, detector de anomalías (Welford), eficiencia, debrief de viaje |
+| `:core:obd` | Transporte (BT clásico y BLE), protocolo ELM327, PidRegistry (exp4j), `PidScheduler`, `ObdSessionManager`, alertas, radares, lluvia, pico y placa, MCP, detección de caída, rodadas en grupo (revscope-server), aviso de actualización |
+| `:core:maps` | MapLibre: estilos, cascada de tiles (`.pmtiles` local > `.pmtiles` remoto > ráster OSM) y descarga del mapa offline de Colombia |
+| `:core:navigation` | Navegación turn-by-turn sobre Ferrostar: parseo de rutas OSRM, maniobras y voz |
+| `:feature:dashboard` | Pantalla Conducir, escáner de adaptador, Modo Pista |
+| `:feature:map` | Pestaña Mapa: mapa en vivo, búsqueda (Photon), rutas (OSRM), navegación, mapa social |
+| `:feature:workshop` | Pestaña Taller: herramientas de diagnóstico, "Vehículo al día", chat con IA |
+| `:feature:session` | Historial y reporte de viajes |
+| `:feature:vehicle` | Perfiles de vehículo |
+| `:feature:settings` | Pestaña Ajustes |
+| `:feature:dtc` `:feature:sensors` `:feature:gear` | Herramientas de diagnóstico montadas dentro de Taller |
+| `:feature:auto` | `RevScopeCarAppService`: panel para Android Auto |
+| `:wear` | App de Wear OS (mismo `applicationId`, streaming de ritmo cardíaco) |
 
 ## Estado
 
-- **Fase 1 completa:** Transport, protocolo ELM327, PidRegistry con exp4j, ~70 unit tests.
-- **Fase 2 (siguiente):** PidScheduler + TelemetryEngine (orquestación del sampling de PIDs en tiempo real).
-- Ver `PLAN.md` para el plan de implementación completo por fases.
+- **v1.19.0** (versionCode 23, `revscope.versionName` en `gradle.properties`), publicada por GitHub Releases (sideload, no Play Store).
+- Ya implementado: telemetría OBD2 en tiempo real, Taller y diagnóstico, IA opcional con llave propia, servidor MCP en red local, radares y alertas por voz, detección de caída, Android Auto, Wear OS, rodadas en grupo, mapa MapLibre con mapa offline de Colombia y navegación turn-by-turn.
+- **892 tests unitarios JVM** (`testDebugUnitTest`, la mayoría en `:core:obd`) más un puñado de tests instrumentados en `androidTest` que necesitan emulador o dispositivo.
+- `PLAN.md` es el plan original de la v1 (histórico); el diseño y los planes de cada feature posterior están en `docs/superpowers/`.
 
 ## Comandos
 
+El repo trae el wrapper de Gradle 8.11.1; basta un JDK 17 o superior (en Windows, `gradlew.bat`).
+
 ```bash
-./gradlew build                    # compilar todo
-./gradlew test                     # unit tests (JVM)
-./gradlew :core:obd:test           # tests de un módulo
-./gradlew installDebug             # instalar en device/emulador
-./gradlew lint                     # análisis estático
+./gradlew :app:assembleDebug              # APK debug del teléfono
+./gradlew :wear:assembleDebug             # APK debug del reloj
+./gradlew testDebugUnitTest               # unit tests (JVM) de todos los módulos
+./gradlew :core:obd:testDebugUnitTest     # tests de un módulo
+./gradlew :app:lintDebug                  # lint de Android
+./gradlew installDebug                    # instalar en device/emulador
 ```
 
 ## Convenciones
