@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HTTPS sigue siendo obligatorio para todo el tráfico a internet. La única excepción es
-  el tráfico plano a un servidor de IA que corre en el propio teléfono o en la red local
-  (Nodo, LM Studio, Ollama): esos endpoints no tienen certificado y nunca salen del
-  dispositivo o de la LAN del usuario.
+  HTTPS es obligatorio para todo el tráfico saliente. La única excepción es el tráfico plano
+  a un servidor que corre en el propio teléfono (Nodo) o, en el emulador, en el PC anfitrión
+  (10.0.2.2). Una IP de la red local (LM Studio u Ollama en otro equipo, revscope-server)
+  NO está permitida: el NSC no admite rangos CIDR, así que esos servidores deben publicarse
+  por https o por un túnel. Android lo rechaza con "CLEARTEXT communication ... not
+  permitted" y NetworkErrorExplainer lo traduce en "Probar conexión" de la IA.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">

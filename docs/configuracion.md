@@ -112,7 +112,7 @@ Campos:
 - **Proveedor de IA**: menú desplegable con las cuatro opciones de la tabla.
 - **API key**: campo tipo contraseña — cambia de valor según el proveedor elegido (cada proveedor guarda su propia llave cifrada en el dispositivo).
 - **Modelo**: opcional; si lo dejas vacío usa el default de la tabla.
-- **Base URL**: solo aparece con "Compatible OpenAI" — apunta a tu servidor, por ejemplo un LM Studio en tu red local: `http://192.168.1.20:1234/v1`.
+- **Base URL**: solo aparece con "Compatible OpenAI" — apunta a tu servidor, por ejemplo `https://api.deepseek.com/v1`. Android bloquea `http://` hacia cualquier equipo que no sea el propio teléfono (solo se permiten `localhost`, `127.0.0.1` y `10.0.2.2` del emulador), así que un LM Studio u Ollama de tu PC **no** funciona con `http://<ip-del-pc>:1234/v1`: publícalo por `https` (un proxy inverso con certificado) o por un túnel que termine en `https`. Si lo intentas por `http`, **Probar conexión** lo avisa con un mensaje explícito en vez de un error genérico.
 
 Botones **Guardar configuración de IA** y **Probar conexión** (hace una llamada mínima y muestra si respondió correctamente).
 

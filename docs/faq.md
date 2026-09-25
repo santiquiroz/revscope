@@ -48,7 +48,7 @@ Es normal y esperado: casi todos los velocímetros de fábrica están calibrados
 
 ### ¿Cuánto cuesta usar las funciones de IA?
 
-Muy poco: cada explicación de código de falla o pregunta al Mecánico IA cuesta típicamente centavos de dólar, porque usa modelos pequeños y rápidos por defecto (`claude-haiku-4-5`, `gpt-5-mini` o `gemini-2.5-flash`, según el proveedor que elijas). Pagas directamente a tu proveedor con **tu propia API key** — RevScope no cobra nada ni intermedia el pago. Si prefieres no pagar nada, puedes conectar un servidor local (por ejemplo LM Studio en tu PC) como proveedor "Compatible OpenAI" y usar un modelo gratuito que corra en tu propio hardware.
+Muy poco: cada explicación de código de falla o pregunta al Mecánico IA cuesta típicamente centavos de dólar, porque usa modelos pequeños y rápidos por defecto (`claude-haiku-4-5`, `gpt-5-mini` o `gemini-2.5-flash`, según el proveedor que elijas). Pagas directamente a tu proveedor con **tu propia API key** — RevScope no cobra nada ni intermedia el pago. Si prefieres no pagar nada, puedes conectar un servidor local (por ejemplo LM Studio en tu PC) como proveedor "Compatible OpenAI" y usar un modelo gratuito que corra en tu propio hardware; eso sí, publicado por `https` o por un túnel, porque Android bloquea `http://` hacia otros equipos de la red ([detalles](configuracion.md#inteligencia-artificial)).
 
 ### Activé el servidor MCP pero mi cliente de IA (Claude Desktop, etc.) no responde, ¿qué reviso?
 
