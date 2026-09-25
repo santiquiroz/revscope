@@ -19,6 +19,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // MigrationTestHelper lee los schemas exportados desde los assets de test (Robolectric).
+    sourceSets {
+        getByName("test").assets.srcDir("$projectDir/schemas")
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 ksp {
@@ -45,6 +53,9 @@ dependencies {
     implementation(libs.timber)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.androidx.test.core)
 }
 
 kotlin {
