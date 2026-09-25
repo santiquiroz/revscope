@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API <= 30: the Keystore key never leaves the device, so the encrypted prefs would arrive unreadable. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="revscope_secure.xml" />
+</full-backup-content>
