@@ -1,5 +1,6 @@
 package com.revscope.core.intelligence.provider
 
+import com.revscope.core.common.net.RevScopeHttp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -46,6 +47,7 @@ class AnthropicProvider(
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("x-api-key", apiKey)
             setRequestProperty("anthropic-version", "2023-06-01")
+            setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
             doOutput = true

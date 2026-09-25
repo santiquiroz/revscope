@@ -1,5 +1,6 @@
 package com.revscope.core.intelligence.provider
 
+import com.revscope.core.common.net.RevScopeHttp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -47,6 +48,7 @@ class OpenAiCompatibleProvider(
         (URL(chatCompletionsUrl()).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             apiKey?.takeIf { it.isNotBlank() }?.let { setRequestProperty("Authorization", "Bearer $it") }
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS

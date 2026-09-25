@@ -30,6 +30,7 @@ dependencies {
     // depende de core:data via implementation (no transitivo), así que hace falta directo.
     implementation(project(":core:data"))
     implementation(project(":core:obd"))
+    implementation(project(":core:common"))
 
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)

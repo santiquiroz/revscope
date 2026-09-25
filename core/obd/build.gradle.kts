@@ -34,6 +34,7 @@ android {
 
 dependencies {
     implementation(project(":core:data"))
+    implementation(project(":core:common"))
     api(project(":core:navigation"))
 
     implementation(libs.coroutines.android)

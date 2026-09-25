@@ -1,5 +1,6 @@
 package com.revscope.core.obd.weather
 
+import com.revscope.core.common.net.RevScopeHttp
 import com.revscope.core.obd.alerts.AlertsEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -95,6 +96,7 @@ class RainWatcher @Inject constructor(
         return try {
             connection.connectTimeout = FETCH_TIMEOUT_MS
             connection.readTimeout = FETCH_TIMEOUT_MS
+            connection.setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             if (connection.responseCode != 200) return null
             JSONObject(connection.inputStream.bufferedReader().readText())
         } finally {

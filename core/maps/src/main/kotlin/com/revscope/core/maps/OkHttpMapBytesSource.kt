@@ -1,5 +1,6 @@
 package com.revscope.core.maps
 
+import com.revscope.core.common.net.RevScopeHttp
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.OkHttpClient
@@ -41,7 +42,8 @@ class OkHttpMapBytesSource(
         onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit,
     ) {
         suspendCancellableCoroutine<Unit> { continuation ->
-            val call = client.newCall(Request.Builder().url(url).build())
+            val request = Request.Builder().url(url).header("User-Agent", RevScopeHttp.USER_AGENT).build()
+            val call = client.newCall(request)
             continuation.invokeOnCancellation { call.cancel() }
             try {
                 executeAndStream(call, destination, onProgress) { continuation.isActive }

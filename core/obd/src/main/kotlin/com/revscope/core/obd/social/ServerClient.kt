@@ -2,6 +2,7 @@ package com.revscope.core.obd.social
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.common.net.RevScopeHttp
 import com.revscope.core.data.datastore.PreferencesKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -68,6 +69,7 @@ class ServerClient @Inject constructor(
                 connection.setRequestProperty("Authorization", "Bearer ${config.token}")
             }
             connection.setRequestProperty("X-Rider-Name", config.riderName)
+            connection.setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             if (body != null) {
                 connection.doOutput = true
                 connection.setRequestProperty("Content-Type", "application/json")

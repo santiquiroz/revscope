@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.revscope.core.common.net.RevScopeHttp
 import com.revscope.core.data.datastore.PreferencesKeys
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +82,7 @@ class UpdateChecker @Inject constructor(
                 connection.connectTimeout = TIMEOUT_MS
                 connection.readTimeout = TIMEOUT_MS
                 connection.setRequestProperty("Accept", "application/vnd.github+json")
+                connection.setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
                 if (connection.responseCode != 200) return@runCatching null
                 JSONObject(connection.inputStream.bufferedReader().readText())
             } finally {

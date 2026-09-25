@@ -18,6 +18,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:common"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     // Trae androidx.lifecycle.compose.LocalLifecycleOwner: el de compose.ui.platform está

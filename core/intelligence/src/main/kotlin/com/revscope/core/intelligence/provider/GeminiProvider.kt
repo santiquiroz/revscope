@@ -1,5 +1,6 @@
 package com.revscope.core.intelligence.provider
 
+import com.revscope.core.common.net.RevScopeHttp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -43,6 +44,7 @@ class GeminiProvider(
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("x-goog-api-key", apiKey)
+            setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
             doOutput = true

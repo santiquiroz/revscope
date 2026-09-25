@@ -1,5 +1,6 @@
 package com.revscope.core.obd.social
 
+import com.revscope.core.common.net.RevScopeHttp
 import com.revscope.core.obd.service.LiveRouteHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -111,6 +112,7 @@ class RoomClient @Inject constructor(
             val wsBase = config.baseUrl.replaceFirst("http", "ws")
             val request = Request.Builder()
                 .url("$wsBase/v1/rooms/${code.uppercase()}/ws?rider=${config.riderName}")
+                .header("User-Agent", RevScopeHttp.USER_AGENT)
                 .apply { if (config.token.isNotBlank()) header("Authorization", "Bearer ${config.token}") }
                 .build()
             socket = ok.newWebSocket(request, listener)

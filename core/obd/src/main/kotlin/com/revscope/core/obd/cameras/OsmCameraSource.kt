@@ -1,5 +1,6 @@
 package com.revscope.core.obd.cameras
 
+import com.revscope.core.common.net.RevScopeHttp
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import java.net.URL
 import java.net.URLEncoder
@@ -36,6 +37,7 @@ object OsmCameraSource {
         val connection = (URL(OVERPASS_URL).openConnection() as HttpsURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
             doOutput = true

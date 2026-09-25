@@ -1,5 +1,6 @@
 package com.revscope.feature.map.search
 
+import com.revscope.core.common.net.RevScopeHttp
 import timber.log.Timber
 import java.net.HttpURLConnection
 import java.net.URL
@@ -46,7 +47,7 @@ object PhotonGeocoder {
         return try {
             connection.connectTimeout = CONNECT_TIMEOUT_MS
             connection.readTimeout = READ_TIMEOUT_MS
-            connection.setRequestProperty("User-Agent", "RevScope/1.0 (github.com/santiquiroz/revscope)")
+            connection.setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             connection.inputStream.bufferedReader().readText()
         } finally {
             connection.disconnect()
