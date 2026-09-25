@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
-import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,32 +28,36 @@ class SecureKeyStore @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
 
+    // A restored backup brings the prefs file without its Keystore key: wipe it and start empty.
     private val prefs: SharedPreferences? by lazy {
-        try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILE,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
-        } catch (e: Exception) {
-            // Corrupt keystore entry (backup restore, etc.) — degrade to no secret storage
-            Timber.e(e, "SecureKeyStore: init failed")
-            null
-        }
+        openWithRecovery(
+            create = ::createEncryptedPrefs,
+            wipe = { context.deleteSharedPreferences(PREFS_FILE) },
+        )
+    }
+
+    private fun createEncryptedPrefs(): SharedPreferences {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        return EncryptedSharedPreferences.create(
+            context,
+            PREFS_FILE,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
     }
 
     fun getApiKey(provider: String): String? = prefs?.getString(prefsKeyFor(provider), null)
 
-    fun setApiKey(provider: String, value: String?) {
+    fun setApiKey(provider: String, value: String?): Boolean {
+        val store = prefs ?: return false
         val key = prefsKeyFor(provider)
-        prefs?.edit()?.apply {
+        store.edit().apply {
             if (value.isNullOrBlank()) remove(key) else putString(key, value)
-        }?.apply()
+        }.apply()
+        return true
     }
 
     private fun prefsKeyFor(provider: String): String =
