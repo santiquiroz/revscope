@@ -12,6 +12,11 @@ import timber.log.Timber
 object ResponseParser {
 
     private val WHITESPACE = Regex("\\s+")
+    private val LINE_BREAKS = Regex("[\\r\\n]+")
+
+    // "41" + range PID (00, 20, 40...) + exactly 4 bitmap bytes
+    private val SUPPORTED_PIDS_LINE = Regex("41([0-9A-F]{2})([0-9A-F]{8})")
+    private const val SUPPORTED_PIDS_RANGE_SIZE = 0x20
 
     // ── Known error strings returned by ELM327 adapters ─────────────────────
 
@@ -179,7 +184,7 @@ object ResponseParser {
      * Decodes a "supported PIDs" bitmask response (reply to 01 00, 01 20, 01 40, 01 60).
      *
      * @param raw Raw adapter response
-     * @return Set of 2-char hex PID strings that are supported by the ECU
+     * @return Set of 2-char hex PID strings supported by any responding ECU
      *
      * Example:
      *   Request  "01 00" → Response "4100BE1FA813"
@@ -187,24 +192,32 @@ object ResponseParser {
      *   Bit 0 of BE = PID 0x01, bit 1 = 0x02, ... bit 31 of 13 = 0x20
      */
     fun parseSupportedPids(raw: String): Set<String> {
-        val clean = stripTransientPrefixes(cleanResponse(raw))
-        if (clean.length < 4 || !clean.startsWith("41")) return emptySet()
+        // Multi-ECU CAN cars answer one line per ECU; cleaning before splitting glues them together
+        val bitmaps = raw.split(LINE_BREAKS).mapNotNull(::parseSupportedPidsLine)
+        val requestPid = bitmaps.firstOrNull()?.requestPid ?: return emptySet()
+        return bitmaps
+            .filter { it.requestPid == requestPid }
+            .flatMapTo(linkedSetOf(), ::decodeSupportedPidsBitmap)
+    }
 
-        // Header "41XX" — XX is the "supported PIDs" PID that was requested
-        val requestPidHex = clean.substring(2, 4)
-        val requestPid = requestPidHex.toIntOrNull(16) ?: return emptySet()
+    private class SupportedPidsBitmap(val requestPid: Int, val bytes: ByteArray)
 
-        val dataHex = clean.drop(4)
-        val bytes = hexToBytes(dataHex) ?: return emptySet()
+    private fun parseSupportedPidsLine(line: String): SupportedPidsBitmap? {
+        val clean = stripTransientPrefixes(cleanResponse(line))
+        val match = SUPPORTED_PIDS_LINE.matchEntire(clean) ?: return null
+        val requestPid = match.groupValues[1].toInt(16)
+        if (requestPid % SUPPORTED_PIDS_RANGE_SIZE != 0) return null
+        val bytes = hexToBytes(match.groupValues[2]) ?: return null
+        return SupportedPidsBitmap(requestPid, bytes)
+    }
 
-        return buildSet {
-            bytes.forEachIndexed { byteIndex, byte ->
-                val unsigned = byte.toInt() and 0xFF
-                repeat(8) { bitIndex ->
-                    if ((unsigned and (0x80 ushr bitIndex)) != 0) {
-                        val pidNum = requestPid + byteIndex * 8 + bitIndex + 1
-                        add(pidNum.toString(16).uppercase().padStart(2, '0'))
-                    }
+    private fun decodeSupportedPidsBitmap(bitmap: SupportedPidsBitmap): Set<String> = buildSet {
+        bitmap.bytes.forEachIndexed { byteIndex, byte ->
+            val unsigned = byte.toInt() and 0xFF
+            repeat(8) { bitIndex ->
+                if ((unsigned and (0x80 ushr bitIndex)) != 0) {
+                    val pidNum = bitmap.requestPid + byteIndex * 8 + bitIndex + 1
+                    add(pidNum.toString(16).uppercase().padStart(2, '0'))
                 }
             }
         }

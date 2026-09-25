@@ -274,6 +274,39 @@ class ResponseParserTest {
         assertFalse(supported.contains("0C")) // out of range
     }
 
+    @Test
+    fun `parseSupportedPids unions bitmaps from two ECUs without inventing PIDs`() {
+        // CAN car with ECM + TCM, ATH0: one "41 00" line per ECU
+        val supported = ResponseParser.parseSupportedPids("4100BE3FA813\r4100 98180001\r>")
+        assertEquals(
+            setOf(
+                "01", "03", "04", "05", "06", "07", "0B", "0C", "0D", "0E", "0F",
+                "10", "11", "13", "15", "1C", "1F", "20",
+            ),
+            supported,
+        )
+        assertFalse(supported.contains("22"))
+        assertFalse(supported.contains("28"))
+    }
+
+    @Test
+    fun `parseSupportedPids keeps PIDs reported only by the second ECU`() {
+        val supported = ResponseParser.parseSupportedPids("SEARCHING...\r4100BE3F9011\r41 00 80 40 00 01\r>")
+        assertEquals(
+            setOf(
+                "01", "03", "04", "05", "06", "07", "0A", "0B", "0C", "0D", "0E",
+                "0F", "10", "11", "14", "1C", "20",
+            ),
+            supported,
+        )
+    }
+
+    @Test
+    fun `parseSupportedPids ignores NO DATA, garbage and foreign lines`() {
+        val raw = "4100BE1FA813\rNO DATA\rGARBAGE\r410012\r410C0FA0\r4120FFFFFFFF\r>"
+        assertEquals(ResponseParser.parseSupportedPids("4100BE1FA813>"), ResponseParser.parseSupportedPids(raw))
+    }
+
     // ── parseDtcResponse ──────────────────────────────────────────────────────
 
     @Test
