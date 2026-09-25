@@ -15,7 +15,8 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 23
-        versionName = "1.19.0"
+        // Al subir de versión se edita revscope.versionName en gradle.properties: core:common la usa en el User-Agent.
+        versionName = providers.gradleProperty("revscope.versionName").get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // MapLibre y Ferrostar traen .so por arquitectura: con las cuatro, el APK pesa 80 MB
         // y 25 de esos son x86, que solo sirve en emulador. Esta app necesita adaptador OBD

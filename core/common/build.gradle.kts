@@ -9,7 +9,11 @@ android {
 
     defaultConfig {
         minSdk = 26
+        // Misma fuente que el versionName de :app, para que el User-Agent HTTP no quede desfasado.
+        buildConfigField("String", "APP_VERSION_NAME", "\"${providers.gradleProperty("revscope.versionName").get()}\"")
     }
+
+    buildFeatures { buildConfig = true }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
