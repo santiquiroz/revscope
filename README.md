@@ -68,7 +68,7 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 ### 💾 Tus datos son tuyos
 - **Todo exportable a CSV** — cada gráfica, cada métrica, cada viaje
 - **Copia de seguridad** manual y automática semanal — cámbiate de celular sin perder nada
-- **100% local**: sin cuentas, sin nube, sin telemetría de terceros
+- **Sin cuentas, sin nube propia, sin telemetría de terceros**: tus viajes y datos del vehículo se quedan en el celular. El mapa, los radares, el aviso de lluvia y las rutas sí consultan servicios públicos por internet · [qué se conecta y qué puedes evitar](docs/faq.md#mis-datos-salen-de-mi-celular)
 
 ## 📚 Documentación
 

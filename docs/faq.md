@@ -100,7 +100,23 @@ Revisa [docs/desarrollo.md](desarrollo.md) para la arquitectura del proyecto, c�
 
 ### ¿Mis datos salen de mi celular?
 
-No, salvo que tú lo decidas explícitamente: RevScope es 100% local — sin cuentas, sin nube propia y sin telemetría a terceros. Las únicas conexiones salientes son las que tú activas: descarga de radares (OpenStreetMap/ANSV), tu proveedor de IA si configuraste una API key, y el servidor MCP si lo enciendes (y ese solo escucha en tu red WiFi local, nunca sale a internet).
+RevScope no tiene cuentas, ni nube propia, ni telemetría hacia terceros: tus viajes, perfiles, lecturas del vehículo y códigos de falla se guardan solo en el celular, y salen de ahí únicamente si tú exportas un CSV o una copia de seguridad. Pero la app sí usa internet: varias funciones consultan servicios públicos y algunas de esas consultas llevan tu ubicación. Esta es la lista completa de conexiones salientes:
+
+| Conexión | Qué se envía | Cuándo | ¿Se puede evitar? |
+|---|---|---|---|
+| **Mapa base por internet** (`colombia.pmtiles` en GitHub Releases; si falla, tiles ráster de `tile.openstreetmap.org`) | Qué pedazos del mapa estás viendo, es decir, la zona | Por defecto, al abrir el Mapa o el mapa de un viaje si no descargaste el mapa offline | Sí: descarga el mapa de Colombia en **Ajustes → Mapa** y desde ahí los tiles salen del archivo local |
+| **Letras e íconos del mapa** (`protomaps.github.io`) | Nada personal: fuentes y sprites genéricos | Al dibujar el mapa vectorial, también con el mapa descargado | No; sin red, el mapa se ve igual pero sin etiquetas |
+| **Radares** (Overpass API de OpenStreetMap y el registro de la ANSV) | A Overpass, tu posición, para pedir los radares a 50 km a la redonda; a la ANSV nada personal, porque se baja el registro completo y se filtra en el celular | Descarga manual, refresco semanal automático y re-descarga durante un viaje cuando te alejas más de 35 km de la última descarga | No hay un interruptor; sin datos móviles simplemente no se actualizan |
+| **Aviso de lluvia** (Open-Meteo, `api.open-meteo.com`) | Tu posición (redondeada a ~10 m) | Cada 10 minutos mientras un viaje registra GPS | No; el interruptor de voz "Lluvia" solo silencia el aviso, no la consulta |
+| **Búsqueda de lugares** (Photon, `photon.komoot.io`) | Lo que escribes y tu posición, para ordenar resultados cercanos | Solo cuando buscas en el Mapa | Sí: no usar el buscador |
+| **Rutas y navegación** (OSRM, `router.project-osrm.org`) | Origen y destino de la ruta | Solo cuando pides una ruta o la navegación la recalcula | Sí: no pedir rutas |
+| **Búsqueda de actualizaciones** (API de GitHub) | Nada personal, solo la versión de la app | Al abrir la app, como máximo cada 12 horas, y con el botón manual de Ajustes | No hay un interruptor |
+| **Tu proveedor de IA** (Anthropic, OpenAI, Google o el servidor compatible que configures) | Tus preguntas y los datos del vehículo que acompañan cada consulta; para la información local en ruta, el nombre del municipio | Solo si configuraste una API key | Sí: sin API key no hay ninguna consulta de IA |
+| **Nombre del municipio** (geocodificador del sistema Android, que en la mayoría de celulares resuelve un servicio de Google) | Tu posición | Durante un viaje, para las funciones que dependen del municipio (información local, compañero de viaje, pico y placa con IA) | Sí: esas funciones son opcionales |
+| **revscope-server** (el servidor que tú configures) | Tu nombre de rodada, tu posición y los huecos o fantasmas que compartas | Solo si pones una URL en **Ajustes → Servidor colaborativo** | Sí: viene vacío por defecto |
+| **Fuente de la interfaz** (Google Fonts, a través de Google Play Services) | Nada personal: el nombre de la fuente | Al dibujar la interfaz, si Google Play Services aún no tiene la fuente guardada | No; sin red se usa la fuente del sistema |
+
+Dos cosas que no salen a internet: el **servidor MCP** solo escucha en tu red WiFi local y viene apagado, y la **detección de caída** usa un SMS (no internet) al contacto de emergencia, también apagada por defecto.
 
 ---
 
