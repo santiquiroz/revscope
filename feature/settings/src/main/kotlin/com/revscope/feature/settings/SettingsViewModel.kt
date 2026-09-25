@@ -543,36 +543,39 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val provider = _aiProvider.value
             val result = runCatching {
-                withContext(Dispatchers.IO) {
-                    secureKeyStore.setApiKey(provider, _aiApiKey.value.trim())
-                    // Wipe any plaintext Claude key left from before encryption existed
-                    if (provider == AI_PROVIDER_ANTHROPIC) settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) }
-                }
-                settings.edit {
-                    it[PreferencesKeys.AI_PROVIDER] = provider
-                    it[modelKeyFor(provider)] = _aiModel.value.trim()
-                    if (provider == AI_PROVIDER_CUSTOM || provider == AI_PROVIDER_NODO) {
-                        it[PreferencesKeys.AI_CUSTOM_BASE_URL] = _aiCustomBaseUrl.value.trim()
-                    }
-                }
-                // Guardar una key = quiero IA: se encienden todas las funciones IA de una
-                // vez (el usuario puede apagarlas individualmente después). Sin esto cada
-                // función era un opt-in enterrado que nadie descubría.
-                if (_aiApiKey.value.isNotBlank()) {
-                    settings.edit {
-                        it[PreferencesKeys.AI_PICO_PLACA_ENABLED] = true
-                        it[PreferencesKeys.VOICE_LOCAL_INFO] = true
-                    }
-                    _aiPicoPlaca.value = true
-                    _voiceLocalInfo.value = true
-                }
+                val keyStored = withContext(Dispatchers.IO) { storeAiKey(provider) }
+                if (keyStored) persistAiSelection(provider)
+                keyStored
             }
-            _lastSaveResult.value = if (result.isSuccess) {
-                val extra = if (_aiApiKey.value.isNotBlank()) " — funciones IA activadas" else ""
-                SaveResult(true, "Configuración de IA guardada$extra")
-            } else {
-                SaveResult(false, "Error guardando la configuración de IA")
+            _lastSaveResult.value = aiSaveResult(result, keyEntered = _aiApiKey.value.isNotBlank())
+        }
+    }
+
+    private suspend fun storeAiKey(provider: String): Boolean {
+        if (!secureKeyStore.setApiKey(provider, _aiApiKey.value.trim())) return false
+        // Wipe any plaintext Claude key left from before encryption existed
+        if (provider == AI_PROVIDER_ANTHROPIC) settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) }
+        return true
+    }
+
+    private suspend fun persistAiSelection(provider: String) {
+        settings.edit {
+            it[PreferencesKeys.AI_PROVIDER] = provider
+            it[modelKeyFor(provider)] = _aiModel.value.trim()
+            if (provider == AI_PROVIDER_CUSTOM || provider == AI_PROVIDER_NODO) {
+                it[PreferencesKeys.AI_CUSTOM_BASE_URL] = _aiCustomBaseUrl.value.trim()
             }
+        }
+        // Guardar una key = quiero IA: se encienden todas las funciones IA de una
+        // vez (el usuario puede apagarlas individualmente después). Sin esto cada
+        // función era un opt-in enterrado que nadie descubría.
+        if (_aiApiKey.value.isNotBlank()) {
+            settings.edit {
+                it[PreferencesKeys.AI_PICO_PLACA_ENABLED] = true
+                it[PreferencesKeys.VOICE_LOCAL_INFO] = true
+            }
+            _aiPicoPlaca.value = true
+            _voiceLocalInfo.value = true
         }
     }
 
@@ -622,8 +625,8 @@ class SettingsViewModel @Inject constructor(
         val secure = secureKeyStore.getApiKey(AI_PROVIDER_ANTHROPIC)
         if (secure != null) return secure
         if (!plaintextLegacy.isNullOrBlank()) {
-            secureKeyStore.setApiKey(AI_PROVIDER_ANTHROPIC, plaintextLegacy)
-            runCatching { settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) } }
+            val migrated = secureKeyStore.setApiKey(AI_PROVIDER_ANTHROPIC, plaintextLegacy)
+            if (migrated) runCatching { settings.edit { it.remove(PreferencesKeys.CLAUDE_API_KEY) } }
             return plaintextLegacy
         }
         return ""
