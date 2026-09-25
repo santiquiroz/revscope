@@ -33,15 +33,13 @@ Kotlin 2.0 · Jetpack Compose (Material 3) · Hilt 2.51 para DI · Room 2.7 con 
 
 ## Compilar
 
-> ⚠️ **El wrapper de Gradle no está incluido en el repositorio.** No hay `gradlew`/`gradlew.bat` en la raíz — hay que tener **Gradle 8.11.1** instalado en el sistema (o generar el wrapper tú mismo con `gradle wrapper --gradle-version 8.11.1` una vez que tengas cualquier Gradle disponible).
-
-Con Gradle en el `PATH`, desde la raíz del repo:
+El repo incluye el wrapper de Gradle (**8.11.1**): no hace falta tener Gradle instalado, solo un JDK 17 o superior. Desde la raíz del repo (en Windows, `gradlew.bat` en vez de `./gradlew`):
 
 ```bash
-gradle :app:assembleDebug            # APK debug del teléfono
-gradle :wear:assembleDebug           # APK debug del reloj
-gradle :core:obd:testDebugUnitTest   # suite de tests de un módulo
-gradle test                          # toda la suite de tests unitarios
+./gradlew :app:assembleDebug          # APK debug del teléfono
+./gradlew :wear:assembleDebug         # APK debug del reloj
+./gradlew :core:obd:testDebugUnitTest # suite de tests de un módulo
+./gradlew test                        # toda la suite de tests unitarios
 ```
 
 Para depurar builds rotos rápido, dirígete al módulo específico primero (`:core:obd:compileDebugKotlin`, `:feature:workshop:compileDebugKotlin`, etc.) en vez de compilar todo el proyecto.
