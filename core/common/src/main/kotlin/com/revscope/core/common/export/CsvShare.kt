@@ -46,6 +46,21 @@ object CsvShare {
         launchShareChooser(context, uri)
     }
 
+    /** Comparte un CSV ya escrito (la captura rápida lo escribe mientras corre). */
+    fun shareFile(context: Context, file: File) {
+        val uri = runCatching {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        }.onFailure { Timber.e(it, "CsvShare: no se pudo compartir ${file.name}") }.getOrNull()
+        if (uri == null) {
+            Toast.makeText(context, EXPORT_FAILED_MESSAGE, Toast.LENGTH_SHORT).show()
+            return
+        }
+        launchShareChooser(context, uri)
+    }
+
+    /** Carpeta de exportaciones (la que publica el FileProvider). */
+    fun exportsDir(context: Context): File = File(context.cacheDir, EXPORTS_DIR)
+
     /** ISO-8601 local timestamp for a CSV `timestamp_iso` column — pair with the raw `epoch_ms`. */
     fun isoTimestamp(epochMs: Long): String =
         SimpleDateFormat(ISO_TIMESTAMP_PATTERN, Locale.US).format(Date(epochMs))
@@ -71,8 +86,8 @@ object CsvShare {
     private fun writeRows(file: File, header: List<String>, rows: Sequence<List<Any?>>, comment: String?) {
         file.bufferedWriter().use { out ->
             comment?.let { out.appendLine("# $it") }
-            out.appendLine(toCsvLine(header))
-            rows.forEach { row -> out.appendLine(toCsvLine(row.map(::formatCell))) }
+            out.appendLine(CsvFormat.linea(header))
+            rows.forEach { row -> out.appendLine(CsvFormat.linea(row)) }
         }
     }
 
@@ -89,20 +104,4 @@ object CsvShare {
         val stamp = SimpleDateFormat(FILE_NAME_TIMESTAMP_PATTERN, Locale.US).format(Date())
         return "revscope-$tipo-$stamp.csv"
     }
-
-    private fun formatCell(value: Any?): String = when (value) {
-        null -> ""
-        is Double -> value.toString()
-        is Float -> value.toString()
-        else -> value.toString()
-    }
-
-    private fun toCsvLine(fields: List<String>): String = fields.joinToString(",", transform = ::escapeCsvField)
-
-    private fun escapeCsvField(field: String): String =
-        if (field.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
-            "\"" + field.replace("\"", "\"\"") + "\""
-        } else {
-            field
-        }
 }

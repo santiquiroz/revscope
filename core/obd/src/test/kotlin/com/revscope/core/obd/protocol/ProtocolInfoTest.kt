@@ -25,4 +25,13 @@ class ProtocolInfoTest {
         assertNull(ProtocolInfo.esCan("?"))
         assertNull(ProtocolInfo.esCan("0"))
     }
+
+    @Test
+    fun `solo 6 y 8 son can de 11 bits`() {
+        assertEquals(true, ProtocolInfo.esCan11Bit("6"))
+        assertEquals(true, ProtocolInfo.esCan11Bit("A8"))
+        assertEquals(false, ProtocolInfo.esCan11Bit("7"))
+        assertEquals(false, ProtocolInfo.esCan11Bit("3"))
+        assertEquals(false, ProtocolInfo.esCan11Bit(null))
+    }
 }

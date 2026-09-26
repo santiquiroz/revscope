@@ -85,6 +85,13 @@ class PidScheduler(
 
     private val preset = AtomicReference(SamplingPreset.DEFAULT)
 
+    // La captura rápida toma el bus: los grupos esperan antes de cada petición, no solo al iniciar ciclo.
+    private val paused = MutableStateFlow(false)
+
+    fun setPaused(value: Boolean) {
+        paused.value = value
+    }
+
     fun setPreset(value: SamplingPreset) {
         preset.set(value)
     }
@@ -166,6 +173,11 @@ class PidScheduler(
         Timber.i("PidScheduler: sin BUFFER FULL en 30 s — multiplicador ahora $multiplier")
     }
 
+    private suspend fun exchangeWhenRunning(command: String): String {
+        paused.first { !it }
+        return transport.exchange(command, PID_READ_TIMEOUT_MS)
+    }
+
     /** Greedy-packs definitions into batches whose response fits one CAN frame. */
     private fun packIntoFrames(defs: List<PidDefinition>): List<List<PidDefinition>> {
         val batches = mutableListOf<List<PidDefinition>>()
@@ -191,7 +203,7 @@ class PidScheduler(
     ) {
         val command = "01 ${batch.joinToString(" ") { it.pid }}\r"
         val response = try {
-            transport.exchange(command, PID_READ_TIMEOUT_MS)
+            exchangeWhenRunning(command)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -241,7 +253,7 @@ class PidScheduler(
         val def = registry.getDefinition(pid) ?: return null
         val command = "${def.mode} ${def.pid}\r"
         return try {
-            handleResponse(pid, transport.exchange(command, PID_READ_TIMEOUT_MS)).also {
+            handleResponse(pid, exchangeWhenRunning(command)).also {
                 consecutiveLinkFailures.set(0)
             }
         } catch (e: CancellationException) {
@@ -256,7 +268,7 @@ class PidScheduler(
         val def = registry.getDefinition(pid) ?: return null
         val command = "${def.mode} ${def.pid}\r"
         return try {
-            handleResponse(pid, transport.exchange(command, PID_READ_TIMEOUT_MS)).also {
+            handleResponse(pid, exchangeWhenRunning(command)).also {
                 consecutiveLinkFailures.set(0)
             }
         } catch (e: CancellationException) {

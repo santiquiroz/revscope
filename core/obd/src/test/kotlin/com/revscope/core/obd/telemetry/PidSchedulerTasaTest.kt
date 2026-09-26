@@ -99,4 +99,22 @@ class PidSchedulerTasaTest {
         assertTrue(periodos(fake).all { it == 30L })
         assertEquals("300 ms / 30 ms por petición, la décima sigue en vuelo", 9, fake.log.size)
     }
+
+    @Test
+    fun `en pausa ningun grupo pide y al reanudar sigue`() = runTest {
+        val fake = fake()
+        val scheduler = scheduler(fake).apply { setPreset(SamplingPreset.MEDIO_SEGUNDO) }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(600)
+        scheduler.setPaused(true)
+        val alPausar = fake.log.size
+        advanceTimeBy(3_000)
+        val enPausa = fake.log.size - alPausar
+        scheduler.setPaused(false)
+        advanceTimeBy(1_100)
+        job.cancel()
+
+        assertEquals(0, enPausa)
+        assertTrue(fake.log.size > alPausar + 1)
+    }
 }

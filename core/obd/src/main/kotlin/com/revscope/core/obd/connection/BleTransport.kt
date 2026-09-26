@@ -3,6 +3,7 @@ package com.revscope.core.obd.connection
 import android.content.Context
 import com.welie.blessed.BluetoothCentralManager
 import com.welie.blessed.BluetoothPeripheral
+import com.welie.blessed.ConnectionPriority
 import com.welie.blessed.WriteType
 import com.welie.blessed.ConnectionState as BleConnectionState
 import kotlinx.coroutines.Dispatchers
@@ -226,4 +227,11 @@ class BleTransport(
     }
 
     override fun observeConnectionState(): Flow<ConnectionState> = _state.asStateFlow()
+
+    override suspend fun setLowLatency(enabled: Boolean) {
+        val p = peripheral ?: return
+        val priority = if (enabled) ConnectionPriority.HIGH else ConnectionPriority.BALANCED
+        runCatching { p.requestConnectionPriority(priority) }
+            .onFailure { Timber.w(it, "BLE: no se pudo pedir prioridad de conexión $priority") }
+    }
 }

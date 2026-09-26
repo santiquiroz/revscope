@@ -11,6 +11,9 @@ import timber.log.Timber
 
 private const val FLUSH_INTERVAL_MS = 500L
 private const val DEDUPE_KEEPALIVE_MS = 4_000L
+// Como mucho ~10 filas/s por PID: la captura rápida (25+ Hz) no infla telemetry_points. 90 y no 100 ms
+// para no perder filas de p1 (100 ms nominales) por la fluctuación del ciclo.
+internal const val MIN_STORE_SPACING_MS = 90L
 
 /**
  * Persists [ObdReading] items to Room in batches every [FLUSH_INTERVAL_MS].
@@ -32,10 +35,10 @@ class SessionRecorder(private val telemetryDao: TelemetryDao) {
                 // 111k GEAR rows (2× the raw PIDs). Skip identical consecutive values,
                 // but keep a heartbeat row every 4 s so time-integration (distance uses
                 // a 5 s max gap) never sees artificial holes during constant cruising.
+                val sinceStoredMs = reading.timestamp - (lastStoredMsByPid[reading.pid] ?: Long.MIN_VALUE / 2)
+                if (sinceStoredMs < MIN_STORE_SPACING_MS) return@collect
                 val unchanged = lastValueByPid[reading.pid] == reading.value
-                val freshEnough =
-                    reading.timestamp - (lastStoredMsByPid[reading.pid] ?: 0L) < DEDUPE_KEEPALIVE_MS
-                if (unchanged && freshEnough) return@collect
+                if (unchanged && sinceStoredMs < DEDUPE_KEEPALIVE_MS) return@collect
                 lastValueByPid[reading.pid] = reading.value
                 lastStoredMsByPid[reading.pid] = reading.timestamp
                 buffer += reading.toEntity(sessionId)

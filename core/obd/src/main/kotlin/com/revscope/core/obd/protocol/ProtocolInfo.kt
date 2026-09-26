@@ -15,6 +15,11 @@ object ProtocolInfo {
         }
     }
 
+    /** CAN 11-bit (protocolos 6 y 8): el único donde la captura rápida usa direccionamiento físico 7E0. */
+    fun esCan11Bit(dpn: String?): Boolean = numeroDe(dpn) in CAN_11_BIT
+
+    private val CAN_11_BIT = setOf('6', '8')
+
     private fun numeroDe(dpn: String?): Char? {
         val clean = dpn?.let(ResponseParser::cleanResponse).orEmpty()
         val sinAuto = if (clean.length == 2 && clean.startsWith("A")) clean.drop(1) else clean

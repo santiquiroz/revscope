@@ -1,0 +1,60 @@
+package com.revscope.core.obd.telemetry.captura
+
+import com.revscope.core.obd.testing.FakeElmTransport
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class ElmSpeedTuningTest {
+
+    private fun fake(rechazados: Set<String> = emptySet()) =
+        FakeElmTransport { cmd -> if (cmd in rechazados) "?>" else "OK>" }
+
+    private fun afinado(fake: FakeElmTransport) = ElmSpeedTuning { cmd -> fake.exchange(cmd, 1_000) }
+
+    @Test
+    fun `en can 11 bits aplica direccion fisica y timing agresivo`() = runTest {
+        val fake = fake()
+
+        val aplicadas = afinado(fake).aplicar(esCan11Bit = true)
+
+        assertEquals(setOf(TecnicaCaptura.DIRECCION_FISICA, TecnicaCaptura.TIMING_AGRESIVO), aplicadas)
+        assertEquals(listOf("ATSH7E0", "ATCRA7E8", "ATAT2"), fake.comandos)
+    }
+
+    @Test
+    fun `fuera de can 11 bits no toca el direccionamiento`() = runTest {
+        val fake = fake()
+
+        val aplicadas = afinado(fake).aplicar(esCan11Bit = false)
+
+        assertEquals(setOf(TecnicaCaptura.TIMING_AGRESIVO), aplicadas)
+        assertEquals(listOf("ATAT2"), fake.comandos)
+    }
+
+    @Test
+    fun `un AT no soportado se omite y deja el header funcional`() = runTest {
+        val fake = fake(rechazados = setOf("ATCRA7E8", "ATAT2"))
+
+        val aplicadas = afinado(fake).aplicar(esCan11Bit = true)
+
+        assertEquals(emptySet<TecnicaCaptura>(), aplicadas)
+        assertEquals(listOf("ATSH7E0", "ATCRA7E8", "ATSH7DF", "ATAT2"), fake.comandos)
+    }
+
+    @Test
+    fun `revertir restaura filtro header y timing aunque la corrutina este cancelada`() = runTest {
+        val fake = fake()
+        val todo = setOf(TecnicaCaptura.DIRECCION_FISICA, TecnicaCaptura.TIMING_AGRESIVO)
+
+        val job = launch {
+            coroutineContext.job.cancel()
+            afinado(fake).revertir(todo)
+        }
+        job.join()
+
+        assertEquals(listOf("ATCRA", "ATSH7DF", "ATAT1"), fake.comandos)
+    }
+}

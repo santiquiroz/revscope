@@ -45,6 +45,12 @@ interface Transport {
 
     fun observeConnectionState(): Flow<ConnectionState>
 
+    /**
+     * Captura rápida: el transporte reduce su propia latencia de lectura (sondeo de socket más
+     * corto en Classic, prioridad de conexión alta en BLE). No-op por defecto.
+     */
+    suspend fun setLowLatency(enabled: Boolean) = Unit
+
     companion object {
         const val DEFAULT_READ_TIMEOUT_MS = 3_000L
     }

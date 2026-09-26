@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.revscope.core.common.export.CsvShare
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -48,6 +49,11 @@ import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.PollingGate
 import com.revscope.core.obd.telemetry.SamplingPreset
+import com.revscope.core.obd.telemetry.captura.AndroidLectorDispositivo
+import com.revscope.core.obd.telemetry.captura.ArchivoCaptura
+import com.revscope.core.obd.telemetry.captura.CapturaRapida
+import com.revscope.core.obd.telemetry.captura.EnlaceCaptura
+import com.revscope.core.obd.telemetry.captura.InfoAdaptador
 import com.revscope.core.obd.telemetry.SessionRecorder
 import com.revscope.core.obd.trip.MaintenanceCalculator
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -56,6 +62,7 @@ import com.revscope.core.obd.workshop.OdometerChecker
 import com.revscope.core.obd.workshop.OdometerHistoryStore
 import com.revscope.core.obd.workshop.OdometerVerifier
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -159,6 +166,34 @@ class ObdSessionManager @Inject constructor(
     private val diagnosticLease = DiagnosticLease(pollingGate)
     private val dtcReader = DtcReader(registry)
     @Volatile private var protocoloEsCan: Boolean? = null
+    @Volatile private var protocoloDpn: String? = null
+    @Volatile private var elmVersion: String? = null
+
+    // Muestras de la captura rápida: entran al mismo flujo que el sondeo (gauges, alertas y grabación).
+    private val capturaLecturas = MutableSharedFlow<ObdReading>(
+        extraBufferCapacity = CAPTURE_READINGS_BUFFER,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    private val enlaceCaptura = object : EnlaceCaptura {
+        override fun transporte(): Transport? = transport
+        override fun scopeEnlace(): CoroutineScope? = linkPipeline?.scope
+        override fun pausarSondeo(pausado: Boolean) {
+            activeScheduler?.setPaused(pausado)
+        }
+        override fun publicar(reading: ObdReading) {
+            capturaLecturas.tryEmit(reading)
+        }
+        override fun info() = InfoAdaptador(currentDeviceName, elmVersion, protocoloDpn, protocoloEsCan)
+    }
+
+    /** Captura rápida (Taller → Sensores y MCP): una a la vez, sobre el enlace vivo. */
+    val captura = CapturaRapida(
+        enlace = enlaceCaptura,
+        gate = pollingGate,
+        registry = registry,
+        nuevoSumidero = { ArchivoCaptura(CsvShare.exportsDir(appContext)) },
+        dispositivo = AndroidLectorDispositivo(appContext),
+    )
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private val odometerHistoryStore = OdometerHistoryStore(settings)
     private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao)
@@ -828,7 +863,9 @@ class ObdSessionManager @Inject constructor(
             return
         }
         registry.setSupportedPids(negotiationResult.supportedPids)
-        protocoloEsCan = ProtocolInfo.esCan(probe(bt, "AT DPN\r", DPN_TIMEOUT_MS))
+        elmVersion = negotiationResult.elmVersion
+        protocoloDpn = probe(bt, "AT DPN\r", DPN_TIMEOUT_MS)?.let(ResponseParser::cleanResponse)
+        protocoloEsCan = ProtocolInfo.esCan(protocoloDpn)
         alertsEngine.reloadThresholds()
         resolveProfileByVin(bt)
         if (_activeProfile.value == null) activateProfileByAdapter()
@@ -851,8 +888,7 @@ class ObdSessionManager @Inject constructor(
                     scheduler.setIdleMode(idleModeEnabled)
                     scheduler.setRemoteViewerActive(remoteViewerActive)
                     scheduler.setPreset(_muestreoPreset.value)
-                    val rawFlow = scheduler
-                        .observeReadings()
+                    val rawFlow = merge(scheduler.observeReadings(), capturaLecturas)
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
 
                     val derivedFlow = derivedEngine.observeDerived(rawFlow)
@@ -1011,6 +1047,7 @@ class ObdSessionManager @Inject constructor(
         private const val DEFAULT_ADAPTER_NAME = "OBD"
 
         private const val DTC_TIMEOUT_MS = 5_000L
+        private const val CAPTURE_READINGS_BUFFER = 512
         private const val DTC_FULL_READ_TIMEOUT_MS = 30_000L
         private const val DPN_TIMEOUT_MS = 1_500L
         private const val VIN_TIMEOUT_MS = 4_000L

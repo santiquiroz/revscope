@@ -1,11 +1,13 @@
 package com.revscope.core.obd.telemetry
 
 import com.revscope.core.obd.connection.Transport
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Exclusión sobre el canal serie a nivel de SECUENCIA. El mutex del transporte ya impide que
@@ -20,16 +22,37 @@ class PollingGate {
     private val _duenoConcesion = MutableStateFlow<String?>(null)
     val duenoConcesion: StateFlow<String?> = _duenoConcesion.asStateFlow()
 
+    // Solo se lee y escribe con el canal tomado: la captura rápida lo pone y lo quita dentro de sondear().
+    @Volatile private var ajusteConcesion: AjusteConcesion? = null
+
     suspend fun <T> sondear(block: suspend () -> T): T = canal.withLock { block() }
 
     suspend fun <T> conceder(owner: String, block: suspend () -> T): T = canal.withLock {
         _duenoConcesion.value = owner
+        val ajuste = ajusteConcesion
         try {
+            ajuste?.antesDeConceder()
             block()
         } finally {
+            withContext(NonCancellable) { ajuste?.despuesDeConceder() }
             _duenoConcesion.value = null
         }
     }
+
+    /** Llamar solo dentro de [sondear]. */
+    fun fijarAjusteConcesion(ajuste: AjusteConcesion?) {
+        ajusteConcesion = ajuste
+    }
+}
+
+/**
+ * Quien deja el ELM en un estado no estándar (la captura rápida con direccionamiento físico) lo
+ * devuelve al estándar antes de una concesión de diagnóstico y lo reaplica después, con el canal
+ * tomado. Ambas deben tolerar fallas (no lanzar).
+ */
+interface AjusteConcesion {
+    suspend fun antesDeConceder()
+    suspend fun despuesDeConceder()
 }
 
 /** Transporte del sondeo periódico: cada intercambio pasa por la [PollingGate]. */

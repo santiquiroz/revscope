@@ -29,6 +29,8 @@ private const val CONNECT_TIMEOUT_MS = 12_000L
 // al inicio (2 ms) y reduce ~3× los wakeups del timer en esperas largas.
 private const val READ_POLL_MIN_MS = 2L
 private const val READ_POLL_MAX_MS = 40L
+// Captura rápida: una respuesta que llega a los 35 ms no debe detectarse hasta los ~62 ms.
+private const val LOW_LATENCY_READ_POLL_MAX_MS = 4L
 private const val CHUNK_SIZE = 256
 private const val PROMPT_CHAR = '>'
 private const val FALLBACK_RFCOMM_CHANNEL = 1
@@ -51,6 +53,7 @@ class ClassicBtTransport(
     private var outputStream: OutputStream? = null
 
     private val ioMutex = Mutex()
+    @Volatile private var readPollMaxMs = READ_POLL_MAX_MS
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
 
     override val isConnected: Boolean
@@ -165,7 +168,7 @@ class ClassicBtTransport(
                 }
             } else {
                 delay(pollDelayMs)
-                pollDelayMs = minOf(pollDelayMs * 2, READ_POLL_MAX_MS)
+                pollDelayMs = minOf(pollDelayMs * 2, readPollMaxMs)
             }
             if (System.currentTimeMillis() >= deadline) {
                 throw IOException(
@@ -227,6 +230,10 @@ class ClassicBtTransport(
     }
 
     override fun observeConnectionState(): Flow<ConnectionState> = _state.asStateFlow()
+
+    override suspend fun setLowLatency(enabled: Boolean) {
+        readPollMaxMs = if (enabled) LOW_LATENCY_READ_POLL_MAX_MS else READ_POLL_MAX_MS
+    }
 
     private fun cleanupSocket() {
         runCatching { outputStream?.close() }.onFailure { Timber.w(it, "Error closing output") }
