@@ -2,6 +2,8 @@ package com.revscope.core.obd.mcp
 
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.diagnostics.BorradoDtc
+import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
+import com.revscope.core.obd.diagnostics.ReglasBorradoDtc
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
@@ -10,7 +12,7 @@ import javax.inject.Inject
 
 /**
  * Modo 04 desde el MCP: exige el permiso BORRADO, `confirmar = "BORRAR"` y el vehículo detenido
- * (0D = 0 con una lectura de menos de [MAX_EDAD_VELOCIDAD_MS]); relee los activos antes y después.
+ * según [ReglasBorradoDtc]; relee los activos antes y después.
  */
 class BorrarDtcTool @Inject constructor(
     private val sessionManager: ObdSessionManager,
@@ -42,7 +44,7 @@ class BorrarDtcTool @Inject constructor(
 
     override suspend fun call(arguments: JSONObject): String {
         if (sessionManager.connectionState.value !is ConnectionState.Connected) return sinEnlaceJson()
-        motivoRechazo(arguments.optString("confirmar"), sessionManager.readings.value[SPEED_PID])
+        motivoRechazo(arguments.optString("confirmar"), sessionManager.readings.value[ReglasBorradoDtc.PID_VELOCIDAD])
             ?.let { return JSONObject().put("error", it).toString() }
         return sessionManager.borrarDtcConRelectura(LEASE_OWNER).fold(
             onSuccess = { borrado -> exito(borrado) },
@@ -50,12 +52,14 @@ class BorrarDtcTool @Inject constructor(
         )
     }
 
-    internal fun motivoRechazo(confirmar: String, velocidad: ObdReading?): String? = when {
-        confirmar != CONFIRMACION -> "falta confirmar=\"BORRAR\""
-        velocidad == null || nowMs() - velocidad.timestamp > MAX_EDAD_VELOCIDAD_MS ->
+    internal fun motivoRechazo(confirmar: String, velocidad: ObdReading?): String? =
+        ReglasBorradoDtc.evaluar(confirmar == CONFIRMACION, velocidad, nowMs())?.let(::textoRechazo)
+
+    private fun textoRechazo(rechazo: RechazoBorradoDtc): String = when (rechazo) {
+        RechazoBorradoDtc.SinConfirmar -> "falta confirmar=\"BORRAR\""
+        RechazoBorradoDtc.SinVelocidadReciente ->
             "sin lectura reciente de velocidad (PID 0D): no se puede comprobar que el vehículo esté detenido"
-        velocidad.value > 0.0 -> "el vehículo está en movimiento (${velocidad.value.toInt()} km/h)"
-        else -> null
+        is RechazoBorradoDtc.EnMovimiento -> "el vehículo está en movimiento (${rechazo.kmh} km/h)"
     }
 
     private fun exito(borrado: BorradoDtc): String {
@@ -81,7 +85,5 @@ class BorrarDtcTool @Inject constructor(
     private companion object {
         const val LEASE_OWNER = "mcp:borrar_dtc"
         const val CONFIRMACION = "BORRAR"
-        const val SPEED_PID = "0D"
-        const val MAX_EDAD_VELOCIDAD_MS = 2_000L
     }
 }
