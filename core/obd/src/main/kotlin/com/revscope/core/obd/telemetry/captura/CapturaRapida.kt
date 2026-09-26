@@ -5,6 +5,7 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ProtocolInfo
+import com.revscope.core.obd.taller.pruebas.CapturaPrueba
 import com.revscope.core.obd.telemetry.AjusteConcesion
 import com.revscope.core.obd.telemetry.PollingGate
 import kotlinx.coroutines.CancellationException
@@ -49,9 +50,10 @@ class CapturaRapida(
     private val relojNanos: () -> Long = System::nanoTime,
     private val relojEpochMs: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
-) {
+) : CapturaPrueba {
     private class Sesion(
         val inicio: InicioCaptura,
+        val config: ConfigCaptura,
         val inicioEpochMs: Long,
         val defs: List<PidDefinition>,
         val transporte: Transport,
@@ -79,15 +81,15 @@ class CapturaRapida(
     val estadisticas: StateFlow<EstadisticasCaptura?> = _estadisticas.asStateFlow()
 
     private val _ultimoResumen = MutableStateFlow<ResumenCaptura?>(null)
-    val ultimoResumen: StateFlow<ResumenCaptura?> = _ultimoResumen.asStateFlow()
+    override val ultimoResumen: StateFlow<ResumenCaptura?> = _ultimoResumen.asStateFlow()
 
-    suspend fun iniciar(config: ConfigCaptura): Result<InicioCaptura> = arranque.withLock {
+    override suspend fun iniciar(config: ConfigCaptura): Result<InicioCaptura> = arranque.withLock {
         if (job?.isActive == true) return Result.failure(IllegalStateException("Ya hay una captura rápida activa"))
         val bt = enlace.transporte()
         val scope = enlace.scopeEnlace()
         if (bt == null || scope == null) return Result.failure(IllegalStateException("Sin adaptador conectado"))
         val (defs, noSoportados) = seleccionar(config.pids).getOrElse { return Result.failure(it) }
-        val nueva = prepararSesion(bt, defs, noSoportados, config.duracionMaxMs).getOrElse { return Result.failure(it) }
+        val nueva = prepararSesion(bt, defs, noSoportados, config).getOrElse { return Result.failure(it) }
         sesion = nueva
         motivoFin = null
         _estado.value = EstadoCaptura.Activa(nueva.inicio, nueva.inicioEpochMs, limiteHz = null)
@@ -95,7 +97,7 @@ class CapturaRapida(
         Result.success(nueva.inicio)
     }
 
-    suspend fun detener(motivo: String = MOTIVO_USUARIO): ResumenCaptura? {
+    override suspend fun detener(motivo: String): ResumenCaptura? {
         val activo = job?.takeIf { it.isActive } ?: return null
         if (motivoFin == null) motivoFin = motivo
         activo.cancelAndJoin()
@@ -108,11 +110,14 @@ class CapturaRapida(
 
     fun inicioEpochMs(id: String): Long? = sesion?.takeIf { it.inicio.id == id }?.inicioEpochMs
 
-    fun muestrasActuales(): List<MuestraCaptura> = sesion?.buffer?.todas().orEmpty()
+    override fun muestrasActuales(): List<MuestraCaptura> = sesion?.buffer?.todas().orEmpty()
 
     fun capturaEnMemoria(): InicioCaptura? = sesion?.inicio
 
-    fun activa(): Boolean = job?.isActive == true
+    override fun activa(): Boolean = job?.isActive == true
+
+    /** Ms desde el inicio de la captura activa, con el mismo reloj que [MuestraCaptura.tMicros]; null si no hay. */
+    override fun transcurridoMs(): Long? = sesion?.takeIf { activa() }?.let(::transcurridoMs)
 
     // ── Arranque ────────────────────────────────────────────────────────────
 
@@ -138,7 +143,7 @@ class CapturaRapida(
         bt: Transport,
         defs: List<PidDefinition>,
         noSoportados: List<String>,
-        duracionMaxMs: Long,
+        config: ConfigCaptura,
     ): Result<Sesion> {
         val info = enlace.info()
         enlace.pausarSondeo(true)
@@ -152,14 +157,14 @@ class CapturaRapida(
             return Result.failure(e)
         }
         runCatching { bt.setLowLatency(true) }
-        return Result.success(nuevaSesion(bt, defs, noSoportados, duracionMaxMs, info, tecnicasElm))
+        return Result.success(nuevaSesion(bt, defs, noSoportados, config, info, tecnicasElm))
     }
 
     private fun nuevaSesion(
         bt: Transport,
         defs: List<PidDefinition>,
         noSoportados: List<String>,
-        duracionMaxMs: Long,
+        config: ConfigCaptura,
         info: InfoAdaptador,
         tecnicasElm: Set<TecnicaCaptura>,
     ): Sesion {
@@ -180,14 +185,14 @@ class CapturaRapida(
             pidsNoSoportados = noSoportados,
             lotes = poller.lotesPara(defs).map { lote -> lote.map { it.pid } },
             tecnicas = tecnicas,
-            duracionMaxMs = duracionMaxMs.coerceIn(LimitesCaptura.MIN_DURACION_MS, LimitesCaptura.MAX_DURACION_MS),
+            duracionMaxMs = config.duracionMaxMs.coerceIn(LimitesCaptura.MIN_DURACION_MS, LimitesCaptura.MAX_DURACION_MS),
         )
         val sumidero = nuevoSumidero().also {
             it.abrir(CapturaCsv.lineasIniciales(CapturaCsv.metadatos(info, pids, inicioEpochMs, tecnicas)))
         }
         return Sesion(
-            inicio, inicioEpochMs, defs, bt, poller, tecnicasElm, FastCaptureBuffer(pids), RateMeter(info.esCan),
-            sumidero, relojNanos(),
+            inicio, config, inicioEpochMs, defs, bt, poller, tecnicasElm, FastCaptureBuffer(pids), RateMeter(info.esCan),
+            sumidero, poller.inicioNanos,
         )
     }
 
@@ -232,7 +237,7 @@ class CapturaRapida(
         try {
             coroutineScope {
                 launch { vigilar(s) }
-                s.poller.correr(s.defs, guardias(s.defs), enlace::publicar) { lote -> registrarLote(s, lote) }
+                s.poller.correr(s.defs, guardias(s.defs, s.config.vigilar), enlace::publicar) { lote -> registrarLote(s, lote) }
             }
         } catch (e: DetencionCaptura) {
             motivoFin = motivoFin ?: e.motivo
@@ -247,10 +252,13 @@ class CapturaRapida(
         }
     }
 
-    private fun guardias(defs: List<PidDefinition>): List<Pair<PidDefinition, Long>> {
-        if (defs.any { it.pid == PID_REFRIGERANTE } || !registry.isSupported(PID_REFRIGERANTE)) return emptyList()
-        val def = registry.getDefinition(PID_REFRIGERANTE) ?: return emptyList()
-        return listOf(def to GUARDIA_REFRIGERANTE_MS)
+    private fun guardias(defs: List<PidDefinition>, vigilar: List<String>): List<Pair<PidDefinition, Long>> =
+        guardia(defs, PID_REFRIGERANTE, GUARDIA_REFRIGERANTE_MS) +
+            vigilar.map { it.trim().uppercase() }.distinct().flatMap { guardia(defs, it, VIGILANCIA_MS) }
+
+    private fun guardia(defs: List<PidDefinition>, pid: String, cadaMs: Long): List<Pair<PidDefinition, Long>> {
+        if (defs.any { it.pid == pid } || !esCapturable(pid)) return emptyList()
+        return listOfNotNull(registry.getDefinition(pid)?.let { it to cadaMs })
     }
 
     private fun registrarLote(s: Sesion, lote: LoteRapido) {
@@ -354,6 +362,7 @@ class CapturaRapida(
             latenciaP95Ms = RateMeter.percentil(latencias, 0.95),
             motivoFin = motivoFin ?: MOTIVO_USUARIO,
             rutaCsv = ruta,
+            guiada = s.config.guiada,
         )
     }
 
@@ -362,6 +371,7 @@ class CapturaRapida(
         const val MOTIVO_ENLACE = "enlace perdido"
         private const val PID_REFRIGERANTE = "05"
         private const val GUARDIA_REFRIGERANTE_MS = 5_000L
+        private const val VIGILANCIA_MS = 1_000L
         private const val TIMEOUT_PETICION_MS = 1_000L
         private const val TIMEOUT_AT_MS = 1_000L
         private const val TICK_MS = 500L

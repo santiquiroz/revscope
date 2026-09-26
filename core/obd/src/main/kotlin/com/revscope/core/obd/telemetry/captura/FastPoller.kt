@@ -35,7 +35,7 @@ class FastPoller(
     private var fallasSeguidas = 0
     private var pausaBufferFullMs = 0L
     private var numeroLote = 0L
-    private val inicioNanos = relojNanos()
+    val inicioNanos = relojNanos()
 
     fun tecnicas(): Set<TecnicaCaptura> = buildSet {
         if (multiPid) add(TecnicaCaptura.MULTI_PID)

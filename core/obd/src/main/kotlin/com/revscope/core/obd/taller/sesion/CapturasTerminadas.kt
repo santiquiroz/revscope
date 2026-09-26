@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 
 // El resumen vigente al suscribirse es de una captura vieja: ya se anotó (o no había sesión) cuando terminó.
+// Las capturas de una prueba guiada no salen: la prueba anota su resultado con el CSV adjunto.
 fun StateFlow<ResumenCaptura?>.terminadasDesdeAhora(): Flow<ResumenCaptura> {
     val previa = value?.id
-    return filterNotNull().filter { it.id != previa }.distinctUntilChangedBy { it.id }
+    return filterNotNull().filter { it.id != previa && !it.guiada }.distinctUntilChangedBy { it.id }
 }

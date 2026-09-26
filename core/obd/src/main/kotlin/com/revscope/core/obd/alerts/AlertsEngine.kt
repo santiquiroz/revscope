@@ -43,6 +43,9 @@ private const val LOCAL_INFO_NOTIFICATION_ID = 2001
 private const val AI_RULES_NOTIFICATION_ID = 2002
 private const val ZONE_BRIEF_NOTIFICATION_ID = 2003
 
+// Un toque corto: marca el cambio de paso sin confundirse con el patrón largo de una alerta.
+private val VIBRACION_PASO_TALLER = longArrayOf(0, 120)
+
 /** Redline fallback when there's no per-profile value — moto redlines run much hotter than car. */
 private fun defaultRedlineRpm(vehicleType: VehicleType): Int =
     if (vehicleType == VehicleType.MOTORCYCLE) MOTORCYCLE_DEFAULT_REDLINE_RPM else CAR_DEFAULT_REDLINE_RPM
@@ -291,6 +294,18 @@ class AlertsEngine @Inject constructor(
         Timber.i("AlertsEngine: navegación — $instruction")
         _alerts.tryEmit(ObdAlert(AlertType.NAVIGATION, instruction, 0.0))
         speakUnconditionally(instruction)
+    }
+
+    /**
+     * Guía por voz de una prueba del Taller («Paso 2 de 5: medio…»). Como la navegación, la pidió el
+     * técnico: no consulta los interruptores de alertas, pero sí el de voz. Vibra siempre: con las manos
+     * en el acelerador la vibración marca el cambio de paso aunque la voz esté apagada.
+     */
+    fun anunciarPasoTaller(texto: String) {
+        vibrate(VIBRACION_PASO_TALLER)
+        if (!ttsEnabled) return
+        Timber.i("AlertsEngine: taller — $texto")
+        speakUnconditionally(sanitizeForSpeech(texto))
     }
 
     /** Spoken speed-camera proximity warning. Per-camera cooldown lives in the alerter. */

@@ -39,4 +39,17 @@ class CapturasTerminadasTest {
 
         assertEquals(listOf("cap-1"), vistas)
     }
+
+    @Test
+    fun `las capturas de una prueba guiada no salen porque la prueba anota su propio evento`() = runTest {
+        val ultimo = MutableStateFlow<ResumenCaptura?>(null)
+        val vistas = mutableListOf<String>()
+        val job = launch(UnconfinedTestDispatcher(testScheduler)) { ultimo.terminadasDesdeAhora().collect { vistas += it.id } }
+
+        ultimo.value = resumen("cap-prueba").copy(guiada = true)
+        ultimo.value = resumen("cap-manual")
+        job.cancel()
+
+        assertEquals(listOf("cap-manual"), vistas)
+    }
 }

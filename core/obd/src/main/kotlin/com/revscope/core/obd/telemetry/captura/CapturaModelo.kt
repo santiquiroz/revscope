@@ -29,9 +29,12 @@ data class InfoAdaptador(
     val esCan: Boolean?,
 )
 
+// [vigilar]: PIDs de seguridad (p. ej. la velocidad) que se leen una vez por segundo sin entrar al anillo.
 data class ConfigCaptura(
     val pids: List<String>,
     val duracionMaxMs: Long,
+    val vigilar: List<String> = emptyList(),
+    val guiada: Boolean = false,
 )
 
 data class InicioCaptura(
@@ -53,6 +56,7 @@ data class ResumenCaptura(
     val latenciaP95Ms: Double?,
     val motivoFin: String,
     val rutaCsv: String?,
+    val guiada: Boolean = false,
 )
 
 sealed interface EstadoCaptura {

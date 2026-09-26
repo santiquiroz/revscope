@@ -60,6 +60,8 @@ class CapturaRapidaTest {
             cmd.startsWith("AT") -> "OK>"
             cmd.startsWith("01494A11") -> "41492E4A171180>"
             cmd.startsWith("0105") -> "410550>"
+            cmd.startsWith("010D") -> "410D00>"
+            cmd.startsWith("0111") -> "41110C>"
             cmd == "03" -> "4300>"
             else -> "NO DATA>"
         }
@@ -297,5 +299,50 @@ class CapturaRapidaTest {
         m.gate.conceder("dtc") { fake.exchange("03\r", 1_000) }
 
         assertEquals(listOf("ATE0", "ATCRA", "ATSH7DF", "03", "03"), fake.comandos.drop(alCerrar))
+    }
+
+    @Test
+    fun `transcurrido cuenta desde el inicio con el reloj de las muestras y es null sin captura activa`() = runTest {
+        val m = montar(fake())
+        val antes = m.captura.transcurridoMs()
+
+        m.captura.iniciar(pedal).getOrThrow()
+        advanceTimeBy(1_500)
+        val durante = m.captura.transcurridoMs()
+        val ultimaMuestraMs = m.captura.muestrasActuales().maxOf { it.tMicros } / 1_000
+        m.captura.detener()
+
+        assertEquals(null, antes)
+        assertEquals(1_500L, durante)
+        assertTrue("la última muestra ($ultimaMuestraMs ms) no puede ir por delante", ultimaMuestraMs <= durante!!)
+        assertEquals(null, m.captura.transcurridoMs())
+    }
+
+    @Test
+    fun `los pids de vigilancia se sondean cada segundo, se publican y no entran al anillo`() = runTest {
+        val m = montar(fake())
+
+        m.captura.iniciar(ConfigCaptura(listOf("11"), 60_000, vigilar = listOf("0D", "ZZ"))).getOrThrow()
+        advanceTimeBy(2_500)
+        m.captura.detener()
+
+        val velocidades = m.enlace.publicadas.count { it.pid == "0D" }
+        assertTrue("entre 2 y 4 lecturas de velocidad en 2,5 s: $velocidades", velocidades in 2..4)
+        assertEquals(setOf("11"), m.captura.muestrasActuales().map { it.pid }.toSet())
+    }
+
+    @Test
+    fun `la captura de una prueba guiada queda marcada en su resumen`() = runTest {
+        val m = montar(fake())
+
+        m.captura.iniciar(ConfigCaptura(listOf("11"), 60_000, guiada = true)).getOrThrow()
+        advanceTimeBy(200)
+        val guiada = m.captura.detener()!!
+        m.captura.iniciar(pedal).getOrThrow()
+        advanceTimeBy(200)
+        val manual = m.captura.detener()!!
+
+        assertTrue(guiada.guiada)
+        assertFalse(manual.guiada)
     }
 }
