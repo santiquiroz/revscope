@@ -15,6 +15,8 @@ import java.io.IOException
  * por trama en CAN y sufijo «1» de número de respuestas (el ELM devuelve el control con la primera
  * respuesta en vez de esperar su timeout). Lo que el ELM rechaza se desactiva y se sigue. Tres pares
  * petición+reintento fallidos seguidos terminan en [IOException], como el circuit breaker del scheduler.
+ * [enCanal] envuelve cada intercambio con la toma del canal (la PollingGate): el reloj se lee ya
+ * dentro, así la espera en cola (una lectura DTC por concesión, el voltaje) no fecha ni infla la muestra.
  */
 class FastPoller(
     private val exchange: suspend (String) -> String,
@@ -22,7 +24,10 @@ class FastPoller(
     private val relojNanos: () -> Long,
     private val relojEpochMs: () -> Long,
     esCan: Boolean?,
+    private val enCanal: suspend (suspend () -> Unit) -> Unit = { bloque -> bloque() },
 ) {
+    private class Intercambio(val respuesta: String?, val error: Exception?, val t0: Long, val t1: Long, val epochT1Ms: Long)
+
     @Volatile private var multiPid = esCan != false
     @Volatile private var sufijo = true
     @Volatile var maxHz: Int? = null
@@ -69,25 +74,40 @@ class FastPoller(
     }
 
     private suspend fun intentar(lote: List<PidDefinition>): LoteRapido {
-        val t0 = relojNanos()
-        val respuesta = try {
-            exchange(comando(lote))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.w(e, "FastPoller: sin respuesta a ${lote.map { it.pid }}")
-            return lote(t0, relojNanos(), emptyList(), FallaLote.SIN_RESPUESTA)
+        val medido = intercambiarMedido(comando(lote))
+        val respuesta = medido.respuesta ?: run {
+            Timber.w(medido.error, "FastPoller: sin respuesta a ${lote.map { it.pid }}")
+            return lote(medido.t0, medido.t1, emptyList(), FallaLote.SIN_RESPUESTA)
         }
-        val t1 = relojNanos()
         if (respuesta.contains("?") && sufijo) {
             Timber.i("FastPoller: el ELM rechaza el sufijo de respuestas, se desactiva")
             sufijo = false
             return intentar(lote)
         }
-        return interpretar(lote, respuesta, t0, t1)
+        return interpretar(lote, respuesta, medido)
     }
 
-    private fun interpretar(lote: List<PidDefinition>, respuesta: String, t0: Long, t1: Long): LoteRapido {
+    private suspend fun intercambiarMedido(cmd: String): Intercambio {
+        var medido: Intercambio? = null
+        enCanal { medido = intercambiar(cmd) }
+        return checkNotNull(medido) { "enCanal no ejecutó el intercambio" }
+    }
+
+    private suspend fun intercambiar(cmd: String): Intercambio {
+        val t0 = relojNanos()
+        return try {
+            val respuesta = exchange(cmd)
+            Intercambio(respuesta, null, t0, relojNanos(), relojEpochMs())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Intercambio(null, e, t0, relojNanos(), relojEpochMs())
+        }
+    }
+
+    private fun interpretar(lote: List<PidDefinition>, respuesta: String, medido: Intercambio): LoteRapido {
+        val t0 = medido.t0
+        val t1 = medido.t1
         fallaDe(respuesta)?.let { falla ->
             if (lote.size > 1) desactivarMultiPidSiRechaza(falla, respuesta)
             return lote(t0, t1, emptyList(), falla)
@@ -97,7 +117,7 @@ class FastPoller(
             Timber.i("FastPoller: el adaptador no acepta varios PIDs por petición, uno por uno")
             multiPid = false
         }
-        val epochMs = relojEpochMs() - (t1 - t0) / 2 / 1_000_000
+        val epochMs = medido.epochT1Ms - (t1 - t0) / 2 / 1_000_000
         val lecturas = bytes.orEmpty().mapNotNull { (pid, datos) ->
             registry.evaluate(pid, datos)?.copy(timestamp = epochMs)
         }

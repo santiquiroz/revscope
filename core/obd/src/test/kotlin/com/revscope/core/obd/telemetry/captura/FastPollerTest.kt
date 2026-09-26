@@ -3,6 +3,7 @@ package com.revscope.core.obd.telemetry.captura
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
+import com.revscope.core.obd.telemetry.PollingGate
 import com.revscope.core.obd.testing.FakeElmTransport
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -138,5 +139,37 @@ class FastPollerTest {
         job.cancel()
 
         assertEquals(listOf(40.0, 40.0, 40.0), guardias)
+    }
+
+    @Test
+    fun `una concesion de 6 s no desplaza la marca de tiempo ni infla la latencia`() = runTest {
+        val gate = PollingGate()
+        val fake = FakeElmTransport(
+            latenciaMs = { cmd -> if (cmd == "03") 6_000L else 20L },
+            reloj = { testScheduler.currentTime },
+        ) { cmd -> if (cmd == "03") "4300>" else "41492E>" }
+        val poller = FastPoller(
+            exchange = { cmd -> fake.exchange(cmd, 1_000) },
+            registry = registry,
+            relojNanos = { testScheduler.currentTime * 1_000_000 },
+            relojEpochMs = { 1_790_000_000_000L + testScheduler.currentTime },
+            esCan = true,
+            enCanal = { bloque -> gate.sondear { bloque() } },
+        )
+        val lotes = mutableListOf<LoteRapido>()
+        val captura = launch { poller.correr(defs("49"), emptyList(), {}) { lotes += it } }
+        advanceTimeBy(5)
+        val dtc = launch { gate.conceder("dtc") { fake.exchange("03", 10_000) } }
+        advanceTimeBy(6_200)
+        captura.cancel()
+        dtc.join()
+
+        val reales = fake.log.filter { it.comando != "03" }
+        val despuesDelDtc = lotes.zip(reales).first { (_, real) -> real.tInicioMs >= 6_000L }
+        val (lote, real) = despuesDelDtc
+        assertEquals("latencia = solo el intercambio", 20_000L, lote.latenciaMicros)
+        assertEquals("marca en el punto medio del intercambio real", (real.tInicioMs + 10) * 1_000, lote.tMicros)
+        assertEquals(1_790_000_000_000L + real.tInicioMs + 10, lote.lecturas.single().timestamp)
+        assertTrue(lotes.zip(reales).all { (l, r) -> kotlin.math.abs(l.tMicros / 1_000 - (r.tInicioMs + 10)) <= 10 })
     }
 }

@@ -163,7 +163,14 @@ class CapturaRapida(
         info: InfoAdaptador,
         tecnicasElm: Set<TecnicaCaptura>,
     ): Sesion {
-        val poller = FastPoller({ cmd -> gate.sondear { bt.exchange(cmd, TIMEOUT_PETICION_MS) } }, registry, relojNanos, relojEpochMs, info.esCan)
+        val poller = FastPoller(
+            exchange = { cmd -> bt.exchange(cmd, TIMEOUT_PETICION_MS) },
+            registry = registry,
+            relojNanos = relojNanos,
+            relojEpochMs = relojEpochMs,
+            esCan = info.esCan,
+            enCanal = { bloque -> gate.sondear { bloque() } },
+        )
         val inicioEpochMs = relojEpochMs()
         val pids = defs.map { it.pid }
         val tecnicas = tecnicasElm + poller.tecnicas() + TecnicaCaptura.BAJA_LATENCIA
