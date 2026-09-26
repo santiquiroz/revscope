@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "modelos": [
+    {
+      "clave": "benelli-tnt150i-2022",
+      "seedVersion": 1,
+      "nombre": "Benelli TNT 150i (2022)",
+      "tipo": "MOTORCYCLE",
+      "ecu": "Delphi, tipo MT05 · referencia 96C00P100D01",
+      "fuenteEcu": "Catálogo de partes Auteco TNT 150i, figura 34, ítem 14 (la referencia). El tipo MT05 sale del informe del caso del 25-sep-2026, sin confirmar con el fabricante",
+      "notasProtocolo": "K-line: la ECU expone pocos PIDs. Observado con RevScope en el caso del 25-sep-2026.",
+      "notas": [
+        {
+          "tipo": "EJEMPLO",
+          "texto": "Ejemplo de TPS en ECUs Delphi MT05: 0,7 V con el acelerador suelto y 4,5 V a fondo. Es un ejemplo de documentación de terceros, no el valor oficial de Benelli; las bandas del modelo siguen siendo las típicas.",
+          "fuente": "HUD ECU Hacker, documentación de ECUs Delphi MT05",
+          "url": "https://netcult.ch/elmue/HUD%20ECU%20Hacker/"
+        },
+        {
+          "tipo": "PENDIENTE",
+          "texto": "Voltajes oficiales del TPS de la TNT 150i: el manual de servicio existe, pero no se consultó.",
+          "fuente": "Manual de servicio TNT 150i (no consultado)",
+          "url": "https://www.scribd.com/document/617202968/Manual-de-servicio-TNT150i"
+        },
+        {
+          "tipo": "NOTA",
+          "texto": "Con el contacto puesto la farola (AHO) queda siempre encendida: el voltaje de la batería baja por eso.",
+          "fuente": "Observado en el caso del 25-sep-2026"
+        },
+        {
+          "tipo": "FUENTE",
+          "texto": "Referencias de repuestos del sistema de inyección: figura 34, equipo eléctrico.",
+          "fuente": "Auteco, manual de partes Benelli TNT 150i (PDF)",
+          "url": "https://media.autecomobility.com/recursos/pdf/manual-partes/benelli/MANUAL-DE-PARTES-TNT-150I.pdf"
+        }
+      ],
+      "cableado": [
+        {
+          "sensor": "TPS",
+          "titulo": "Sensor de posición del acelerador (3 cables)",
+          "fuente": "Medición del dueño con multímetro, 25-sep-2026 (editable)",
+          "cables": [
+            { "funcion": "REF_5V", "color": "Rojo" },
+            { "funcion": "MASA", "color": "Negro" },
+            { "funcion": "SENAL", "color": "Verde-amarillo" }
+          ]
+        }
+      ],
+      "repuestos": [
+        {
+          "rol": "ECU",
+          "referencia": "96C00P100D01",
+          "descripcion": "E.C.U",
+          "tipo": "OEM",
+          "fuente": "Catálogo de partes Auteco TNT 150i, figura 34, ítem 14"
+        },
+        {
+          "rol": "TPS",
+          "referencia": "280756030001",
+          "descripcion": "Sensor de posición del acelerador (TPS)",
+          "tipo": "OEM",
+          "fuente": "Catálogo de partes Auteco TNT 150i, figura 34, ítem 35"
+        },
+        {
+          "rol": "CUERPO_INYECCION",
+          "referencia": "289004320030",
+          "descripcion": "Cuerpo de inyección completo",
+          "tipo": "OEM",
+          "fuente": "Catálogo de partes Auteco TNT 150i, figura 34, ítem 36"
+        },
+        {
+          "rol": "VALVULA_AIRE",
+          "referencia": "280024320000",
+          "descripcion": "Válvula de control de aire",
+          "tipo": "OEM",
+          "fuente": "Catálogo de partes Auteco TNT 150i, figura 34, ítem 37"
+        },
+        {
+          "rol": "SENSOR_TEMPERATURA",
+          "referencia": "280013320000",
+          "descripcion": "Sensor de temperatura",
+          "tipo": "OEM",
+          "fuente": "Catálogo de partes Auteco TNT 150i, figura 34, ítem 26"
+        },
+        {
+          "rol": "TPS",
+          "referencia": "280023130000",
+          "descripcion": "TPS de Keeway",
+          "tipo": "NO_EQUIVALENTE",
+          "nota": "Referencia de Keeway, distinta de la original. Hay TPS genéricos anunciados para Benelli y Keeway a la vez: pueden encajar en el cuerpo de inyección sin ser equivalentes al original.",
+          "fuente": "Anuncio de repuesto citado en el informe del caso del 25-sep-2026 (Amazon.es)"
+        },
+        {
+          "rol": "TPS",
+          "referencia": "280023300000",
+          "descripcion": "TPS de Keeway",
+          "tipo": "NO_EQUIVALENTE",
+          "nota": "Referencia de Keeway, distinta de la original. Hay TPS genéricos anunciados para Benelli y Keeway a la vez: pueden encajar en el cuerpo de inyección sin ser equivalentes al original.",
+          "fuente": "Anuncio de repuesto citado en el informe del caso del 25-sep-2026 (Motor-X)"
+        }
+      ],
+      "bandas": []
+    }
+  ]
+}

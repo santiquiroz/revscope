@@ -13,6 +13,7 @@ import com.revscope.core.obd.cameras.CameraRefreshWorker
 import com.revscope.core.obd.legal.DailyStatusSchedule
 import com.revscope.core.obd.legal.DailyStatusScheduler
 import com.revscope.core.obd.legal.DailyStatusWorker
+import com.revscope.core.obd.taller.modelo.SemillaAlArrancar
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -26,6 +27,9 @@ class RevScopeApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var hiltWorkerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var semillaTaller: SemillaAlArrancar
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -43,6 +47,7 @@ class RevScopeApp : Application(), Configuration.Provider {
         scheduleDailyStatusWorker()
         scheduleCameraRefreshWorker()
         scheduleAutoBackupWorker()
+        semillaTaller.lanzar()
     }
 
     private fun scheduleDailyStatusWorker() {

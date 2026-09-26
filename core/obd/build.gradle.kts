@@ -66,6 +66,10 @@ dependencies {
     testImplementation(libs.mockk)
     // org.json available on Android runtime; add for JVM unit tests
     testImplementation(libs.org.json)
+    // Room en memoria sobre Robolectric para los tests del repositorio del Taller.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.room.runtime)
+    testImplementation(libs.androidx.test.core)
 }
 
 kotlin {
