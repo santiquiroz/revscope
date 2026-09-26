@@ -51,7 +51,7 @@ class SugeridorPruebas(private val accionesDeCodigo: (String) -> List<AccionGuia
         fun accionesDeSintoma(sintoma: Sintoma): List<AccionGuia> = when (sintoma) {
             Sintoma.SE_AHOGA_AL_ACELERAR -> listOf(prueba(TipoPrueba.TPS_BARRIDO), multimetro(SensorMultimetro.TPS))
             Sintoma.SE_APAGA_AL_SOLTAR, Sintoma.MINIMO_INESTABLE -> listOf(prueba(TipoPrueba.MINIMO_RETORNO))
-            Sintoma.NO_SOSTIENE_MINIMO_FRIO -> listOf(prueba(TipoPrueba.ARRANQUE_FRIO))
+            Sintoma.NO_SOSTIENE_MINIMO_FRIO -> listOf(prueba(TipoPrueba.ARRANQUE_FRIO), prueba(TipoPrueba.MINIMO_RETORNO))
             Sintoma.ARRANQUE_DIFICIL_FRIO -> listOf(prueba(TipoPrueba.ARRANQUE_FRIO), prueba(TipoPrueba.BATERIA_CARGA))
             Sintoma.BATERIA_DESCARGA, Sintoma.NO_ARRANCA ->
                 listOf(prueba(TipoPrueba.BATERIA_CARGA), multimetro(SensorMultimetro.BATERIA))

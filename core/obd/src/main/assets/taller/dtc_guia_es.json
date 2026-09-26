@@ -611,6 +611,11 @@
           "detalle": "Con contacto puesto, mueve el cableado del sensor: la temperatura no debe saltar."
         },
         {
+          "paso": "Seguir el calentamiento con la prueba guiada",
+          "detalle": "La prueba de arranque en frío graba la temperatura desde el contacto hasta que el motor calienta y marca cada salto de más de 5 °C en menos de 1 s (umbral típico).",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
           "paso": "Medir el sensor con el multímetro",
           "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
           "accion": "MULTIMETRO:ECT"

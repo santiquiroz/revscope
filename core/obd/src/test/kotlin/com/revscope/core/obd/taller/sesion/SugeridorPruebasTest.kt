@@ -33,6 +33,20 @@ class SugeridorPruebasTest {
     }
 
     @Test
+    fun `no sostiene el mínimo en frío sugiere el arranque en frío y el mínimo y retorno`() {
+        val sugeridas = sugeridor.sugerir(setOf(Sintoma.NO_SOSTIENE_MINIMO_FRIO), emptyList())
+
+        assertEquals(listOf(AccionGuia.Prueba(TipoPrueba.ARRANQUE_FRIO), minimoRetorno), sugeridas.map { it.accion })
+    }
+
+    @Test
+    fun `P0119 sugiere el arranque en frío, que marca los saltos de la temperatura`() {
+        val sugeridas = sugeridor.sugerir(emptySet(), listOf("P0119"))
+
+        assertTrue(sugeridas.any { it.accion == AccionGuia.Prueba(TipoPrueba.ARRANQUE_FRIO) && it.motivo == "por P0119" })
+    }
+
+    @Test
     fun `borrar códigos nunca aparece como prueba sugerida`() {
         val sugeridas = sugeridor.sugerir(emptySet(), listOf("P0122", "P0562"))
 
