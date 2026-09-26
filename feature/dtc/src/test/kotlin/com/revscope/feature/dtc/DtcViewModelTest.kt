@@ -1,6 +1,7 @@
 package com.revscope.feature.dtc
 
 import com.revscope.core.intelligence.IntelligenceOrchestrator
+import com.revscope.core.intelligence.dtc.DtcExplanation
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
@@ -8,7 +9,9 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.taller.dtc.BaseConocimientoDtc
 import com.revscope.core.obd.taller.sesion.RegistroTaller
+import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -22,7 +25,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -54,13 +59,22 @@ class DtcViewModelTest {
         coEvery { connectionVm.borrarDtcConRelectura(any()) } returns Result.success(
             BorradoDtc(respuestaCruda = "44", rechazadoPorCondiciones = false, antes = scan("P0122"), despues = scan()),
         )
+        coEvery { registro.sesionAbierta() } returns null
+        coEvery { registro.anotarLecturaDtc(any(), any()) } returns null
+        coEvery { registro.marcarPaso(any(), any()) } returns null
     }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vmConCodigos(): DtcViewModel =
-        DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true), registro).also { it.readDtcCodes(connectionVm) }
+    private val guias = BaseConocimientoDtc { GUIA_JSON }
+
+    private fun nuevoVm(): DtcViewModel = DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true), registro, guias)
+
+    private fun vmConCodigos(): DtcViewModel = nuevoVm().also { it.readDtcCodes(connectionVm) }
+
+    private fun sesion(pasos: Set<String> = emptySet()) =
+        SesionTaller(id = 4, vehiculoId = 7, inicio = 1, titulo = "Se apaga al soltar el acelerador", pasosMarcados = pasos)
 
     private fun detenido() {
         readings.value = mapOf("0D" to ObdReading("0D", 0.0, "km/h", timestamp = ahora - 300))
@@ -160,6 +174,149 @@ class DtcViewModelTest {
 
         vm.confirmarBorrado(connectionVm, declaraDetenido = true, ahoraMs = ahora)
         coVerify(exactly = 1) { connectionVm.borrarDtcConRelectura(any()) }
+    }
+
+    @Test
+    fun `la lectura adjunta la guia local de cada codigo y decodifica los que no estan`() {
+        coEvery { connectionVm.leerDtcCompleto(any(), any()) } returns Result.success(scan("P0122", "P1234"))
+
+        val vm = vmConCodigos()
+
+        val codigos = (vm.state.value as DtcUiState.HasCodes).codes
+        assertEquals(listOf("P0122", "P1234"), codigos.map { it.codigo })
+        val p0122 = codigos.first()
+        assertEquals("Sensor de posición del acelerador «A»: circuito con señal baja", p0122.guia?.titulo)
+        assertEquals("Barrido guiado del TPS", p0122.guia?.verificaciones?.get(1)?.paso)
+        assertNull(p0122.sinGuia)
+        assertNull(codigos[1].guia)
+        assertTrue(codigos[1].sinGuia!!.contains("Código del fabricante"))
+    }
+
+    @Test
+    fun `un codigo activo y pendiente a la vez es una sola tarjeta con sus dos modos`() {
+        coEvery { connectionVm.leerDtcCompleto(any(), any()) } returns Result.success(
+            scan("P0122").copy(pendientes = listOf(DtcCode("P0122", DtcMode.Pending))),
+        )
+
+        val codigos = (vmConCodigos().state.value as DtcUiState.HasCodes).codes
+
+        assertEquals(1, codigos.size)
+        assertEquals(listOf(DtcMode.Active, DtcMode.Pending), codigos.single().modos)
+    }
+
+    @Test
+    fun `con un solo codigo su guia se abre sola`() {
+        assertEquals(setOf("P0122"), vmConCodigos().detalle.value.guiasAbiertas)
+    }
+
+    @Test
+    fun `marcar una casilla con sesion abierta la guarda en la sesion`() {
+        coEvery { registro.sesionAbierta() } returns sesion()
+        coEvery { registro.marcarPaso("P0122#2", true) } returns sesion(setOf("P0122#2"))
+        val vm = vmConCodigos()
+
+        vm.marcarPaso("P0122#2", marcado = true)
+
+        coVerify(exactly = 1) { registro.marcarPaso("P0122#2", true) }
+        assertEquals(setOf("P0122#2"), vm.detalle.value.pasosMarcados)
+        assertEquals(
+            SesionDtcUi.Abierta("Se apaga al soltar el acelerador", setOf("P0122#2")),
+            vm.detalle.value.sesion,
+        )
+    }
+
+    @Test
+    fun `sin sesion la casilla se recuerda en pantalla y pasa a la sesion nueva al guardar la lectura`() {
+        coEvery { registro.abrirSesion(any()) } returns Result.success(sesion())
+        coEvery { registro.anotarLecturaDtc(any(), any()) } returnsMany listOf(null, 11L)
+        coEvery { registro.marcarPaso("P0122#1", true) } returns sesion(setOf("P0122#1"))
+        val vm = vmConCodigos()
+
+        vm.marcarPaso("P0122#1", marcado = true)
+        coVerify(exactly = 0) { registro.marcarPaso(any(), any()) }
+        assertEquals(setOf("P0122#1"), vm.detalle.value.pasosMarcados)
+
+        vm.guardarEnSesionNueva()
+
+        coVerify(exactly = 1) { registro.abrirSesion(solicitudDesdeLectura(scan("P0122"))) }
+        coVerify(exactly = 2) { registro.anotarLecturaDtc(scan("P0122"), any()) }
+        coVerify(exactly = 1) { registro.marcarPaso("P0122#1", true) }
+        assertTrue(vm.detalle.value.lecturaEnSesion)
+        assertEquals(SesionDtcUi.Abierta("Se apaga al soltar el acelerador", setOf("P0122#1")), vm.detalle.value.sesion)
+    }
+
+    @Test
+    fun `guardar en sesion sin vehiculo activo avisa el motivo`() {
+        coEvery { registro.abrirSesion(any()) } returns
+            Result.failure(IllegalStateException("Elige el vehículo activo antes de abrir una sesión"))
+        val vm = vmConCodigos()
+
+        vm.guardarEnSesionNueva()
+
+        assertEquals("Elige el vehículo activo antes de abrir una sesión", vm.detalle.value.mensaje)
+        assertEquals(SesionDtcUi.Ninguna, vm.detalle.value.sesion)
+    }
+
+    @Test
+    fun `la lectura anotada en la sesion avisa que el freeze frame ya quedo guardado`() {
+        detenido()
+        coEvery { registro.sesionAbierta() } returns sesion()
+        coEvery { registro.anotarLecturaDtc(any(), any()) } returns 9L
+        val vm = vmConCodigos()
+
+        vm.solicitarBorrado(connectionVm, ahora)
+
+        assertTrue(vm.detalle.value.lecturaEnSesion)
+        assertTrue(vm.confirmacionBorrado.value!!.freezeFrameEnSesion)
+        assertTrue(avisosBorradoDtc(freezeFrameEnSesion = true)[1].contains("ya quedó guardado en la sesión"))
+    }
+
+    @Test
+    fun `el rechazo 7F 04 22 muestra por que la ECU no borro`() {
+        detenido()
+        coEvery { connectionVm.borrarDtcConRelectura(any()) } returns Result.success(
+            BorradoDtc(respuestaCruda = "7F 04 22", rechazadoPorCondiciones = true, antes = scan("P0122"), despues = scan("P0122")),
+        )
+        val vm = vmConCodigos()
+        vm.solicitarBorrado(connectionVm, ahora)
+
+        vm.confirmarBorrado(connectionVm, declaraDetenido = false, ahoraMs = ahora)
+
+        val resultado = (vm.state.value as DtcUiState.Borrado).resultado
+        assertTrue(resultado.rechazadoPorEcu)
+        assertEquals(
+            "La ECU rechazó el borrado (7F 04 22: condiciones no correctas). Muchas ECU solo borran con el motor " +
+                "apagado: apaga el motor, deja el contacto puesto y vuelve a intentarlo. Los códigos siguen guardados.",
+            textoResultadoBorrado(resultado),
+        )
+    }
+
+    @Test
+    fun `con velocidad mayor a cero el borrado queda deshabilitado con el motivo`() {
+        val vm = vmConCodigos()
+        vm.observarVelocidad(connectionVm) { ahora }
+
+        readings.value = mapOf("0D" to ObdReading("0D", 35.0, "km/h", timestamp = ahora - 200))
+
+        assertFalse(DtcPantallaUi(vm.state.value, vm.detalle.value).puedeBorrar)
+        assertEquals("El vehículo va a 35 km/h. Detente antes de borrar los códigos.", vm.detalle.value.bloqueoBorrado)
+
+        readings.value = mapOf("0D" to ObdReading("0D", 0.0, "km/h", timestamp = ahora - 200))
+
+        assertTrue(DtcPantallaUi(vm.state.value, vm.detalle.value).puedeBorrar)
+    }
+
+    @Test
+    fun `explicar con IA es opcional y solo consulta el codigo pedido`() {
+        coEvery { orchestrator.explainDtc("P0122", any(), any()) } returns
+            DtcExplanation("P0122", "Configura un proveedor", source = "no_key")
+        val vm = vmConCodigos()
+        coVerify(exactly = 0) { orchestrator.explainDtc(any(), any(), any()) }
+
+        vm.explicarConIa("P0122", connectionVm)
+
+        val codigo = (vm.state.value as DtcUiState.HasCodes).codes.single()
+        assertEquals(ExplicacionIa.Lista("Configura un proveedor", faltaConfigurar = true), codigo.explicacion)
     }
 
     @Test

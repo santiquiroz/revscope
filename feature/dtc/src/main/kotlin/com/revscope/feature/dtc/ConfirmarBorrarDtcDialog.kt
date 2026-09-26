@@ -33,8 +33,8 @@ fun ConfirmarBorrarDtcDialog(
         titulo = "¿Borrar los códigos de falla?",
         mensaje = "Se enviará el borrado (modo 04) de: ${confirmacion.codigos.joinToString()}. " +
             "Después se relee la ECU para ver si vuelven.",
-        avisos = AVISOS_BORRADO_DTC,
-        textoConfirmar = "Borrar códigos",
+        avisos = avisosBorradoDtc(confirmacion.freezeFrameEnSesion),
+        textoConfirmar = "Sí, borrar",
         confirmarHabilitado = permiteBorrarDesdeUi(confirmacion.rechazo, declaraDetenido),
         onConfirmar = { onConfirmar(declaraDetenido) },
         onCancelar = onCancelar,

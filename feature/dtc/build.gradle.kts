@@ -24,6 +24,7 @@ roborazzi { outputDir.set(file("src/test/screenshots")) }
 dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:obd"))
+    implementation(project(":core:data"))
     implementation(project(":core:intelligence"))
     implementation(project(":core:common"))
     implementation(platform(libs.compose.bom))
@@ -36,6 +37,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(project(":core:ui-testing"))
     testImplementation(libs.mockk)
+    testImplementation(libs.org.json)
     testImplementation(libs.coroutines.test)
 }
 

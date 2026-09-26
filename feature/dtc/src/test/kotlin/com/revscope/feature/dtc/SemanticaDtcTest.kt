@@ -1,11 +1,22 @@
 package com.revscope.feature.dtc
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.revscope.core.designsystem.DESCRIPCION_VOLVER
 import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.intelligence.IntelligenceOrchestrator
@@ -15,6 +26,7 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.taller.dtc.BaseConocimientoDtc
 import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import io.mockk.coEvery
@@ -38,6 +50,7 @@ class SemanticaDtcTest {
     val compose = createComposeRule()
 
     private val connectionVm = mockk<ConnectionViewModel>()
+    private val registro = mockk<RegistroTaller>(relaxed = true)
 
     private fun scan(vararg codes: String) = DtcScan(
         activos = codes.map { DtcCode(it, DtcMode.Active) },
@@ -55,6 +68,9 @@ class SemanticaDtcTest {
         // Lectura «del futuro»: sigue siendo reciente cuando el ViewModel mira el reloj real.
         val detenido = ObdReading("0D", 0.0, "km/h", timestamp = System.currentTimeMillis() + 60_000)
         every { connectionVm.readings } returns MutableStateFlow(mapOf("0D" to detenido))
+        every { connectionVm.activeProfile } returns MutableStateFlow(null)
+        coEvery { registro.sesionAbierta() } returns null
+        coEvery { registro.anotarLecturaDtc(any(), any()) } returns null
         coEvery { connectionVm.leerDtcCompleto(any(), any()) } returns Result.success(scan("P0122"))
         coEvery { connectionVm.borrarDtcConRelectura(any()) } returns Result.success(
             BorradoDtc("44", rechazadoPorCondiciones = false, antes = scan("P0122"), despues = scan()),
@@ -65,7 +81,8 @@ class SemanticaDtcTest {
         val vm = DtcViewModel(
             mockk<IntelligenceOrchestrator>(relaxed = true),
             mockk<PidRegistry>(relaxed = true),
-            mockk<RegistroTaller>(relaxed = true),
+            registro,
+            BaseConocimientoDtc { GUIA_JSON },
         )
         compose.setContent {
             RevScopeTheme { DtcScreen(onNavigateBack = onVolver, connectionVm = connectionVm, vm = vm) }
@@ -75,15 +92,16 @@ class SemanticaDtcTest {
     @Test
     fun `borrar DTC pide confirmacion antes de tocar la ECU`() {
         montar()
-        compose.onNodeWithText("Leer DTCs").performClick()
+        compose.onNodeWithText("Leer códigos").performClick()
         compose.waitForIdle()
 
-        compose.onNodeWithText("Borrar DTCs").performClick()
+        // El primero es el botón de la barra; el otro, la acción del paso «Borrar el código» de la guía.
+        compose.onAllNodesWithText("Borrar códigos").onFirst().performClick()
 
         compose.onNodeWithText("¿Borrar los códigos de falla?").assertIsDisplayed()
         coVerify(exactly = 0) { connectionVm.borrarDtcConRelectura(any()) }
 
-        compose.onNodeWithText("Borrar códigos").performClick()
+        compose.onNodeWithText("Sí, borrar").performClick()
         compose.waitForIdle()
 
         coVerify(exactly = 1) { connectionVm.borrarDtcConRelectura(any()) }
@@ -94,7 +112,32 @@ class SemanticaDtcTest {
     fun `sin lectura el boton de borrar esta deshabilitado`() {
         montar()
 
-        compose.onNodeWithText("Borrar DTCs").assertIsNotEnabled()
+        compose.onAllNodesWithText("Borrar códigos").onFirst().assertIsNotEnabled()
+    }
+
+    @Test
+    fun `la casilla de un paso de la guia se anuncia como casilla y al tocarla se marca`() {
+        montar()
+        compose.onNodeWithText("Leer códigos").performClick()
+        compose.waitForIdle()
+
+        val paso = compose.onNode(hasText("2. Barrido guiado del TPS", substring = true) and isToggleable())
+        paso.assertIsOff()
+        paso.performScrollTo().performClick()
+
+        paso.assertIsOn()
+    }
+
+    @Test
+    fun `la guia desplegable anuncia si esta desplegada`() {
+        montar()
+        compose.onNodeWithText("Leer códigos").performClick()
+        compose.waitForIdle()
+
+        compose.onNode(hasText("Guía de diagnóstico", substring = true) and hasClickAction())
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Desplegada"))
+            .performClick()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Plegada"))
     }
 
     @Test
