@@ -12,6 +12,8 @@ import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.sesion.RegistroTaller
+import com.revscope.core.obd.taller.sesion.terminadasDesdeAhora
 import com.revscope.core.obd.telemetry.captura.CapturaCsv
 import com.revscope.core.obd.telemetry.captura.ConfigCaptura
 import com.revscope.core.obd.telemetry.captura.EstadisticasCaptura
@@ -41,6 +43,7 @@ class FastCaptureViewModel @Inject constructor(
     private val manager: ObdSessionManager,
     private val registry: PidRegistry,
     private val settings: DataStore<Preferences>,
+    private val registro: RegistroTaller,
 ) : ViewModel() {
 
     private val captura = manager.captura
@@ -67,6 +70,7 @@ class FastCaptureViewModel @Inject constructor(
     init {
         viewModelScope.launch { cargarSeleccion() }
         viewModelScope.launch { estado.collect(::alCambiarEstado) }
+        viewModelScope.launch { anotarCapturasTerminadas() }
     }
 
     /** PIDs de modo 01 que el vehículo soporta (todos antes de conectar), por número de PID. */
@@ -130,6 +134,12 @@ class FastCaptureViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { settings.edit { it[PreferencesKeys.FAST_CAPTURE_PIDS] = SeleccionPids.aCsv(pids) } }
                 .onFailure { Timber.w(it, "FastCapture: no se pudo guardar la selección") }
+        }
+    }
+
+    private suspend fun anotarCapturasTerminadas() {
+        ultimoResumen.terminadasDesdeAhora().collect { resumen ->
+            registro.anotarCaptura(resumen, captura.muestrasActuales())
         }
     }
 

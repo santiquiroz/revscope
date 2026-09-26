@@ -15,6 +15,7 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -61,7 +62,11 @@ class SemanticaDtcTest {
     }
 
     private fun montar(onVolver: () -> Unit = {}) {
-        val vm = DtcViewModel(mockk<IntelligenceOrchestrator>(relaxed = true), mockk<PidRegistry>(relaxed = true))
+        val vm = DtcViewModel(
+            mockk<IntelligenceOrchestrator>(relaxed = true),
+            mockk<PidRegistry>(relaxed = true),
+            mockk<RegistroTaller>(relaxed = true),
+        )
         compose.setContent {
             RevScopeTheme { DtcScreen(onNavigateBack = onVolver, connectionVm = connectionVm, vm = vm) }
         }

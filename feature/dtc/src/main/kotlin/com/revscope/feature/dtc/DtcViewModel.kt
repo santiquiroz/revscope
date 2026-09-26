@@ -10,6 +10,7 @@ import com.revscope.core.obd.diagnostics.ReglasBorradoDtc
 import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,7 @@ data class FreezeFrameItem(val label: String, val value: String)
 class DtcViewModel @Inject constructor(
     private val orchestrator: IntelligenceOrchestrator,
     private val registry: PidRegistry,
+    private val registro: RegistroTaller,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<DtcUiState>(DtcUiState.Idle)
@@ -59,7 +61,10 @@ class DtcViewModel @Inject constructor(
             _freezeFrame.value = emptyList()
             _estadoMil.value = null
             connectionVm.leerDtcCompleto(LEASE_OWNER)
-                .onSuccess { scan -> mostrarLectura(scan, connectionVm) }
+                .onSuccess { scan ->
+                    anotarEnSesion { registro.anotarLecturaDtc(scan) }
+                    mostrarLectura(scan, connectionVm)
+                }
                 .onFailure { e -> _state.value = DtcUiState.Error(mensajeDeError(e)) }
         }
     }
@@ -131,9 +136,17 @@ class DtcViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = DtcUiState.Clearing
             connectionVm.borrarDtcConRelectura(LEASE_OWNER)
-                .onSuccess { _state.value = DtcUiState.Borrado(resultadoBorradoUi(it)) }
+                .onSuccess { borrado ->
+                    _state.value = DtcUiState.Borrado(resultadoBorradoUi(borrado))
+                    anotarEnSesion { registro.anotarBorradoDtc(borrado) }
+                }
                 .onFailure { e -> _state.value = DtcUiState.Error(mensajeDeError(e, "Error borrando DTCs")) }
         }
+    }
+
+    // Aparte de la lectura: anotar en la sesión del Taller no demora mostrar los códigos.
+    private fun anotarEnSesion(anotacion: suspend () -> Unit) {
+        viewModelScope.launch { anotacion() }
     }
 
     private companion object {

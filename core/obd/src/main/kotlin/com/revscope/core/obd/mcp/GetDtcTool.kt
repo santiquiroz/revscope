@@ -5,6 +5,8 @@ import com.revscope.core.obd.diagnostics.DtcLectura
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.sesion.OrigenEvento
+import com.revscope.core.obd.taller.sesion.RegistroTaller
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -16,15 +18,21 @@ import javax.inject.Inject
  * sin cortar la conexión (el sondeo se pausa solo mientras dura la lectura).
  *
  * Caché de [CACHE_WINDOW_MS] por combinación de argumentos y como mucho una lectura al ECU
- * cada [MIN_INTERVAL_MS]: un cliente MCP insistente no acapara el canal serie.
+ * cada [MIN_INTERVAL_MS]: un cliente MCP insistente no acapara el canal serie. Cada lectura real (no la
+ * de caché) queda en la sesión abierta del Taller con origen MCP.
  */
 class GetDtcTool @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val registry: PidRegistry,
+    private val registro: RegistroTaller,
 ) : McpTool {
 
-    internal constructor(sessionManager: ObdSessionManager, registry: PidRegistry, nowMs: () -> Long) :
-        this(sessionManager, registry) {
+    internal constructor(
+        sessionManager: ObdSessionManager,
+        registry: PidRegistry,
+        registro: RegistroTaller,
+        nowMs: () -> Long,
+    ) : this(sessionManager, registry, registro) {
         this.nowMs = nowMs
     }
 
@@ -97,7 +105,10 @@ class GetDtcTool @Inject constructor(
                 JSONObject().put("conectado", true).put("error", e.message ?: "no se pudo leer DTC").toString()
             },
         )
-        if (lectura.isSuccess) cache[clave] = nowMs() to result
+        lectura.onSuccess { scan ->
+            cache[clave] = nowMs() to result
+            registro.anotarLecturaDtc(scan, OrigenEvento.MCP)
+        }
         return result
     }
 

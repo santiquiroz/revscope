@@ -8,6 +8,7 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -32,6 +33,7 @@ class DtcViewModelTest {
     private val readings = MutableStateFlow<Map<String, ObdReading>>(emptyMap())
     private val connectionVm = mockk<ConnectionViewModel>()
     private val orchestrator = mockk<IntelligenceOrchestrator>(relaxed = true)
+    private val registro = mockk<RegistroTaller>(relaxed = true)
 
     private fun scan(vararg codes: String) = DtcScan(
         activos = codes.map { DtcCode(it, DtcMode.Active) },
@@ -58,10 +60,33 @@ class DtcViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun vmConCodigos(): DtcViewModel =
-        DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true)).also { it.readDtcCodes(connectionVm) }
+        DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true), registro).also { it.readDtcCodes(connectionVm) }
 
     private fun detenido() {
         readings.value = mapOf("0D" to ObdReading("0D", 0.0, "km/h", timestamp = ahora - 300))
+    }
+
+    @Test
+    fun `leer codigos anota la lectura en la sesion del taller`() {
+        vmConCodigos()
+
+        coVerify(exactly = 1) { registro.anotarLecturaDtc(scan("P0122")) }
+    }
+
+    @Test
+    fun `borrar anota antes y despues en la sesion del taller y pedirlo sin confirmar no anota nada`() {
+        detenido()
+        val vm = vmConCodigos()
+        vm.solicitarBorrado(connectionVm, ahora)
+        coVerify(exactly = 0) { registro.anotarBorradoDtc(any()) }
+
+        vm.confirmarBorrado(connectionVm, declaraDetenido = false, ahoraMs = ahora)
+
+        coVerify(exactly = 1) {
+            registro.anotarBorradoDtc(
+                BorradoDtc(respuestaCruda = "44", rechazadoPorCondiciones = false, antes = scan("P0122"), despues = scan()),
+            )
+        }
     }
 
     @Test

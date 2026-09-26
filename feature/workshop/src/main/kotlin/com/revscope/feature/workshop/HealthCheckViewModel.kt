@@ -8,10 +8,15 @@ import com.revscope.core.common.export.CsvShare
 import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.obd.connection.ConnectionState
-import com.revscope.core.obd.protocol.ReadinessParser
 import com.revscope.core.obd.diagnostics.DtcLectura
+import com.revscope.core.obd.diagnostics.DtcScan
+import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.protocol.ReadinessParser
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.workshop.DiagnosticRules
+import com.revscope.core.obd.workshop.HealthReportFormato
+import com.revscope.core.obd.workshop.MetricasChequeo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +26,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -31,6 +34,7 @@ class HealthCheckViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val reportDao: HealthReportDao,
     private val telemetryDao: com.revscope.core.data.db.dao.TelemetryDao,
+    private val registro: RegistroTaller,
 ) : ViewModel() {
 
     sealed interface UiState {
@@ -50,7 +54,7 @@ class HealthCheckViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             runCatching { reportDao.latest() }.getOrNull()?.let { last ->
-                _state.value = UiState.Done(parseStoredItems(last.resultsJson), emptyList(), last.timestamp)
+                _state.value = UiState.Done(HealthReportFormato.leer(last.resultsJson).items, emptyList(), last.timestamp)
             }
         }
     }
@@ -70,10 +74,12 @@ class HealthCheckViewModel @Inject constructor(
                 items += buildDtcDiagnosis(dtcScan)
 
                 _state.value = UiState.Running("Consultando monitores de readiness…")
-                items += readReadinessDiagnoses()
+                val readiness = readReadiness()
+                items += readinessDiagnoses(readiness)
 
                 _state.value = UiState.Running("Muestreando mezcla y sensores ($SAMPLE_SECONDS s)…")
-                items += sampleMixtureDiagnoses()
+                val mezcla = sampleMixture()
+                items += mezcla.diagnosticos
 
                 _state.value = UiState.Running("Verificando odómetro…")
                 items += odometerDiagnoses()
@@ -82,8 +88,10 @@ class HealthCheckViewModel @Inject constructor(
                 batteryTrendDiagnosis()?.let { items += it }
 
                 val now = System.currentTimeMillis()
-                persist(items, now)
+                val metricas = MetricasChequeo.desde(mezcla.lecturas, readiness, dtcScan.codigosLeidos())
+                val reportId = persist(items, metricas, now)
                 _state.value = UiState.Done(items, dtcScan.codes, now)
+                registro.anotarChequeo(reportId, items, metricas, dtcScan.scan)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -146,7 +154,14 @@ class HealthCheckViewModel @Inject constructor(
         }
     }
 
-    private data class DtcScanResult(val codes: List<String>, val readFailed: Boolean)
+    private data class DtcScanResult(val codes: List<String>, val readFailed: Boolean, val scan: DtcScan?) {
+        fun codigosLeidos(): List<String>? = scan?.takeUnless { readFailed }?.todos?.map { it.code }
+    }
+
+    private data class MuestreoMezcla(
+        val diagnosticos: List<DiagnosticRules.Diagnosis>,
+        val lecturas: Map<String, ObdReading>,
+    )
 
     private fun buildDtcDiagnosis(scan: DtcScanResult): DiagnosticRules.Diagnosis = when {
         scan.readFailed -> DiagnosticRules.Diagnosis(
@@ -163,41 +178,44 @@ class HealthCheckViewModel @Inject constructor(
         )
     }
 
-    private suspend fun readReadinessDiagnoses(): List<DiagnosticRules.Diagnosis> {
-        val status = sessionManager.rawExchange("01 01\r").getOrNull()?.let { ReadinessParser.parse(it) }
-        return status?.let { DiagnosticRules.evaluarReadiness(it) } ?: listOf(readinessUnavailableDiagnosis())
-    }
+    private suspend fun readReadiness(): ReadinessParser.ReadinessStatus? =
+        sessionManager.rawExchange("01 01\r").getOrNull()?.let { ReadinessParser.parse(it) }
+
+    private fun readinessDiagnoses(status: ReadinessParser.ReadinessStatus?): List<DiagnosticRules.Diagnosis> =
+        status?.let { DiagnosticRules.evaluarReadiness(it) } ?: listOf(readinessUnavailableDiagnosis())
 
     private fun readinessUnavailableDiagnosis(): DiagnosticRules.Diagnosis = DiagnosticRules.Diagnosis(
         DiagnosticRules.Nivel.ATENCION, "Readiness", "Readiness no disponible",
         "Se perdió el enlace durante el escaneo — repite el chequeo",
     )
 
-    private suspend fun sampleMixtureDiagnoses(): List<DiagnosticRules.Diagnosis> {
+    private suspend fun sampleMixture(): MuestreoMezcla {
         sessionManager.setWorkshopMode(true)
         try {
             val o2Samples = collectO2Samples()
             val readings = sessionManager.readings.value
-
-            return buildList {
-                readings[LONG_TRIM_B1_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
-                readings[LONG_TRIM_B2_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
-                val shortTrimB1 = readings[SHORT_TRIM_B1_PID]
-                val longTrimB1 = readings[LONG_TRIM_B1_PID]
-                if (shortTrimB1 != null && longTrimB1 != null) {
-                    add(DiagnosticRules.evaluarTrimCombinado(shortTrimB1.value, longTrimB1.value))
-                }
-                add(DiagnosticRules.evaluarO2(o2Samples))
-                readings[ObdSessionManager.VBAT_PID]?.let {
-                    val encendido = (readings[RPM_PID]?.value ?: 0.0) > ENGINE_RUNNING_RPM
-                    add(DiagnosticRules.evaluarVoltaje(it.value, encendido))
-                }
-                readings[COOLANT_TEMP_PID]?.let { add(DiagnosticRules.evaluarTemperatura(it.value)) }
-            }
+            return MuestreoMezcla(mixtureDiagnoses(readings, o2Samples), readings)
         } finally {
             sessionManager.setWorkshopMode(false)
         }
     }
+
+    private fun mixtureDiagnoses(readings: Map<String, ObdReading>, o2Samples: List<Double>): List<DiagnosticRules.Diagnosis> =
+        buildList {
+            readings[LONG_TRIM_B1_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
+            readings[LONG_TRIM_B2_PID]?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
+            val shortTrimB1 = readings[SHORT_TRIM_B1_PID]
+            val longTrimB1 = readings[LONG_TRIM_B1_PID]
+            if (shortTrimB1 != null && longTrimB1 != null) {
+                add(DiagnosticRules.evaluarTrimCombinado(shortTrimB1.value, longTrimB1.value))
+            }
+            add(DiagnosticRules.evaluarO2(o2Samples))
+            readings[ObdSessionManager.VBAT_PID]?.let {
+                val encendido = (readings[RPM_PID]?.value ?: 0.0) > ENGINE_RUNNING_RPM
+                add(DiagnosticRules.evaluarVoltaje(it.value, encendido))
+            }
+            readings[COOLANT_TEMP_PID]?.let { add(DiagnosticRules.evaluarTemperatura(it.value)) }
+        }
 
     /**
      * Empty when the ECU doesn't support PID 01 A6. When it does but the read still failed
@@ -227,50 +245,26 @@ class HealthCheckViewModel @Inject constructor(
 
     private suspend fun readAllDtcs(): DtcScanResult {
         val scan = sessionManager.leerDtcCompleto("ui:chequeo", DtcLectura(freezeFrame = false)).getOrNull()
-            ?: return DtcScanResult(emptyList(), readFailed = true)
+            ?: return DtcScanResult(emptyList(), readFailed = true, scan = null)
         val codes = scan.activos.map { it.code } +
             scan.pendientes.map { "${it.code} (pendiente)" } +
             scan.permanentes.map { "${it.code} (permanente)" }
-        return DtcScanResult(codes, readFailed = scan.enlacePerdido)
+        return DtcScanResult(codes, readFailed = scan.enlacePerdido, scan = scan)
     }
 
-    private suspend fun persist(items: List<DiagnosticRules.Diagnosis>, timestamp: Long) {
-        val json = JSONArray().apply {
-            items.forEach {
-                put(
-                    JSONObject()
-                        .put("area", it.area)
-                        .put("nivel", it.nivel.name)
-                        .put("titulo", it.titulo)
-                        .put("causa", it.causaProbable),
-                )
-            }
-        }
-        runCatching {
-            reportDao.insert(
-                HealthReportEntity(
-                    vehicleProfileId = sessionManager.activeProfile.value?.id ?: 0L,
-                    timestamp = timestamp,
-                    resultsJson = json.toString(),
-                ),
-            )
-        }.onFailure { Timber.w(it, "HealthCheck: persist failed") }
-    }
-
-    private fun parseStoredItems(json: String): List<DiagnosticRules.Diagnosis> = try {
-        val array = JSONArray(json)
-        (0 until array.length()).map { i ->
-            val o = array.getJSONObject(i)
-            DiagnosticRules.Diagnosis(
-                nivel = DiagnosticRules.Nivel.valueOf(o.getString("nivel")),
-                area = o.getString("area"),
-                titulo = o.getString("titulo"),
-                causaProbable = o.getString("causa"),
-            )
-        }
-    } catch (_: Exception) {
-        emptyList()
-    }
+    private suspend fun persist(
+        items: List<DiagnosticRules.Diagnosis>,
+        metricas: MetricasChequeo,
+        timestamp: Long,
+    ): Long? = runCatching {
+        reportDao.insert(
+            HealthReportEntity(
+                vehicleProfileId = sessionManager.activeProfile.value?.id ?: 0L,
+                timestamp = timestamp,
+                resultsJson = HealthReportFormato.escribir(items, metricas),
+            ),
+        )
+    }.onFailure { Timber.w(it, "HealthCheck: persist failed") }.getOrNull()
 
     companion object {
         private const val SAMPLE_SECONDS = 10

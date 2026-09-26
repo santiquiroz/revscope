@@ -12,6 +12,8 @@ import com.revscope.core.obd.pid.TestPids
 import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.sesion.OrigenEvento
+import com.revscope.core.obd.taller.sesion.RegistroTaller
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -28,6 +30,7 @@ import org.junit.Test
 class GetDtcToolTest {
 
     private val registry = PidRegistry(TestPids.load())
+    private val registro = mockk<RegistroTaller>(relaxed = true)
 
     private val scan = DtcScan(
         activos = listOf(DtcCode("P0300", DtcMode.Active)),
@@ -55,7 +58,7 @@ class GetDtcToolTest {
     fun `vehiculo no conectado responde sin intentar leer dtc`() = runTest {
         val manager = sessionManager(connectionState = ConnectionState.Disconnected)
 
-        val response = JSONObject(GetDtcTool(manager, registry).call(JSONObject()))
+        val response = JSONObject(GetDtcTool(manager, registry, registro).call(JSONObject()))
 
         assertFalse(response.getBoolean("conectado"))
         coVerify(exactly = 0) { manager.leerDtcCompleto(any(), any()) }
@@ -65,7 +68,7 @@ class GetDtcToolTest {
     fun `viaje activo y conectado lee dtc bajo concesion`() = runTest {
         val manager = sessionManager(estado = EstadoViaje.Grabando(sessionId = 42L, inicioMs = 0L))
 
-        val response = JSONObject(GetDtcTool(manager, registry).call(JSONObject()))
+        val response = JSONObject(GetDtcTool(manager, registry, registro).call(JSONObject()))
 
         assertTrue(response.getBoolean("conectado"))
         assertEquals("grabando", response.getString("viaje"))
@@ -75,7 +78,7 @@ class GetDtcToolTest {
 
     @Test
     fun `devuelve activos pendientes permanentes mil y freeze frame con su causante`() = runTest {
-        val response = JSONObject(GetDtcTool(sessionManager(), registry).call(JSONObject()))
+        val response = JSONObject(GetDtcTool(sessionManager(), registry, registro).call(JSONObject()))
 
         assertEquals("P0300", response.getJSONArray("codigos").getString(0))
         assertEquals("P0420", response.getJSONArray("pendientes").getString(0))
@@ -98,7 +101,7 @@ class GetDtcToolTest {
             .put("freeze_frame", false)
             .put("incluir_crudo", true)
 
-        val response = JSONObject(GetDtcTool(manager, registry).call(args))
+        val response = JSONObject(GetDtcTool(manager, registry, registro).call(args))
 
         assertEquals(setOf(DtcServicio.PENDIENTES), opciones.captured.servicios)
         assertFalse(opciones.captured.freezeFrame)
@@ -109,7 +112,7 @@ class GetDtcToolTest {
     fun `segunda llamada igual dentro de 10 s responde con cache sin releer el ecu`() = runTest {
         val manager = sessionManager()
         var now = 1_000L
-        val tool = GetDtcTool(manager, registry) { now }
+        val tool = GetDtcTool(manager, registry, registro) { now }
 
         tool.call(JSONObject())
         now += 9_000L
@@ -123,7 +126,7 @@ class GetDtcToolTest {
     fun `otra combinacion de argumentos antes de 5 s pide esperar`() = runTest {
         val manager = sessionManager()
         var now = 1_000L
-        val tool = GetDtcTool(manager, registry) { now }
+        val tool = GetDtcTool(manager, registry, registro) { now }
 
         tool.call(JSONObject())
         now += 2_000L
@@ -137,7 +140,7 @@ class GetDtcToolTest {
     fun `llamada tras vencer la cache vuelve a leer el ecu`() = runTest {
         val manager = sessionManager()
         var now = 1_000L
-        val tool = GetDtcTool(manager, registry) { now }
+        val tool = GetDtcTool(manager, registry, registro) { now }
 
         tool.call(JSONObject())
         now += 10_001L
@@ -148,11 +151,34 @@ class GetDtcToolTest {
     }
 
     @Test
+    fun `una lectura real queda en la sesion del taller con origen MCP y la de cache no`() = runTest {
+        val manager = sessionManager()
+        var now = 1_000L
+        val tool = GetDtcTool(manager, registry, registro) { now }
+
+        tool.call(JSONObject())
+        now += 9_000L
+        tool.call(JSONObject())
+
+        coVerify(exactly = 1) { registro.anotarLecturaDtc(scan, OrigenEvento.MCP) }
+    }
+
+    @Test
+    fun `una lectura fallida no se anota en la sesion`() = runTest {
+        val manager = sessionManager()
+        coEvery { manager.leerDtcCompleto(any(), any()) } returns Result.failure(IllegalStateException("Not connected"))
+
+        GetDtcTool(manager, registry, registro).call(JSONObject())
+
+        coVerify(exactly = 0) { registro.anotarLecturaDtc(any(), any()) }
+    }
+
+    @Test
     fun `una lectura fallida no se cachea`() = runTest {
         val manager = sessionManager()
         coEvery { manager.leerDtcCompleto(any(), any()) } returns Result.failure(IllegalStateException("Not connected"))
         var now = 1_000L
-        val tool = GetDtcTool(manager, registry) { now }
+        val tool = GetDtcTool(manager, registry, registro) { now }
 
         tool.call(JSONObject())
         now += 6_000L
