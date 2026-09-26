@@ -50,7 +50,7 @@ Los 20 módulos de `settings.gradle.kts`:
 
 - **v1.20.0** (versionCode 24, `revscope.versionName` en `gradle.properties`), publicada por GitHub Releases (sideload, no Play Store).
 - Ya implementado: telemetría OBD2 en tiempo real, Taller y diagnóstico, IA opcional con llave propia, servidor MCP en red local, radares y alertas por voz, detección de caída, Android Auto, Wear OS, rodadas en grupo, mapa MapLibre con mapa offline de Colombia y navegación turn-by-turn.
-- **1 136 tests unitarios JVM** (`testDebugUnitTest`, la mayoría en `:core:obd`), incluidas las capturas de pantalla JVM (Roborazzi; PNG en `<módulo>/src/test/screenshots`), más un puñado de tests instrumentados en `androidTest` que necesitan emulador o dispositivo.
+- **1 183 tests unitarios JVM** (`testDebugUnitTest`, la mayoría en `:core:obd`), incluidas las capturas de pantalla JVM (Roborazzi; PNG en `<módulo>/src/test/screenshots`), más un puñado de tests instrumentados en `androidTest` que necesitan emulador o dispositivo.
 - `PLAN.md` es el plan original de la v1 (histórico); el diseño y los planes de cada feature posterior están en `docs/superpowers/`.
 
 ## Comandos
