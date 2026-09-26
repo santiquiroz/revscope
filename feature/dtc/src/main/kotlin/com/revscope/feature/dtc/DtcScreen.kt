@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -81,6 +82,7 @@ fun DtcScreen(
 ) {
     val state by vm.state.collectAsState()
     val freezeFrame by vm.freezeFrame.collectAsState()
+    val estadoMil by vm.estadoMil.collectAsState()
 
     Column(
         modifier = Modifier
@@ -122,8 +124,10 @@ fun DtcScreen(
                 DtcUiState.Clearing -> LoadingContent("Borrando códigos…")
                 DtcUiState.Cleared -> StatusContent("Códigos borrados ✓", AccentColor)
                 is DtcUiState.HasCodes -> {
+                    estadoMil?.let { Text(it, color = TextMutedColor, fontSize = 12.sp) }
+                    Spacer(Modifier.height(8.dp))
                     if (s.codes.isEmpty()) {
-                        StatusContent("Sin códigos de falla activos ✓", SuccessColor)
+                        StatusContent("Sin códigos activos, pendientes ni permanentes ✓", SuccessColor)
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             if (freezeFrame.isNotEmpty()) {
@@ -215,7 +219,7 @@ private fun DtcItem(item: DtcCodeUi, onOpenAiValue: () -> Unit) {
             )
             Spacer(Modifier.weight(1f))
             Text(
-                text = item.dtc.mode.javaClass.simpleName,
+                text = etiquetaModo(item.dtc.mode),
                 fontSize = 11.sp,
                 color = TextMutedColor,
             )
@@ -246,4 +250,10 @@ private fun DtcItem(item: DtcCodeUi, onOpenAiValue: () -> Unit) {
             }
         }
     }
+}
+
+private fun etiquetaModo(mode: DtcMode): String = when (mode) {
+    DtcMode.Active -> "Activo"
+    DtcMode.Pending -> "Pendiente"
+    DtcMode.Permanent -> "Permanente"
 }

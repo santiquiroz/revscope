@@ -23,6 +23,10 @@ import com.revscope.core.obd.connection.BleTransport
 import com.revscope.core.obd.connection.ClassicBtTransport
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.connection.Transport
+import com.revscope.core.obd.diagnostics.BorradoDtc
+import com.revscope.core.obd.diagnostics.DtcLectura
+import com.revscope.core.obd.diagnostics.DtcReader
+import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
@@ -30,6 +34,7 @@ import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.DtcResponseParser
 import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.protocol.ElmCommandBuilder
+import com.revscope.core.obd.protocol.ProtocolInfo
 import com.revscope.core.obd.protocol.ProtocolNegotiator
 import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.service.ObdForegroundService
@@ -143,6 +148,8 @@ class ObdSessionManager @Inject constructor(
     private val milWatcher = MilWatcher(alertsEngine)
     private val pollingGate = PollingGate()
     private val diagnosticLease = DiagnosticLease(pollingGate)
+    private val dtcReader = DtcReader(registry)
+    @Volatile private var protocoloEsCan: Boolean? = null
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private val odometerHistoryStore = OdometerHistoryStore(settings)
     private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao)
@@ -509,6 +516,14 @@ class ObdSessionManager @Inject constructor(
             parseDtcResponse(bt.exchange("03\r", DTC_TIMEOUT_MS), DtcMode.Active)
         }
 
+    /** 01 01, 03, 07, 0A y freeze frame con su DTC causante, sin soltar el adaptador ni el viaje. */
+    suspend fun leerDtcCompleto(owner: String, opciones: DtcLectura = DtcLectura()): Result<DtcScan> =
+        withDiagnosticLease(owner, DTC_FULL_READ_TIMEOUT_MS) { bt -> dtcReader.leer(bt, opciones, protocoloEsCan) }
+
+    /** Modo 04 con relectura de los activos antes y después. */
+    suspend fun borrarDtcConRelectura(owner: String): Result<BorradoDtc> =
+        withDiagnosticLease(owner, DTC_FULL_READ_TIMEOUT_MS) { bt -> dtcReader.borrar(bt, protocoloEsCan) }
+
     /** Clears all stored DTCs (Mode 04) under a diagnostic lease. */
     suspend fun clearDtcCodes(): Result<Unit> =
         withDiagnosticLease("clearDtcCodes") { bt ->
@@ -744,6 +759,7 @@ class ObdSessionManager @Inject constructor(
             return
         }
         registry.setSupportedPids(negotiationResult.supportedPids)
+        protocoloEsCan = ProtocolInfo.esCan(probe(bt, "AT DPN\r", DPN_TIMEOUT_MS))
         alertsEngine.reloadThresholds()
         alertsEngine.resetSessionFlags()
         resolveProfileByVin(bt)
@@ -862,6 +878,8 @@ class ObdSessionManager @Inject constructor(
         const val GPS_ADAPTER_NAME = "GPS"
 
         private const val DTC_TIMEOUT_MS = 5_000L
+        private const val DTC_FULL_READ_TIMEOUT_MS = 30_000L
+        private const val DPN_TIMEOUT_MS = 1_500L
         private const val VIN_TIMEOUT_MS = 4_000L
         private const val VOLTAGE_TIMEOUT_MS = 2_000L
         // 15 s > 12 s connect watchdog, so attempts never overlap; total ≈ 3 min

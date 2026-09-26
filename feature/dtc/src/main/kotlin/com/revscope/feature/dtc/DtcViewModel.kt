@@ -3,10 +3,11 @@ package com.revscope.feature.dtc
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.intelligence.IntelligenceOrchestrator
+import com.revscope.core.obd.diagnostics.DtcScan
+import com.revscope.core.obd.diagnostics.FreezeFrame
 import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
-import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,39 +45,51 @@ class DtcViewModel @Inject constructor(
     private val _freezeFrame = MutableStateFlow<List<FreezeFrameItem>>(emptyList())
     val freezeFrame: StateFlow<List<FreezeFrameItem>> = _freezeFrame.asStateFlow()
 
+    private val _estadoMil = MutableStateFlow<String?>(null)
+    val estadoMil: StateFlow<String?> = _estadoMil.asStateFlow()
+
     fun readDtcCodes(connectionVm: ConnectionViewModel) {
         viewModelScope.launch {
             _state.value = DtcUiState.Reading
             _freezeFrame.value = emptyList()
-            connectionVm.readActiveDtc()
-                .onSuccess { codes ->
-                    val items = codes.map { DtcCodeUi(dtc = it, explanation = null, isLoadingExplanation = true) }
-                    _state.value = DtcUiState.HasCodes(items)
-                    if (codes.isNotEmpty()) readFreezeFrame(connectionVm)
-                    fetchExplanations(codes, connectionVm)
-                }
-                .onFailure { e ->
-                    _state.value = DtcUiState.Error(e.message ?: "Error leyendo DTCs")
-                }
+            _estadoMil.value = null
+            connectionVm.leerDtcCompleto(LEASE_OWNER)
+                .onSuccess { scan -> mostrarLectura(scan, connectionVm) }
+                .onFailure { e -> _state.value = DtcUiState.Error(mensajeDeError(e)) }
         }
     }
 
-    /** Mode 02: sensor snapshot the ECU stored at the instant the DTC was set. */
-    private suspend fun readFreezeFrame(connectionVm: ConnectionViewModel) {
-        val items = mutableListOf<FreezeFrameItem>()
-        FREEZE_FRAME_PIDS.forEach { pid ->
-            val def = registry.getDefinition(pid) ?: return@forEach
-            val raw = connectionVm.rawExchange("02 $pid 00\r", 3_000).getOrNull() ?: return@forEach
-            val bytes = ResponseParser.parseFreezeFramePid(raw, pid) ?: return@forEach
-            registry.evaluate(pid, bytes)?.let { reading ->
-                items += FreezeFrameItem(
-                    label = def.nameEs,
-                    value = "${if (reading.value % 1.0 == 0.0) reading.value.toInt() else "%.1f".format(reading.value)} ${reading.unit}",
-                )
-            }
-        }
-        _freezeFrame.value = items
+    private suspend fun mostrarLectura(scan: DtcScan, connectionVm: ConnectionViewModel) {
+        _freezeFrame.value = freezeFrameItems(scan.freezeFrame)
+        _estadoMil.value = textoMil(scan)
+        val codes = scan.todos
+        _state.value = DtcUiState.HasCodes(
+            codes.map { DtcCodeUi(dtc = it, explanation = null, isLoadingExplanation = true) },
+        )
+        fetchExplanations(codes, connectionVm)
     }
+
+    private fun freezeFrameItems(freezeFrame: FreezeFrame?): List<FreezeFrameItem> {
+        if (freezeFrame == null) return emptyList()
+        val causante = freezeFrame.dtcCausante?.let { FreezeFrameItem("DTC que lo guardó", it) }
+        return listOfNotNull(causante) + freezeFrame.valores.map(::freezeFrameItem)
+    }
+
+    private fun freezeFrameItem(reading: ObdReading): FreezeFrameItem {
+        val label = registry.getDefinition(reading.pid)?.nameEs ?: reading.pid
+        val value = if (reading.value % 1.0 == 0.0) "${reading.value.toInt()}" else "%.1f".format(reading.value)
+        return FreezeFrameItem(label = label, value = "$value ${reading.unit}")
+    }
+
+    private fun textoMil(scan: DtcScan): String? {
+        val mil = scan.milEncendida ?: return null
+        val luz = if (mil) "Testigo de falla (MIL) encendido" else "Testigo de falla (MIL) apagado"
+        return scan.conteoSegunEcu?.let { "$luz · la ECU reporta $it código(s) confirmados" } ?: luz
+    }
+
+    private fun mensajeDeError(e: Throwable): String =
+        if (e is IllegalStateException && e.message == "Not connected") "Conecta el adaptador primero"
+        else e.message ?: "Error leyendo DTCs"
 
     fun clearDtcCodes(connectionVm: ConnectionViewModel) {
         viewModelScope.launch {
@@ -90,11 +103,11 @@ class DtcViewModel @Inject constructor(
     fun reset() {
         _state.value = DtcUiState.Idle
         _freezeFrame.value = emptyList()
+        _estadoMil.value = null
     }
 
     private companion object {
-        // RPM, speed, coolant, load, throttle — the "what was the engine doing" set
-        val FREEZE_FRAME_PIDS = listOf("0C", "0D", "05", "04", "11")
+        const val LEASE_OWNER = "ui:dtc"
     }
 
     private suspend fun fetchExplanations(codes: List<DtcCode>, connectionVm: ConnectionViewModel) {

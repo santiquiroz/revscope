@@ -9,7 +9,7 @@ import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.protocol.ReadinessParser
-import com.revscope.core.obd.protocol.ResponseParser
+import com.revscope.core.obd.diagnostics.DtcLectura
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.workshop.DiagnosticRules
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -225,27 +225,14 @@ class HealthCheckViewModel @Inject constructor(
         return samples
     }
 
-    /**
-     * DtcViewModel (feature/dtc) only reads active codes via [ObdSessionManager.readActiveDtc]
-     * (Mode 03) — it never surfaces pending/permanent codes, so there is nothing there to reuse.
-     * [ResponseParser.parseDtcResponse] (distinct from the manager's DtcCode-returning
-     * companion function, which is hardcoded to prefix "43") already generalizes across the
-     * 43/47/4A prefixes for Modes 03/07/0A, so it is reused directly here instead.
-     */
     private suspend fun readAllDtcs(): DtcScanResult {
-        val active = readDtcMode(ACTIVE_DTC_COMMAND)
-        val pending = readDtcMode(PENDING_DTC_COMMAND)
-        val permanent = readDtcMode(PERMANENT_DTC_COMMAND)
-        val codes = active.orEmpty() +
-            pending.orEmpty().map { "$it (pendiente)" } +
-            permanent.orEmpty().map { "$it (permanente)" }
-        val readFailed = active == null || pending == null || permanent == null
-        return DtcScanResult(codes, readFailed)
+        val scan = sessionManager.leerDtcCompleto("ui:chequeo", DtcLectura(freezeFrame = false)).getOrNull()
+            ?: return DtcScanResult(emptyList(), readFailed = true)
+        val codes = scan.activos.map { it.code } +
+            scan.pendientes.map { "${it.code} (pendiente)" } +
+            scan.permanentes.map { "${it.code} (permanente)" }
+        return DtcScanResult(codes, readFailed = scan.enlacePerdido)
     }
-
-    /** Null means the read itself failed (lost link) — distinct from an empty-but-successful read. */
-    private suspend fun readDtcMode(command: String): List<String>? =
-        sessionManager.rawExchange(command).getOrNull()?.let { ResponseParser.parseDtcResponse(it) }
 
     private suspend fun persist(items: List<DiagnosticRules.Diagnosis>, timestamp: Long) {
         val json = JSONArray().apply {
@@ -290,10 +277,6 @@ class HealthCheckViewModel @Inject constructor(
         private const val O2_SAMPLE_INTERVAL_MS = 250L
         private const val O2_SAMPLE_COUNT = 40
         private const val ENGINE_RUNNING_RPM = 400.0
-
-        private const val ACTIVE_DTC_COMMAND = "03\r"
-        private const val PENDING_DTC_COMMAND = "07\r"
-        private const val PERMANENT_DTC_COMMAND = "0A\r"
 
         private const val SHORT_TRIM_B1_PID = "06"
         private const val LONG_TRIM_B1_PID = "07"
