@@ -11,6 +11,7 @@ import com.revscope.core.obd.mcp.GetChequeoSaludTool
 import com.revscope.core.obd.mcp.GetDocumentosTool
 import com.revscope.core.obd.mcp.GetDtcTool
 import com.revscope.core.obd.mcp.GetEstadoTool
+import com.revscope.core.obd.mcp.GetGuiaDtcTool
 import com.revscope.core.obd.mcp.GetMantenimientoTool
 import com.revscope.core.obd.mcp.GetViajeDetalleTool
 import com.revscope.core.obd.mcp.GetViajesTool
@@ -52,8 +53,9 @@ object McpModule {
         iniciarCaptura: IniciarCapturaTool,
         getCaptura: GetCapturaTool,
         detenerCaptura: DetenerCapturaTool,
+        getGuiaDtc: GetGuiaDtcTool,
     ): List<McpTool> = listOf(
-        getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getMantenimiento, getDocumentos,
+        getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getGuiaDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
         getMuestreo, setMuestreo, iniciarCaptura, getCaptura, detenerCaptura,
     )
