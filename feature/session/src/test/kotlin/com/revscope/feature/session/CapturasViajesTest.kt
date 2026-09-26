@@ -31,4 +31,29 @@ class CapturasViajesTest {
             onDelete = {},
         )
     }
+
+    @Test
+    fun confirmarBorrarViajeDialog() = MatrizCaptura.dialogo("ConfirmarBorrarViajeDialog") {
+        ConfirmarBorrarViajeDialog(
+            sesion = SessionEntity(
+                vehicleProfileId = 1,
+                startedAt = 1_790_000_000_000,
+                endedAt = 1_790_000_000_000 + 30 * 60_000,
+                adapterName = "Android-Vlink",
+                maxRpm = 9_000,
+                maxSpeed = 80,
+                distanceKm = 12.3f,
+            ),
+            onConfirmar = {},
+            onCancelar = {},
+        )
+    }
+
+    @Test
+    fun historialVacio() = MatrizCaptura.pantalla("SessionHistoryContent_vacio") {
+        SessionHistoryContent(
+            historial = HistorialUi(emptyList(), emptyList(), filtro = null, candidatoComparar = null),
+            acciones = AccionesHistorial({}, {}, {}, {}, {}),
+        )
+    }
 }
