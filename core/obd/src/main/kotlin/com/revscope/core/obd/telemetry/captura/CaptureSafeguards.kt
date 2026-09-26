@@ -41,6 +41,10 @@ object CaptureSafeguards {
         else -> DecisionSalvaguarda.Continuar
     }
 
+    /** Mismas reglas de batería y calor para el preset Máximo del sondeo normal (sin tope de duración ni de errores). */
+    fun decidirMuestreo(l: LecturaDispositivo): DecisionSalvaguarda =
+        decidir(EstadoDispositivo(l.bateriaPct, l.cargando, l.termico, 0L, 0.0, 0), Long.MAX_VALUE)
+
     private fun bateriaBajo(e: EstadoDispositivo, umbral: Int): Boolean =
         !e.cargando && e.bateriaPct != null && e.bateriaPct < umbral
 

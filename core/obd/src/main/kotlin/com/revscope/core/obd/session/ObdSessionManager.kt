@@ -188,13 +188,15 @@ class ObdSessionManager @Inject constructor(
 
     fun infoAdaptador(): InfoAdaptador = enlaceCaptura.info()
 
+    private val lectorDispositivo = AndroidLectorDispositivo(appContext)
+
     /** Captura rápida (Taller → Sensores y MCP): una a la vez, sobre el enlace vivo. */
     val captura = CapturaRapida(
         enlace = enlaceCaptura,
         gate = pollingGate,
         registry = registry,
         nuevoSumidero = { ArchivoCaptura(CsvShare.exportsDir(appContext)) },
-        dispositivo = AndroidLectorDispositivo(appContext),
+        dispositivo = lectorDispositivo,
     )
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private val odometerHistoryStore = OdometerHistoryStore(settings)
@@ -885,7 +887,7 @@ class ObdSessionManager @Inject constructor(
         telemetryJob = scope.launch {
             try {
                 coroutineScope {
-                    val scheduler = PidScheduler(polled, registry).also { activeScheduler = it }
+                    val scheduler = PidScheduler(polled, registry, dispositivo = lectorDispositivo).also { activeScheduler = it }
                     scheduler.setWorkshopMode(workshopClients.get() > 0)
                     scheduler.setIdleMode(idleModeEnabled)
                     scheduler.setRemoteViewerActive(remoteViewerActive)

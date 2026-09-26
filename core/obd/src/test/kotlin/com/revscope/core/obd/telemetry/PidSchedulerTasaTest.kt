@@ -1,6 +1,8 @@
 package com.revscope.core.obd.telemetry
 
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.telemetry.captura.LecturaDispositivo
+import com.revscope.core.obd.telemetry.captura.LectorDispositivo
 import com.revscope.core.obd.testing.FakeElmTransport
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -22,8 +24,13 @@ class PidSchedulerTasaTest {
         return FakeElmTransport(latenciaMs = { 30L }, reloj = { testScheduler.currentTime }) { respuesta(n++) }
     }
 
-    private fun TestScope.scheduler(fake: FakeElmTransport) =
-        PidScheduler(fake, PidRegistry(soloP3), nowMs = { testScheduler.currentTime })
+    private fun TestScope.scheduler(fake: FakeElmTransport, dispositivo: LecturaDispositivo? = null) =
+        PidScheduler(
+            fake,
+            PidRegistry(soloP3),
+            nowMs = { testScheduler.currentTime },
+            dispositivo = dispositivo?.let { lectura -> LectorDispositivo { lectura } },
+        )
 
     private fun inicios(fake: FakeElmTransport): List<Long> = fake.log.map { it.tInicioMs }
 
@@ -116,5 +123,84 @@ class PidSchedulerTasaTest {
 
         assertEquals(0, enPausa)
         assertTrue(fake.log.size > alPausar + 1)
+    }
+
+    @Test
+    fun `maximo con BUFFER FULL espacia los ciclos`() = runTest {
+        val fake = fake { n -> if (n == 0) "BUFFER FULL>" else "410F50>" }
+        val scheduler = scheduler(fake).apply { setPreset(SamplingPreset.MAXIMO) }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(3_000)
+        job.cancel()
+
+        val gaps = periodos(fake)
+        // Sin piso, 0 × 2 = 0 y el sondeo seguiría encadenado; con piso va a 250 ms × 2.
+        assertTrue("tras BUFFER FULL los ciclos van a 500 ms: $gaps", gaps.drop(1).all { it == 500L })
+        assertTrue(gaps.size >= 4)
+    }
+
+    @Test
+    fun `maximo con pantalla apagada se estira`() = runTest {
+        val fake = fake()
+        val scheduler = scheduler(fake).apply {
+            setPreset(SamplingPreset.MAXIMO)
+            setIdleMode(true)
+        }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(2_100)
+        job.cancel()
+
+        assertEquals(listOf(0L, 500L, 1_000L, 1_500L, 2_000L), inicios(fake))
+    }
+
+    @Test
+    fun `maximo con espectador remoto y pantalla apagada no frena`() = runTest {
+        val fake = fake()
+        val scheduler = scheduler(fake).apply {
+            setPreset(SamplingPreset.MAXIMO)
+            setIdleMode(true)
+            setRemoteViewerActive(true)
+        }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(300)
+        job.cancel()
+
+        assertTrue(periodos(fake).all { it == 30L })
+    }
+
+    @Test
+    fun `maximo con bateria baja limita a 250 ms`() = runTest {
+        val fake = fake()
+        val bateriaBaja = LecturaDispositivo(bateriaPct = 25, cargando = false, termico = 0)
+        val scheduler = scheduler(fake, bateriaBaja).apply { setPreset(SamplingPreset.MAXIMO) }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(1_100)
+        job.cancel()
+
+        assertEquals(listOf(0L, 250L, 500L, 750L, 1_000L), inicios(fake))
+    }
+
+    @Test
+    fun `maximo con el telefono muy caliente vuelve al estandar`() = runTest {
+        val fake = fake()
+        val caliente = LecturaDispositivo(bateriaPct = 80, cargando = true, termico = 3)
+        val scheduler = scheduler(fake, caliente).apply { setPreset(SamplingPreset.MAXIMO) }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(4_100)
+        job.cancel()
+
+        assertEquals(listOf(0L, 2_000L, 4_000L), inicios(fake))
+    }
+
+    @Test
+    fun `maximo con el telefono en buen estado no espera`() = runTest {
+        val fake = fake()
+        val bien = LecturaDispositivo(bateriaPct = 80, cargando = false, termico = 0)
+        val scheduler = scheduler(fake, bien).apply { setPreset(SamplingPreset.MAXIMO) }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(300)
+        job.cancel()
+
+        assertTrue(periodos(fake).all { it == 30L })
     }
 }

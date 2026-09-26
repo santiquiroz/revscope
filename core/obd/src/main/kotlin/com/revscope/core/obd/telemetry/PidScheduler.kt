@@ -5,6 +5,9 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ResponseParser
+import com.revscope.core.obd.telemetry.captura.CaptureSafeguards
+import com.revscope.core.obd.telemetry.captura.DecisionSalvaguarda
+import com.revscope.core.obd.telemetry.captura.LectorDispositivo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -29,6 +32,7 @@ private const val BUFFER_FULL_DECAY_WINDOW_MS = 30_000L
 private const val EMPTY_CYCLE_DELAY_MS = 500L
 private const val MAX_CONSECUTIVE_LINK_FAILURES = 3
 private const val WORKSHOP_PRIORITY = 4
+private const val PROTECCION_MAXIMO_CADA_MS = 5_000L
 
 // One CAN frame carries 7 usable payload bytes: "41" header + PID+data pairs.
 // Batches are packed to fit so the ELM never needs ISO-TP multi-frame responses.
@@ -43,6 +47,10 @@ private const val SINGLE_FRAME_PAYLOAD_BYTES = 7
  * Priority 4 → every 1 000 ms, polled only while [setWorkshopMode] is enabled
  *
  * Those are the [SamplingPreset.ESTANDAR_2S] intervals; other presets cap them (min(base, preset)).
+ * [SamplingPreset.MAXIMO] only runs without waiting while nothing asks to slow down: after a
+ * BUFFER FULL, with the screen off or with a low battery / warm phone it falls back to the
+ * [SamplingPreset.CUARTO_SEGUNDO] intervals (then stretched), and to [SamplingPreset.ESTANDAR_2S]
+ * when the phone is very hot or the battery is critical ([CaptureSafeguards]).
  *
  * ELM327 is half-duplex — [Transport.exchange] serializes all send/receive pairs
  * at the transport level, so the three coroutine groups (and any external caller,
@@ -52,6 +60,7 @@ class PidScheduler(
     private val transport: Transport,
     private val registry: PidRegistry,
     private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 },
+    private val dispositivo: LectorDispositivo? = null,
 ) {
     // Written concurrently from the three priority-group coroutines
     private val excludedPids: MutableSet<String> = ConcurrentHashMap.newKeySet()
@@ -83,7 +92,10 @@ class PidScheduler(
         idleMode.set(enabled)
     }
 
-    private val preset = AtomicReference(SamplingPreset.DEFAULT)
+    private val preset = MutableStateFlow(SamplingPreset.DEFAULT)
+
+    // Solo cuenta en Máximo: batería o calor del teléfono, evaluados cada 5 s mientras ese preset está activo.
+    private val proteccionMaximo = AtomicReference<DecisionSalvaguarda>(DecisionSalvaguarda.Continuar)
 
     // La captura rápida toma el bus: los grupos esperan antes de cada petición, no solo al iniciar ciclo.
     private val paused = MutableStateFlow(false)
@@ -93,7 +105,7 @@ class PidScheduler(
     }
 
     fun setPreset(value: SamplingPreset) {
-        preset.set(value)
+        preset.value = value
     }
 
     fun setRemoteViewerActive(active: Boolean) {
@@ -110,6 +122,7 @@ class PidScheduler(
     fun observeReadings(): Flow<ObdReading> = channelFlow {
         val producer = this
         coroutineScope {
+            dispositivo?.let { lector -> launch { vigilarProteccionMaximo(lector) } }
             launch { pollGroup(1, 100L) { producer.trySend(it) } }
             launch { pollGroup(2, 500L) { producer.trySend(it) } }
             launch { pollGroup(3, 2_000L) { producer.trySend(it) } }
@@ -139,8 +152,40 @@ class PidScheduler(
     }
 
     private fun intervalFor(priority: Int, baseIntervalMs: Long): Long {
-        val presetMs = preset.get().intervaloPara(baseIntervalMs)
+        val presetMs = presetEfectivo(priority).intervaloPara(baseIntervalMs)
         return (presetMs * intervalMultiplier.get() * idleFactorFor(priority)).toLong()
+    }
+
+    // Máximo tiene intervalo 0: multiplicar 0 anularía el backoff de BUFFER FULL y el estiramiento en reposo.
+    private fun presetEfectivo(priority: Int): SamplingPreset {
+        val elegido = preset.value
+        if (elegido != SamplingPreset.MAXIMO) return elegido
+        return when (proteccionMaximo.get()) {
+            is DecisionSalvaguarda.Detener -> SamplingPreset.ESTANDAR_2S
+            is DecisionSalvaguarda.Limitar -> SamplingPreset.CUARTO_SEGUNDO
+            DecisionSalvaguarda.Continuar -> if (debeFrenar(priority)) SamplingPreset.CUARTO_SEGUNDO else elegido
+        }
+    }
+
+    private fun debeFrenar(priority: Int): Boolean =
+        intervalMultiplier.get() > 1.0 || idleFactorFor(priority) > 1.0
+
+    private suspend fun vigilarProteccionMaximo(lector: LectorDispositivo) {
+        while (true) {
+            preset.first { it == SamplingPreset.MAXIMO }
+            actualizarProteccionMaximo(lector)
+            delay(PROTECCION_MAXIMO_CADA_MS)
+        }
+    }
+
+    private fun actualizarProteccionMaximo(lector: LectorDispositivo) {
+        val lectura = runCatching { lector.leer() }
+            .onFailure { Timber.w(it, "PidScheduler: no se pudo leer batería/temperatura") }
+            .getOrNull() ?: return
+        val decision = CaptureSafeguards.decidirMuestreo(lectura)
+        if (proteccionMaximo.getAndSet(decision) != decision) {
+            Timber.i("PidScheduler: protección del preset Máximo → $decision")
+        }
     }
 
     private suspend fun pollCycle(defs: List<PidDefinition>, emit: (ObdReading) -> Unit) {
