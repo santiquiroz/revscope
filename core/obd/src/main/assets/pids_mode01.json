@@ -394,5 +394,17 @@
     "min": 0,
     "max": 100,
     "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "33",
+    "name": "Absolute Barometric Pressure",
+    "nameEs": "Presión barométrica",
+    "bytes": 1,
+    "formula": "A",
+    "unit": "kPa",
+    "min": 0,
+    "max": 255,
+    "priority": 4
   }
 ]

@@ -391,4 +391,27 @@ class PidRegistryTest {
         val emptyRegistry = PidRegistry("[]")
         assertEquals(0, emptyRegistry.allDefinitions().size)
     }
+
+    // ── Registro real (assets) ────────────────────────────────────────────────
+
+    @Test
+    fun `el registro real trae la presión barométrica 33 en kPa con prioridad de taller`() {
+        val real = PidRegistry(TestPids.load())
+        val def = real.getDefinition("33")
+
+        assertNotNull(def)
+        assertEquals("01", def!!.mode)
+        assertEquals("kPa", def.unit)
+        assertEquals(1, def.bytes)
+        assertEquals(4, def.priority)
+        assertEquals("Presión barométrica", def.nameEs)
+    }
+
+    @Test
+    fun `la presión barométrica 33 es el byte A en kPa`() {
+        val real = PidRegistry(TestPids.load())
+
+        assertEquals(85.0, real.evaluate("33", byteArrayOf(0x55))!!.value, 0.001)
+        assertEquals(101.0, real.parseAndEvaluate("33", "41 33 65 >")!!.value, 0.001)
+    }
 }
