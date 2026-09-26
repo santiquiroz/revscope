@@ -61,4 +61,51 @@ class CapturasSistemaDisenoTest {
             FilaEtiquetaValor("Ajuste largo de combustible (banco 1)", "+2,3 %")
         }
     }
+
+    @Test
+    fun nivelBadge() = MatrizCaptura.componente("NivelBadge") {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            NivelEstado.entries.forEach { NivelBadge(it) }
+            NivelBadge(NivelEstado.ATENCION, texto = "Vence en 12 días")
+        }
+    }
+
+    @Test
+    fun emptyState() = MatrizCaptura.componente("EmptyState") {
+        EmptyState(
+            mensaje = "Todavía no hay viajes guardados. Conecta el adaptador o inicia un viaje GPS desde Conducir.",
+            accion = AccionEstado("Iniciar un viaje") {},
+        )
+    }
+
+    @Test
+    fun errorState() = MatrizCaptura.componente("ErrorState") {
+        ErrorState(mensaje = "No se pudo leer la ECU: el adaptador no respondió a tiempo", onReintentar = {})
+    }
+
+    @Test
+    fun barraConVolver() = MatrizCaptura.componente("BarraConVolver") {
+        BarraConVolver(
+            titulo = "Códigos de falla y freeze frame",
+            subtitulo = "Benelli TNT 150i",
+            onVolver = {},
+        )
+    }
+
+    @Test
+    fun indicadorPasos() = MatrizCaptura.componente("IndicadorPasos") {
+        IndicadorPasos(actual = 2, total = 4, titulo = "Acelerador a medio recorrido")
+    }
+
+    @Test
+    fun confirmarDestructivoDialog() = MatrizCaptura.dialogo("ConfirmarDestructivoDialog") {
+        ConfirmarDestructivoDialog(
+            titulo = "¿Borrar el viaje?",
+            mensaje = "Viaje del 25 sep 2026, 18:40 (12,3 km).",
+            avisos = listOf("Se borran la telemetría y la ruta. No se puede deshacer."),
+            textoConfirmar = "Borrar viaje",
+            onConfirmar = {},
+            onCancelar = {},
+        )
+    }
 }

@@ -20,6 +20,7 @@ dependencies {
     api(project(":core:designsystem"))
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
+    api(libs.activity.compose)
     api(libs.compose.ui.test.junit4)
     api(libs.compose.ui.test.manifest)
     api(libs.junit)

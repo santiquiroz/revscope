@@ -1,5 +1,8 @@
 package com.revscope.core.uitesting
 
+import android.os.Looper
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,10 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ActivityScenario
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeTheme
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 
 enum class DispositivoCaptura(val anchoDp: Int, val altoDp: Int, val densidad: String) {
     PEQUENO(360, 640, "xhdpi"),
@@ -54,6 +60,22 @@ object MatrizCaptura {
 
     fun pantalla(nombre: String, altoMinimoDp: Int = 0, contenido: @Composable () -> Unit) =
         capturarVariantes(nombre, altoMinimoDp) { EnvolturaPantalla(contenido) }
+
+    /** Los diálogos viven en su propia ventana: se captura la pantalla entera, no solo la vista. */
+    fun dialogo(nombre: String, contenido: @Composable () -> Unit) {
+        variantesCaptura().forEach { variante ->
+            aplicarVariante(variante, altoMinimoDp = 0)
+            capturarPantallaConVentanas(rutaCaptura(nombre, variante)) { EnvolturaPantalla(contenido) }
+        }
+    }
+
+    private fun capturarPantallaConVentanas(ruta: String, contenido: @Composable () -> Unit) {
+        ActivityScenario.launch(ComponentActivity::class.java).use { escenario ->
+            escenario.onActivity { it.setContent { contenido() } }
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+            captureScreenRoboImage(filePath = ruta)
+        }
+    }
 
     private fun capturarVariantes(nombre: String, altoMinimoDp: Int, envoltura: @Composable () -> Unit) {
         variantesCaptura().forEach { variante ->
