@@ -61,15 +61,21 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -155,6 +161,28 @@ class ObdSessionManager @Inject constructor(
     private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao)
     val odometerCheck: StateFlow<OdometerChecker.Result?> = odometerChecker.lastResult
     private var activeScheduler: PidScheduler? = null
+    @Volatile private var linkPipeline: LinkPipeline? = null
+    @Volatile private var currentDeviceName: String? = null
+    @Volatile private var autoTripEnabled = true
+    private val autoTripTrigger = AutoTripTrigger()
+    private val tripController = TripController(
+        store = { adapterName -> abrirSesionObd(adapterName) },
+        closer = { sessionId -> cerrarSesionObd(sessionId) },
+        launcher = { sessionId -> lanzarGrabacion(sessionId) },
+        publicarSesion = { sessionId -> _currentSessionIdFlow.value = sessionId },
+    )
+
+    /** Enlace y viaje por separado: se puede finalizar el viaje sin soltar el adaptador. */
+    val estadoViaje: StateFlow<EstadoViaje> = tripController.estado
+
+    /** Por qué se cerró el último viaje OBD — el servicio lo lee al ver el null de [currentSessionId]. */
+    val ultimoMotivoFin: StateFlow<MotivoFin?> = tripController.ultimoMotivoFin
+
+    private val _eventosViaje = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val eventosViaje: SharedFlow<String> = _eventosViaje.asSharedFlow()
+
+    /** El scope y el flujo del pipeline vivo: la grabación de cada viaje cuelga de ellos. */
+    private class LinkPipeline(val scope: CoroutineScope, val readings: SharedFlow<ObdReading>)
     private val workshopClients = AtomicInteger(0)
     @Volatile private var idleModeEnabled = false
 
@@ -183,6 +211,7 @@ class ObdSessionManager @Inject constructor(
         scope.launch {
             launchTimer.results.collect { onLaunchResult(it) }
         }
+        scope.launch { observeAutoTripSetting() }
         scope.launch {
             trackModeEngine.lapEvents.collect { lap ->
                 alertsEngine.announceLap(lap.number, lap.timeMs)
@@ -429,7 +458,7 @@ class ObdSessionManager @Inject constructor(
         _gpsSessionActive.value = false
         stopGpsInactivityWatcher()
         val sessionId = _currentSessionIdFlow.value
-        _readings.value = _readings.value - GPS_SPEED_PID
+        _readings.update { it - GPS_SPEED_PID }
         _currentSessionIdFlow.value = null
         if (alsoStopService) ObdForegroundService.requestShutdown(appContext)
         scope.launch {
@@ -456,7 +485,7 @@ class ObdSessionManager @Inject constructor(
      */
     fun publishGpsSpeed(kmh: Float) {
         val reading = ObdReading(GPS_SPEED_PID, kmh.toDouble(), "km/h")
-        _readings.value = _readings.value + (GPS_SPEED_PID to reading)
+        publishReading(reading)
         if (_gpsSessionActive.value) engineOffDetector.onSpeed(kmh.toDouble())
     }
 
@@ -494,11 +523,42 @@ class ObdSessionManager @Inject constructor(
         reconnectJob?.cancel()
         ObdForegroundService.stop(appContext)
         scope.launch {
-            stopTelemetry()
+            stopTelemetry(MotivoFin.USUARIO)
             transport?.disconnect()
             transport = null
         }
     }
+
+    /**
+     * Cierra el viaje OBD en curso y deja el adaptador conectado, el sondeo y las alertas
+     * vivos. Devuelve el id cerrado, o null si no había viaje OBD grabando.
+     */
+    suspend fun finalizarViajeManteniendoEnlace(motivo: MotivoFin = MotivoFin.USUARIO): Long? {
+        val sessionId = tripController.finalizar(motivo) ?: return null
+        autoTripTrigger.exigirParada()
+        sesion(sessionId)?.let { tripSummaryNotifier.post(it) }
+        return sessionId
+    }
+
+    /** Abre un viaje OBD nuevo sobre el enlace ya conectado. */
+    suspend fun iniciarViajeSobreEnlace(): Result<Long> =
+        tripController.iniciar(currentDeviceName ?: DEFAULT_ADAPTER_NAME)
+
+    /** Para la UI y la notificación: la operación corre en el scope del manager y sobrevive a la pantalla. */
+    fun pedirFinDeViaje(motivo: MotivoFin = MotivoFin.USUARIO) {
+        scope.launch { finalizarViajeManteniendoEnlace(motivo) }
+    }
+
+    fun pedirInicioDeViaje() {
+        scope.launch { iniciarViajeSobreEnlace() }
+    }
+
+    fun hasLiveLink(): Boolean = tripController.estado.value != EstadoViaje.SinEnlace
+
+    suspend fun sesion(sessionId: Long): SessionEntity? =
+        runCatching { sessionDao.getById(sessionId) }
+            .onFailure { Timber.w(it, "ObdSessionManager: failed to read session $sessionId") }
+            .getOrNull()
 
     /**
      * Secuencia de diagnóstico con el sondeo detenido y el adaptador conectado — funciona
@@ -613,7 +673,7 @@ class ObdSessionManager @Inject constructor(
 
     private fun connect(deviceAddress: String, mode: ConnectMode, type: AdapterType = AdapterType.CLASSIC_BT) {
         scope.launch {
-            stopTelemetry()
+            stopTelemetry(MotivoFin.RECONEXION)
             transport?.disconnect()
             currentDeviceAddress = deviceAddress
             currentAdapterType = type
@@ -761,26 +821,18 @@ class ObdSessionManager @Inject constructor(
         registry.setSupportedPids(negotiationResult.supportedPids)
         protocoloEsCan = ProtocolInfo.esCan(probe(bt, "AT DPN\r", DPN_TIMEOUT_MS))
         alertsEngine.reloadThresholds()
-        alertsEngine.resetSessionFlags()
         resolveProfileByVin(bt)
         if (_activeProfile.value == null) activateProfileByAdapter()
         checkOdometerOnce(bt)
 
-        val sessionId = createSession(deviceName)
-        _currentSessionIdFlow.value = sessionId
-        bestTo60Ms = null
-        bestTo100Ms = null
-        launchTimer.reset()
-        engineOffDetector.reset()
+        currentDeviceName = deviceName
 
         val polled = GatedTransport(bt, pollingGate)
         voltagePoller.start(scope, polled) { reading ->
-            _readings.value = _readings.value + (reading.pid to reading)
+            publishReading(reading)
             alertsEngine.process(reading)
         }
-        milWatcher.start(scope, polled) { reading ->
-            _readings.value = _readings.value + (reading.pid to reading)
-        }
+        milWatcher.start(scope, polled) { reading -> publishReading(reading) }
 
         telemetryJob = scope.launch {
             try {
@@ -797,18 +849,10 @@ class ObdSessionManager @Inject constructor(
                     val allFlow = merge(rawFlow, derivedFlow)
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
 
-                    launch {
-                        allFlow.collect { reading ->
-                            _readings.value = _readings.value + (reading.pid to reading)
-                            alertsEngine.process(reading)
-                            launchTimer.process(reading)
-                            if (reading.pid == "0D") engineOffDetector.onSpeed(reading.value)
-                        }
-                    }
+                    launch { allFlow.collect { reading -> onLinkReading(reading) } }
 
-                    launch {
-                        SessionRecorder(telemetryDao).record(sessionId, allFlow)
-                    }
+                    linkPipeline = LinkPipeline(this, allFlow)
+                    tripController.onEnlaceListo(deviceName)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -817,9 +861,8 @@ class ObdSessionManager @Inject constructor(
                 Timber.e(e, "ObdSessionManager: telemetry link lost")
                 voltagePoller.stop()
                 milWatcher.stop()
-                val closedSessionId = _currentSessionIdFlow.value
-                closedSessionId?.let { id -> runCatching { updateSessionEnd(id) } }
-                _currentSessionIdFlow.value = null
+                linkPipeline = null
+                val closedSessionId = tripController.onEnlacePerdido(MotivoFin.ENLACE_PERDIDO)
                 // Probe BEFORE dropping the transport — the adapter may still answer
                 val cause = classifyLinkLoss(transport)
                 runCatching { transport?.disconnect() }
@@ -839,7 +882,7 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
-    private suspend fun stopTelemetry() {
+    private suspend fun stopTelemetry(motivo: MotivoFin) {
         voltagePoller.stop()
         milWatcher.stop()
         // Join so SessionRecorder's final NonCancellable flush lands in Room
@@ -847,8 +890,61 @@ class ObdSessionManager @Inject constructor(
         telemetryJob?.cancelAndJoin()
         telemetryJob = null
         activeScheduler = null
-        _currentSessionIdFlow.value?.let { id -> updateSessionEnd(id) }
-        _currentSessionIdFlow.value = null
+        linkPipeline = null
+        tripController.onEnlacePerdido(motivo)
+    }
+
+    private fun publishReading(reading: ObdReading) {
+        _readings.update { it + (reading.pid to reading) }
+    }
+
+    private fun onLinkReading(reading: ObdReading) {
+        publishReading(reading)
+        alertsEngine.process(reading)
+        // Sin viaje no hay dónde guardar un 0-100: no se anuncia.
+        if (tripController.estado.value is EstadoViaje.Grabando) launchTimer.process(reading)
+        if (reading.pid == "0D") onObdSpeed(reading.value)
+    }
+
+    private fun onObdSpeed(kmh: Double) {
+        engineOffDetector.onSpeed(kmh)
+        if (!autoTripEnabled || tripController.estado.value != EstadoViaje.EnlaceSinViaje) return
+        if (autoTripTrigger.onVelocidad(kmh, System.currentTimeMillis())) scope.launch { iniciarViajeAutomatico() }
+    }
+
+    private suspend fun iniciarViajeAutomatico() {
+        iniciarViajeSobreEnlace().onSuccess { _eventosViaje.tryEmit(AUTO_TRIP_MESSAGE) }
+    }
+
+    private suspend fun observeAutoTripSetting() {
+        runCatching {
+            settings.data
+                .map { it[PreferencesKeys.AUTO_TRIP_ON_MOVE] ?: true }
+                .distinctUntilChanged()
+                .collect { autoTripEnabled = it }
+        }.onFailure { Timber.w(it, "ObdSessionManager: failed to observe auto-trip setting") }
+    }
+
+    private suspend fun abrirSesionObd(adapterName: String): Long {
+        val sessionId = createSession(adapterName)
+        bestTo60Ms = null
+        bestTo100Ms = null
+        launchTimer.reset()
+        engineOffDetector.reset()
+        autoTripTrigger.reset()
+        alertsEngine.resetSessionFlags()
+        return sessionId
+    }
+
+    private suspend fun cerrarSesionObd(sessionId: Long) {
+        runCatching { updateSessionEnd(sessionId) }
+            .onFailure { Timber.w(it, "ObdSessionManager: failed to close session $sessionId") }
+    }
+
+    /** Pipeline ya caído (carrera con la pérdida de enlace): Job vacío; el cierre llega enseguida. */
+    private fun lanzarGrabacion(sessionId: Long): Job {
+        val pipeline = linkPipeline ?: return Job().apply { complete() }
+        return pipeline.scope.launch { SessionRecorder(telemetryDao).record(sessionId, pipeline.readings) }
     }
 
     private suspend fun createSession(deviceName: String): Long =
@@ -876,6 +972,8 @@ class ObdSessionManager @Inject constructor(
         /** Pseudo-PID for the GPS-only trip mode's live speed reading. */
         const val GPS_SPEED_PID = "GPS_SPEED"
         const val GPS_ADAPTER_NAME = "GPS"
+        const val AUTO_TRIP_MESSAGE = "Viaje iniciado automáticamente"
+        private const val DEFAULT_ADAPTER_NAME = "OBD"
 
         private const val DTC_TIMEOUT_MS = 5_000L
         private const val DTC_FULL_READ_TIMEOUT_MS = 30_000L

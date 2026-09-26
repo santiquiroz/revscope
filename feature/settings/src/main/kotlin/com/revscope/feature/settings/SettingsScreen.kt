@@ -198,8 +198,8 @@ private fun buildSettingsEntries(
             id = "herramientas",
             section = SettingsSectionId.VEHICULO_GARAGE,
             title = "Herramientas",
-            subtitle = "Perfiles de vehículo y pantalla encendida",
-            keywords = listOf("perfiles", "pantalla", "screen", "herramientas"),
+            subtitle = "Perfiles de vehículo, pantalla encendida y viaje automático",
+            keywords = listOf("perfiles", "pantalla", "screen", "herramientas", "viaje", "auto-viaje", "automatico"),
         ),
     ) { HerramientasCard(vm, onNavigateToVehicleProfiles) },
     SettingsEntry(

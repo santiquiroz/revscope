@@ -28,6 +28,7 @@ import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.service.LiveRouteHolder
+import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.navigation.LatLon
 import com.revscope.core.navigation.NavigationController
@@ -101,25 +102,33 @@ class LiveMapViewModel @Inject constructor(
         // La navegación recibe el GPS del servicio en primer plano; si no hay viaje,
         // se arranca uno GPS aquí mismo — un tap, como Google Maps. startGpsSession()
         // es no-op si ya hay sesión o el OBD está conectando/conectado.
-        if (sessionManager.currentSessionId.value == null) {
-            sessionManager.startGpsSession()
-            // startGpsSession() marca isGpsSessionActive de forma SÍNCRONA (antes de su
-            // scope.launch interno) pero currentSessionId recién queda seteado async, tras
-            // el insert suspend en Room — comprobar solo currentSessionId acá daría un falso
-            // "no arrancó" en el camino feliz (primer viaje, sin sesión previa). isGpsSessionActive
-            // sí distingue ese caso de un no-op real (OBD Connecting/Connected — ver
-            // ObdSessionManager.startGpsSession), que es cuando la nav arrancaría muda.
-            if (sessionManager.currentSessionId.value == null && !sessionManager.isGpsSessionActive.value) {
-                _navigationError.value = "Esperando el GPS — reintentá en unos segundos"
-                return
-            }
-        }
+        if (sessionManager.currentSessionId.value == null && !arrancarViajeParaNavegar()) return
         val started = navigationController.start(
             route = route,
             origin = LatLon(origin.lat, origin.lon),
             destination = LatLon(destination.lat, destination.lon),
         )
         if (!started) _navigationError.value = "No se pudo iniciar la navegación"
+    }
+
+    /** Adaptador conectado sin viaje: se abre un viaje OBD; sin adaptador, uno GPS. */
+    private fun arrancarViajeParaNavegar(): Boolean {
+        if (sessionManager.estadoViaje.value == EstadoViaje.EnlaceSinViaje) {
+            sessionManager.pedirInicioDeViaje()
+            return true
+        }
+        sessionManager.startGpsSession()
+        // startGpsSession() marca isGpsSessionActive de forma SÍNCRONA (antes de su
+        // scope.launch interno) pero currentSessionId recién queda seteado async, tras
+        // el insert suspend en Room — comprobar solo currentSessionId acá daría un falso
+        // "no arrancó" en el camino feliz (primer viaje, sin sesión previa). isGpsSessionActive
+        // sí distingue ese caso de un no-op real (OBD Connecting/Connected — ver
+        // ObdSessionManager.startGpsSession), que es cuando la nav arrancaría muda.
+        if (sessionManager.currentSessionId.value == null && !sessionManager.isGpsSessionActive.value) {
+            _navigationError.value = "Esperando el GPS — reintentá en unos segundos"
+            return false
+        }
+        return true
     }
 
     fun stopNavigation() {

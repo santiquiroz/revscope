@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,6 +60,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.revscope.core.obd.connection.AdapterType
 import com.revscope.core.obd.connection.BleScanner
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import com.revscope.feature.dashboard.ui.RevScopeColors
 
@@ -71,6 +73,7 @@ fun AdapterScanScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val connectionState by connectionVm.connectionState.collectAsState()
+    val estadoViaje by connectionVm.estadoViaje.collectAsState()
     val lastAdapterAddress by connectionVm.lastAdapterAddress.collectAsState()
     val bleDevices by connectionVm.bleScanResults.collectAsState()
     val bleScanning by connectionVm.bleScanning.collectAsState()
@@ -182,6 +185,9 @@ fun AdapterScanScreen(
                 ConnectionState.Connecting -> ConnectingContent()
 
                 is ConnectionState.Connected -> ConnectedContent(
+                    estadoViaje = estadoViaje,
+                    onFinalizarViaje = connectionVm::finalizarViaje,
+                    onIniciarViaje = connectionVm::iniciarViaje,
                     deviceName = state.deviceName,
                     onDisconnect = { connectionVm.disconnect() },
                 )
@@ -397,12 +403,18 @@ private fun ConnectingContent() {
     ) {
         CircularProgressIndicator(color = RevScopeColors.Accent)
         Spacer(Modifier.height(16.dp))
-        Text("Connecting…", color = RevScopeColors.TextPrimary, fontSize = 16.sp)
+        Text("Conectando…", color = RevScopeColors.TextPrimary, fontSize = 16.sp)
     }
 }
 
 @Composable
-private fun ConnectedContent(deviceName: String, onDisconnect: () -> Unit) {
+private fun ConnectedContent(
+    deviceName: String,
+    estadoViaje: EstadoViaje,
+    onFinalizarViaje: () -> Unit,
+    onIniciarViaje: () -> Unit,
+    onDisconnect: () -> Unit,
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -415,15 +427,22 @@ private fun ConnectedContent(deviceName: String, onDisconnect: () -> Unit) {
             modifier = Modifier.size(48.dp),
         )
         Spacer(Modifier.height(12.dp))
-        Text("Connected ●", color = RevScopeColors.Success, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("Conectado ●", color = RevScopeColors.Success, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(deviceName, color = RevScopeColors.TextPrimary, fontSize = 14.sp)
+        Text(
+            if (estadoViaje is EstadoViaje.Grabando) "Grabando viaje" else "Sin viaje · lecturas en vivo",
+            color = RevScopeColors.TextMuted,
+            fontSize = 12.sp,
+        )
         Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = onDisconnect,
-            colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
-        ) {
-            Text("Disconnect", color = RevScopeColors.TextPrimary)
+        Box(modifier = Modifier.padding(horizontal = 32.dp)) {
+            TripActions(
+                estado = estadoViaje,
+                onFinalizar = onFinalizarViaje,
+                onIniciar = onIniciarViaje,
+                onDesconectar = onDisconnect,
+            )
         }
     }
 }

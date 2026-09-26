@@ -11,6 +11,8 @@ import com.revscope.core.obd.diagnostics.DtcLectura
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.session.EstadoViaje
+import com.revscope.core.obd.session.MotivoFin
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,6 +39,8 @@ class ConnectionViewModel @Inject constructor(
     val alerts: SharedFlow<AlertsEngine.ObdAlert> = alertsEngine.alerts
     val launchResults = manager.launchResults
     val isGpsTripActive: StateFlow<Boolean> = manager.isGpsSessionActive
+    val estadoViaje: StateFlow<EstadoViaje> = manager.estadoViaje
+    val eventosViaje: SharedFlow<String> = manager.eventosViaje
 
     fun setActiveProfile(profile: VehicleProfileEntity?) = manager.setActiveProfile(profile)
 
@@ -62,6 +66,11 @@ class ConnectionViewModel @Inject constructor(
     fun startGpsTrip() = manager.startGpsSession()
 
     fun stopGpsTrip() = manager.stopGpsSession()
+
+    /** «Finalizar viaje (seguir conectado)»: cierra el viaje OBD sin soltar el adaptador. */
+    fun finalizarViaje() = manager.pedirFinDeViaje(MotivoFin.USUARIO)
+
+    fun iniciarViaje() = manager.pedirInicioDeViaje()
 
     suspend fun readActiveDtc(): Result<List<DtcCode>> = manager.readActiveDtc()
 

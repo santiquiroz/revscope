@@ -28,6 +28,7 @@ import com.revscope.core.obd.legal.CityEnforcementAlerter
 import com.revscope.core.obd.motion.MotionMetricsHub
 import com.revscope.core.obd.motion.MotionSensorRecorder
 import com.revscope.core.obd.safety.CrashResponder
+import com.revscope.core.obd.session.MotivoFin
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.track.TrackModeEngine
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,7 +61,8 @@ private const val ALARM_DRAIN_TIMEOUT_MS = 180_000L
 /**
  * Keeps telemetry recording and the GPS track alive when the app is backgrounded
  * or the screen is off. Started by [ObdSessionManager] on connection, stopped on
- * explicit disconnect. The notification doubles as a live mini-dashboard.
+ * explicit disconnect. The notification doubles as a live mini-dashboard. With the adapter
+ * still connected and no trip recording it stays up, so the link survives the trip.
  */
 @AndroidEntryPoint
 class ObdForegroundService : Service() {
@@ -127,7 +129,11 @@ class ObdForegroundService : Service() {
     // NOT_STICKY: el estado de sesión vive en el proceso — si el sistema mata el proceso,
     // el restart sticky revivía un servicio zombie sin sesión que nunca llamaba stopSelf().
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_SHUTDOWN) handleShutdownRequest()
+        when (intent?.action) {
+            ACTION_SHUTDOWN -> handleShutdownRequest()
+            ACTION_END_TRIP -> sessionManager.pedirFinDeViaje(MotivoFin.USUARIO)
+            ACTION_START_TRIP -> sessionManager.pedirInicioDeViaje()
+        }
         return START_NOT_STICKY
     }
 
@@ -182,6 +188,12 @@ class ObdForegroundService : Service() {
                 graceJob = null
                 if (sessionId != null) startSession(sessionId) else handleSessionLost()
             }
+        }
+
+        // El cambio de viaje refresca la notificación aunque la pantalla esté apagada: la acción
+        // Finalizar/Iniciar tiene que corresponder al estado real.
+        scope.launch {
+            sessionManager.estadoViaje.collect { updateNotification(force = true) }
         }
 
         // Live notification content
@@ -267,7 +279,11 @@ class ObdForegroundService : Service() {
     }
 
     private fun shouldEnterCrashGrace(): Boolean =
-        crashResponder.isMonitoringEnabled() && crashResponder.hadRecentMotion(CRASH_GRACE_MOTION_LOOKBACK_MS)
+        TripServicePolicy.entrarEnGraciaDeChoque(
+            motivo = sessionManager.ultimoMotivoFin.value,
+            deteccionActiva = crashResponder.isMonitoringEnabled(),
+            huboMovimientoReciente = crashResponder.hadRecentMotion(CRASH_GRACE_MOTION_LOOKBACK_MS),
+        )
 
     private suspend fun runCrashGrace() {
         delay(CRASH_GRACE_PERIOD_MS)
@@ -278,7 +294,7 @@ class ObdForegroundService : Service() {
             crashResponder.alarmState.first { it == null }
         }
         stopCrashSubsystemAndRecorders()
-        stopSelf()
+        if (TripServicePolicy.detenerTrasGracia(sessionManager.hasLiveLink())) stopSelf()
     }
 
     private fun stopCrashSubsystemAndRecorders() {
@@ -297,13 +313,9 @@ class ObdForegroundService : Service() {
         // Con la pantalla apagada nadie ve la notificación; el force del screen-on la refresca.
         if (!screenOn && !force) return
         val state = sessionManager.connectionState.value
+        val estadoViaje = sessionManager.estadoViaje.value
         val readings = sessionManager.readings.value
-        val title = when (state) {
-            is ConnectionState.Connected -> "Conectado a ${state.deviceName}"
-            ConnectionState.Connecting -> "Conectando…"
-            is ConnectionState.Error -> "Enlace perdido — reintentando"
-            ConnectionState.Disconnected -> "Desconectado"
-        }
+        val title = TripServicePolicy.titulo(state, estadoViaje)
         val temp = readings["05"]?.value?.toInt()
         val speed = readings["0D"]?.value?.toInt()
         val volts = readings[ObdSessionManager.VBAT_PID]?.value
@@ -311,17 +323,21 @@ class ObdForegroundService : Service() {
             speed?.let { add("$it km/h") }
             temp?.let { add("$it°C") }
             volts?.let { add("%.1fV".format(it)) }
-        }.joinToString("  ·  ").ifEmpty { "Grabando telemetría" }
+        }.joinToString("  ·  ").ifEmpty { TripServicePolicy.cuerpoSinLecturas(estadoViaje) }
 
         val key: Pair<String, String?> = title to body
         if (!force && key == lastNotificationKey) return
         lastNotificationKey = key
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification(title, body))
+        manager.notify(NOTIFICATION_ID, buildNotification(title, body, TripServicePolicy.accion(state, estadoViaje)))
     }
 
-    private fun buildNotification(title: String, body: String?): Notification =
-        NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun buildNotification(
+        title: String,
+        body: String?,
+        accion: TripServicePolicy.AccionViaje? = null,
+    ): Notification {
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_revscope)
             .setContentTitle(title)
             .setContentText(body)
@@ -329,7 +345,27 @@ class ObdForegroundService : Service() {
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(launchAppIntent())
-            .build()
+        accion?.let { builder.addAction(0, textoAccion(it), tripActionIntent(it)) }
+        return builder.build()
+    }
+
+    private fun textoAccion(accion: TripServicePolicy.AccionViaje): String = when (accion) {
+        TripServicePolicy.AccionViaje.FINALIZAR -> "Finalizar viaje"
+        TripServicePolicy.AccionViaje.INICIAR -> "Iniciar viaje"
+    }
+
+    private fun tripActionIntent(accion: TripServicePolicy.AccionViaje): android.app.PendingIntent {
+        val action = when (accion) {
+            TripServicePolicy.AccionViaje.FINALIZAR -> ACTION_END_TRIP
+            TripServicePolicy.AccionViaje.INICIAR -> ACTION_START_TRIP
+        }
+        return android.app.PendingIntent.getService(
+            this,
+            accion.ordinal + 1,
+            Intent(this, ObdForegroundService::class.java).setAction(action),
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
 
     private fun launchAppIntent() =
         packageManager.getLaunchIntentForPackage(packageName)?.let { intent ->
@@ -355,6 +391,8 @@ class ObdForegroundService : Service() {
 
     companion object {
         private const val ACTION_SHUTDOWN = "com.revscope.core.obd.action.SHUTDOWN"
+        private const val ACTION_END_TRIP = "com.revscope.core.obd.action.END_TRIP"
+        private const val ACTION_START_TRIP = "com.revscope.core.obd.action.START_TRIP"
 
         fun start(context: Context) {
             runCatching {

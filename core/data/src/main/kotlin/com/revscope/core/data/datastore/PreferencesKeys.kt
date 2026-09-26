@@ -276,6 +276,14 @@ object PreferencesKeys {
     /** Mantener la pantalla encendida mientras el dashboard esté conectado (default true) */
     val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
 
+    // ── Viaje OBD ────────────────────────────────────────────────────────────
+
+    /**
+     * Con el adaptador conectado y sin viaje (tras «Finalizar viaje (seguir conectado)»), iniciar
+     * uno solo al sostener ≥10 km/h durante 5 s (default true).
+     */
+    val AUTO_TRIP_ON_MOVE = booleanPreferencesKey("auto_trip_on_move")
+
     // ── Servidor MCP (red local) ────────────────────────────────────────────
 
     /** Apagado por defecto — expone el estado del vehículo a clientes MCP del PC (default false) */

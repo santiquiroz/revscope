@@ -81,6 +81,15 @@ fun DashboardScreen(
     val update by dashboardVm.updateAvailable.collectAsState()
     val isGpsTrip by connectionVm.isGpsTripActive.collectAsState()
     val speedSourceGps by dashboardVm.speedSourceGps.collectAsState()
+    val estadoViaje by connectionVm.estadoViaje.collectAsState()
+    var avisoViaje by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { connectionVm.eventosViaje.collect { avisoViaje = it } }
+    LaunchedEffect(avisoViaje) {
+        if (avisoViaje != null) {
+            delay(5_000)
+            avisoViaje = null
+        }
+    }
 
     // "Viaje sin adaptador": only offered while there's no live/incoming BT link, so it
     // can never race connectToDevice()'s own GPS-session handover.
@@ -290,6 +299,17 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     OpenMapButton(onClick = onOpenMap)
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            if (connectionState is ConnectionState.Connected) {
+                ObdTripControls(
+                    estado = estadoViaje,
+                    aviso = avisoViaje,
+                    onFinalizar = connectionVm::finalizarViaje,
+                    onIniciar = connectionVm::iniciarViaje,
+                    onDesconectar = connectionVm::disconnect,
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
 

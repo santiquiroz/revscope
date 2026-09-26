@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 private val BgColor = Color(0xFF0A0A0F)
 private val AccentColor = Color(0xFFE8FF00)
@@ -60,8 +61,13 @@ internal fun VehiculoActivoCard(vm: SettingsViewModel, onNavigateToVehicleProfil
 }
 
 @Composable
-internal fun HerramientasCard(vm: SettingsViewModel, onNavigateToVehicleProfiles: () -> Unit) {
+internal fun HerramientasCard(
+    vm: SettingsViewModel,
+    onNavigateToVehicleProfiles: () -> Unit,
+    viajeVm: ViajeObdSettingsViewModel = hiltViewModel(),
+) {
     val keepScreenOn by vm.keepScreenOn.collectAsState()
+    val autoTripOnMove by viajeVm.autoTripOnMove.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle("Herramientas")
@@ -71,6 +77,13 @@ internal fun HerramientasCard(vm: SettingsViewModel, onNavigateToVehicleProfiles
             keepScreenOn,
             vm::updateKeepScreenOn,
             subtitle = "Durante la conducción con el dashboard abierto. Apagarlo ahorra batería en soporte de carro.",
+        )
+        ToggleRow(
+            "Iniciar viaje automáticamente al moverse",
+            autoTripOnMove,
+            viajeVm::updateAutoTripOnMove,
+            subtitle = "Con el adaptador conectado y sin viaje (tras «Finalizar viaje (seguir conectado)»), " +
+                "abre uno al sostener 10 km/h durante 5 s.",
         )
     }
 }
