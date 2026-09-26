@@ -19,11 +19,11 @@ App Android de telemetría OBD2 en tiempo real, UI estilo HUD racing, open sourc
 
 Versiones según `gradle/libs.versions.toml`:
 
-Kotlin 2.2.21 (KSP 2.2.21-2.0.5) · AGP 8.10.1 · Gradle 8.11.1 (wrapper) · JDK 17 · Jetpack Compose (BOM 2025.05.00, Material 3) · MVVM + Clean Architecture · Hilt 2.56.2 (vía KSP) · Coroutines 1.9 + StateFlow/SharedFlow · Room 2.7.1 · DataStore · WorkManager · Vico 2.1.2 (gráficas) · exp4j (fórmulas de PIDs) · MapLibre Android 13.4.1 (variante OpenGL) + PMTiles · Ferrostar 0.53.0 (solo `core`, navegación turn-by-turn) · OkHttp 4.12 (WebSocket) · NanoHTTPD 2.3.1 (servidor MCP) · Car App Library 1.4.0 · Wear Compose 1.4.0 + Health Services · BluetoothSocket RFCOMM (Classic) + blessed-android-coroutines 0.4.2 (BLE) · compileSdk 36, targetSdk 35, minSdk 26 (reloj: minSdk 30).
+Kotlin 2.2.21 (KSP 2.2.21-2.0.5) · AGP 8.10.1 · Gradle 8.11.1 (wrapper) · JDK 17 · Jetpack Compose (BOM 2025.05.00, Material 3) · MVVM + Clean Architecture · Hilt 2.56.2 (vía KSP) · Coroutines 1.9 + StateFlow/SharedFlow · Room 2.7.1 · DataStore · WorkManager · Vico 2.1.2 (gráficas) · Roborazzi 1.75.0 (capturas JVM) · exp4j (fórmulas de PIDs) · MapLibre Android 13.4.1 (variante OpenGL) + PMTiles · Ferrostar 0.53.0 (solo `core`, navegación turn-by-turn) · OkHttp 4.12 (WebSocket) · NanoHTTPD 2.3.1 (servidor MCP) · Car App Library 1.4.0 · Wear Compose 1.4.0 + Health Services · BluetoothSocket RFCOMM (Classic) + blessed-android-coroutines 0.4.2 (BLE) · compileSdk 36, targetSdk 35, minSdk 26 (reloj: minSdk 30).
 
 ## Layout (multi-módulo Gradle)
 
-Los 18 módulos de `settings.gradle.kts`:
+Los 20 módulos de `settings.gradle.kts`:
 
 | Módulo | Responsabilidad |
 |---|---|
@@ -34,6 +34,8 @@ Los 18 módulos de `settings.gradle.kts`:
 | `:core:obd` | Transporte (BT clásico y BLE), protocolo ELM327, PidRegistry (exp4j), `PidScheduler`, `ObdSessionManager`, alertas, radares, lluvia, pico y placa, MCP, detección de caída, rodadas en grupo (revscope-server), aviso de actualización |
 | `:core:maps` | MapLibre: estilos, cascada de tiles (`.pmtiles` local > `.pmtiles` remoto > ráster OSM) y descarga del mapa offline de Colombia |
 | `:core:navigation` | Navegación turn-by-turn sobre Ferrostar: parseo de rutas OSRM, maniobras y voz |
+| `:core:designsystem` | Tokens (`RevScopeColors`, `RevScopeType` con cifras tabulares), `RevScopeTheme` y componentes compartidos |
+| `:core:ui-testing` | `MatrizCaptura`: capturas JVM con Roborazzi + Robolectric (360/412 dp × letra 1,0/1,3/2,0) |
 | `:feature:dashboard` | Pantalla Conducir, escáner de adaptador, Modo Pista |
 | `:feature:map` | Pestaña Mapa: mapa en vivo, búsqueda (Photon), rutas (OSRM), navegación, mapa social |
 | `:feature:workshop` | Pestaña Taller: herramientas de diagnóstico, "Vehículo al día", chat con IA |
@@ -48,7 +50,7 @@ Los 18 módulos de `settings.gradle.kts`:
 
 - **v1.20.0** (versionCode 24, `revscope.versionName` en `gradle.properties`), publicada por GitHub Releases (sideload, no Play Store).
 - Ya implementado: telemetría OBD2 en tiempo real, Taller y diagnóstico, IA opcional con llave propia, servidor MCP en red local, radares y alertas por voz, detección de caída, Android Auto, Wear OS, rodadas en grupo, mapa MapLibre con mapa offline de Colombia y navegación turn-by-turn.
-- **1 058 tests unitarios JVM** (`testDebugUnitTest`, la mayoría en `:core:obd`) más un puñado de tests instrumentados en `androidTest` que necesitan emulador o dispositivo.
+- **1 088 tests unitarios JVM** (`testDebugUnitTest`, la mayoría en `:core:obd`), incluidas las capturas de pantalla JVM (Roborazzi; PNG en `<módulo>/src/test/screenshots`), más un puñado de tests instrumentados en `androidTest` que necesitan emulador o dispositivo.
 - `PLAN.md` es el plan original de la v1 (histórico); el diseño y los planes de cada feature posterior están en `docs/superpowers/`.
 
 ## Comandos
@@ -61,6 +63,8 @@ El repo trae el wrapper de Gradle 8.11.1; basta un JDK 17 o superior (en Windows
 ./gradlew testDebugUnitTest               # unit tests (JVM) de todos los módulos
 ./gradlew :core:obd:testDebugUnitTest     # tests de un módulo
 ./gradlew :app:lintDebug                  # lint de Android
+./gradlew recordRoborazziDebug            # regenerar capturas JVM (mirarlas antes de commitear)
+./gradlew verifyRoborazziDebug            # comparar contra las capturas guardadas
 ./gradlew :app:installDebug               # instalar el teléfono en device/emulador
 ./gradlew :wear:installDebug              # instalar el reloj
 ```

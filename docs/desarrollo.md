@@ -8,7 +8,7 @@ This page targets contributors. English/Spanish mixed is fine here — the app U
 
 ## Módulos
 
-Multi-module Gradle project, declared in `settings.gradle.kts` (18 módulos):
+Multi-module Gradle project, declared in `settings.gradle.kts` (20 módulos):
 
 | Módulo | Contenido |
 |---|---|
@@ -19,6 +19,8 @@ Multi-module Gradle project, declared in `settings.gradle.kts` (18 módulos):
 | `:core:obd` | Todo el pipeline OBD2/GPS/IMU: transporte Bluetooth, `PidScheduler`, `ObdSessionManager`, alertas, pico y placa, MCP, safety (caída) |
 | `:core:maps` | Motor de mapas MapLibre: estilos, cascada de tiles (`.pmtiles` local > `.pmtiles` remoto > ráster OSM) y descarga del mapa offline de Colombia |
 | `:core:navigation` | Navegación turn-by-turn sobre Ferrostar: parseo de rutas OSRM, maniobras y voz |
+| `:core:designsystem` | Tokens (`RevScopeColors`, `RevScopeType` con cifras tabulares), `RevScopeTheme` y componentes compartidos (selector de vehículo, chips, avisos, filas etiqueta/valor, texto que se ajusta) |
+| `:core:ui-testing` | `MatrizCaptura`: capturas JVM con Roborazzi sobre Robolectric (solo `testImplementation`) |
 | `:feature:dashboard` | Pantalla Conducir, escáner de adaptador, Modo Pista |
 | `:feature:map` | Pestaña Mapa (MapLibre): mapa en vivo, búsqueda (Photon), rutas (OSRM), navegación, mapa social |
 | `:feature:workshop` | Pestaña Taller — las 14 herramientas, "Vehículo al día", chat con IA |
@@ -49,6 +51,23 @@ Para depurar builds rotos rápido, dirígete al módulo específico primero (`:c
 ## Tests
 
 **890+ pruebas unitarias JVM** (`@Test` de JUnit4, `./gradlew testDebugUnitTest`), más de la mitad en `core/obd/src/test/kotlin/...` — es el módulo con toda la lógica pura y offline (motores de PIDs, pico y placa, diagnóstico, detección de caída, cálculo de eco-score, etc.). El resto está en `feature/map`, `core/navigation`, `core/maps`, `core/intelligence`, `feature/settings`, `core/data`, `core/common`, `feature/workshop` y `app`. Los pocos tests de `androidTest` necesitan emulador o dispositivo.
+
+### Capturas de pantalla (Roborazzi)
+
+Las pantallas y componentes Compose tocados se renderizan en la JVM con `MatrizCaptura` (`:core:ui-testing`): dos teléfonos (360×640 dp xhdpi y 412×915 dp xxhdpi) por tres escalas de letra (1,0 · 1,3 · 2,0), con el tema RevScope. Los PNG viven en `<módulo>/src/test/screenshots/<Componente>_<w360|w412>_fs<100|130|200>.png`.
+
+```bash
+./gradlew :feature:dashboard:recordRoborazziDebug   # regenera las capturas de un módulo
+./gradlew verifyRoborazziDebug                      # compara contra las guardadas; falla si cambian
+```
+
+- Las pantallas con `hiltViewModel()` se parten en `XxxScreen` (con ViewModel) y un `XxxContent(estado, acciones)` sin estado, que es lo que se captura.
+- Un contenido que en el teléfono se recorre con scroll se captura entero con `altoMinimoDp` (alarga la ventana, no cambia ancho ni densidad).
+- Antes de commitear capturas nuevas o regeneradas, **mírelas**: la captura prueba que no hay recortes, solapes ni textos partidos letra por letra, pero solo si alguien la revisa. Las fuentes de Google no se descargan en Robolectric (se ve la fuente por defecto) y el antialias puede diferir del teléfono.
+
+### Regla de `Row` con texto y acciones
+
+En un `Row` con texto y una acción (botón, ícono o enlace), **el texto lleva `Modifier.weight(1f)`** (o `weight(1f, fill = false)` si no debe estirarse). `Row` mide primero los hijos sin peso y en orden: si el texto no tiene peso se queda con casi todo el ancho y la acción recibe el sobrante, que Compose parte letra por letra (fue el caso de la tarjeta «Configurar adaptador» de Conducir). Si la acción puede crecer —etiquetas largas o letra al 200 %— se apila en una `Column` o se usa `FlowRow`. Pares etiqueta/valor: `FilaEtiquetaValor` del sistema de diseño. Áreas táctiles de 48 dp: preferir `Button`, `IconButton`, `TextButton`, `FilterChip` o `Surface(onClick)` con `heightIn(min = 48.dp)` en vez de `Modifier.clickable` sobre un `Text`.
 
 Convenciones:
 - **`org.junit.Assert`** (`assertEquals`, `assertTrue`, `assertNull`…) como base, no Truth ni Kotest — sigue el estilo de los tests ya existentes en el módulo antes de escribir uno nuevo.

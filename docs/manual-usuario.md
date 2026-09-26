@@ -4,11 +4,11 @@
 >
 > Ver también: [Instalación](instalacion.md) · [Configuración](configuracion.md) · [FAQ](faq.md) · [Desarrollo](desarrollo.md)
 
-RevScope se organiza en cinco pestañas en la barra inferior: **Conducir**, **Mapa**, **Taller**, **Viajes** y **Ajustes**. Todas comparten arriba una pastilla flotante para elegir el vehículo activo.
+RevScope se organiza en cinco pestañas en la barra inferior: **Conducir**, **Mapa**, **Taller**, **Viajes** y **Ajustes**. Cada pestaña muestra en su encabezado el selector del vehículo activo.
 
 ## Selector de vehículo
 
-La pastilla superior muestra un punto de color (estado de conexión del adaptador), un ícono de carro o moto según el tipo del vehículo activo, su nombre, y una flecha hacia abajo. Al tocarla se abre la hoja **"Selecciona"**:
+El selector va en el encabezado de cada pestaña, debajo del título (en el **Mapa**, arriba al centro, y se oculta mientras navegas). Muestra un punto de color (estado de conexión del adaptador), un ícono de carro o moto según el tipo del vehículo activo, su nombre (con un nombre largo usa dos líneas) y una flecha hacia abajo. Al tocarlo se abre la hoja **"Selecciona"**:
 
 - Lista de vehículos guardados (ícono + nombre + placa si la tiene), con una marca ✓ en el activo — tocar uno lo activa de inmediato y cierra la hoja.
 - Botón **"Agregar otro vehículo"** que lleva al formulario de perfiles.
@@ -18,7 +18,7 @@ Si es el primer arranque del proceso (la app se acaba de abrir) y tienes uno o m
 
 ## Conducir
 
-La pantalla principal. Arriba a la izquierda, el ícono de Bluetooth cambia de color según el estado del adaptador (gris = sin conexión, ámbar = conectando, verde = conectado, rojo = error); tocarlo abre el escáner de adaptadores. A la derecha están el voltaje de batería (si hay lectura), el botón de **Modo Pista** (bandera a cuadros) y el de **Ajustes**.
+La pantalla principal. Arriba a la izquierda, el ícono de Bluetooth cambia de forma y de color según el estado del adaptador (gris = sin conexión, ámbar = conectando, verde = conectado, rojo = error; TalkBack lo lee en palabras); tocarlo abre el escáner de adaptadores. Debajo de la barra va el [selector de vehículo](#selector-de-vehículo). A la derecha están el voltaje de batería (si hay lectura), el botón de **Modo Pista** (bandera a cuadros) y el de **Ajustes**.
 
 Contenido, de arriba hacia abajo:
 
@@ -31,9 +31,10 @@ Contenido, de arriba hacia abajo:
   - **Desconectar adaptador**: suelta el Bluetooth y cierra el viaje, como antes.
   - Conectar el adaptador sigue iniciando un viaje, igual que siempre. Con **Iniciar viaje automáticamente al moverse** (Ajustes → Vehículo y garage → Herramientas, activo por defecto), si hay conexión sin viaje y mantienes 10 km/h durante 5 s se abre uno solo y lo avisa ("Viaje iniciado automáticamente"). Si finalizas el viaje andando, primero hay que detenerse para que se vuelva a armar.
 - **Gauge de RPM**, con el borde de toda la pantalla iluminándose como *shift light*: color acento cuando llegas al 95% de la línea roja configurada para el vehículo activo, y rojo pleno al cruzarla.
-- **Velocímetro**, con una pequeña pastilla debajo que indica la fuente: **OBD** o **GPS**. Se puede tocar para alternar manualmente entre la velocidad que reporta el ECU y la del GPS del celular — útil si el adaptador da lecturas erráticas o para comparar con el [comparador de velocímetros](#taller) de Taller.
+- **Velocímetro**, con un chip debajo que indica la fuente: **OBD** o **GPS** (con ✓ cuando usa GPS). Se puede tocar para alternar manualmente entre la velocidad que reporta el ECU y la del GPS del celular — útil si el adaptador da lecturas erráticas o para comparar con el [comparador de velocímetros](#taller) de Taller.
 - **Marcha calculada**, **temperatura del motor** y **barra de boost** (turbo), lado a lado.
-- **Barra de "Trip Score"**: un estilo de conducción (con emoji y etiqueta, ej. "🧘 Relajado", "🔥 Deportivo") calculado en vivo por el motor de eficiencia, junto con un puntaje 0-100.
+- **Barra de puntaje del viaje**: un estilo de conducción (con emoji y etiqueta, ej. "🌿 Eco", "🔥 Agresivo") calculado en vivo por el motor de eficiencia, junto con un **Puntaje** 0-100.
+- Sin adaptador (modo solo GPS), una tarjeta explica que RPM, temperatura, marcha y boost necesitan un adaptador OBD2, con el botón **Configurar adaptador**.
 
 ## Mapa
 
