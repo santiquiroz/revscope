@@ -315,6 +315,15 @@ private fun buildSettingsEntries(
     ) { ModoGuardiaCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
+            id = "muestreo_obd",
+            section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
+            title = "Muestreo OBD",
+            subtitle = "Frecuencia de lectura de sensores y captura rápida",
+            keywords = listOf("muestreo", "frecuencia", "hz", "rapido", "sondeo", "polling", "captura", "escaner"),
+        ),
+    ) { MuestreoObdCard() },
+    SettingsEntry(
+        SettingsEntryMeta(
             id = "pids_personalizados",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
             title = "PIDs personalizados",

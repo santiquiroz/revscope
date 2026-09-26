@@ -23,8 +23,11 @@ object PreferencesKeys {
     /** Show the vehicle picker sheet on app start (default true) */
     val ASK_VEHICLE_ON_START = booleanPreferencesKey("ask_vehicle_on_start")
 
-    /** Polling interval for high-priority PIDs in milliseconds (default 200) */
-    val POLLING_INTERVAL_MS = intPreferencesKey("polling_interval_ms")
+    /**
+     * Frecuencia del sondeo OBD normal: nombre de SamplingPreset (ESTANDAR_2S, UN_SEGUNDO,
+     * MEDIO_SEGUNDO, CUARTO_SEGUNDO, MAXIMO). Default ESTANDAR_2S = intervalos de v1.19.
+     */
+    val SAMPLING_PRESET = stringPreferencesKey("sampling_preset")
 
     /** true = metric units (km/h, °C), false = imperial (mph, °F) */
     val UNITS_METRIC = booleanPreferencesKey("units_metric")

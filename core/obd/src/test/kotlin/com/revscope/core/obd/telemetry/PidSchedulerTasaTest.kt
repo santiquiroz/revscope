@@ -76,4 +76,27 @@ class PidSchedulerTasaTest {
 
         assertTrue(periodos(fake).all { it == 4_000L })
     }
+
+    @Test
+    fun `preset 500ms lleva p3 a medio segundo`() = runTest {
+        val fake = fake()
+        val scheduler = scheduler(fake).apply { setPreset(SamplingPreset.MEDIO_SEGUNDO) }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(2_100)
+        job.cancel()
+
+        assertEquals(listOf(0L, 500L, 1_000L, 1_500L, 2_000L), inicios(fake))
+    }
+
+    @Test
+    fun `preset maximo encadena peticiones sin esperar`() = runTest {
+        val fake = fake()
+        val scheduler = scheduler(fake).apply { setPreset(SamplingPreset.MAXIMO) }
+        val job = launch { scheduler.observeReadings().collect {} }
+        advanceTimeBy(300)
+        job.cancel()
+
+        assertTrue(periodos(fake).all { it == 30L })
+        assertEquals("300 ms / 30 ms por petición, la décima sigue en vuelo", 9, fake.log.size)
+    }
 }

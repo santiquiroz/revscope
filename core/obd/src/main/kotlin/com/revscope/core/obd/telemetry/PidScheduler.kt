@@ -42,6 +42,8 @@ private const val SINGLE_FRAME_PAYLOAD_BYTES = 7
  * Priority 3 → every 2 000 ms
  * Priority 4 → every 1 000 ms, polled only while [setWorkshopMode] is enabled
  *
+ * Those are the [SamplingPreset.ESTANDAR_2S] intervals; other presets cap them (min(base, preset)).
+ *
  * ELM327 is half-duplex — [Transport.exchange] serializes all send/receive pairs
  * at the transport level, so the three coroutine groups (and any external caller,
  * e.g. DTC reads) never interleave on the wire.
@@ -81,6 +83,12 @@ class PidScheduler(
         idleMode.set(enabled)
     }
 
+    private val preset = AtomicReference(SamplingPreset.DEFAULT)
+
+    fun setPreset(value: SamplingPreset) {
+        preset.set(value)
+    }
+
     fun setRemoteViewerActive(active: Boolean) {
         remoteViewerActive.set(active)
     }
@@ -111,7 +119,7 @@ class PidScheduler(
             if (priority == WORKSHOP_PRIORITY) workshopMode.first { it }
             val cycleStartMs = nowMs()
             decayBufferFullMultiplier(cycleStartMs)
-            val intervalMs = (baseIntervalMs * intervalMultiplier.get() * idleFactorFor(priority)).toLong()
+            val intervalMs = intervalFor(priority, baseIntervalMs)
             val defs = registry.definitionsForPriority(priority)
                 .filterNot { it.pid in excludedPids }
             if (defs.isEmpty()) {
@@ -121,6 +129,11 @@ class PidScheduler(
             pollCycle(defs, emit)
             waitUntilNextCycle(cycleStartMs, intervalMs)
         }
+    }
+
+    private fun intervalFor(priority: Int, baseIntervalMs: Long): Long {
+        val presetMs = preset.get().intervaloPara(baseIntervalMs)
+        return (presetMs * intervalMultiplier.get() * idleFactorFor(priority)).toLong()
     }
 
     private suspend fun pollCycle(defs: List<PidDefinition>, emit: (ObdReading) -> Unit) {

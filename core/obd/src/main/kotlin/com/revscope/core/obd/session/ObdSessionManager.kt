@@ -47,6 +47,7 @@ import com.revscope.core.obd.telemetry.GatedTransport
 import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
 import com.revscope.core.obd.telemetry.PollingGate
+import com.revscope.core.obd.telemetry.SamplingPreset
 import com.revscope.core.obd.telemetry.SessionRecorder
 import com.revscope.core.obd.trip.MaintenanceCalculator
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -189,6 +190,9 @@ class ObdSessionManager @Inject constructor(
     @Volatile private var idleModeEnabled = false
     @Volatile private var remoteViewerActive = false
 
+    private val _muestreoPreset = MutableStateFlow(SamplingPreset.DEFAULT)
+    val muestreoPreset: StateFlow<SamplingPreset> = _muestreoPreset.asStateFlow()
+
     private val launchTimer = LaunchTimerEngine()
     val launchResults = launchTimer.results
     private var bestTo60Ms: Long? = null
@@ -216,6 +220,7 @@ class ObdSessionManager @Inject constructor(
         }
         scope.launch { observeAutoTripSetting() }
         scope.launch { observeRemoteViewer() }
+        scope.launch { observeSamplingPreset() }
         scope.launch {
             trackModeEngine.lapEvents.collect { lap ->
                 alertsEngine.announceLap(lap.number, lap.timeMs)
@@ -845,6 +850,7 @@ class ObdSessionManager @Inject constructor(
                     scheduler.setWorkshopMode(workshopClients.get() > 0)
                     scheduler.setIdleMode(idleModeEnabled)
                     scheduler.setRemoteViewerActive(remoteViewerActive)
+                    scheduler.setPreset(_muestreoPreset.value)
                     val rawFlow = scheduler
                         .observeReadings()
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
@@ -935,6 +941,23 @@ class ObdSessionManager @Inject constructor(
             remoteViewerActive = activo
             activeScheduler?.setRemoteViewerActive(activo)
         }
+    }
+
+    private suspend fun observeSamplingPreset() {
+        runCatching {
+            settings.data
+                .map { SamplingPreset.desdeClave(it[PreferencesKeys.SAMPLING_PRESET]) }
+                .distinctUntilChanged()
+                .collect { preset ->
+                    _muestreoPreset.value = preset
+                    activeScheduler?.setPreset(preset)
+                }
+        }.onFailure { Timber.w(it, "ObdSessionManager: failed to observe sampling preset") }
+    }
+
+    /** Cambia la frecuencia del sondeo normal; el scheduler vivo la toma sin reconectar. */
+    suspend fun cambiarPresetMuestreo(preset: SamplingPreset) {
+        settings.edit { it[PreferencesKeys.SAMPLING_PRESET] = preset.name }
     }
 
     private suspend fun abrirSesionObd(adapterName: String): Long {
