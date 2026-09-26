@@ -1,11 +1,14 @@
 package com.revscope.core.obd.di
 
 import com.revscope.core.obd.mcp.AgregarNotaTallerTool
+import com.revscope.core.obd.mcp.AvanzarPruebaGuiadaTool
 import com.revscope.core.obd.mcp.BorrarDtcTool
+import com.revscope.core.obd.mcp.CancelarPruebaGuiadaTool
 import com.revscope.core.obd.mcp.DetenerCapturaTool
 import com.revscope.core.obd.mcp.GetCapturaTool
 import com.revscope.core.obd.mcp.GetMuestreoTool
 import com.revscope.core.obd.mcp.IniciarCapturaTool
+import com.revscope.core.obd.mcp.IniciarPruebaGuiadaTool
 import com.revscope.core.obd.mcp.SetMuestreoTool
 import com.revscope.core.obd.mcp.FinalizarViajeTool
 import com.revscope.core.obd.mcp.GetChequeoSaludTool
@@ -14,6 +17,7 @@ import com.revscope.core.obd.mcp.GetDtcTool
 import com.revscope.core.obd.mcp.GetEstadoTool
 import com.revscope.core.obd.mcp.GetGuiaDtcTool
 import com.revscope.core.obd.mcp.GetMantenimientoTool
+import com.revscope.core.obd.mcp.GetPruebaGuiadaTool
 import com.revscope.core.obd.mcp.GetSesionTallerTool
 import com.revscope.core.obd.mcp.GetViajeDetalleTool
 import com.revscope.core.obd.mcp.GetViajesTool
@@ -30,9 +34,10 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * Las tools de lectura (plan6 Task 4, get_muestreo, get_captura, get_guia_dtc y get_sesion_taller) más las
- * de control (viaje, preset de muestreo, captura rápida y sesión del Taller) y borrado de DTC, que el
- * dispatcher solo lista y ejecuta si el dueño activó sus permisos en Ajustes.
+ * Las tools de lectura (plan6 Task 4, get_muestreo, get_captura, get_guia_dtc, get_sesion_taller y
+ * get_prueba_guiada) más las de control (viaje, preset de muestreo, captura rápida, sesión y pruebas guiadas
+ * del Taller) y borrado de DTC, que el dispatcher solo lista y ejecuta si el dueño activó sus permisos en
+ * Ajustes.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -60,11 +65,16 @@ object McpModule {
         getSesionTaller: GetSesionTallerTool,
         iniciarSesionTaller: IniciarSesionTallerTool,
         agregarNotaTaller: AgregarNotaTallerTool,
+        getPruebaGuiada: GetPruebaGuiadaTool,
+        iniciarPruebaGuiada: IniciarPruebaGuiadaTool,
+        avanzarPruebaGuiada: AvanzarPruebaGuiadaTool,
+        cancelarPruebaGuiada: CancelarPruebaGuiadaTool,
     ): List<McpTool> = listOf(
         getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getGuiaDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
         getMuestreo, setMuestreo, iniciarCaptura, getCaptura, detenerCaptura,
         getSesionTaller, iniciarSesionTaller, agregarNotaTaller,
+        getPruebaGuiada, iniciarPruebaGuiada, avanzarPruebaGuiada, cancelarPruebaGuiada,
     )
 
     @Provides

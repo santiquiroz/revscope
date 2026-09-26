@@ -55,6 +55,8 @@ object McpSchemas {
 
     fun texto(descripcion: String): JSONObject = JSONObject().put("type", "string").put("description", descripcion)
 
+    fun numero(descripcion: String): JSONObject = JSONObject().put("type", "number").put("description", descripcion)
+
     /** Strings no vacíos de un argumento array (null o ausente = lista vacía). */
     fun strings(array: JSONArray?): List<String> =
         (0 until (array?.length() ?: 0)).mapNotNull { i -> array?.optString(i)?.trim()?.takeIf { it.isNotEmpty() } }
