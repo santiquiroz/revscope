@@ -314,6 +314,12 @@ fun RevScopeNavGraph(
                         onCompareSessions = { a, b ->
                             navController.navigate(Screen.SessionCompare.withIds(a, b))
                         },
+                        onIniciarViaje = {
+                            navController.navigate(Screen.Dashboard.route) {
+                                popUpTo(Screen.Dashboard.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
                 composable(
@@ -337,7 +343,10 @@ fun RevScopeNavGraph(
                     )
                 }
                 composable(Screen.VehicleProfile.route) {
-                    VehicleProfileScreen(connectionVm = connectionVm)
+                    VehicleProfileScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        connectionVm = connectionVm,
+                    )
                 }
                 composable(
                     route = Screen.Settings.route,
