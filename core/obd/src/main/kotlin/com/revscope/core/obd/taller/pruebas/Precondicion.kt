@@ -23,7 +23,8 @@ data class ContextoPrueba(
     }
 }
 
-data class ResultadoPrecondicion(val texto: String, val cumple: Boolean, val queHacer: String? = null)
+// [aviso]: se puede seguir, pero hay algo que el técnico debe saber o confirmar (p. ej. un arranque tibio).
+data class ResultadoPrecondicion(val texto: String, val cumple: Boolean, val queHacer: String? = null, val aviso: Boolean = false)
 
 sealed interface Precondicion {
     fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion
@@ -36,17 +37,69 @@ sealed interface Precondicion {
         }
     }
 
-    data object MotorApagado : Precondicion {
+    data class MotorApagado(val queHacer: String) : Precondicion {
         override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
             val rpm = ctx.reciente(ContextoPrueba.PID_RPM)?.value
                 ?: return ResultadoPrecondicion("Motor apagado (sin lectura de RPM)", cumple = true)
             if (rpm < 1.0) return ResultadoPrecondicion("Motor apagado (RPM = 0)", cumple = true)
+            return ResultadoPrecondicion("Motor encendido (${FormatoTaller.numero(rpm, 0)} rpm)", cumple = false, queHacer)
+        }
+    }
+
+    data class MotorEncendido(val minRpm: Double = MIN_RPM_ENCENDIDO) : Precondicion {
+        override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
+            val rpm = ctx.reciente(ContextoPrueba.PID_RPM)?.value
+                ?: return ResultadoPrecondicion("Sin lectura de RPM", cumple = false, ENCENDER)
+            if (rpm > minRpm) return ResultadoPrecondicion("Motor encendido (${FormatoTaller.numero(rpm, 0)} rpm)", cumple = true)
+            return ResultadoPrecondicion("Motor apagado o a punto de apagarse (${FormatoTaller.numero(rpm, 0)} rpm)", cumple = false, ENCENDER)
+        }
+
+        private companion object {
+            const val MIN_RPM_ENCENDIDO = 400.0
+            const val ENCENDER = "Enciende el motor y déjalo en mínimo sin tocar el acelerador"
+        }
+    }
+
+    // La ECU no informa la marcha por OBD: lo confirma el técnico.
+    data object EnNeutro : Precondicion {
+        override fun evaluar(ctx: ContextoPrueba) = ResultadoPrecondicion(
+            "Caja en neutro: confírmalo tú (la ECU no lo informa)",
+            cumple = true,
+            "Vas a acelerar hasta unas 3 000 rpm: pon la caja en neutro antes de empezar",
+            aviso = true,
+        )
+    }
+
+    // Frío si motor y aire difieren menos de 5 °C (típico tras ≥ 6 h de reposo). Tibio no impide la prueba:
+    // el resultado sale etiquetado como «arranque tibio».
+    data object MotorFrio : Precondicion {
+        const val DIFERENCIA_MAX_C = 5.0
+
+        override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
+            val ect = ctx.reciente(PID_ECT)?.value
+            val iat = ctx.reciente(PID_IAT)?.value
+            if (ect == null || iat == null) return sinTemperaturas()
+            val medidas = "motor ${grados(ect)}, aire ${grados(iat)}"
+            if (ect - iat < DIFERENCIA_MAX_C) return ResultadoPrecondicion("Motor frío ($medidas)", cumple = true)
             return ResultadoPrecondicion(
-                "Motor encendido (${FormatoTaller.numero(rpm, 0)} rpm)",
-                cumple = false,
-                "Apaga el motor y deja el contacto puesto: a fondo con el motor encendido no es un barrido seguro",
+                "Motor tibio ($medidas): la prueba seguirá como «arranque tibio»",
+                cumple = true,
+                "Para un arranque en frío de verdad, repítela tras el reposo de la noche (≥ 6 h, típico)",
+                aviso = true,
             )
         }
+
+        private fun sinTemperaturas() = ResultadoPrecondicion(
+            "Sin lectura de la temperatura del motor o del aire",
+            cumple = true,
+            "Se decidirá con el paso de contacto; si la ECU no las reporta, el resultado no dirá si estaba frío",
+            aviso = true,
+        )
+
+        private fun grados(x: Double) = "${FormatoTaller.numero(x, 0)} °C"
+
+        private const val PID_ECT = "05"
+        private const val PID_IAT = "0F"
     }
 
     data object MotoDetenida : Precondicion {

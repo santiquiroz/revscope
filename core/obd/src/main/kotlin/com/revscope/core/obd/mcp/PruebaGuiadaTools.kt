@@ -5,6 +5,7 @@ import com.revscope.core.obd.taller.pruebas.ControladorPruebaGuiada
 import com.revscope.core.obd.taller.pruebas.EnlacePrueba
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
 import com.revscope.core.obd.taller.pruebas.FasePaso
+import com.revscope.core.obd.taller.pruebas.ModoPaso
 import com.revscope.core.obd.taller.pruebas.OpcionesPrueba
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
@@ -19,7 +20,7 @@ private fun disponibles(): List<String> = CatalogoPruebas.disponibles.map { it.n
 
 // Estado de la prueba con el valor en vivo del PID principal mientras corre (la captura lo publica al flujo del enlace).
 private fun estadoJson(controlador: ControladorPruebaGuiada, enlace: EnlacePrueba, estado: EstadoPrueba): JSONObject {
-    val principal = (estado as? EstadoPrueba.EnPaso)?.let { CatalogoPruebas.definicion(it.tipo)?.pids?.firstOrNull() }
+    val principal = (estado as? EstadoPrueba.EnPaso)?.let { e -> CatalogoPruebas.definicion(e.tipo)?.pidPrincipal(e.paso) }
     return PruebaGuiadaJson.estado(estado, controlador.idPrueba, principal?.let { enlace.lecturas()[it] })
         .put("mensaje", mensaje(estado))
 }
@@ -46,9 +47,15 @@ private fun mensajePaso(e: EstadoPrueba.EnPaso): String {
     return when (e.fase) {
         FasePaso.POSICIONANDO -> "$cabeza. Cuando esté en posición, llama avanzar_prueba_guiada (equivale a «Listo»)"
         FasePaso.SOSTENIENDO -> "$cabeza. Sosteniendo; faltan ${(e.restanteMs ?: 0) / 1_000} s"
-        FasePaso.GRABANDO -> "$cabeza. Grabando; faltan ${(e.restanteMs ?: 0) / 1_000} s"
+        FasePaso.GRABANDO -> if (terminaConToque(e.paso.modo)) {
+            "$cabeza. Grabando hasta el evento o hasta avanzar_prueba_guiada («Terminar»); como mucho ${(e.restanteMs ?: 0) / 1_000} s"
+        } else {
+            "$cabeza. Grabando; faltan ${(e.restanteMs ?: 0) / 1_000} s"
+        }
     }
 }
+
+private fun terminaConToque(modo: ModoPaso): Boolean = modo is ModoPaso.GrabarHasta || modo is ModoPaso.Accion
 
 /** Arranca una prueba guiada del Taller; el teléfono guía por voz y el resultado queda en la sesión abierta. */
 class IniciarPruebaGuiadaTool @Inject constructor(
@@ -61,8 +68,13 @@ class IniciarPruebaGuiadaTool @Inject constructor(
         "Arranca una prueba guiada del Taller sobre la captura rápida. TPS_BARRIDO: barrido del acelerador con el " +
             "motor apagado y el contacto puesto (cerrado, medio, a fondo, cerrado otra vez y un barrido lento); da el " +
             "patrón de la señal (p. ej. «señal baja en todo el recorrido», compatible con P0122) contra bandas típicas " +
-            "editables. Primero verifica adaptador, motor apagado, moto detenida y que la ECU reporte el PID: si algo " +
-            "falla devuelve qué y qué hacer. El teléfono guía cada paso por voz; los pasos sostenidos esperan a " +
+            "editables. MINIMO_RETORNO: con el motor encendido y en neutro, 45 s de mínimo sin tocar el acelerador " +
+            "(media, desviación, deriva, oscilación, apagones y TPS de ralentí contra la banda de cerrado) y 3 " +
+            "aceleradas a ~3 000 rpm soltando de golpe (valle, tiempo de retorno y si se apagó). ARRANQUE_FRIO: " +
+            "contacto 10 s (motor, aire y ambiente deben coincidir; si difieren 5 °C o más sale como «arranque " +
+            "tibio»), arranque (intentos y tiempo) y calentamiento hasta 60 °C o «Terminar» (perfil del mínimo " +
+            "rápido, apagones y saltos de la temperatura). Primero verifica las precondiciones de cada prueba: si " +
+            "algo falla devuelve qué y qué hacer. El teléfono guía cada paso por voz; los pasos sostenidos esperan a " +
             "avanzar_prueba_guiada («Listo»). Sigue el avance con get_prueba_guiada. Una prueba a la vez y no con una " +
             "captura rápida manual activa. El resultado queda en la sesión de taller abierta"
     override val inputSchema: JSONObject = McpSchemas.objeto(
@@ -107,7 +119,9 @@ class AvanzarPruebaGuiadaTool @Inject constructor(
     override val name = "avanzar_prueba_guiada"
     override val description =
         "Equivale a tocar «Listo» en el paso actual de la prueba guiada: úsalo cuando el acelerador ya esté en la " +
-            "posición que pide el paso; arranca su cuenta regresiva. Los pasos que graban solos no lo necesitan"
+            "posición que pide el paso; arranca su cuenta regresiva. En los pasos que graban hasta un evento o hasta " +
+            "que se diga (el arranque y el calentamiento del arranque en frío) equivale a «Terminar». Los pasos que " +
+            "graban solos no lo necesitan"
     override val inputSchema: JSONObject = McpSchemas.noArguments()
     override val permiso = McpPermiso.CONTROL
 

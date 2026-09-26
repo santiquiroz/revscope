@@ -19,6 +19,9 @@ data class DefinicionPrueba(
 
     val titulo: String get() = tipo.titulo
 
+    // El PID que se muestra en vivo en cada paso: el del paso si lo dice, si no el primero de la prueba.
+    fun pidPrincipal(paso: PasoPrueba): String = paso.pidPrincipal ?: pids.first()
+
     // Cada paso con su tope más un margen para posicionar el acelerador antes de tocar «Listo».
     val duracionMaximaMs: Long
         get() = pasos.sumOf { it.modo.limiteMs + MARGEN_POR_PASO_MS }.coerceAtMost(LimitesCaptura.MAX_DURACION_MS)
@@ -35,6 +38,7 @@ data class PasoPrueba(
     val modo: ModoPaso,
     val descartarInicioMs: Long = 1_000,
     val terminarCuando: CriterioFin? = null,
+    val pidPrincipal: String? = null,
 )
 
 sealed interface ModoPaso {
