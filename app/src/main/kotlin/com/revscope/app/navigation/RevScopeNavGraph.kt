@@ -3,35 +3,24 @@ package com.revscope.app.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -41,6 +30,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.revscope.app.onboarding.AiValueScreen
+import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.SelectorVehiculo
 import com.revscope.app.onboarding.OnboardingScreen
 import com.revscope.app.onboarding.OnboardingViewModel
 import com.revscope.app.safety.CrashAlertDialog
@@ -70,18 +61,13 @@ import com.revscope.feature.workshop.OdometerScreen
 import com.revscope.feature.workshop.SpeedComparisonScreen
 import com.revscope.feature.workshop.WorkshopScreen
 
-private val BgColor = Color(0xFF0A0A0F)
-private val SurfaceColor = Color(0xFF12121A)
-private val AccentColor = Color(0xFFE8FF00)
-private val TextMutedColor = Color(0xFF6B7089)
-
-private data class BottomNavItem(
+internal data class BottomNavItem(
     val screen: Screen,
     val label: String,
     val icon: ImageVector,
 )
 
-private val bottomNavItems = listOf(
+internal val bottomNavItems = listOf(
     BottomNavItem(Screen.Dashboard, "Conducir", Icons.Default.Speed),
     BottomNavItem(Screen.LiveMap, "Mapa", Icons.Default.Map),
     BottomNavItem(Screen.Workshop, "Taller", Icons.Default.Build),
@@ -135,18 +121,26 @@ fun RevScopeNavGraph(
         }
     }
 
-    // El chip de perfil de vehículo (VehicleSwitcherPill, abajo) vive acá porque se comparte
-    // entre todas las pantallas de bottom-nav, pero con navegación activa en el mapa el banner
-    // de maniobra lo tapa — LiveMapScreen nos avisa por callback (fix W2 regla 1) en vez de
-    // acoplar este chip al ViewModel del mapa, que es screen-scoped.
-    var mapNavigationActive by remember { mutableStateOf(false) }
-
+    // El selector de vehículo se arma acá (lo comparten las pestañas) pero cada pestaña lo monta
+    // en su propio encabezado: flotando encima tapaba los títulos. El mapa lo oculta mientras navega.
     var showVehiclePicker by rememberSaveable { mutableStateOf(false) }
     var vehiclePickerIsStartupPrompt by rememberSaveable { mutableStateOf(false) }
     var hasOfferedVehiclePicker by rememberSaveable { mutableStateOf(false) }
     val vehicleProfiles by vehiclePickerVm.profiles.collectAsState()
     val askVehicleOnStart by vehiclePickerVm.askOnStart.collectAsState()
     val activeVehicleProfile by vehiclePickerVm.activeProfile.collectAsState()
+
+    val connState by connectionVm.connectionState.collectAsState()
+    val selectorVehiculo: @Composable () -> Unit = {
+        SelectorVehiculo(
+            vehiculo = vehiculoEnEncabezado(connState, activeVehicleProfile),
+            onClick = {
+                hasOfferedVehiclePicker = true
+                vehiclePickerIsStartupPrompt = false
+                showVehiclePicker = true
+            },
+        )
+    }
 
     LaunchedEffect(vehicleProfiles, askVehicleOnStart, currentRoute) {
         val onOnboarding = currentRoute == Screen.Onboarding.route
@@ -158,32 +152,14 @@ fun RevScopeNavGraph(
     }
 
     Scaffold(
-        containerColor = BgColor,
+        containerColor = RevScopeColors.Background,
         bottomBar = {
             if (currentRoute in bottomNavRoutes) {
-                NavigationBar(containerColor = SurfaceColor) {
-                    bottomNavItems.forEach { item ->
-                        NavigationBarItem(
-                            selected = currentRoute == item.screen.route,
-                            onClick = {
-                                if (currentRoute != item.screen.route) {
-                                    navController.navigate(item.screen.navRoute) {
-                                        popUpTo(Screen.Dashboard.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label, fontSize = 11.sp) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = AccentColor,
-                                selectedTextColor = AccentColor,
-                                unselectedIconColor = TextMutedColor,
-                                unselectedTextColor = TextMutedColor,
-                                indicatorColor = Color(0xFF1C1C28),
-                            ),
-                        )
+                BarraInferior(rutaActual = currentRoute) { item ->
+                    navController.navigate(item.screen.navRoute) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 }
             }
@@ -232,12 +208,14 @@ fun RevScopeNavGraph(
                                 restoreState = true
                             }
                         },
+                        selectorVehiculo = selectorVehiculo,
                         connectionVm = connectionVm,
                     )
                 }
                 composable(Screen.Workshop.route) {
                     WorkshopScreen(
                         connectionVm = connectionVm,
+                        selectorVehiculo = selectorVehiculo,
                         onOpenAlDia = { navController.navigate(Screen.AlDia.route) },
                         onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
                         onOpenDtc = { navController.navigate(Screen.Dtc.route) },
@@ -291,7 +269,7 @@ fun RevScopeNavGraph(
                 }
                 composable(Screen.LiveMap.route) {
                     LiveMapScreen(
-                        onNavigationActiveChanged = { mapNavigationActive = it },
+                        selectorVehiculo = selectorVehiculo,
                         // Único uso de onNavigateToSettings dentro de LiveMapScreen es el CTA
                         // del diálogo de descarga de mapa offline — abre Ajustes con la sección
                         // Mapa ya expandida en vez de aterrizar en la lista colapsada.
@@ -328,6 +306,7 @@ fun RevScopeNavGraph(
                 }
                 composable(Screen.Sessions.route) {
                     SessionHistoryScreen(
+                        selectorVehiculo = selectorVehiculo,
                         onOpenSession = { sessionId ->
                             navController.navigate(Screen.SessionDetail.withId(sessionId))
                         },
@@ -370,6 +349,7 @@ fun RevScopeNavGraph(
                     ),
                 ) { backStackEntry ->
                     SettingsScreen(
+                        selectorVehiculo = selectorVehiculo,
                         onNavigateToVehicleProfiles = { navController.navigate(Screen.VehicleProfile.route) },
                         onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
                         onRerunOnboarding = {
@@ -389,22 +369,6 @@ fun RevScopeNavGraph(
                         onNavigateBack = { navController.popBackStack() },
                         connectionVm = connectionVm,
                     )
-                }
-            }
-            val hideVehiclePill = currentRoute == Screen.LiveMap.route && mapNavigationActive
-            if (currentRoute in bottomNavRoutes && !hideVehiclePill) {
-                val connState by connectionVm.connectionState.collectAsState()
-                Box(
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .statusBarsPadding()
-                        .padding(top = 4.dp),
-                ) {
-                    VehicleSwitcherPill(connectionState = connState, activeProfile = activeVehicleProfile) {
-                        hasOfferedVehiclePicker = true
-                        vehiclePickerIsStartupPrompt = false
-                        showVehiclePicker = true
-                    }
                 }
             }
             if (showVehiclePicker) {

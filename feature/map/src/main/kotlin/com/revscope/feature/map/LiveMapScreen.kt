@@ -56,6 +56,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.DisposableEffect
@@ -122,13 +125,17 @@ private val SharedDestSaver = listSaver<RoomClient.SharedDest?, Any>(
     },
 )
 
+// El selector de vehículo arranca bajo la atribución de OSM y mide 48 dp de alto; lo que va
+// arriba al centro (avisos, búsqueda, ranking) empieza debajo de él.
+private val TOPE_SELECTOR = 20.dp
+private val BAJO_SELECTOR = TOPE_SELECTOR + 48.dp + 8.dp
+
 @Composable
 fun LiveMapScreen(
     viewModel: LiveMapViewModel = hiltViewModel(),
-    // La navegación activa también debe ocultar chrome que vive FUERA de este composable (el
-    // chip de perfil de vehículo, montado por RevScopeNavGraph junto al resto de pantallas de
-    // bottom-nav) — se lo avisamos al padre en vez de acoplar ese chip al ViewModel del mapa.
-    onNavigationActiveChanged: (Boolean) -> Unit = {},
+    // Selector de vehículo que arma RevScopeNavGraph; el mapa lo monta arriba al centro y lo
+    // oculta mientras hay navegación, cuando esa franja es del banner de maniobra.
+    selectorVehiculo: @Composable () -> Unit = {},
     // CTA del banner de promo del tier remoto (fix W1) — mismo patrón que DashboardScreen y
     // MechanicChatScreen: RevScopeNavGraph lo cablea a navController.navigate(Screen.Settings.route).
     onNavigateToSettings: () -> Unit = {},
@@ -552,13 +559,6 @@ fun LiveMapScreen(
             mapRef?.uiSettings?.isCompassEnabled = navIdle
         }
 
-        // El chip de perfil de vehículo (VehicleSwitcherPill) lo monta RevScopeNavGraph, fuera
-        // de este composable — el padre necesita saber cuándo hay nav activa para ocultarlo
-        // (fix W2, regla 1) sin acoplar ese chip al ViewModel del mapa.
-        LaunchedEffect(navIdle) {
-            onNavigationActiveChanged(!navIdle)
-        }
-
         Text(
             "© OpenStreetMap contributors",
             color = AttributionColor,
@@ -566,18 +566,25 @@ fun LiveMapScreen(
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
 
+        // navigation == null y no navIdle: con «Llegó» el NavigationBanner sigue arriba al centro.
+        if (navigation == null) {
+            Box(Modifier.align(Alignment.TopCenter).padding(top = TOPE_SELECTOR, start = 12.dp, end = 12.dp)) {
+                selectorVehiculo()
+            }
+        }
+
         if (!hasLocationPermission) {
             Surface(
                 color = Color(0xF2121218),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 28.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = BAJO_SELECTOR),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "Ubicación desactivada",
                         color = Color(0xFFF0F0F8),
                         fontSize = 13.sp,
-                        modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
+                        modifier = Modifier.weight(1f, fill = false).padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
                     )
                     TextButton(
                         onClick = {
@@ -596,8 +603,7 @@ fun LiveMapScreen(
         // "arrived"): con arrived=true, navIdle ya es true pero el NavigationBanner de "Llegó"
         // y la NavigationProgressBar (ver navLive != null más abajo) SIGUEN de pie hasta que el
         // usuario cierra la navegación — con navIdle esta barra reaparecía encima de ese banner.
-        // El chip de perfil de vehículo (fuera de este composable, ver onNavigationActiveChanged)
-        // sigue atado a navIdle — ese no tiene el problema de solape (fix W2, regla 1).
+        // El selector de vehículo usa la misma condición (fix W2, regla 1).
         if (navigation == null) {
             SearchOverlay(
                 query = searchQuery,
@@ -610,7 +616,7 @@ fun LiveMapScreen(
                 onSelectSaved = viewModel::selectSavedPlace,
                 onSaveFavorite = viewModel::saveFavorite,
                 onRemoveSaved = viewModel::removePlace,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 68.dp, start = 12.dp, end = 12.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = BAJO_SELECTOR + 40.dp, start = 12.dp, end = 12.dp),
             )
         }
 
@@ -728,7 +734,7 @@ fun LiveMapScreen(
             }
         }
         Column(
-            Modifier.align(Alignment.TopCenter).padding(top = if (navigation != null) 8.dp else 28.dp, start = 12.dp, end = 12.dp),
+            Modifier.align(Alignment.TopCenter).padding(top = if (navigation != null) 8.dp else BAJO_SELECTOR, start = 12.dp, end = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             navigation?.let { live ->
@@ -805,7 +811,7 @@ fun LiveMapScreen(
             // no una suposición sobre el ancho de pantalla); con NavigationBanner Y el
             // secundario apilados a la vez el offset es más ajustado — no se profundizó porque
             // el reporte de campo fue específicamente Leaderboard×SharedDestBanner solo.
-            val leaderboardTopPadding = if (navigation != null || secondaryBanner != null) 96.dp else 28.dp
+            val leaderboardTopPadding = if (navigation != null || secondaryBanner != null) BAJO_SELECTOR + 68.dp else BAJO_SELECTOR
             Column(
                 Modifier.align(Alignment.TopStart).padding(top = leaderboardTopPadding, start = 12.dp),
                 horizontalAlignment = Alignment.Start,
@@ -832,7 +838,7 @@ fun LiveMapScreen(
                         selfRiderName = effectiveSelfName,
                         onStartRace = viewModel::startRace,
                         onStopRace = viewModel::stopRace,
-                        modifier = Modifier.width(220.dp),
+                        modifier = Modifier.widthIn(max = anchoLeaderboard(LocalDensity.current.fontScale)),
                     )
                 }
             }
@@ -1006,6 +1012,7 @@ private fun RouteInfoChip(
                     color = Color(0xFFE8FF00),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 if (plannedRoute != null) {
                     TextButton(onClick = onStart) {
@@ -1121,6 +1128,9 @@ private fun formatRouteSummary(route: NavigationRoute): String {
     return "$distance · $time"
 }
 
+// Con letra grande el ranking crece hasta 1,5 veces su ancho y luego envuelve.
+internal fun anchoLeaderboard(escalaLetra: Float): Dp = 220.dp * minOf(maxOf(escalaLetra, 1f), 1.5f)
+
 /** Aviso inline dismisseable — mismo look para el error de navegación y el de mapa offline
  * corrupto (fix C: ahora nunca conviven, pickSecondaryBanner elige uno). internal: la usa
  * también SecondaryBannerContent en OverlayPriority.kt. */
@@ -1132,12 +1142,13 @@ internal fun ErrorBanner(message: String, onDismiss: () -> Unit, modifier: Modif
         modifier = modifier,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // weight: sin él un mensaje largo empujaba el botón de cerrar a 0 dp.
             Text(
                 message,
                 color = Color(0xFFE8FF00),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
+                modifier = Modifier.weight(1f, fill = false).padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
             )
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
@@ -1320,13 +1331,14 @@ private fun MapDownloadConfirmDialog(
 @Composable
 private fun RecenterChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
+        onClick = onClick,
         color = Color(0xFFE8FF00),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.heightIn(min = 48.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             Icon(Icons.Default.Navigation, contentDescription = null, tint = Color(0xFF0A0A0F))
             Spacer(Modifier.width(6.dp))

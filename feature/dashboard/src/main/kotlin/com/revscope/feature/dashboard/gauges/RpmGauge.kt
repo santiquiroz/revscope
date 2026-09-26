@@ -4,29 +4,33 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.TextoAjustable
 import kotlin.math.cos
 import kotlin.math.sin
 
 private const val ARC_START = 135f
 private const val ARC_SWEEP = 270f
+private const val FRACCION_TEXTO_ARCO = 0.5f
+private const val FRACCION_ALTO_NUMERO = 0.22f
 
 @Composable
 fun RpmGauge(
@@ -43,8 +47,9 @@ fun RpmGauge(
         label = "rpm_needle"
     )
 
-    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.size(size)) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val lado = ladoAcotado(size, maxWidth)
+        Canvas(modifier = Modifier.size(lado)) {
             val stroke = 12.dp.toPx()
             val padding = stroke / 2f + 4.dp.toPx()
             val arcSize = Size(this.size.width - padding * 2, this.size.height - padding * 2)
@@ -135,17 +140,21 @@ fun RpmGauge(
             )
         }
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = rpm.toInt().toString(),
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
+        Column(
+            modifier = Modifier.width(lado * FRACCION_TEXTO_ARCO),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TextoAjustable(
+                texto = rpm.toInt().toString(),
+                estilo = RevScopeType.numeros.copy(fontSize = 36.sp),
                 color = RevScopeColors.TextPrimary,
+                modifier = Modifier.fillMaxWidth().height(lado * FRACCION_ALTO_NUMERO),
             )
-            Text(
-                text = "RPM",
-                fontSize = 12.sp,
-                color = RevScopeColors.TextMuted,
+            TextoAjustable(
+                texto = "RPM",
+                estilo = RevScopeType.bodySmall,
+                color = RevScopeColors.TextSecondary,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

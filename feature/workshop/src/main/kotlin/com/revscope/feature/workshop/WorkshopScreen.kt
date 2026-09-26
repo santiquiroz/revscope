@@ -2,6 +2,7 @@ package com.revscope.feature.workshop
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -80,6 +81,7 @@ fun WorkshopScreen(
     onOpenOdometer: () -> Unit,
     onOpenSpeedComparison: () -> Unit,
     onOpenMechanicChat: () -> Unit,
+    selectorVehiculo: @Composable () -> Unit = {},
 ) {
     val connState by connectionVm.connectionState.collectAsState()
     val isConnected = connState is ConnectionState.Connected
@@ -96,6 +98,7 @@ fun WorkshopScreen(
     ) {
         item {
             Text("Taller", color = TextColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.padding(top = 8.dp)) { selectorVehiculo() }
             if (!isConnected) {
                 Text(
                     "Conecta el adaptador para usar las herramientas de diagnóstico",

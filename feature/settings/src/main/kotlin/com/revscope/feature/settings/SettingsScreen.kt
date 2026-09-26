@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.FranjaSelectorVehiculo
 import kotlinx.coroutines.delay
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -54,6 +55,7 @@ fun SettingsScreen(
     // Deep-link opcional (nav arg `expand`, ver Screen.Settings.withExpand): nombre de un
     // SettingsSectionId a expandir al abrir — ej. "mapa" desde el diálogo de descarga de mapa.
     initialExpandedSection: String? = null,
+    selectorVehiculo: @Composable () -> Unit = {},
     vm: SettingsViewModel = hiltViewModel(),
 ) {
     val saveResult by vm.lastSaveResult.collectAsState()
@@ -111,10 +113,13 @@ fun SettingsScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
         topBar = {
-            TopAppBar(
-                title = { Text("Ajustes", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
-            )
+            Column {
+                TopAppBar(
+                    title = { Text("Ajustes", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
+                )
+                FranjaSelectorVehiculo(selector = selectorVehiculo)
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = BgColor,

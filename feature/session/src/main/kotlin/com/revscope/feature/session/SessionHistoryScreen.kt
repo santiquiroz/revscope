@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +43,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.FranjaSelectorVehiculo
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import java.text.SimpleDateFormat
@@ -63,6 +68,7 @@ private val dateFormat = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale("es"))
 fun SessionHistoryScreen(
     onOpenSession: (Long) -> Unit = {},
     onCompareSessions: (Long, Long) -> Unit = { _, _ -> },
+    selectorVehiculo: @Composable () -> Unit = {},
     vm: SessionViewModel = hiltViewModel(),
 ) {
     val compareCandidate by vm.compareCandidate.collectAsState()
@@ -79,6 +85,7 @@ fun SessionHistoryScreen(
             title = { Text("Historial", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
         )
+        FranjaSelectorVehiculo(selector = selectorVehiculo)
 
         if (profiles.isNotEmpty()) {
             VehicleFilterRow(
@@ -125,7 +132,7 @@ fun SessionHistoryScreen(
 }
 
 @Composable
-private fun SessionItem(
+internal fun SessionItem(
     session: SessionEntity,
     isCompareCandidate: Boolean,
     onClick: () -> Unit,
@@ -161,7 +168,12 @@ private fun SessionItem(
                 fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            // FlowRow: con letra grande las cuatro cifras no caben en una fila y se salían del borde.
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 StatChip(label = "Duración", value = "%dm %ds".format(durationMin, durationSec))
                 StatChip(label = "Max RPM", value = session.maxRpm.toString())
                 StatChip(label = "Max km/h", value = session.maxSpeed.toString())
@@ -185,7 +197,7 @@ private fun SessionItem(
 @Composable
 private fun StatChip(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = AccentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = AccentColor, style = RevScopeType.label.conCifrasTabulares(), fontWeight = FontWeight.Bold)
         Text(label, color = TextMutedColor, fontSize = 10.sp)
     }
 }
