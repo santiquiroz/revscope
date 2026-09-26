@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -23,9 +24,16 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
+roborazzi { outputDir.set(file("src/test/screenshots")) }
+
 dependencies {
+    implementation(project(":core:designsystem"))
     implementation(project(":core:obd"))
     implementation(project(":core:intelligence"))
     implementation(project(":core:data"))
@@ -42,6 +50,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     debugImplementation(libs.compose.ui.tooling)
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

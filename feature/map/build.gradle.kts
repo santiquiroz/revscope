@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -15,9 +16,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true }
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
+roborazzi { outputDir.set(file("src/test/screenshots")) }
+
 dependencies {
+    implementation(project(":core:designsystem"))
     implementation(project(":core:obd"))
     implementation(project(":core:data"))
     implementation(project(":core:common"))
@@ -36,6 +41,7 @@ dependencies {
     testImplementation(libs.junit)
     // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
     testImplementation(libs.org.json)
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

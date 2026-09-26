@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.revscope.feature.dashboard.ui.RevScopeColors
+import com.revscope.core.designsystem.RevScopeColors
 
 @Composable
 fun GearDisplay(

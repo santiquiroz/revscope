@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -50,9 +51,16 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
+roborazzi { outputDir.set(file("src/test/screenshots")) }
+
 dependencies {
+    implementation(project(":core:designsystem"))
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(project(":core:obd"))
     implementation(project(":core:intelligence"))
@@ -75,7 +83,6 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.ui.tooling.preview)
-    implementation(libs.compose.ui.google.fonts)
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
 
@@ -105,6 +112,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

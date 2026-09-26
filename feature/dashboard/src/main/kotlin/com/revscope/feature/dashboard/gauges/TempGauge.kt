@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.revscope.feature.dashboard.ui.RevScopeColors
+import com.revscope.core.designsystem.RevScopeColors
 
 private const val TEMP_MIN = -40f
 private const val TEMP_MAX = 130f

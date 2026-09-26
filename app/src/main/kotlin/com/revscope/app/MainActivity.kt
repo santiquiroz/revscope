@@ -8,7 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.revscope.app.navigation.RevScopeNavGraph
-import com.revscope.app.ui.theme.RevScopeTheme
+import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.obd.legal.DailyStatusWorker
 import com.revscope.core.obd.service.TripSummaryNotifier
 import dagger.hilt.android.AndroidEntryPoint

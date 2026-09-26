@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.revscope.feature.dashboard.ui.RevScopeColors
+import com.revscope.core.designsystem.RevScopeColors
 
 // Upper semicircle: West (180°) to East (0°) going through North, sweep = -180°
 private const val ARC_START = 180f

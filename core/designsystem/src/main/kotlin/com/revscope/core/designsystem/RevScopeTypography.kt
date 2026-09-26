@@ -1,4 +1,4 @@
-package com.revscope.app.ui.theme
+package com.revscope.core.designsystem
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -8,7 +8,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
-import com.revscope.app.R
 
 private val googleFontsProvider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
@@ -16,7 +15,7 @@ private val googleFontsProvider = GoogleFont.Provider(
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
-private val SpaceGrotesk = FontFamily(
+internal val SpaceGrotesk = FontFamily(
     Font(
         googleFont = GoogleFont("Space Grotesk"),
         fontProvider = googleFontsProvider,
@@ -34,7 +33,7 @@ private val SpaceGrotesk = FontFamily(
     )
 )
 
-private val Inter = FontFamily(
+internal val Inter = FontFamily(
     Font(
         googleFont = GoogleFont("Inter"),
         fontProvider = googleFontsProvider,

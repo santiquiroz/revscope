@@ -58,7 +58,7 @@ import com.revscope.feature.dashboard.gauges.GearDisplay
 import com.revscope.feature.dashboard.gauges.RpmGauge
 import com.revscope.feature.dashboard.gauges.SpeedGauge
 import com.revscope.feature.dashboard.gauges.TempGauge
-import com.revscope.feature.dashboard.ui.RevScopeColors
+import com.revscope.core.designsystem.RevScopeColors
 import kotlinx.coroutines.flow.channelFlow
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -1,4 +1,4 @@
-package com.revscope.feature.dashboard.ui
+package com.revscope.core.designsystem
 
 import androidx.compose.ui.graphics.Color
 
@@ -12,5 +12,10 @@ object RevScopeColors {
     val Danger      = Color(0xFFFF3040)
     val Success     = Color(0xFF00E676)
     val TextPrimary = Color(0xFFF0F0F8)
+
+    // Texto informativo secundario: 5,8:1 sobre SurfaceHigh (TextMuted se queda en 3,45:1).
+    val TextSecondary = Color(0xFF9097B0)
+
+    // Solo decoración, bordes y texto deshabilitado: no llega a 4,5:1 sobre las superficies.
     val TextMuted   = Color(0xFF6B7089)
 }

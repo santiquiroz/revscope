@@ -46,7 +46,7 @@ import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.motion.MotionMetricsHub
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.track.TrackModeEngine
-import com.revscope.feature.dashboard.ui.RevScopeColors
+import com.revscope.core.designsystem.RevScopeColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted

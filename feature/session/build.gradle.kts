@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -15,9 +16,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true }
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
+roborazzi { outputDir.set(file("src/test/screenshots")) }
+
 dependencies {
+    implementation(project(":core:designsystem"))
     implementation(project(":core:obd"))
     implementation(project(":core:data"))
     // Debrief de viaje por IA
@@ -35,6 +40,7 @@ dependencies {
     implementation(libs.maplibre)
     implementation(libs.timber)
     debugImplementation(libs.compose.ui.tooling)
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

@@ -62,7 +62,7 @@ import com.revscope.core.obd.connection.BleScanner
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
-import com.revscope.feature.dashboard.ui.RevScopeColors
+import com.revscope.core.designsystem.RevScopeColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

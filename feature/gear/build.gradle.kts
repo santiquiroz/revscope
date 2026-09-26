@@ -18,6 +18,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:designsystem"))
     implementation(project(":core:obd"))
     implementation(project(":core:intelligence"))
     implementation(project(":core:common"))

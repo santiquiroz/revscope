@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.revscope.core.obd.session.EstadoViaje
-import com.revscope.feature.dashboard.ui.RevScopeColors
+import com.revscope.core.designsystem.RevScopeColors
 
 /**
  * Pastilla de estado del viaje OBD bajo el encabezado de Conducir. Tocarla despliega las
