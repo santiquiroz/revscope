@@ -27,6 +27,8 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.protocol.DtcResponseParser
+import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.protocol.ElmCommandBuilder
 import com.revscope.core.obd.protocol.ProtocolNegotiator
 import com.revscope.core.obd.protocol.ResponseParser
@@ -872,30 +874,15 @@ class ObdSessionManager @Inject constructor(
         // Timeout de sondeo de módulo — corto: un módulo ausente debe fallar rápido.
         private const val MODULE_PROBE_TIMEOUT_MS = 1_500L
 
-        private val DTC_PREFIX = mapOf(0 to 'P', 1 to 'C', 2 to 'B', 3 to 'U')
-
         fun parseVoltage(raw: String): Double? = VoltagePoller.parseVoltage(raw)
 
-        fun parseDtcResponse(raw: String, mode: DtcMode): List<DtcCode> {
-            val hex = raw.filter { it.isLetterOrDigit() }.uppercase()
-            // Mode 03 response starts with "43"
-            if (!hex.startsWith("43") || hex.length < 4) return emptyList()
-            val payload = hex.drop(2)
-            return buildList {
-                var i = 0
-                while (i + 3 < payload.length) {
-                    val b1 = payload.substring(i, i + 2).toIntOrNull(16) ?: break
-                    val b2 = payload.substring(i + 2, i + 4).toIntOrNull(16) ?: break
-                    if (b1 == 0 && b2 == 0) { i += 4; continue }
-                    val prefix = DTC_PREFIX[(b1 shr 6) and 0x03] ?: 'P'
-                    val d1 = (b1 shr 4) and 0x03
-                    val d2 = b1 and 0x0F
-                    val d3 = (b2 shr 4) and 0x0F
-                    val d4 = b2 and 0x0F
-                    add(DtcCode(code = "$prefix$d1$d2$d3$d4", mode = mode))
-                    i += 4
-                }
-            }
+        fun parseDtcResponse(raw: String, mode: DtcMode): List<DtcCode> =
+            DtcResponseParser.parse(raw, servicioDe(mode), esCan = null).map { DtcCode(code = it, mode = mode) }
+
+        private fun servicioDe(mode: DtcMode): DtcServicio = when (mode) {
+            DtcMode.Active -> DtcServicio.ACTIVOS
+            DtcMode.Pending -> DtcServicio.PENDIENTES
+            DtcMode.Permanent -> DtcServicio.PERMANENTES
         }
     }
 }

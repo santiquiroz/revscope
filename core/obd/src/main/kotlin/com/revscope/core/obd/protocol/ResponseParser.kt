@@ -266,55 +266,13 @@ object ResponseParser {
     // ── DTC parsing ──────────────────────────────────────────────────────────
 
     /**
-     * Parses DTC codes from Mode 03, 07, or 0A responses.
-     *
-     * @return List of DTC strings in standard format (e.g. ["P0300", "C0121"])
-     *
-     * Response byte pairs encoding:
-     *   High byte bits 7-6: type prefix (00=P, 01=C, 10=B, 11=U)
-     *   High byte bits 5-4: first digit
-     *   High byte bits 3-0: second digit
-     *   Low byte bits 7-4:  third digit
-     *   Low byte bits 3-0:  fourth digit
+     * Códigos de una respuesta 03, 07 o 0A cuando el llamador no sabe el protocolo: delega en
+     * [DtcResponseParser], que infiere CAN por la paridad de bytes.
      */
-    fun parseDtcResponse(raw: String): List<String> {
-        val clean = cleanResponse(raw)
-        if (isErrorResponse(clean) || clean.isEmpty()) return emptyList()
-
-        // Strip mode prefix (43 = Mode 03, 47 = Mode 07, 4A = Mode 0A)
-        val dataStart = when {
-            clean.startsWith("43") || clean.startsWith("47") || clean.startsWith("4A") -> 2
-            else -> return emptyList()
-        }
-
-        val bytes = hexToBytes(clean.drop(dataStart)) ?: return emptyList()
-
-        return buildList {
-            var i = 0
-            while (i + 1 < bytes.size) {
-                val high = bytes[i].toInt() and 0xFF
-                val low = bytes[i + 1].toInt() and 0xFF
-                if (high == 0 && low == 0) break  // zero-padding signals end of DTC list
-                decodeDtcPair(high, low)?.let { add(it) }
-                i += 2
-            }
-        }
-    }
-
-    private fun decodeDtcPair(high: Int, low: Int): String? {
-        val prefix = when ((high shr 6) and 0x03) {
-            0x00 -> 'P'
-            0x01 -> 'C'
-            0x02 -> 'B'
-            0x03 -> 'U'
-            else -> return null
-        }
-        val d1 = (high shr 4) and 0x03
-        val d2 = high and 0x0F
-        val d3 = (low shr 4) and 0x0F
-        val d4 = low and 0x0F
-        return "$prefix$d1${d2.toString(16).uppercase()}${d3.toString(16).uppercase()}${d4.toString(16).uppercase()}"
-    }
+    fun parseDtcResponse(raw: String): List<String> =
+        DtcServicio.entries
+            .flatMap { DtcResponseParser.parse(raw, it, esCan = null) }
+            .distinct()
 
     // ── Error detection helpers ───────────────────────────────────────────────
 
