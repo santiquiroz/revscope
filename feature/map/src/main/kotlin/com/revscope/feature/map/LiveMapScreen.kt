@@ -562,7 +562,7 @@ fun LiveMapScreen(
         Text(
             "© OpenStreetMap contributors",
             color = AttributionColor,
-            fontSize = 9.sp,
+            fontSize = 10.sp,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
         )
 

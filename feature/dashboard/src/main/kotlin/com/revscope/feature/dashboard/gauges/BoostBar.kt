@@ -51,8 +51,8 @@ fun BoostBar(
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = "BOOST",
-            fontSize = 10.sp,
-            color = RevScopeColors.TextMuted,
+            fontSize = 12.sp,
+            color = RevScopeColors.TextSecondary,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Canvas(modifier = Modifier.fillMaxWidth().height(barHeight)) {
@@ -83,7 +83,7 @@ fun BoostBar(
                 // Vacuum — fills left of center
                 clipRect(left = centerX - fillWidth, right = centerX) {
                     drawRoundRect(
-                        color = RevScopeColors.TextMuted,
+                        color = RevScopeColors.TextSecondary,
                         cornerRadius = cornerRadius,
                     )
                 }
@@ -91,7 +91,7 @@ fun BoostBar(
 
             // Center line (atmospheric)
             drawLine(
-                color = RevScopeColors.TextMuted,
+                color = RevScopeColors.TextSecondary,
                 start = Offset(centerX, 0f),
                 end = Offset(centerX, trackHeight),
                 strokeWidth = 2.dp.toPx(),
@@ -112,7 +112,7 @@ fun BoostBar(
             text = label,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            color = if (boostKpa > 0f) RevScopeColors.Warning else RevScopeColors.TextMuted,
+            color = if (boostKpa > 0f) RevScopeColors.Warning else RevScopeColors.TextSecondary,
         )
     }
 }

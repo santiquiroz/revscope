@@ -1,5 +1,6 @@
 package com.revscope.feature.dashboard
 
+import com.revscope.core.designsystem.RevScopeType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -161,7 +162,7 @@ fun TrackModeScreen(
                 title = { Text("Modo Pista", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = RevScopeColors.TextPrimary)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = RevScopeColors.TextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = RevScopeColors.Surface),
@@ -179,7 +180,7 @@ fun TrackModeScreen(
             if (!state.hasGpsFix) {
                 Text(
                     "Esperando señal GPS… (conecta el adaptador y muévete un poco)",
-                    color = RevScopeColors.TextMuted,
+                    color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -189,7 +190,7 @@ fun TrackModeScreen(
                 Text(
                     "Rueda despacio SOBRE la línea de meta y pulsa el botón — " +
                         "la línea queda perpendicular a tu dirección (30 m de ancho).",
-                    color = RevScopeColors.TextMuted,
+                    color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(16.dp))
@@ -213,7 +214,7 @@ fun TrackModeScreen(
                 Text(
                     if (state.lapInProgress) "vuelta ${state.laps.size + 1} en curso"
                     else "cruza la línea para iniciar la vuelta 1",
-                    color = RevScopeColors.TextMuted,
+                    color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
                 // Delta vs tu fantasma (mejor vuelta de la sesión): + rojo = perdiendo
@@ -325,7 +326,7 @@ private fun GhostSection(vm: TrackModeViewModel, hasBestLap: Boolean) {
         }
     }
     (action as? TrackModeViewModel.GhostAction.Message)?.let {
-        Text(it.text, color = RevScopeColors.TextMuted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        Text(it.text, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall, modifier = Modifier.padding(top = 4.dp))
     }
     nearby.forEach { ghost ->
         Row(
@@ -364,6 +365,6 @@ private fun TrackStat(label: String, value: String, modifier: Modifier = Modifie
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
         )
-        Text(label, color = RevScopeColors.TextMuted, fontSize = 11.sp)
+        Text(label, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
 }

@@ -1,5 +1,6 @@
 package com.revscope.feature.dashboard
 
+import com.revscope.core.designsystem.RevScopeType
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -143,7 +144,7 @@ fun AdapterScanScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = "Volver",
                             tint = RevScopeColors.TextPrimary,
                         )
                     }
@@ -236,7 +237,7 @@ private fun DisconnectedContent(
             Spacer(Modifier.height(12.dp))
             Text(
                 "Bluetooth permission required",
-                color = RevScopeColors.TextMuted,
+                color = RevScopeColors.TextSecondary,
                 fontSize = 14.sp,
             )
             Spacer(Modifier.height(16.dp))
@@ -257,14 +258,14 @@ private fun DisconnectedContent(
                 "Paired devices",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = RevScopeColors.TextMuted,
+                color = RevScopeColors.TextSecondary,
             )
         }
         if (sortedDevices.isEmpty()) {
             item {
                 Text(
                     "No paired Bluetooth devices found.\nPair your OBD2 adapter in Android Settings first.",
-                    color = RevScopeColors.TextMuted,
+                    color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
             }
@@ -288,7 +289,7 @@ private fun DisconnectedContent(
                     "Adaptadores BLE",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = RevScopeColors.TextMuted,
+                    color = RevScopeColors.TextSecondary,
                     modifier = Modifier.weight(1f),
                 )
                 if (bleScanning) {
@@ -308,16 +309,16 @@ private fun DisconnectedContent(
             }
             Text(
                 "Los adaptadores BLE (Vgate 4.0, VLink…) no aparecen en emparejados — búscalos aquí.",
-                color = RevScopeColors.TextMuted,
-                fontSize = 11.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
             )
         }
         if (bleDevices.isEmpty() && !bleScanning) {
             item {
                 Text(
                     "Sin resultados aún.",
-                    color = RevScopeColors.TextMuted,
-                    fontSize = 12.sp,
+                    color = RevScopeColors.TextSecondary,
+                    style = RevScopeType.bodySmall,
                 )
             }
         } else {
@@ -346,13 +347,13 @@ private fun BleDeviceItem(device: BleScanner.Device, isLastUsed: Boolean, onClic
         Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RevScopeColors.Accent)
         Column(modifier = Modifier.weight(1f)) {
             Text(device.name, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text("${device.address}  ·  ${device.rssi} dBm  ·  BLE", color = RevScopeColors.TextMuted, fontSize = 11.sp)
+            Text("${device.address}  ·  ${device.rssi} dBm  ·  BLE", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
         if (isLastUsed) {
             Text(
                 "Último usado",
                 color = RevScopeColors.Accent,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(6.dp))
@@ -378,13 +379,13 @@ private fun DeviceItem(device: BluetoothDevice, isLastUsed: Boolean, onClick: ()
         Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RevScopeColors.Accent)
         Column(modifier = Modifier.weight(1f)) {
             Text(name, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(device.address, color = RevScopeColors.TextMuted, fontSize = 11.sp)
+            Text(device.address, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
         if (isLastUsed) {
             Text(
                 "Último usado",
                 color = RevScopeColors.Accent,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(6.dp))
@@ -432,8 +433,8 @@ private fun ConnectedContent(
         Text(deviceName, color = RevScopeColors.TextPrimary, fontSize = 14.sp)
         Text(
             if (estadoViaje is EstadoViaje.Grabando) "Grabando viaje" else "Sin viaje · lecturas en vivo",
-            color = RevScopeColors.TextMuted,
-            fontSize = 12.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
         Spacer(Modifier.height(24.dp))
         Box(modifier = Modifier.padding(horizontal = 32.dp)) {
@@ -465,8 +466,8 @@ private fun ErrorContent(message: String, onRetry: () -> Unit, onChooseAnother: 
         Spacer(Modifier.height(8.dp))
         Text(
             "Reintentando en segundo plano…",
-            color = RevScopeColors.TextMuted,
-            fontSize = 12.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
         Spacer(Modifier.height(24.dp))
         Button(

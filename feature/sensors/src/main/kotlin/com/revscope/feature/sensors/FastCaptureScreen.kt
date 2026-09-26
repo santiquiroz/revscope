@@ -1,5 +1,6 @@
 package com.revscope.feature.sensors
 
+import com.revscope.core.designsystem.RevScopeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,12 +51,6 @@ import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 import com.revscope.core.obd.telemetry.captura.SeleccionPids
 import kotlinx.coroutines.launch
 
-private val SurfaceColor = Color(0xFF12121A)
-private val AccentColor = Color(0xFFE8FF00)
-private val BgColor = Color(0xFF0A0A0F)
-private val TextPrimaryColor = Color(0xFFF0F0F8)
-private val TextMutedColor = Color(0xFF6B7089)
-private val WarningColor = Color(0xFFFFB020)
 
 @Composable
 fun FastCaptureContent(vm: FastCaptureViewModel = hiltViewModel()) {
@@ -78,12 +72,12 @@ fun FastCaptureContent(vm: FastCaptureViewModel = hiltViewModel()) {
         Text(
             "Lee solo los PIDs elegidos lo más rápido que permita el adaptador; los demás gauges quedan en pausa. " +
                 "Para un pedal: contacto puesto, motor apagado o en ralentí, y barre el pedal despacio.",
-            color = TextMutedColor,
-            fontSize = 11.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
         if (activa == null) SelectorPids(vm, seleccion)
         BotonCaptura(activa != null, conectado && seleccion.isNotEmpty(), vm::iniciar, vm::detener)
-        mensaje?.let { AvisoDescartable(texto = it, onDescartar = vm::descartarMensaje, color = WarningColor) }
+        mensaje?.let { AvisoDescartable(texto = it, onDescartar = vm::descartarMensaje, color = RevScopeColors.Warning) }
         if (activa != null) {
             activa.limiteHz?.let { AvisoLimite("Limitada a $it Hz para cuidar batería y temperatura del teléfono") }
             Medicion(stats, activa.inicio.pidsAceptados, vm::nombreDe)
@@ -98,7 +92,7 @@ private fun SelectorPids(vm: FastCaptureViewModel, seleccion: List<String>) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             "PIDs (${seleccion.size}/${FastCaptureViewModel.MAX_PIDS})",
-            color = TextPrimaryColor,
+            color = RevScopeColors.TextPrimary,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -114,8 +108,8 @@ private fun SelectorPids(vm: FastCaptureViewModel, seleccion: List<String>) {
         Text(
             "Cada petición lleva hasta 3 PIDs de 1 byte (o menos si alguno es de 2 bytes, como RPM): " +
                 "más PIDs = menos Hz por PID.",
-            color = TextMutedColor,
-            fontSize = 11.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
     }
 }
@@ -130,13 +124,13 @@ private fun BotonCaptura(activa: Boolean, habilitado: Boolean, onIniciar: () -> 
     Button(
         onClick = if (activa) onDetener else onIniciar,
         enabled = activa || habilitado,
-        colors = ButtonDefaults.buttonColors(containerColor = AccentColor, contentColor = BgColor),
+        colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent, contentColor = RevScopeColors.Background),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(if (activa) "Detener captura" else "Iniciar captura rápida", fontWeight = FontWeight.Bold)
     }
     if (!activa && !habilitado) {
-        Text("Conecta el adaptador para capturar.", color = TextMutedColor, fontSize = 11.sp)
+        Text("Conecta el adaptador para capturar.", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
 }
 
@@ -144,11 +138,11 @@ private fun BotonCaptura(activa: Boolean, habilitado: Boolean, onIniciar: () -> 
 private fun AvisoLimite(texto: String) {
     Text(
         texto,
-        color = WarningColor,
+        color = RevScopeColors.Warning,
         fontSize = 12.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
             .padding(10.dp),
     )
 }
@@ -158,26 +152,26 @@ private fun Medicion(stats: EstadisticasCaptura?, pids: List<String>, nombreDe: 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text("Tasa medida", color = AccentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text("Tasa medida", color = RevScopeColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         if (stats == null) {
-            Text("Midiendo…", color = TextMutedColor, fontSize = 12.sp)
+            Text("Midiendo…", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
             return@Column
         }
         pids.forEach { pid ->
             val hz = stats.hzPorPid[pid] ?: 0.0
-            Text("$pid ${nombreDe(pid)}: ${"%.1f".format(hz)} Hz", color = TextPrimaryColor, fontSize = 13.sp)
+            Text("$pid ${nombreDe(pid)}: ${"%.1f".format(hz)} Hz", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
         }
         Text(
             "${"%.1f".format(stats.peticionesPorS)} peticiones/s · latencia p50 ${ms(stats.latenciaP50Ms)} · " +
                 "p95 ${ms(stats.latenciaP95Ms)}",
-            color = TextMutedColor,
-            fontSize = 11.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
-        stats.limitadoPor?.let { Text("Limitado por: $it", color = WarningColor, fontSize = 11.sp) }
+        stats.limitadoPor?.let { Text("Limitado por: $it", color = RevScopeColors.Warning, fontSize = 12.sp) }
     }
 }
 
@@ -203,12 +197,12 @@ private fun GraficaCaptura(vm: FastCaptureViewModel, pids: List<String>) {
 
     Text(
         "Últimos 10 s · ${conDatos.keys.joinToString { "$it ${vm.nombreDe(it)}" }}",
-        color = TextMutedColor,
-        fontSize = 11.sp,
+        color = RevScopeColors.TextSecondary,
+        style = RevScopeType.bodySmall,
     )
     if (conDatos.isEmpty()) {
         Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-            Text("Esperando muestras…", color = TextMutedColor, fontSize = 13.sp)
+            Text("Esperando muestras…", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
         }
         return
     }
@@ -245,21 +239,21 @@ internal fun FastCaptureResumen(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text("Última captura", color = AccentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text("Última captura", color = RevScopeColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         Text(
             "${"%.1f".format(resumen.duracionMs / 1_000.0)} s · ${resumen.motivoFin} · latencia p50 ${ms(resumen.latenciaP50Ms)}",
-            color = TextMutedColor,
-            fontSize = 11.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
         resumen.porPid.forEach { p ->
             Text(
                 "${p.pid} ${nombreDe(p.pid)}: ${p.n} muestras · ${"%.1f".format(p.hz)} Hz · " +
                     "${"%.1f".format(p.min)}–${"%.1f".format(p.max)}",
-                color = TextPrimaryColor,
+                color = RevScopeColors.TextPrimary,
                 style = RevScopeType.bodySmall.conCifrasTabulares(),
             )
         }
@@ -276,6 +270,6 @@ private fun BotonCsv(texto: String, habilitado: Boolean, onClick: () -> Unit) {
         enabled = habilitado,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
     ) {
-        Text(texto, color = if (habilitado) AccentColor else TextMutedColor, fontSize = 13.sp, textAlign = TextAlign.Center)
+        Text(texto, color = if (habilitado) RevScopeColors.Accent else RevScopeColors.TextMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }

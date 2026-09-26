@@ -1,5 +1,7 @@
 package com.revscope.feature.session
 
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.RevScopeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,11 +70,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-private val BgColor = Color(0xFF0A0A0F)
-private val SurfaceColor = Color(0xFF12121A)
-private val AccentColor = Color(0xFFE8FF00)
-private val TextPrimaryColor = Color(0xFFF0F0F8)
-private val TextMutedColor = Color(0xFF6B7089)
 
 private val dateFormat = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale("es"))
 
@@ -105,15 +102,15 @@ fun SessionDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Reporte de viaje", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+                title = { Text("Reporte de viaje", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimaryColor)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = RevScopeColors.TextPrimary)
                     }
                 },
                 actions = {
                     IconButton(onClick = { showVehicleDialog = true }) {
-                        Icon(Icons.Default.DirectionsCar, contentDescription = "Asignar vehículo", tint = AccentColor)
+                        Icon(Icons.Default.DirectionsCar, contentDescription = "Asignar vehículo", tint = RevScopeColors.Accent)
                     }
                     IconButton(onClick = {
                         scope.launch {
@@ -148,21 +145,21 @@ fun SessionDetailScreen(
                         },
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = RevScopeColors.Surface),
             )
         },
-        containerColor = BgColor,
+        containerColor = RevScopeColors.Background,
     ) { innerPadding ->
         when (val s = state) {
             SessionDetailViewModel.UiState.Loading -> Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center,
-            ) { Text("Cargando…", color = TextMutedColor) }
+            ) { Text("Cargando…", color = RevScopeColors.TextSecondary) }
 
             is SessionDetailViewModel.UiState.NotFound -> Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center,
-            ) { Text(s.message, color = TextMutedColor) }
+            ) { Text(s.message, color = RevScopeColors.TextSecondary) }
 
             is SessionDetailViewModel.UiState.Ready -> ReportContent(
                 report = s.report,
@@ -192,7 +189,7 @@ private fun ExportMenuButton(
     val options = exportMenuOptions(report)
     Box {
         IconButton(onClick = { onExpandedChange(true) }) {
-            Icon(Icons.Default.Download, contentDescription = "Exportar…", tint = AccentColor)
+            Icon(Icons.Default.Download, contentDescription = "Exportar…", tint = RevScopeColors.Accent)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
             options.forEach { option ->
@@ -250,15 +247,15 @@ private fun ReportContent(
     ) {
         Text(
             dateFormat.format(Date(session.startedAt)),
-            color = TextPrimaryColor,
+            color = RevScopeColors.TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
         )
-        Text(assignedVehicleName, color = AccentColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text(assignedVehicleName, color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(
             if (session.adapterName == "GPS") "Fuente: GPS" else session.adapterName,
-            color = TextMutedColor,
-            fontSize = 12.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
 
         Row(
@@ -324,7 +321,7 @@ private fun ReportContent(
                 "Recorrido GPS — %.1f km · máx %d km/h (GPS)".format(
                     java.util.Locale("es"), report.gpsDistanceKm, report.gpsMaxSpeedKmh,
                 ),
-                color = AccentColor,
+                color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -338,8 +335,8 @@ private fun ReportContent(
             )
             Text(
                 "azul = lento · amarillo = medio · rojo = rápido",
-                color = TextMutedColor,
-                fontSize = 10.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
             )
             TrackMap(
                 track = report.gpsTrack,
@@ -351,15 +348,15 @@ private fun ReportContent(
             )
             Text(
                 "racing line — puntos rojos = frenadas fuertes",
-                color = TextMutedColor,
-                fontSize = 10.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
             )
         }
 
         if (report.frictionPoints.isNotEmpty()) {
             Text(
                 "Círculo de fricción — agarre usado (rojo = frenando)",
-                color = AccentColor,
+                color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -371,8 +368,8 @@ private fun ReportContent(
             )
             Text(
                 "anillos = 0.5G y 1.0G · arriba acelera · abajo frena · izq/der curvas",
-                color = TextMutedColor,
-                fontSize = 10.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
             )
         }
 
@@ -402,7 +399,7 @@ private fun ReportContent(
             val bestMs = report.laps.minOf { it.timeMs }
             Text(
                 "Vueltas (${report.laps.size})",
-                color = AccentColor,
+                color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -411,11 +408,11 @@ private fun ReportContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(SurfaceColor, RoundedCornerShape(8.dp))
+                        .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Vuelta ${lap.lapNumber}", color = TextPrimaryColor, fontSize = 13.sp)
+                        Text("Vuelta ${lap.lapNumber}", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
                         if (stat?.maxAbsG != null || (isMotorcycle && stat?.maxAbsLean != null) || stat?.maxBpm != null) {
                             Text(
                                 buildList {
@@ -423,8 +420,8 @@ private fun ReportContent(
                                     if (isMotorcycle) stat.maxAbsLean?.let { add("%.0f° lean".format(it)) }
                                     stat.maxBpm?.let { add("♥%.0f".format(it)) }
                                 }.joinToString(" · "),
-                                color = TextMutedColor,
-                                fontSize = 11.sp,
+                                color = RevScopeColors.TextSecondary,
+                                style = RevScopeType.bodySmall,
                             )
                         }
                     }
@@ -434,7 +431,7 @@ private fun ReportContent(
                     Text(
                         "%d:%02d.%02d".format(minutes, seconds, hundredths) +
                             (if (lap.timeMs == bestMs) "  ★" else ""),
-                        color = if (lap.timeMs == bestMs) Color(0xFF3DFF8E) else AccentColor,
+                        color = if (lap.timeMs == bestMs) Color(0xFF3DFF8E) else RevScopeColors.Accent,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -445,7 +442,7 @@ private fun ReportContent(
         if (report.throttleGPoints.size >= 10) {
             Text(
                 "Acelerador vs fuerza G (tuning)",
-                color = AccentColor,
+                color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -457,8 +454,8 @@ private fun ReportContent(
             )
             Text(
                 "x: % mariposa (PID 11) · y: G (+acelera / −frena) · banda diagonal sana = entrega pareja",
-                color = TextMutedColor,
-                fontSize = 10.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
             )
         }
 
@@ -489,7 +486,7 @@ private fun ChartSection(title: String, series: List<Float>, unit: String, durat
     Column {
         Text(
             title,
-            color = AccentColor,
+            color = RevScopeColors.Accent,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 4.dp),
@@ -515,12 +512,12 @@ private fun ChartSection(title: String, series: List<Float>, unit: String, durat
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(value, color = AccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = TextMutedColor, fontSize = 11.sp)
+        Text(value, color = RevScopeColors.Accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
 }
 
@@ -531,20 +528,20 @@ private fun DebriefCard(vm: SessionDetailViewModel, onOpenAiValue: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(12.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(12.dp))
             .padding(14.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("🤖 Análisis IA", color = TextPrimaryColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("🤖 Análisis IA", color = RevScopeColors.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             when (debrief) {
                 is SessionDetailViewModel.DebriefState.Generating ->
-                    Text("Generando…", color = TextMutedColor, fontSize = 12.sp)
+                    Text("Generando…", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
                 else -> Text(
                     if (debrief is SessionDetailViewModel.DebriefState.Ready) "Regenerar" else "Analizar",
-                    color = AccentColor,
+                    color = RevScopeColors.Accent,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -555,18 +552,18 @@ private fun DebriefCard(vm: SessionDetailViewModel, onOpenAiValue: () -> Unit) {
         }
         when (val d = debrief) {
             is SessionDetailViewModel.DebriefState.Ready -> Text(
-                d.text, color = TextPrimaryColor, fontSize = 13.sp,
+                d.text, color = RevScopeColors.TextPrimary, fontSize = 13.sp,
                 modifier = Modifier.padding(top = 8.dp),
             )
             is SessionDetailViewModel.DebriefState.Error -> Column(modifier = Modifier.padding(top = 8.dp)) {
                 Text(d.message, color = Color(0xFFFF5252), fontSize = 12.sp)
                 TextButton(onClick = onOpenAiValue, contentPadding = PaddingValues(0.dp)) {
-                    Text("Configurar IA", color = AccentColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Configurar IA", color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             else -> Text(
                 "Resumen y consejos de tu coach IA con los datos de este viaje, comparados con tu historial.",
-                color = TextMutedColor, fontSize = 11.sp,
+                color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall,
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
@@ -578,13 +575,13 @@ private fun EcoCard(score: Int, desglose: EcoScoreCalculator.Desglose?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(12.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(12.dp))
             .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "Eco",
-                color = AccentColor,
+                color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
@@ -595,16 +592,16 @@ private fun EcoCard(score: Int, desglose: EcoScoreCalculator.Desglose?) {
         if (desglose != null) {
             Text(
                 "Aceleradas bruscas: ${desglose.aceleradasBruscas}  ·  Frenadas bruscas: ${desglose.frenadasBruscas}",
-                color = TextMutedColor,
-                fontSize = 11.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
             )
             Text(
                 "RPM alto sostenido: ${desglose.tiempoAltasRpmSeg} s  ·  Bonus crucero: +${desglose.bonusCrucero}",
-                color = TextMutedColor,
-                fontSize = 11.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
             )
         } else {
-            Text("Desglose no disponible para este viaje", color = TextMutedColor, fontSize = 11.sp)
+            Text("Desglose no disponible para este viaje", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
     }
 }
@@ -623,11 +620,11 @@ private fun VehiclePickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceColor,
-        title = { Text("Asignar vehículo", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+        containerColor = RevScopeColors.Surface,
+        title = { Text("Asignar vehículo", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
         text = {
             if (profiles.isEmpty()) {
-                Text("No hay vehículos guardados", color = TextMutedColor, fontSize = 13.sp)
+                Text("No hay vehículos guardados", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
             } else {
                 Column {
                     profiles.forEach { profile ->
@@ -641,11 +638,11 @@ private fun VehiclePickerDialog(
                             Icon(
                                 imageVector = if (profile.type == "MOTORCYCLE") Icons.Default.TwoWheeler else Icons.Default.DirectionsCar,
                                 contentDescription = null,
-                                tint = AccentColor,
+                                tint = RevScopeColors.Accent,
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text(profile.name, color = TextPrimaryColor, fontSize = 14.sp)
+                            Text(profile.name, color = RevScopeColors.TextPrimary, fontSize = 14.sp)
                         }
                     }
                 }
@@ -653,7 +650,7 @@ private fun VehiclePickerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar", color = TextMutedColor, fontSize = 13.sp)
+                Text("Cerrar", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
             }
         },
     )

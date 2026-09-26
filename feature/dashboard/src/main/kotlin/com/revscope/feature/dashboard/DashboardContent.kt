@@ -1,5 +1,7 @@
 package com.revscope.feature.dashboard
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -132,30 +134,34 @@ private fun AvisosConducir(estado: EstadoConducirUi, acciones: AccionesConducir)
             onDismiss = acciones.onDescartarActualizacion,
         )
     }
-    estado.avisoAlDia?.let { mensaje ->
+    estado.avisoAlDia?.let { mensaje -> BannerPeligro(mensaje, onClick = acciones.onAbrirAlDia) }
+    estado.alertaActiva?.let { mensaje -> BannerPeligro(mensaje) }
+}
+
+// Texto Background sobre Danger (5,4:1): el TextPrimary de antes daba 3,2:1.
+@Composable
+internal fun BannerPeligro(mensaje: String, onClick: (() -> Unit)? = null) {
+    val accion = onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .background(RevScopeColors.Danger, RoundedCornerShape(8.dp))
+            .then(accion)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Icon(Icons.Default.Warning, contentDescription = null, tint = RevScopeColors.Background)
         Text(
-            text = "⚠ $mensaje",
-            color = RevScopeColors.TextPrimary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = acciones.onAbrirAlDia)
-                .background(RevScopeColors.Danger, RoundedCornerShape(8.dp))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-        )
-    }
-    estado.alertaActiva?.let { mensaje ->
-        Text(
-            text = "⚠ $mensaje",
+            mensaje,
             color = RevScopeColors.Background,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(RevScopeColors.Danger, RoundedCornerShape(8.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            style = RevScopeType.label,
+            modifier = Modifier.weight(1f),
         )
+        if (onClick != null) {
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = RevScopeColors.Background)
+        }
     }
 }
 

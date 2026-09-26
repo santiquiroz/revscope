@@ -7,6 +7,7 @@ import com.revscope.core.intelligence.efficiency.DriveStyle
 import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.uitesting.MatrizCaptura
+import androidx.compose.ui.unit.dp
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -101,5 +102,15 @@ class CapturasConducirTest {
             onDesconectar = {},
             expandidoInicial = true,
         )
+    }
+
+    @Test
+    fun bannerPeligro() = MatrizCaptura.componente("BannerPeligro") {
+        androidx.compose.foundation.layout.Column(
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        ) {
+            BannerPeligro("El SOAT vence en 3 días", onClick = {})
+            BannerPeligro("Temperatura del motor alta: 112 °C")
+        }
     }
 }

@@ -1,5 +1,10 @@
 package com.revscope.feature.session
 
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.RevScopeColors
+import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -55,12 +60,8 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos
 
-private val BgColor = Color(0xFF0A0A0F)
-private val SurfaceColor = Color(0xFF12121A)
 private val RunAColor = Color(0xFFE8FF00)
 private val RunBColor = Color(0xFF3D8BFF)
-private val TextPrimaryColor = Color(0xFFF0F0F8)
-private val TextMutedColor = Color(0xFF6B7089)
 
 private val dateFormat = SimpleDateFormat("dd MMM HH:mm", Locale("es"))
 
@@ -75,25 +76,25 @@ fun SessionCompareScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Comparar viajes", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+                title = { Text("Comparar viajes", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimaryColor)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = RevScopeColors.TextPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = RevScopeColors.Surface),
             )
         },
-        containerColor = BgColor,
+        containerColor = RevScopeColors.Background,
     ) { innerPadding ->
         when (val s = state) {
             SessionCompareViewModel.UiState.Loading -> Box(
                 Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center,
-            ) { Text("Cargando…", color = TextMutedColor) }
+            ) { Text("Cargando…", color = RevScopeColors.TextSecondary) }
 
             is SessionCompareViewModel.UiState.Error -> Box(
                 Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center,
-            ) { Text(s.message, color = TextMutedColor) }
+            ) { Text(s.message, color = RevScopeColors.TextSecondary) }
 
             is SessionCompareViewModel.UiState.Ready -> CompareContent(
                 s.runA, s.runB, s.showLean, Modifier.padding(innerPadding),
@@ -101,6 +102,19 @@ fun SessionCompareScreen(
         }
     }
 }
+
+// A y B no se distinguen solo por el color: A es continua y B discontinua.
+@Composable
+private fun lineasComparacion(): LineCartesianLayer.LineProvider = LineCartesianLayer.LineProvider.series(
+    LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(fill(RunAColor)),
+        stroke = LineCartesianLayer.LineStroke.Continuous(),
+    ),
+    LineCartesianLayer.rememberLine(
+        fill = LineCartesianLayer.LineFill.single(fill(RunBColor)),
+        stroke = LineCartesianLayer.LineStroke.Dashed(),
+    ),
+)
 
 @Composable
 private fun CompareContent(
@@ -170,7 +184,11 @@ private fun CompareContent(
         }
 
         if (runA.speedSeries.size >= 2 && runB.speedSeries.size >= 2) {
-            Text("Velocidad — A amarillo, B azul", color = TextMutedColor, fontSize = 11.sp)
+            Text(
+                "Velocidad: A en línea continua amarilla, B en línea discontinua azul",
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
+            )
             val producer = remember { CartesianChartModelProducer() }
             LaunchedEffect(runA, runB) {
                 producer.runTransaction {
@@ -184,7 +202,7 @@ private fun CompareContent(
             val sampleCount = maxOf(runA.speedSeries.size, runB.speedSeries.size)
             CartesianChartHost(
                 chart = rememberCartesianChart(
-                    rememberLineCartesianLayer(),
+                    rememberLineCartesianLayer(lineProvider = lineasComparacion()),
                     startAxis = VerticalAxis.rememberStart(title = "km/h"),
                     bottomAxis = HorizontalAxis.rememberBottom(
                         valueFormatter = elapsedFractionFormatter(sampleCount, referenceDurationMs),
@@ -197,7 +215,7 @@ private fun CompareContent(
         }
 
         if (runA.track.size >= 2 && runB.track.size >= 2) {
-            Text("Trazados superpuestos", color = TextMutedColor, fontSize = 11.sp)
+            Text("Trazados superpuestos", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
             OverlayTrackMap(
                 trackA = runA.track,
                 trackB = runB.track,
@@ -224,20 +242,20 @@ private fun CompareRow(label: String, a: String, b: String, highlightMax: Int = 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Text(label, color = TextMutedColor, fontSize = 12.sp, modifier = Modifier.weight(1.2f))
+        Text(label, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall, modifier = Modifier.weight(1.2f))
         Text(
             a,
-            color = if (highlightMax > 0) RunAColor else TextPrimaryColor,
+            color = if (highlightMax > 0) RunAColor else RevScopeColors.TextPrimary,
             fontSize = 13.sp,
             fontWeight = if (highlightMax > 0) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier.weight(1f),
         )
         Text(
             b,
-            color = if (highlightMax < 0) RunBColor else TextPrimaryColor,
+            color = if (highlightMax < 0) RunBColor else RevScopeColors.TextPrimary,
             fontSize = 13.sp,
             fontWeight = if (highlightMax < 0) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier.weight(1f),
@@ -254,7 +272,7 @@ private fun OverlayTrackMap(
 ) {
     Canvas(
         modifier = modifier
-            .background(SurfaceColor, RoundedCornerShape(12.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(12.dp))
             .padding(16.dp),
     ) {
         val all = trackA + trackB

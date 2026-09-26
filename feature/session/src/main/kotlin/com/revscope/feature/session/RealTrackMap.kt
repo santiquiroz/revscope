@@ -188,7 +188,7 @@ fun RealTrackMap(
         Text(
             "© OpenStreetMap contributors",
             color = AttributionColor,
-            fontSize = 9.sp,
+            fontSize = 10.sp,
         )
     }
 }
