@@ -61,7 +61,8 @@ El repo trae el wrapper de Gradle 8.11.1; basta un JDK 17 o superior (en Windows
 ./gradlew testDebugUnitTest               # unit tests (JVM) de todos los módulos
 ./gradlew :core:obd:testDebugUnitTest     # tests de un módulo
 ./gradlew :app:lintDebug                  # lint de Android
-./gradlew installDebug                    # instalar en device/emulador
+./gradlew :app:installDebug               # instalar el teléfono en device/emulador
+./gradlew :wear:installDebug              # instalar el reloj
 ```
 
 ## Convenciones
