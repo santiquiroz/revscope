@@ -54,4 +54,6 @@ data class VehicleProfileEntity(
      */
     @ColumnInfo(defaultValue = "6")
     val gearCount: Int = 6,
+    /** Clave de `vehicle_knowledge` del modelo de referencia; null = sin modelo asociado. */
+    val knowledgeKey: String? = null,
 )

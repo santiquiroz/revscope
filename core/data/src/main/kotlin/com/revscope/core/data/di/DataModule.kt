@@ -6,15 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.revscope.core.data.db.AppDatabase
-import com.revscope.core.data.db.MIGRATION_10_11
-import com.revscope.core.data.db.MIGRATION_11_12
-import com.revscope.core.data.db.MIGRATION_12_13
-import com.revscope.core.data.db.MIGRATION_13_14
-import com.revscope.core.data.db.MIGRATION_14_15
-import com.revscope.core.data.db.MIGRATION_15_16
-import com.revscope.core.data.db.MIGRATION_16_17
-import com.revscope.core.data.db.MIGRATION_17_18
-import com.revscope.core.data.db.MIGRATION_9_10
+import com.revscope.core.data.db.ALL_MIGRATIONS
+import com.revscope.core.data.db.dao.DiagSessionDao
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.HrDao
@@ -25,6 +18,7 @@ import com.revscope.core.data.db.dao.SavedPlaceDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.dao.TelemetryDao
+import com.revscope.core.data.db.dao.VehicleKnowledgeDao
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import dagger.Module
 import dagger.Provides
@@ -50,7 +44,7 @@ object DataModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "revscope.db")
-            .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+            .addMigrations(*ALL_MIGRATIONS)
             // Sin fallback destructivo: toda migración debe ser explícita (incidente 2026-07-08).
             .build()
 
@@ -89,4 +83,10 @@ object DataModule {
 
     @Provides
     fun provideSavedPlaceDao(db: AppDatabase): SavedPlaceDao = db.savedPlaceDao()
+
+    @Provides
+    fun provideDiagSessionDao(db: AppDatabase): DiagSessionDao = db.diagSessionDao()
+
+    @Provides
+    fun provideVehicleKnowledgeDao(db: AppDatabase): VehicleKnowledgeDao = db.vehicleKnowledgeDao()
 }

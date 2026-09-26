@@ -123,3 +123,85 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
         db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `gearCount` INTEGER NOT NULL DEFAULT 6")
     }
 }
+
+/**
+ * Taller profesional: sesiones de diagnóstico con su línea de tiempo, conocimiento por modelo
+ * (ECU, repuestos, cableado), bandas de referencia editables y el modelo de referencia del perfil.
+ * Puramente aditiva.
+ */
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        MIGRATION_18_19_SQL.forEach(db::execSQL)
+    }
+}
+
+private val MIGRATION_18_19_SQL = listOf(
+    "CREATE TABLE IF NOT EXISTS `diag_sessions` (" +
+        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+        "`vehicleProfileId` INTEGER NOT NULL DEFAULT 0, " +
+        "`knowledgeKey` TEXT, " +
+        "`startedAt` INTEGER NOT NULL, " +
+        "`closedAt` INTEGER, " +
+        "`title` TEXT NOT NULL, " +
+        "`symptomTags` TEXT NOT NULL DEFAULT '', " +
+        "`symptomsText` TEXT NOT NULL DEFAULT '', " +
+        "`notes` TEXT NOT NULL DEFAULT '', " +
+        "`odometerKm` REAL, " +
+        "`baselineHealthReportId` INTEGER, " +
+        "`interpretation` TEXT NOT NULL DEFAULT '', " +
+        "`checkedSteps` TEXT NOT NULL DEFAULT '')",
+    "CREATE INDEX IF NOT EXISTS `index_diag_sessions_vehicleProfileId` ON `diag_sessions` (`vehicleProfileId`)",
+    "CREATE TABLE IF NOT EXISTS `diag_events` (" +
+        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+        "`sessionId` INTEGER NOT NULL, " +
+        "`timestamp` INTEGER NOT NULL, " +
+        "`type` TEXT NOT NULL, " +
+        "`source` TEXT NOT NULL DEFAULT 'APP', " +
+        "`title` TEXT NOT NULL, " +
+        "`summary` TEXT NOT NULL DEFAULT '', " +
+        "`verdict` TEXT NOT NULL DEFAULT 'INFO', " +
+        "`payloadVersion` INTEGER NOT NULL DEFAULT 1, " +
+        "`payloadJson` TEXT NOT NULL DEFAULT '{}', " +
+        "`attachmentPath` TEXT, " +
+        "FOREIGN KEY(`sessionId`) REFERENCES `diag_sessions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+    "CREATE INDEX IF NOT EXISTS `index_diag_events_sessionId_timestamp` ON `diag_events` (`sessionId`, `timestamp`)",
+    "CREATE TABLE IF NOT EXISTS `vehicle_knowledge` (" +
+        "`key` TEXT PRIMARY KEY NOT NULL, " +
+        "`displayName` TEXT NOT NULL, " +
+        "`vehicleType` TEXT NOT NULL, " +
+        "`ecu` TEXT, `ecuSource` TEXT, " +
+        "`protocolNotes` TEXT NOT NULL DEFAULT '', " +
+        "`notes` TEXT NOT NULL DEFAULT '', " +
+        "`wiringJson` TEXT NOT NULL DEFAULT '[]', " +
+        "`seedVersion` INTEGER NOT NULL DEFAULT 0, " +
+        "`userEdited` INTEGER NOT NULL DEFAULT 0)",
+    "CREATE TABLE IF NOT EXISTS `vehicle_parts` (" +
+        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+        "`knowledgeKey` TEXT NOT NULL, " +
+        "`role` TEXT NOT NULL, `partNumber` TEXT NOT NULL, `description` TEXT NOT NULL, " +
+        "`kind` TEXT NOT NULL, `note` TEXT NOT NULL DEFAULT '', `source` TEXT NOT NULL DEFAULT '', " +
+        "FOREIGN KEY(`knowledgeKey`) REFERENCES `vehicle_knowledge`(`key`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+    "CREATE INDEX IF NOT EXISTS `index_vehicle_parts_knowledgeKey` ON `vehicle_parts` (`knowledgeKey`)",
+    "CREATE TABLE IF NOT EXISTS `reference_bands` (" +
+        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+        "`knowledgeKey` TEXT NOT NULL, `bandKey` TEXT NOT NULL, " +
+        "`minValue` REAL, `maxValue` REAL, `unit` TEXT NOT NULL, " +
+        "`origin` TEXT NOT NULL, `source` TEXT NOT NULL DEFAULT '')",
+    "CREATE UNIQUE INDEX IF NOT EXISTS `index_reference_bands_knowledgeKey_bandKey` " +
+        "ON `reference_bands` (`knowledgeKey`, `bandKey`)",
+    "ALTER TABLE `vehicle_profiles` ADD COLUMN `knowledgeKey` TEXT",
+)
+
+// Al final del archivo: los val de nivel superior se inicializan en orden de aparición.
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(
+    MIGRATION_9_10,
+    MIGRATION_10_11,
+    MIGRATION_11_12,
+    MIGRATION_12_13,
+    MIGRATION_13_14,
+    MIGRATION_14_15,
+    MIGRATION_15_16,
+    MIGRATION_16_17,
+    MIGRATION_17_18,
+    MIGRATION_18_19,
+)

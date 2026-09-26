@@ -62,10 +62,22 @@ class MigrationTest {
     fun `17 a 18 conserva datos`() = assertStepPreservesRows(17, MIGRATION_17_18)
 
     @Test
-    fun `9 a 18 encadenado conserva la moto y la sesion con los defaults nuevos`() {
+    fun `18 a 19 conserva datos y crea las tablas del taller`() {
+        helper.createDatabase(TEST_DB, 18).use(::seedMotoWithSession)
+
+        helper.runMigrationsAndValidate(TEST_DB, 19, true, MIGRATION_18_19).use { db ->
+            assertSeedRowsSurvived(db)
+            assertTrue(db.queryIsNull("SELECT knowledgeKey FROM vehicle_profiles"))
+            TALLER_TABLES.forEach { table -> assertEquals(0, db.queryInt("SELECT COUNT(*) FROM $table")) }
+            assertTallerDefaults(db)
+        }
+    }
+
+    @Test
+    fun `9 a 19 encadenado conserva la moto y la sesion con los defaults nuevos`() {
         helper.createDatabase(TEST_DB, 9).use(::seedMotoWithSession)
 
-        helper.runMigrationsAndValidate(TEST_DB, 18, true, *ALL_MIGRATIONS).use { db ->
+        helper.runMigrationsAndValidate(TEST_DB, 19, true, *ALL_MIGRATIONS).use { db ->
             assertSeedRowsSurvived(db)
             assertEquals("Moto", db.queryString("SELECT name FROM vehicle_profiles"))
             assertEquals("MOTORCYCLE", db.queryString("SELECT type FROM vehicle_profiles"))
@@ -79,7 +91,20 @@ class MigrationTest {
             assertEquals(0, db.queryInt("SELECT COUNT(*) FROM potholes"))
             assertEquals(0, db.queryInt("SELECT COUNT(*) FROM maintenance_items"))
             assertEquals(0, db.queryInt("SELECT COUNT(*) FROM health_reports"))
+            assertTrue(db.queryIsNull("SELECT knowledgeKey FROM vehicle_profiles"))
+            TALLER_TABLES.forEach { table -> assertEquals(0, db.queryInt("SELECT COUNT(*) FROM $table")) }
         }
+    }
+
+    private fun assertTallerDefaults(db: SupportSQLiteDatabase) {
+        db.execSQL("INSERT INTO diag_sessions (id, startedAt, title) VALUES (1, 1700000400000, 'P0122')")
+        db.execSQL("INSERT INTO diag_events (sessionId, timestamp, type, title) VALUES (1, 1700000500000, 'NOTA', 'Nota')")
+        db.execSQL("INSERT INTO vehicle_knowledge (`key`, displayName, vehicleType) VALUES ('moto', 'Moto', 'MOTORCYCLE')")
+
+        assertEquals(0, db.queryInt("SELECT vehicleProfileId FROM diag_sessions"))
+        assertEquals("", db.queryString("SELECT symptomTags || symptomsText || notes || interpretation || checkedSteps FROM diag_sessions"))
+        assertEquals("APP|INFO|1|{}", db.queryString("SELECT source || '|' || verdict || '|' || payloadVersion || '|' || payloadJson FROM diag_events"))
+        assertEquals("[]|0|0", db.queryString("SELECT wiringJson || '|' || seedVersion || '|' || userEdited FROM vehicle_knowledge"))
     }
 
     private fun assertStepPreservesRows(fromVersion: Int, migration: Migration) {
@@ -126,16 +151,6 @@ class MigrationTest {
     private companion object {
         const val TEST_DB = "migration-test.db"
 
-        val ALL_MIGRATIONS = arrayOf(
-            MIGRATION_9_10,
-            MIGRATION_10_11,
-            MIGRATION_11_12,
-            MIGRATION_12_13,
-            MIGRATION_13_14,
-            MIGRATION_14_15,
-            MIGRATION_15_16,
-            MIGRATION_16_17,
-            MIGRATION_17_18,
-        )
+        val TALLER_TABLES = listOf("diag_sessions", "diag_events", "vehicle_knowledge", "vehicle_parts", "reference_bands")
     }
 }
