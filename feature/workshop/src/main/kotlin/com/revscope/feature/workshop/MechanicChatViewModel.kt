@@ -11,7 +11,7 @@ import com.revscope.core.intelligence.provider.AiRequest
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.trip.MaintenanceCalculator
-import com.revscope.core.obd.workshop.DiagnosticRules
+import com.revscope.core.obd.workshop.HealthReportFormato
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -182,20 +181,8 @@ class MechanicChatViewModel @Inject constructor(
         default
     }
 
-    private fun parseChequeoItems(json: String): List<MechanicChatContextBuilder.ChequeoItem> = try {
-        val array = JSONArray(json)
-        (0 until array.length()).map { i ->
-            val o = array.getJSONObject(i)
-            MechanicChatContextBuilder.ChequeoItem(
-                titulo = o.getString("titulo"),
-                nivel = DiagnosticRules.Nivel.valueOf(o.getString("nivel")),
-            )
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        emptyList()
-    }
+    private fun parseChequeoItems(json: String): List<MechanicChatContextBuilder.ChequeoItem> =
+        HealthReportFormato.leer(json).items.map { MechanicChatContextBuilder.ChequeoItem(titulo = it.titulo, nivel = it.nivel) }
 
     private companion object {
         const val MAX_TOKENS = 800

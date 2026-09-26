@@ -9,6 +9,6 @@ data class HealthReportEntity(
     val id: Long = 0,
     val vehicleProfileId: Long,
     val timestamp: Long,
-    /** JSON array of {area, nivel, titulo, causa} produced by the health check */
+    /** v1: array de {area, nivel, titulo, causa}; v2: {"v":2,"items":[…],"metricas":{…}} (HealthReportFormato en core:obd) */
     val resultsJson: String,
 )
