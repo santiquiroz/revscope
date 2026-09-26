@@ -9,7 +9,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Inject
 
 // Los últimos segundos de la captura en curso, por PID, para la minigráfica y el valor en vivo de la prueba.
-interface FuenteSerieVivo {
+fun interface FuenteSerieVivo {
     fun leer(pid: String): SerieVivo
 }
 
