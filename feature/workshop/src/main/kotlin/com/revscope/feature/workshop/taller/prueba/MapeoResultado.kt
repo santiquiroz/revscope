@@ -9,7 +9,9 @@ import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.grafica.BandasPosicion
 import com.revscope.core.obd.taller.grafica.FormatoPosicion
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
+import com.revscope.core.obd.taller.pruebas.AnalisisArranqueFrio
 import com.revscope.core.obd.taller.pruebas.AnalisisBarridoTps
+import com.revscope.core.obd.taller.pruebas.AnalisisMinimo
 import com.revscope.core.obd.taller.pruebas.AnalizadorBarridoTps
 import com.revscope.core.obd.taller.pruebas.AnalizadorBarridoTps.Pasos
 import com.revscope.core.obd.taller.pruebas.Comprobacion
@@ -32,8 +34,17 @@ internal object MapeoResultado {
     )
 
     fun de(t: EstadoPrueba.Terminada): ResultadoUi {
+        val base = base(t)
+        return when (val detalle = t.resultado.detalle) {
+            is AnalisisBarridoTps -> conBarrido(base, detalle, t.datos)
+            is AnalisisMinimo -> MapeoResultadoMotor.minimo(base, detalle, t.datos)
+            is AnalisisArranqueFrio -> MapeoResultadoMotor.arranque(base, detalle, t.datos)
+            else -> base
+        }
+    }
+
+    private fun base(t: EstadoPrueba.Terminada): ResultadoUi {
         val r = t.resultado
-        val analisis = r.detalle as? AnalisisBarridoTps
         return ResultadoUi(
             tipo = r.tipo,
             veredicto = r.veredicto,
@@ -41,15 +52,25 @@ internal object MapeoResultado {
             interpretacion = r.interpretacion,
             hallazgos = r.hallazgos,
             siguientePaso = r.siguientePaso,
-            pesas = analisis?.let(::pesas).orEmpty(),
-            comprobaciones = analisis?.comprobaciones?.map(::comprobacion).orEmpty(),
-            serie = analisis?.let { a -> t.datos?.let { serie(it, a) } },
-            leyendaSerie = t.datos?.let(::leyendaTramos).orEmpty() + analisis?.let(::leyendaBandas).orEmpty(),
-            referencia = analisis?.vref?.let(::referencia) ?: "",
-            codigoGuia = analisis?.patron?.let(TextosPrueba::codigoGuia),
+            pesas = emptyList(),
+            comprobaciones = emptyList(),
+            medidas = emptyList(),
+            graficas = emptyList(),
+            referencia = "",
+            codigoGuia = null,
             guardado = t.eventoId != null,
         )
     }
+
+    private fun conBarrido(base: ResultadoUi, a: AnalisisBarridoTps, datos: DatosPrueba?) = base.copy(
+        pesas = pesas(a),
+        comprobaciones = a.comprobaciones.map(::comprobacion),
+        graficas = listOfNotNull(
+            datos?.let { GraficaResultadoUi("Toda la prueba, en voltios", serie(it, a), leyendaTramos(it) + leyendaBandas(a)) },
+        ),
+        referencia = referencia(a.vref),
+        codigoGuia = TextosPrueba.codigoGuia(a.patron),
+    )
 
     fun referencia(vref: ReferenciaVoltaje): String = "Referencia ${FormatoPosicion.voltios(vref.voltios)} · ${vref.origen}"
 

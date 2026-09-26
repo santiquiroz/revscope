@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.prueba
 
+import com.revscope.core.obd.taller.grafica.PidsPosicion
 import com.revscope.core.obd.taller.pruebas.DefinicionPrueba
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
@@ -25,14 +26,14 @@ internal class PantallaPrueba(
     fun fase(entrada: EntradaPantalla): FasePantalla = when (val e = entrada.estado) {
         EstadoPrueba.Inactiva -> inactiva(entrada)
         is EstadoPrueba.Verificando -> preparacion(e.tipo, entrada.precondicionesVivas ?: e.precondiciones) ?: elegir()
-        is EstadoPrueba.EnPaso -> FasePantalla.Paso(MapeoPaso.de(e, pidVivo(e.tipo), entrada.serieVivo, entrada.vref, entrada.bandas))
+        is EstadoPrueba.EnPaso -> FasePantalla.Paso(MapeoPaso.de(e, pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas))
         is EstadoPrueba.Analizando -> FasePantalla.Analizando(e.tipo)
         is EstadoPrueba.Terminada -> FasePantalla.Resultado(MapeoResultado.de(e))
         is EstadoPrueba.Cancelada -> FasePantalla.Cancelada(e.tipo, e.motivo)
         is EstadoPrueba.Fallida -> FasePantalla.Fallida(e.tipo, e.motivo, e.reintentable)
     }
 
-    fun pidVivo(tipo: TipoPrueba): String = definicion(tipo)?.pids?.first().orEmpty()
+    fun pidVivo(e: EstadoPrueba.EnPaso): String = definicion(e.tipo)?.pidPrincipal(e.paso).orEmpty()
 
     private fun inactiva(entrada: EntradaPantalla): FasePantalla {
         val tipo = entrada.tipoElegido ?: return elegir()
@@ -45,7 +46,8 @@ internal class PantallaPrueba(
             tipo = tipo,
             descripcion = TextosPrueba.descripcion(tipo),
             pasos = d.pasos.map(TextosPrueba::paso),
-            precondiciones = precondiciones.map { ItemPrecondicion(it.texto, it.cumple, it.queHacer) },
+            precondiciones = precondiciones.map { ItemPrecondicion(it.texto, it.cumple, it.queHacer, it.aviso) },
+            usaVref = d.pids.any(PidsPosicion::es),
         )
     }
 

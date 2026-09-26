@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -25,6 +26,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -93,7 +96,7 @@ internal fun ColumnScope.PreparacionPrueba(fase: FasePantalla.Preparacion, estad
             Text("${i + 1}. $paso", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
         }
         Seccion("Ajustes")
-        FilaVref(estado.vref, acciones.onPedirVref)
+        if (fase.usaVref) FilaVref(estado.vref, acciones.onPedirVref)
         FilaVoz(estado.voz, acciones.onVoz)
     }
     PieConAccion(
@@ -107,18 +110,23 @@ internal fun ColumnScope.PreparacionPrueba(fase: FasePantalla.Preparacion, estad
 @Composable
 private fun FilaPrecondicion(item: ItemPrecondicion) {
     val lado = with(LocalDensity.current) { 20.sp.toDp() }
+    val (icono, color, nombre) = marcaPrecondicion(item)
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-        Icon(
-            if (item.cumple) Icons.Filled.CheckCircle else Icons.Filled.Cancel,
-            contentDescription = if (item.cumple) "Cumple" else "No cumple",
-            tint = if (item.cumple) RevScopeColors.Success else RevScopeColors.Danger,
-            modifier = Modifier.size(lado),
-        )
+        Icon(icono, contentDescription = nombre, tint = color, modifier = Modifier.size(lado))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(item.texto, color = RevScopeColors.TextPrimary, style = RevScopeType.body)
-            item.queHacer?.takeIf { !item.cumple }?.let { Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.body) }
+            item.queHacer?.takeIf { !item.cumple || item.aviso }?.let {
+                Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.body)
+            }
         }
     }
+}
+
+// Un aviso deja empezar, pero con ícono y texto propios: no se confunde con «cumple» ni con «no cumple».
+private fun marcaPrecondicion(item: ItemPrecondicion): Triple<ImageVector, Color, String> = when {
+    !item.cumple -> Triple(Icons.Filled.Cancel, RevScopeColors.Danger, "No cumple")
+    item.aviso -> Triple(Icons.Filled.Warning, RevScopeColors.Warning, "Aviso")
+    else -> Triple(Icons.Filled.CheckCircle, RevScopeColors.Success, "Cumple")
 }
 
 @Composable

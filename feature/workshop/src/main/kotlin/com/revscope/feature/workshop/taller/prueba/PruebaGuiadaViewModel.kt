@@ -179,7 +179,7 @@ class PruebaGuiadaViewModel @Inject constructor(
     private suspend fun refrescarSerieDuranteLaPrueba() {
         controlador.estado.collectLatest { e ->
             if (e !is EstadoPrueba.EnPaso) return@collectLatest
-            val pid = pantalla.pidVivo(e.tipo)
+            val pid = pantalla.pidVivo(e)
             while (true) {
                 local.update { it.copy(serie = fuenteSerie.leer(pid)) }
                 delay(REFRESCO_SERIE_MS)

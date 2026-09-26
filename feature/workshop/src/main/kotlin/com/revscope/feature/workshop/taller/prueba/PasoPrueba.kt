@@ -82,10 +82,14 @@ private fun CuentaYValor(paso: PasoUi) {
 private fun ValorVivo(vivo: ValorVivoUi, modifier: Modifier = Modifier) {
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier.clearAndSetSemantics { contentDescription = "${vivo.etiqueta}: ${vivo.porcentaje}, ${vivo.voltios}" },
+        modifier = modifier.clearAndSetSemantics {
+            contentDescription = listOfNotNull(vivo.principal, vivo.secundario).joinToString(", ", prefix = "${vivo.etiqueta}: ")
+        },
     ) {
-        TextoAjustable(vivo.porcentaje, RevScopeType.numeros, RevScopeColors.TextPrimary, maximo = 40.sp, alineacion = TextAlign.Start)
-        TextoAjustable(vivo.voltios, RevScopeType.numeros.copy(fontWeight = FontWeight.SemiBold), RevScopeColors.Accent, maximo = 28.sp, alineacion = TextAlign.Start)
+        TextoAjustable(vivo.principal, RevScopeType.numeros, RevScopeColors.TextPrimary, maximo = 40.sp, alineacion = TextAlign.Start)
+        vivo.secundario?.let {
+            TextoAjustable(it, RevScopeType.numeros.copy(fontWeight = FontWeight.SemiBold), RevScopeColors.Accent, maximo = 28.sp, alineacion = TextAlign.Start)
+        }
         Text(vivo.etiqueta, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
 }
@@ -93,7 +97,7 @@ private fun ValorVivo(vivo: ValorVivoUi, modifier: Modifier = Modifier) {
 @Composable
 private fun MiniGrafica(paso: PasoUi) {
     TarjetaTaller {
-        Text("Últimos 10 s, en voltios", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+        Text(paso.tituloGrafica, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
         if (paso.grafica.tieneDatos) {
             GraficaSerie(paso.grafica, alto = 160.dp)
         } else {

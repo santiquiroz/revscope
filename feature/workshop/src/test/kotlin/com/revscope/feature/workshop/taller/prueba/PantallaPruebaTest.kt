@@ -23,7 +23,10 @@ class PantallaPruebaTest {
         val fase = pantalla.fase(EntradaPantalla(EstadoPrueba.Inactiva)) as FasePantalla.Elegir
 
         assertEquals(TipoPrueba.entries, fase.opciones.map { it.tipo })
-        assertEquals(listOf(TipoPrueba.TPS_BARRIDO), fase.opciones.filter { it.disponible }.map { it.tipo })
+        assertEquals(
+            listOf(TipoPrueba.TPS_BARRIDO, TipoPrueba.MINIMO_RETORNO, TipoPrueba.ARRANQUE_FRIO),
+            fase.opciones.filter { it.disponible }.map { it.tipo },
+        )
     }
 
     @Test
@@ -81,8 +84,9 @@ class PantallaPruebaTest {
     fun `el valor en vivo va en porcentaje y voltios y la minigrafica cubre 10 s en voltios`() {
         val p = paso(1, FasePaso.SOSTENIENDO, 2_400)
 
-        assertEquals("9,4 %", p.vivo!!.porcentaje)
-        assertEquals("0,47 V", p.vivo!!.voltios)
+        assertEquals("9,4 %", p.vivo!!.principal)
+        assertEquals("0,47 V", p.vivo!!.secundario)
+        assertEquals("Últimos 10 s, en voltios", p.tituloGrafica)
         assertEquals(-10.0..0.0, p.grafica.rangoX)
         assertEquals(0.0..5.0, p.grafica.rangoY)
         assertTrue(p.grafica.series.single().puntos.all { it.y < 0.5 })
@@ -129,10 +133,12 @@ class PantallaPruebaTest {
     fun `la serie del resultado sombrea los 5 pasos y las bandas y los nombra en la leyenda`() {
         val r = (pantalla.fase(EntradaPantalla(BarridoBenelli.terminada())) as FasePantalla.Resultado).resultado
 
-        val serie = r.serie!!
+        val grafica = r.graficas.single()
+        val serie = grafica.modelo
+        assertEquals("Toda la prueba, en voltios", grafica.titulo)
         assertEquals(listOf("1", "2", "3", "4", "5"), serie.tramos.map { it.etiqueta })
         assertEquals(2, serie.bandas.size)
-        assertEquals("1 Cerrado · 2 Medio · 3 A fondo · 4 Cerrado otra vez · 5 Barrido lento", r.leyendaSerie.first())
+        assertEquals("1 Cerrado · 2 Medio · 3 A fondo · 4 Cerrado otra vez · 5 Barrido lento", grafica.leyenda.first())
         assertTrue(serie.descripcion, serie.descripcion.startsWith("TPS en toda la prueba: de 0,12 V a 0,90 V, 5 pasos sombreados."))
     }
 

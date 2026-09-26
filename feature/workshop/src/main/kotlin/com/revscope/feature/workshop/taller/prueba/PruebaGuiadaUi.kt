@@ -25,9 +25,10 @@ enum class DialogoPrueba { CANCELAR, VREF }
 
 data class OpcionPrueba(val tipo: TipoPrueba, val descripcion: String, val disponible: Boolean)
 
-data class ItemPrecondicion(val texto: String, val cumple: Boolean, val queHacer: String?)
+data class ItemPrecondicion(val texto: String, val cumple: Boolean, val queHacer: String?, val aviso: Boolean = false)
 
-data class ValorVivoUi(val etiqueta: String, val porcentaje: String, val voltios: String)
+// [principal] en grande; [secundario] (los voltios de un PID de posición) debajo, si lo hay.
+data class ValorVivoUi(val etiqueta: String, val principal: String, val secundario: String? = null)
 
 data class PasoUi(
     val tipo: TipoPrueba,
@@ -42,6 +43,7 @@ data class PasoUi(
     val fraccionRestante: Float?,
     val vivo: ValorVivoUi?,
     val grafica: ModeloGrafica,
+    val tituloGrafica: String,
     val leyendaGrafica: List<String>,
     val anuncio: String,
     val accionPrincipal: String?,
@@ -65,6 +67,8 @@ data class PesaUi(
     val descripcion: String,
 )
 
+data class GraficaResultadoUi(val titulo: String, val modelo: ModeloGrafica, val leyenda: List<String>)
+
 data class ComprobacionUi(val texto: String, val cumple: Boolean)
 
 data class ResultadoUi(
@@ -76,8 +80,8 @@ data class ResultadoUi(
     val siguientePaso: String?,
     val pesas: List<PesaUi>,
     val comprobaciones: List<ComprobacionUi>,
-    val serie: ModeloGrafica?,
-    val leyendaSerie: List<String>,
+    val medidas: List<String>,
+    val graficas: List<GraficaResultadoUi>,
     val referencia: String,
     val codigoGuia: String?,
     val guardado: Boolean,
@@ -95,6 +99,7 @@ sealed interface FasePantalla {
         val descripcion: String,
         val pasos: List<String>,
         val precondiciones: List<ItemPrecondicion>,
+        val usaVref: Boolean = true,
     ) : FasePantalla {
         val listas: Boolean get() = precondiciones.isNotEmpty() && precondiciones.all { it.cumple }
     }

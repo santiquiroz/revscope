@@ -43,8 +43,9 @@ internal fun ColumnScope.ResultadoPrueba(r: ResultadoUi, estado: PruebaGuiadaUi,
         TarjetaVeredicto(r)
         r.siguientePaso?.let { TarjetaSiguiente(it) }
         if (r.pesas.isNotEmpty()) PesasPorPaso(r)
+        if (r.medidas.isNotEmpty()) Medidas(r.medidas)
         if (r.comprobaciones.isNotEmpty()) Comprobaciones(r)
-        r.serie?.takeIf { it.tieneDatos }?.let { SerieCompleta(r) }
+        r.graficas.filter { it.modelo.tieneDatos }.forEach { SerieCompleta(it) }
         AccionesResultado(r, estado, acciones)
     }
     PieConAccion("Listo", acciones.onTerminar)
@@ -122,12 +123,19 @@ private fun Comprobaciones(r: ResultadoUi) {
 }
 
 @Composable
-private fun SerieCompleta(r: ResultadoUi) {
-    val serie = r.serie ?: return
-    Seccion("Toda la prueba, en voltios")
+private fun Medidas(medidas: List<String>) {
+    Seccion("Medidas")
     TarjetaTaller {
-        GraficaSerie(serie, alto = 200.dp)
-        r.leyendaSerie.forEach { Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall) }
+        medidas.forEach { Text(it, color = RevScopeColors.TextPrimary, style = RevScopeType.body.copy(fontFeatureSettings = "tnum")) }
+    }
+}
+
+@Composable
+private fun SerieCompleta(g: GraficaResultadoUi) {
+    Seccion(g.titulo)
+    TarjetaTaller {
+        GraficaSerie(g.modelo, alto = 200.dp)
+        g.leyenda.forEach { Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall) }
     }
 }
 

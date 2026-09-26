@@ -36,9 +36,32 @@ internal object MapeoPaso {
         Pasos.BARRIDO_LENTO to setOf(ClavesBanda.TPS_CERRADO_V, ClavesBanda.TPS_FONDO_V),
     )
 
-    fun de(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, vref: ReferenciaVoltaje, bandas: Map<String, BandaReferencia>): PasoUi {
-        val restanteS = e.restanteMs?.let { ceil(it / 1_000.0).toInt() }
+    fun de(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, vref: ReferenciaVoltaje, bandas: Map<String, BandaReferencia>): PasoUi =
+        if (PidsPosicion.es(pid)) dePosicion(e, pid, serie, vref, bandas) else deMagnitud(e, pid, serie, bandas)
+
+    private fun dePosicion(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, vref: ReferenciaVoltaje, bandas: Map<String, BandaReferencia>): PasoUi {
         val objetivo = BandasPosicion.tps(bandas, UnidadPosicion.VOLTIOS, vref).filter { it.clave in BANDAS_POR_PASO[e.paso.clave].orEmpty() }
+        return base(e).copy(
+            vivo = serie.lastOrNull()?.let { valorVivo(pid, it.second, vref) },
+            grafica = grafica(pid, serie, vref, objetivo),
+            tituloGrafica = "Últimos 10 s, en voltios",
+            leyendaGrafica = objetivo.map { it.descripcion },
+        )
+    }
+
+    // RPM y temperaturas: el valor tal cual, en su unidad, y la banda del paso si la tiene (el mínimo).
+    private fun deMagnitud(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, bandas: Map<String, BandaReferencia>): PasoUi {
+        val banda = MapeoMagnitud.banda(e.paso.clave, bandas)
+        return base(e).copy(
+            vivo = serie.lastOrNull()?.let { MapeoMagnitud.valorVivo(pid, it.second) },
+            grafica = MapeoMagnitud.grafica(pid, serie, VENTANA_MS, banda),
+            tituloGrafica = "Últimos 10 s, en ${MapeoMagnitud.de(pid).unidad.ifEmpty { "unidades del PID" }}",
+            leyendaGrafica = listOfNotNull(banda?.let(MapeoMagnitud::leyenda)),
+        )
+    }
+
+    private fun base(e: EstadoPrueba.EnPaso): PasoUi {
+        val restanteS = e.restanteMs?.let { ceil(it / 1_000.0).toInt() }
         return PasoUi(
             tipo = e.tipo,
             indice = e.indice + 1,
@@ -50,9 +73,10 @@ internal object MapeoPaso {
             restanteS = restanteS,
             duracionS = ceil(e.paso.modo.limiteMs / 1_000.0).toInt(),
             fraccionRestante = e.restanteMs?.let { (it.toFloat() / e.paso.modo.limiteMs).coerceIn(0f, 1f) },
-            vivo = serie.lastOrNull()?.takeIf { PidsPosicion.es(pid) }?.let { valorVivo(pid, it.second, vref) },
-            grafica = grafica(pid, serie, vref, objetivo),
-            leyendaGrafica = objetivo.map { it.descripcion },
+            vivo = null,
+            grafica = ModeloGrafica(emptyList(), ""),
+            tituloGrafica = "",
+            leyendaGrafica = emptyList(),
             anuncio = anuncio(e, restanteS),
             accionPrincipal = TextosPrueba.accionPrincipal(e.fase, e.paso.modo),
             grabados = e.indice,
@@ -67,8 +91,8 @@ internal object MapeoPaso {
 
     private fun valorVivo(pid: String, porcentaje: Double, vref: ReferenciaVoltaje) = ValorVivoUi(
         etiqueta = "TPS · PID $pid · con ${FormatoPosicion.voltios(vref.voltios)} de referencia",
-        porcentaje = FormatoPosicion.porcentaje(porcentaje),
-        voltios = FormatoPosicion.voltios(vref.aVoltios(porcentaje)),
+        principal = FormatoPosicion.porcentaje(porcentaje),
+        secundario = FormatoPosicion.voltios(vref.aVoltios(porcentaje)),
     )
 
     private fun grafica(pid: String, serie: SerieVivo, vref: ReferenciaVoltaje, bandas: List<BandaEnEscala>): ModeloGrafica {
