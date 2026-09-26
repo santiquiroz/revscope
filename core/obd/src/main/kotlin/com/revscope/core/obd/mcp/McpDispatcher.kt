@@ -38,6 +38,7 @@ class McpDispatcher(
     tools: List<McpTool>,
     private val serverVersion: String = "1.0.0",
     private val permisos: suspend () -> Set<McpPermiso> = { setOf(McpPermiso.LECTURA) },
+    private val alLlamarTool: () -> Unit = {},
 ) {
 
     private val toolsByName = tools.associateBy { it.name }
@@ -62,6 +63,7 @@ class McpDispatcher(
             ?: return errorResponse(id, INVALID_PARAMS_CODE, "Missing tool name")
         val tool = toolsByName[toolName]
             ?: return errorResponse(id, INVALID_PARAMS_CODE, "Unknown tool: $toolName")
+        alLlamarTool()
         if (tool.permiso !in permisos()) return successResponse(id, toolErrorResult(McpPermisos.MENSAJE_DESHABILITADO))
         val arguments = params.optJSONObject("arguments") ?: JSONObject()
         return successResponse(id, runTool(tool, arguments))

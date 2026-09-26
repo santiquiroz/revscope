@@ -31,6 +31,7 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.mcp.McpActivityTracker
 import com.revscope.core.obd.protocol.DtcResponseParser
 import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.protocol.ElmCommandBuilder
@@ -104,6 +105,7 @@ class ObdSessionManager @Inject constructor(
     private val alertsEngine: AlertsEngine,
     private val trackModeEngine: TrackModeEngine,
     private val tripSummaryNotifier: TripSummaryNotifier,
+    private val mcpActivity: McpActivityTracker,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -185,6 +187,7 @@ class ObdSessionManager @Inject constructor(
     private class LinkPipeline(val scope: CoroutineScope, val readings: SharedFlow<ObdReading>)
     private val workshopClients = AtomicInteger(0)
     @Volatile private var idleModeEnabled = false
+    @Volatile private var remoteViewerActive = false
 
     private val launchTimer = LaunchTimerEngine()
     val launchResults = launchTimer.results
@@ -212,6 +215,7 @@ class ObdSessionManager @Inject constructor(
             launchTimer.results.collect { onLaunchResult(it) }
         }
         scope.launch { observeAutoTripSetting() }
+        scope.launch { observeRemoteViewer() }
         scope.launch {
             trackModeEngine.lapEvents.collect { lap ->
                 alertsEngine.announceLap(lap.number, lap.timeMs)
@@ -840,6 +844,7 @@ class ObdSessionManager @Inject constructor(
                     val scheduler = PidScheduler(polled, registry).also { activeScheduler = it }
                     scheduler.setWorkshopMode(workshopClients.get() > 0)
                     scheduler.setIdleMode(idleModeEnabled)
+                    scheduler.setRemoteViewerActive(remoteViewerActive)
                     val rawFlow = scheduler
                         .observeReadings()
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
@@ -923,6 +928,13 @@ class ObdSessionManager @Inject constructor(
                 .distinctUntilChanged()
                 .collect { autoTripEnabled = it }
         }.onFailure { Timber.w(it, "ObdSessionManager: failed to observe auto-trip setting") }
+    }
+
+    private suspend fun observeRemoteViewer() {
+        mcpActivity.espectadorActivo.collect { activo ->
+            remoteViewerActive = activo
+            activeScheduler?.setRemoteViewerActive(activo)
+        }
     }
 
     private suspend fun abrirSesionObd(adapterName: String): Long {

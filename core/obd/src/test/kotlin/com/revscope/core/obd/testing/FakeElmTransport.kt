@@ -16,10 +16,11 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class FakeElmTransport(
     private val latenciaMs: (String) -> Long = { 20L },
+    private val reloj: () -> Long = { 0L },
     private val responder: (String) -> String,
 ) : Transport {
 
-    data class Entrada(val comando: String, val respuesta: String)
+    data class Entrada(val comando: String, val respuesta: String, val tInicioMs: Long = 0L)
 
     private val mutex = Mutex()
     private val enVuelo = AtomicInteger(0)
@@ -63,11 +64,12 @@ class FakeElmTransport(
     override fun observeConnectionState(): Flow<ConnectionState> = state
 
     private suspend fun responderRegistrando(comando: String): String {
+        val inicio = reloj()
         delay(latenciaMs(comando))
         val limite = fallasDesde
         if (limite != null && log.size >= limite) throw IOException("enlace muerto (fake)")
         val respuesta = responder(comando)
-        synchronized(_log) { _log += Entrada(comando, respuesta) }
+        synchronized(_log) { _log += Entrada(comando, respuesta, inicio) }
         return respuesta
     }
 

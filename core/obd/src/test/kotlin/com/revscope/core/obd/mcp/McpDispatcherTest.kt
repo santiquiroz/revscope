@@ -202,4 +202,15 @@ class McpDispatcherTest {
             McpPermisos.desdeAjustes(controlActivo = true, borradoActivo = true),
         )
     }
+
+    @Test
+    fun `cada tools call registra actividad y tools list no`() = runTest {
+        var llamadas = 0
+        val dispatcher = McpDispatcher(listOf(toolConPermiso("get_estado", McpPermiso.LECTURA)), alLlamarTool = { llamadas++ })
+
+        dispatcher.dispatch("""{"jsonrpc":"2.0","id":1,"method":"tools/list"}""")
+        dispatcher.dispatch("""{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_estado"}}""")
+
+        assertEquals(1, llamadas)
+    }
 }

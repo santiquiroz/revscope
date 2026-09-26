@@ -10,6 +10,7 @@ import com.revscope.core.obd.mcp.GetMantenimientoTool
 import com.revscope.core.obd.mcp.GetViajeDetalleTool
 import com.revscope.core.obd.mcp.GetViajesTool
 import com.revscope.core.obd.mcp.IniciarViajeTool
+import com.revscope.core.obd.mcp.McpActivityTracker
 import com.revscope.core.obd.mcp.McpDispatcher
 import com.revscope.core.obd.mcp.McpPermisosProvider
 import com.revscope.core.obd.mcp.McpTool
@@ -50,5 +51,6 @@ object McpModule {
     fun provideMcpDispatcher(
         tools: @JvmSuppressWildcards List<McpTool>,
         permisos: McpPermisosProvider,
-    ): McpDispatcher = McpDispatcher(tools, permisos = permisos::actuales)
+        actividad: McpActivityTracker,
+    ): McpDispatcher = McpDispatcher(tools, permisos = permisos::actuales, alLlamarTool = actividad::registrarLlamada)
 }

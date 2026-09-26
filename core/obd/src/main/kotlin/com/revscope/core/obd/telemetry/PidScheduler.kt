@@ -13,15 +13,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 private const val PID_READ_TIMEOUT_MS = 2_000L
 private const val MAX_INTERVAL_MULTIPLIER = 8.0
+private const val BUFFER_FULL_DECAY_WINDOW_MS = 30_000L
+// Un grupo sin PIDs (todos excluidos o ninguno soportado) no debe girar en vacío con intervalo 0.
+private const val EMPTY_CYCLE_DELAY_MS = 500L
 private const val MAX_CONSECUTIVE_LINK_FAILURES = 3
 private const val WORKSHOP_PRIORITY = 4
 
@@ -44,10 +49,12 @@ private const val SINGLE_FRAME_PAYLOAD_BYTES = 7
 class PidScheduler(
     private val transport: Transport,
     private val registry: PidRegistry,
+    private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 },
 ) {
     // Written concurrently from the three priority-group coroutines
     private val excludedPids: MutableSet<String> = ConcurrentHashMap.newKeySet()
     private val intervalMultiplier = AtomicReference(1.0)
+    private val lastBufferFullMs = AtomicLong(0L)
     private val consecutiveLinkFailures = AtomicInteger(0)
 
     // CAN protocols accept several PIDs per request; K-line/ISO9141 don't.
@@ -63,6 +70,9 @@ class PidScheduler(
     // telemetría. p3 solo ×2 para que la alerta de sobrecalentamiento siga siendo oportuna.
     private val idleMode = AtomicBoolean(false)
 
+    // Alguien consulta el MCP desde el PC: la pantalla del teléfono apagada no debe frenar el muestreo.
+    private val remoteViewerActive = AtomicBoolean(false)
+
     fun setWorkshopMode(enabled: Boolean) {
         workshopMode.value = enabled
     }
@@ -71,8 +81,12 @@ class PidScheduler(
         idleMode.set(enabled)
     }
 
+    fun setRemoteViewerActive(active: Boolean) {
+        remoteViewerActive.set(active)
+    }
+
     private fun idleFactorFor(priority: Int): Double = when {
-        !idleMode.get() -> 1.0
+        !idleMode.get() || remoteViewerActive.get() -> 1.0
         priority == 1 -> 5.0
         priority == 2 -> 3.0
         else -> 2.0
@@ -95,23 +109,48 @@ class PidScheduler(
     ) {
         while (true) {
             if (priority == WORKSHOP_PRIORITY) workshopMode.first { it }
+            val cycleStartMs = nowMs()
+            decayBufferFullMultiplier(cycleStartMs)
             val intervalMs = (baseIntervalMs * intervalMultiplier.get() * idleFactorFor(priority)).toLong()
             val defs = registry.definitionsForPriority(priority)
                 .filterNot { it.pid in excludedPids }
-
-            val (mode01, otherModes) = defs.partition { it.mode == "01" }
-            if (batchingSupported.get() && mode01.size > 1) {
-                packIntoFrames(mode01).forEach { batch ->
-                    if (batch.size == 1) requestPid(batch[0].pid)?.let { emit(it) }
-                    else requestBatch(batch, emit)
-                }
-            } else {
-                mode01.forEach { def -> requestPid(def.pid)?.let { emit(it) } }
+            if (defs.isEmpty()) {
+                delay(maxOf(intervalMs, EMPTY_CYCLE_DELAY_MS))
+                continue
             }
-            otherModes.forEach { def -> requestPid(def.pid)?.let { emit(it) } }
-
-            delay(intervalMs)
+            pollCycle(defs, emit)
+            waitUntilNextCycle(cycleStartMs, intervalMs)
         }
+    }
+
+    private suspend fun pollCycle(defs: List<PidDefinition>, emit: (ObdReading) -> Unit) {
+        val (mode01, otherModes) = defs.partition { it.mode == "01" }
+        if (batchingSupported.get() && mode01.size > 1) {
+            packIntoFrames(mode01).forEach { batch ->
+                if (batch.size == 1) requestPid(batch[0].pid)?.let { emit(it) }
+                else requestBatch(batch, emit)
+            }
+        } else {
+            mode01.forEach { def -> requestPid(def.pid)?.let { emit(it) } }
+        }
+        otherModes.forEach { def -> requestPid(def.pid)?.let { emit(it) } }
+    }
+
+    /** Tasa fija: el intervalo cuenta desde el inicio del ciclo, así la duración del ciclo no se suma. */
+    private suspend fun waitUntilNextCycle(cycleStartMs: Long, intervalMs: Long) {
+        val remainingMs = cycleStartMs + intervalMs - nowMs()
+        if (remainingMs > 0) delay(remainingMs) else yield()
+    }
+
+    /** Tras [BUFFER_FULL_DECAY_WINDOW_MS] sin BUFFER FULL, el multiplicador vuelve a la mitad (mínimo ×1). */
+    private fun decayBufferFullMultiplier(now: Long) {
+        if (intervalMultiplier.get() <= 1.0) return
+        val lastEventMs = lastBufferFullMs.get()
+        if (now - lastEventMs < BUFFER_FULL_DECAY_WINDOW_MS) return
+        // Los cuatro grupos llegan aquí: solo el que gana el CAS divide.
+        if (!lastBufferFullMs.compareAndSet(lastEventMs, now)) return
+        val multiplier = intervalMultiplier.updateAndGet { (it / 2.0).coerceAtLeast(1.0) }
+        Timber.i("PidScheduler: sin BUFFER FULL en 30 s — multiplicador ahora $multiplier")
     }
 
     /** Greedy-packs definitions into batches whose response fits one CAN frame. */
@@ -236,6 +275,7 @@ class PidScheduler(
             null
         }
         ResponseParser.isBufferFull(response) -> {
+            lastBufferFullMs.set(nowMs())
             val multiplier = intervalMultiplier.updateAndGet {
                 (it * 2.0).coerceAtMost(MAX_INTERVAL_MULTIPLIER)
             }
