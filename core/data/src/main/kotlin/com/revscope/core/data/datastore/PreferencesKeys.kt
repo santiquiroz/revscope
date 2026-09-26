@@ -292,6 +292,15 @@ object PreferencesKeys {
     /** Token Bearer generado una sola vez (UUID) — requerido en Authorization para /mcp */
     val MCP_TOKEN = stringPreferencesKey("mcp_token")
 
+    /**
+     * Permite al MCP finalizar e iniciar viajes (default false). No viaja en el respaldo:
+     * restaurar nunca concede control remoto sin que el dueño lo active en este teléfono.
+     */
+    val MCP_CONTROL_ENABLED = booleanPreferencesKey("mcp_control_enabled")
+
+    /** Permite al MCP borrar los DTC (modo 04); exige también [MCP_CONTROL_ENABLED] (default false). */
+    val MCP_CLEAR_DTC_ENABLED = booleanPreferencesKey("mcp_clear_dtc_enabled")
+
     // ── Mapa ─────────────────────────────────────────────────────────────────
 
     /** Modo nocturno del mapa: "auto" (por sol), "on", "off". */

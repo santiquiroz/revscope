@@ -1,72 +1,114 @@
 package com.revscope.core.obd.mcp
 
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.diagnostics.DtcLectura
+import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.session.ObdSessionManager
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 
 /**
- * Códigos DTC activos leídos en vivo (Mode 03) — requiere adaptador conectado.
+ * DTC leídos en vivo bajo la concesión de diagnóstico: funciona durante o después de un viaje
+ * sin cortar la conexión (el sondeo se pausa solo mientras dura la lectura).
  *
- * The ECU read itself (not the connection/estado checks) is rate-limited to one call per
- * [RATE_LIMIT_WINDOW_MS] and refused outright while a trip is recording, so a chatty MCP client
- * can't hammer the transport mutex and starve the telemetry scheduler.
+ * Caché de [CACHE_WINDOW_MS] por combinación de argumentos y como mucho una lectura al ECU
+ * cada [MIN_INTERVAL_MS]: un cliente MCP insistente no acapara el canal serie.
  */
 class GetDtcTool @Inject constructor(
     private val sessionManager: ObdSessionManager,
+    private val registry: PidRegistry,
 ) : McpTool {
 
-    /** Test-only clock override — see [McpServerController] for the same internal-constructor pattern. */
-    internal constructor(sessionManager: ObdSessionManager, nowMs: () -> Long) : this(sessionManager) {
+    internal constructor(sessionManager: ObdSessionManager, registry: PidRegistry, nowMs: () -> Long) :
+        this(sessionManager, registry) {
         this.nowMs = nowMs
     }
 
     override val name = "get_dtc"
-    override val description = "Códigos de falla (DTC) activos leídos en vivo del vehículo — requiere adaptador conectado"
-    override val inputSchema: JSONObject = McpSchemas.noArguments()
+    override val description =
+        "Códigos de falla (DTC) leídos en vivo: activos (03), pendientes (07), permanentes (0A), testigo MIL " +
+            "y freeze frame con el DTC que lo guardó. Funciona durante o después de un viaje sin cortar la " +
+            "conexión — requiere adaptador conectado"
+    override val inputSchema: JSONObject = McpSchemas.objeto(
+        "modos" to McpSchemas.arrayDeEnum(MODOS.keys.toList(), "Qué listas leer (por defecto las tres)"),
+        "freeze_frame" to McpSchemas.booleano("Leer el freeze frame (por defecto true)"),
+        "incluir_crudo" to McpSchemas.booleano("Incluir la respuesta cruda del ECU por comando (por defecto false)"),
+    )
 
     private var nowMs: () -> Long = { System.currentTimeMillis() }
-    private var cachedResult: String? = null
-    private var cachedAtMs: Long = 0L
+    private val mutex = Mutex()
+    private val cache = HashMap<String, Pair<Long, String>>()
+    private var ultimaLecturaMs: Long? = null
 
     override suspend fun call(arguments: JSONObject): String {
         if (sessionManager.connectionState.value !is ConnectionState.Connected) {
             return JSONObject().put("conectado", false).put("mensaje", "vehículo no conectado").toString()
         }
-        if (sessionManager.currentSessionId.value != null) return tripActiveError()
-        return cachedResultWithinRateLimitWindow() ?: readAndCacheDtc()
+        val opciones = opcionesDe(arguments)
+        val incluirCrudo = arguments.optBoolean("incluir_crudo", false)
+        val clave = "${opciones.servicios.sorted()}|${opciones.freezeFrame}|$incluirCrudo"
+        return mutex.withLock {
+            cacheVigente(clave) ?: esperaPendiente() ?: leerYCachear(clave, opciones, incluirCrudo)
+        }
     }
 
-    private fun tripActiveError(): String =
-        JSONObject()
-            .put("error", "vehículo en marcha — consulta DTC no disponible durante un viaje para no interferir con la telemetría")
+    private fun opcionesDe(arguments: JSONObject): DtcLectura {
+        val modos = arguments.optJSONArray("modos")?.let(::serviciosDe)?.takeIf { it.isNotEmpty() }
+        return DtcLectura(
+            servicios = modos ?: DtcServicio.entries.toSet(),
+            freezeFrame = arguments.optBoolean("freeze_frame", true),
+        )
+    }
+
+    private fun serviciosDe(array: JSONArray): Set<DtcServicio> =
+        (0 until array.length()).mapNotNull { MODOS[array.optString(it)] }.toSet()
+
+    private fun cacheVigente(clave: String): String? {
+        val (enMs, json) = cache[clave] ?: return null
+        if (nowMs() - enMs >= CACHE_WINDOW_MS) return null
+        return JSONObject(json).put("cache", true).toString()
+    }
+
+    private fun esperaPendiente(): String? {
+        val ultima = ultimaLecturaMs ?: return null
+        val restanteMs = MIN_INTERVAL_MS - (nowMs() - ultima)
+        if (restanteMs <= 0) return null
+        return JSONObject()
+            .put("conectado", true)
+            .put("error", "lectura de DTC reciente — reintenta en ${(restanteMs + 999) / 1_000} s")
             .toString()
-
-    private fun cachedResultWithinRateLimitWindow(): String? {
-        val cached = cachedResult ?: return null
-        if (nowMs() - cachedAtMs >= RATE_LIMIT_WINDOW_MS) return null
-        return JSONObject(cached).put("cache", true).toString()
     }
 
-    private suspend fun readAndCacheDtc(): String {
-        val result = sessionManager.readActiveDtc().fold(
-            onSuccess = { codes ->
-                JSONObject()
+    private suspend fun leerYCachear(clave: String, opciones: DtcLectura, incluirCrudo: Boolean): String {
+        ultimaLecturaMs = nowMs()
+        val lectura = sessionManager.leerDtcCompleto(LEASE_OWNER, opciones)
+        val result = lectura.fold(
+            onSuccess = { scan ->
+                DtcScanJson.scan(scan, incluirCrudo) { registry.getDefinition(it)?.nameEs }
                     .put("conectado", true)
-                    .put("codigos", JSONArray(codes.map { it.code }))
+                    .put("viaje", DtcScanJson.estadoViaje(sessionManager.estadoViaje.value))
                     .toString()
             },
             onFailure = { e ->
                 JSONObject().put("conectado", true).put("error", e.message ?: "no se pudo leer DTC").toString()
             },
         )
-        cachedResult = result
-        cachedAtMs = nowMs()
+        if (lectura.isSuccess) cache[clave] = nowMs() to result
         return result
     }
 
     private companion object {
-        const val RATE_LIMIT_WINDOW_MS = 30_000L
+        const val LEASE_OWNER = "mcp:get_dtc"
+        const val CACHE_WINDOW_MS = 10_000L
+        const val MIN_INTERVAL_MS = 5_000L
+        val MODOS = mapOf(
+            "activos" to DtcServicio.ACTIVOS,
+            "pendientes" to DtcServicio.PENDIENTES,
+            "permanentes" to DtcServicio.PERMANENTES,
+        )
     }
 }

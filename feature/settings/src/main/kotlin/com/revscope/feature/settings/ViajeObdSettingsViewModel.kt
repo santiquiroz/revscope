@@ -16,7 +16,10 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
-/** Ajustes del viaje OBD separado del enlace — aparte de SettingsViewModel, que ya pasa de 1 000 líneas. */
+/**
+ * Ajustes del viaje OBD separado del enlace y de quién puede controlarlo por MCP — aparte de
+ * SettingsViewModel, que ya pasa de 1 000 líneas.
+ */
 @HiltViewModel
 class ViajeObdSettingsViewModel @Inject constructor(
     private val settings: DataStore<Preferences>,
@@ -25,6 +28,17 @@ class ViajeObdSettingsViewModel @Inject constructor(
     val autoTripOnMove: StateFlow<Boolean> = flag(PreferencesKeys.AUTO_TRIP_ON_MOVE, default = true)
 
     fun updateAutoTripOnMove(value: Boolean) = write(PreferencesKeys.AUTO_TRIP_ON_MOVE, value)
+
+    val mcpControlEnabled: StateFlow<Boolean> = flag(PreferencesKeys.MCP_CONTROL_ENABLED, default = false)
+
+    val mcpClearDtcEnabled: StateFlow<Boolean> = flag(PreferencesKeys.MCP_CLEAR_DTC_ENABLED, default = false)
+
+    fun updateMcpControlEnabled(value: Boolean) {
+        write(PreferencesKeys.MCP_CONTROL_ENABLED, value)
+        if (!value) write(PreferencesKeys.MCP_CLEAR_DTC_ENABLED, false)
+    }
+
+    fun updateMcpClearDtcEnabled(value: Boolean) = write(PreferencesKeys.MCP_CLEAR_DTC_ENABLED, value)
 
     private fun flag(key: Preferences.Key<Boolean>, default: Boolean): StateFlow<Boolean> =
         settings.data

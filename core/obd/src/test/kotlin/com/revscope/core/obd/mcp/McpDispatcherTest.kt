@@ -149,4 +149,57 @@ class McpDispatcherTest {
         assertEquals("text", content.getJSONObject(0).getString("type"))
         assertEquals("error interno de la herramienta", content.getJSONObject(0).getString("text"))
     }
+
+    private fun toolConPermiso(name: String, permiso: McpPermiso, onCall: () -> Unit = {}) = object : McpTool {
+        override val name = name
+        override val description = "d"
+        override val inputSchema: JSONObject = JSONObject().put("type", "object")
+        override val permiso = permiso
+        override suspend fun call(arguments: JSONObject): String {
+            onCall()
+            return """{"ok":true}"""
+        }
+    }
+
+    @Test
+    fun `tools list oculta las tools sin permiso`() = runTest {
+        val tools = listOf(
+            toolConPermiso("get_dtc", McpPermiso.LECTURA),
+            toolConPermiso("finalizar_viaje", McpPermiso.CONTROL),
+            toolConPermiso("borrar_dtc", McpPermiso.BORRADO),
+        )
+        val soloLectura = McpDispatcher(tools)
+        val conControl = McpDispatcher(tools, permisos = { setOf(McpPermiso.LECTURA, McpPermiso.CONTROL) })
+
+        suspend fun nombres(d: McpDispatcher): List<String> {
+            val arr = JSONObject(d.dispatch("""{"jsonrpc":"2.0","id":1,"method":"tools/list"}""")!!)
+                .getJSONObject("result").getJSONArray("tools")
+            return (0 until arr.length()).map { arr.getJSONObject(it).getString("name") }
+        }
+
+        assertEquals(listOf("get_dtc"), nombres(soloLectura))
+        assertEquals(listOf("get_dtc", "finalizar_viaje"), nombres(conControl))
+    }
+
+    @Test
+    fun `tools call sin permiso devuelve isError con el lugar donde activarlo y no ejecuta`() = runTest {
+        var ejecutada = false
+        val dispatcher = McpDispatcher(listOf(toolConPermiso("finalizar_viaje", McpPermiso.CONTROL) { ejecutada = true }))
+        val request = """{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"finalizar_viaje"}}"""
+
+        val result = JSONObject(dispatcher.dispatch(request)!!).getJSONObject("result")
+
+        assertTrue(result.getBoolean("isError"))
+        assertTrue(result.getJSONArray("content").getJSONObject(0).getString("text").contains("Permitir control desde MCP"))
+        assertEquals(false, ejecutada)
+    }
+
+    @Test
+    fun `permisos se derivan de los ajustes y borrar exige control`() {
+        assertEquals(setOf(McpPermiso.LECTURA), McpPermisos.desdeAjustes(controlActivo = false, borradoActivo = true))
+        assertEquals(
+            setOf(McpPermiso.LECTURA, McpPermiso.CONTROL, McpPermiso.BORRADO),
+            McpPermisos.desdeAjustes(controlActivo = true, borradoActivo = true),
+        )
+    }
 }

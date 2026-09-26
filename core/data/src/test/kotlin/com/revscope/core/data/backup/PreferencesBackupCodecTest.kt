@@ -131,4 +131,32 @@ class PreferencesBackupCodecTest {
         val restored = settings.data.first()
         assertEquals(original.asMap(), restored.asMap())
     }
+
+    @Test
+    fun `los permisos de control MCP no viajan y el import conserva los del dispositivo`() = runTest {
+        val exported = JSONObject(
+            PreferencesBackupCodec.encode(
+                preferencesOf(
+                    PreferencesKeys.MCP_CONTROL_ENABLED to true,
+                    PreferencesKeys.MCP_CLEAR_DTC_ENABLED to true,
+                    riderName to "Santi",
+                ),
+            ),
+        )
+        assertFalse(exported.has(PreferencesKeys.MCP_CONTROL_ENABLED.name))
+        assertFalse(exported.has(PreferencesKeys.MCP_CLEAR_DTC_ENABLED.name))
+
+        val settings = newDataStore()
+        settings.edit { it[PreferencesKeys.MCP_CONTROL_ENABLED] = false }
+        val json = JSONObject()
+            .put(PreferencesKeys.MCP_CONTROL_ENABLED.name, JSONObject().put("type", "boolean").put("value", true))
+            .put(PreferencesKeys.MCP_CLEAR_DTC_ENABLED.name, JSONObject().put("type", "boolean").put("value", true))
+            .toString()
+
+        PreferencesBackupCodec.restore(json, settings)
+
+        val restored = settings.data.first()
+        assertEquals(false, restored[PreferencesKeys.MCP_CONTROL_ENABLED])
+        assertNull(restored[PreferencesKeys.MCP_CLEAR_DTC_ENABLED])
+    }
 }

@@ -17,11 +17,12 @@ private const val METHOD_INITIALIZED_NOTIFICATION = "notifications/initialized"
 private const val METHOD_TOOLS_LIST = "tools/list"
 private const val METHOD_TOOLS_CALL = "tools/call"
 
-/** One MCP tool: read-only vehicle query exposed over JSON-RPC's `tools/call`. */
+/** One MCP tool exposed over JSON-RPC's `tools/call`; [permiso] gates it (read-only by default). */
 interface McpTool {
     val name: String
     val description: String
     val inputSchema: JSONObject
+    val permiso: McpPermiso get() = McpPermiso.LECTURA
 
     /** [arguments] is the `tools/call` params' `arguments` object — returns a compact JSON string. */
     suspend fun call(arguments: JSONObject): String
@@ -36,6 +37,7 @@ interface McpTool {
 class McpDispatcher(
     tools: List<McpTool>,
     private val serverVersion: String = "1.0.0",
+    private val permisos: suspend () -> Set<McpPermiso> = { setOf(McpPermiso.LECTURA) },
 ) {
 
     private val toolsByName = tools.associateBy { it.name }
@@ -48,7 +50,7 @@ class McpDispatcher(
         val response = when (val method = request.optString("method")) {
             METHOD_INITIALIZE -> successResponse(id, initializeResult())
             METHOD_INITIALIZED_NOTIFICATION -> null
-            METHOD_TOOLS_LIST -> successResponse(id, toolsListResult())
+            METHOD_TOOLS_LIST -> successResponse(id, toolsListResult(permisos()))
             METHOD_TOOLS_CALL -> handleToolsCall(id, request.optJSONObject("params"))
             else -> errorResponse(id, METHOD_NOT_FOUND_CODE, "Method not found: $method")
         }
@@ -60,6 +62,7 @@ class McpDispatcher(
             ?: return errorResponse(id, INVALID_PARAMS_CODE, "Missing tool name")
         val tool = toolsByName[toolName]
             ?: return errorResponse(id, INVALID_PARAMS_CODE, "Unknown tool: $toolName")
+        if (tool.permiso !in permisos()) return successResponse(id, toolErrorResult(McpPermisos.MENSAJE_DESHABILITADO))
         val arguments = params.optJSONObject("arguments") ?: JSONObject()
         return successResponse(id, runTool(tool, arguments))
     }
@@ -82,8 +85,8 @@ class McpDispatcher(
         .put("capabilities", JSONObject().put("tools", JSONObject()))
         .put("serverInfo", JSONObject().put("name", SERVER_NAME).put("version", serverVersion))
 
-    private fun toolsListResult(): JSONObject =
-        JSONObject().put("tools", JSONArray(toolsByName.values.map(::toolSummary)))
+    private fun toolsListResult(permitidos: Set<McpPermiso>): JSONObject =
+        JSONObject().put("tools", JSONArray(toolsByName.values.filter { it.permiso in permitidos }.map(::toolSummary)))
 
     private fun toolSummary(tool: McpTool): JSONObject = JSONObject()
         .put("name", tool.name)
@@ -93,12 +96,12 @@ class McpDispatcher(
     private fun toolCallResult(text: String): JSONObject =
         JSONObject().put("content", JSONArray().put(JSONObject().put("type", "text").put("text", text)))
 
-    private fun toolErrorResult(): JSONObject =
+    private fun toolErrorResult(mensaje: String = "error interno de la herramienta"): JSONObject =
         JSONObject()
             .put("isError", true)
             .put(
                 "content",
-                JSONArray().put(JSONObject().put("type", "text").put("text", "error interno de la herramienta")),
+                JSONArray().put(JSONObject().put("type", "text").put("text", mensaje)),
             )
 
     private fun successResponse(id: Any, result: JSONObject): JSONObject = JSONObject()

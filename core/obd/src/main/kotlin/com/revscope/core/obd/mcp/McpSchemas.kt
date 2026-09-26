@@ -24,4 +24,24 @@ object McpSchemas {
             JSONObject().put(propertyName, JSONObject().put("type", "integer").put("description", description)),
         )
         .put("required", JSONArray().put(propertyName))
+
+    fun objeto(vararg propiedades: Pair<String, JSONObject>, requeridos: List<String> = emptyList()): JSONObject {
+        val schema = JSONObject()
+            .put("type", "object")
+            .put("properties", JSONObject().apply { propiedades.forEach { (nombre, prop) -> put(nombre, prop) } })
+        if (requeridos.isNotEmpty()) schema.put("required", JSONArray(requeridos))
+        return schema
+    }
+
+    fun booleano(descripcion: String): JSONObject =
+        JSONObject().put("type", "boolean").put("description", descripcion)
+
+    fun enumString(valores: List<String>, descripcion: String): JSONObject =
+        JSONObject().put("type", "string").put("enum", JSONArray(valores)).put("description", descripcion)
+
+    fun arrayDeEnum(valores: List<String>, descripcion: String): JSONObject =
+        JSONObject()
+            .put("type", "array")
+            .put("items", JSONObject().put("type", "string").put("enum", JSONArray(valores)))
+            .put("description", descripcion)
 }

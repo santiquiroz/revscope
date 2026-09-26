@@ -27,11 +27,13 @@ object PreferencesBackupCodec {
     private const val TYPE_DOUBLE = "double"
     private const val TYPE_STRING = "string"
 
-    // Secretos propios de este dispositivo: no viajan en el zip y restore no los pisa.
-    private val DEVICE_SECRET_KEYS = listOf(
+    // Secretos y permisos remotos propios de este dispositivo: no viajan en el zip y restore no los pisa.
+    private val DEVICE_SECRET_KEYS: List<Preferences.Key<*>> = listOf(
         PreferencesKeys.CLAUDE_API_KEY,
         PreferencesKeys.MCP_TOKEN,
         PreferencesKeys.SERVER_AUTH_TOKEN,
+        PreferencesKeys.MCP_CONTROL_ENABLED,
+        PreferencesKeys.MCP_CLEAR_DTC_ENABLED,
     )
     private val DEVICE_SECRET_NAMES = DEVICE_SECRET_KEYS.map { it.name }.toSet()
 
@@ -57,8 +59,14 @@ object PreferencesBackupCodec {
         }
     }
 
-    private fun deviceSecrets(preferences: Preferences): List<Preferences.Pair<String>> =
-        DEVICE_SECRET_KEYS.mapNotNull { key -> preferences[key]?.let { key to it } }
+    private fun deviceSecrets(preferences: Preferences): List<Preferences.Pair<*>> =
+        DEVICE_SECRET_KEYS.mapNotNull { key -> currentPair(preferences, key) }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun currentPair(preferences: Preferences, key: Preferences.Key<*>): Preferences.Pair<*>? {
+        val typedKey = key as Preferences.Key<Any>
+        return preferences[typedKey]?.let { typedKey to it }
+    }
 
     private fun encodeEntry(value: Any): JSONObject? = when (value) {
         is Boolean -> jsonEntry(TYPE_BOOLEAN, value)

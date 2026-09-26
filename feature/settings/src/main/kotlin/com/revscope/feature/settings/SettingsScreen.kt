@@ -346,7 +346,7 @@ private fun buildSettingsEntries(
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
             title = "Servidor MCP (red local)",
             subtitle = "Expone el vehículo a asistentes de IA en WiFi",
-            keywords = listOf("mcp", "claude desktop", "lm studio", "token"),
+            keywords = listOf("mcp", "claude desktop", "lm studio", "token", "permisos", "control", "borrar dtc"),
         ),
     ) { ServidorMcpCard(vm) },
     SettingsEntry(

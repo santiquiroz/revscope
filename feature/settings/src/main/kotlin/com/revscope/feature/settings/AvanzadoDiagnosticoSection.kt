@@ -376,6 +376,7 @@ internal fun ServidorMcpCard(vm: SettingsViewModel) {
                 onCopyUrl = { url -> copyToClipboard(context, "URL MCP", url) },
                 onCopyToken = { copyToClipboard(context, "Token MCP", mcpToken) },
             )
+            McpPermisosToggles()
         }
     }
 }
