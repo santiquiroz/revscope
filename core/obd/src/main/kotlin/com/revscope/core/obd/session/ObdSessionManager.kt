@@ -37,8 +37,10 @@ import com.revscope.core.obd.service.TripSummaryNotifier
 import com.revscope.core.obd.track.TrackModeEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
+import com.revscope.core.obd.telemetry.GatedTransport
 import com.revscope.core.obd.telemetry.LaunchTimerEngine
 import com.revscope.core.obd.telemetry.PidScheduler
+import com.revscope.core.obd.telemetry.PollingGate
 import com.revscope.core.obd.telemetry.SessionRecorder
 import com.revscope.core.obd.trip.MaintenanceCalculator
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -139,6 +141,8 @@ class ObdSessionManager @Inject constructor(
     private val engineOffDetector = EngineOffDetector()
     private val voltagePoller = VoltagePoller()
     private val milWatcher = MilWatcher(alertsEngine)
+    private val pollingGate = PollingGate()
+    private val diagnosticLease = DiagnosticLease(pollingGate)
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private val odometerHistoryStore = OdometerHistoryStore(settings)
     private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao)
@@ -490,32 +494,27 @@ class ObdSessionManager @Inject constructor(
     }
 
     /**
-     * Reads active DTC codes (Mode 03). Serialized through the transport mutex so it
-     * never interleaves with active polling.
+     * Secuencia de diagnóstico con el sondeo detenido y el adaptador conectado — funciona
+     * durante o después de un viaje. Ver [DiagnosticLease].
      */
-    suspend fun readActiveDtc(): Result<List<DtcCode>> {
-        val bt = transport ?: return Result.failure(IllegalStateException("Not connected"))
-        return try {
-            Result.success(parseDtcResponse(bt.exchange("03\r", DTC_TIMEOUT_MS), DtcMode.Active))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
+    suspend fun <T> withDiagnosticLease(
+        owner: String,
+        timeoutMs: Long = DiagnosticLease.DEFAULT_TIMEOUT_MS,
+        block: suspend (Transport) -> T,
+    ): Result<T> = diagnosticLease.run(transport, owner, timeoutMs, block)
 
-    /** Clears all stored DTCs (Mode 04). */
-    suspend fun clearDtcCodes(): Result<Unit> {
-        val bt = transport ?: return Result.failure(IllegalStateException("Not connected"))
-        return try {
-            bt.exchange("04\r", DTC_TIMEOUT_MS)
-            Result.success(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.failure(e)
+    /** Reads active DTC codes (Mode 03) under a diagnostic lease. */
+    suspend fun readActiveDtc(): Result<List<DtcCode>> =
+        withDiagnosticLease("readActiveDtc") { bt ->
+            parseDtcResponse(bt.exchange("03\r", DTC_TIMEOUT_MS), DtcMode.Active)
         }
-    }
+
+    /** Clears all stored DTCs (Mode 04) under a diagnostic lease. */
+    suspend fun clearDtcCodes(): Result<Unit> =
+        withDiagnosticLease("clearDtcCodes") { bt ->
+            bt.exchange("04\r", DTC_TIMEOUT_MS)
+            Unit
+        }
 
     /** Raw serialized command exchange for diagnostic tooling (Mode 22 scanner). */
     suspend fun rawExchange(command: String, timeoutMs: Long = DTC_TIMEOUT_MS): Result<String> {
@@ -758,18 +757,19 @@ class ObdSessionManager @Inject constructor(
         launchTimer.reset()
         engineOffDetector.reset()
 
-        voltagePoller.start(scope, bt) { reading ->
+        val polled = GatedTransport(bt, pollingGate)
+        voltagePoller.start(scope, polled) { reading ->
             _readings.value = _readings.value + (reading.pid to reading)
             alertsEngine.process(reading)
         }
-        milWatcher.start(scope, bt) { reading ->
+        milWatcher.start(scope, polled) { reading ->
             _readings.value = _readings.value + (reading.pid to reading)
         }
 
         telemetryJob = scope.launch {
             try {
                 coroutineScope {
-                    val scheduler = PidScheduler(bt, registry).also { activeScheduler = it }
+                    val scheduler = PidScheduler(polled, registry).also { activeScheduler = it }
                     scheduler.setWorkshopMode(workshopClients.get() > 0)
                     scheduler.setIdleMode(idleModeEnabled)
                     val rawFlow = scheduler
