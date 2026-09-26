@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Scaffold
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -20,7 +21,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -85,8 +85,8 @@ fun RevScopeNavGraph(
     initialOpenAlDia: Boolean = false,
     onInitialOpenAlDiaConsumed: () -> Unit = {},
 ) {
-    val onboardingVm: OnboardingViewModel =
-        hiltViewModel(LocalContext.current as ComponentActivity)
+    val actividad = LocalActivity.current as ComponentActivity
+    val onboardingVm: OnboardingViewModel = hiltViewModel(actividad)
     val onboardingDone by onboardingVm.onboardingDone.collectAsState()
 
     // Nothing to compose until we know whether to start at Onboarding or Dashboard —
@@ -100,11 +100,11 @@ fun RevScopeNavGraph(
     // destination would create one ViewModel PER SCREEN, so navigating away from the
     // adapter screen would clear its ViewModel and drop the Bluetooth socket.
     val connectionVm: ConnectionViewModel =
-        hiltViewModel(LocalContext.current as ComponentActivity)
+        hiltViewModel(actividad)
     val vehiclePickerVm: VehiclePickerViewModel =
-        hiltViewModel(LocalContext.current as ComponentActivity)
+        hiltViewModel(actividad)
     val crashAlertVm: CrashAlertViewModel =
-        hiltViewModel(LocalContext.current as ComponentActivity)
+        hiltViewModel(actividad)
     val crashAlarmState by crashAlertVm.alarmState.collectAsState()
 
     LaunchedEffect(initialSessionId) {

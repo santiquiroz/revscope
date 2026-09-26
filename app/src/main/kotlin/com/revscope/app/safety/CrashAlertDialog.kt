@@ -1,6 +1,7 @@
 package com.revscope.app.safety
 
 import android.app.Activity
+import androidx.activity.compose.LocalActivity
 import android.os.Build
 import android.view.WindowManager
 import androidx.compose.foundation.background
@@ -19,7 +20,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,7 +36,7 @@ private val TextMutedColor = Color(0xFFD0A0A0)
 /** Full-screen blocking dialog shown while a crash alarm is counting down. */
 @Composable
 fun CrashAlertDialog(state: CrashResponder.AlarmState, onEstoyBien: () -> Unit) {
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     DisposableEffect(activity) {
         activity?.let(::showOverLockScreen)
         onDispose { activity?.let(::clearShowOverLockScreen) }

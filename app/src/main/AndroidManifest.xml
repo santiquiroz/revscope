@@ -40,6 +40,8 @@
 
     <!-- Detección de caída: alarma en pantalla completa + SMS de emergencia -->
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- SEND_SMS implica telefonía: sin esto la tienda y ChromeOS excluyen equipos sin SIM. -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Aviso diario "Vehículo al día" a las 5:30am: alarma que atraviesa Doze y se
