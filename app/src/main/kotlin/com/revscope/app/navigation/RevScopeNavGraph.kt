@@ -39,6 +39,7 @@ import com.revscope.app.safety.CrashAlertViewModel
 import com.revscope.feature.dashboard.AdapterScanScreen
 import com.revscope.feature.dashboard.DashboardScreen
 import com.revscope.feature.dashboard.TrackModeScreen
+import com.revscope.feature.dtc.DestinosDtc
 import com.revscope.feature.dtc.DtcScreen
 import com.revscope.feature.gear.GearAnalyzerScreen
 import com.revscope.feature.map.LiveMapScreen
@@ -60,6 +61,8 @@ import com.revscope.feature.workshop.O2WaveScreen
 import com.revscope.feature.workshop.OdometerScreen
 import com.revscope.feature.workshop.SpeedComparisonScreen
 import com.revscope.feature.workshop.taller.DestinosSesion
+import com.revscope.feature.workshop.taller.prueba.PruebaGuiadaScreen
+import com.revscope.feature.workshop.taller.prueba.PruebaGuiadaViewModel
 import com.revscope.feature.workshop.taller.NuevaSesionScreen
 import com.revscope.feature.workshop.taller.SesionTallerScreen
 import com.revscope.feature.workshop.taller.SesionTallerViewModel
@@ -242,7 +245,23 @@ fun RevScopeNavGraph(
                             onLeerCodigos = { navController.navigate(Screen.Dtc.route) },
                             onCaptura = { navController.navigate(Screen.Sensors.route) },
                             onChequeo = { navController.navigate(Screen.HealthCheck.route) },
+                            onPruebaGuiada = { navController.navigate(Screen.PruebaGuiada.navRoute) },
                         ),
+                    )
+                }
+                composable(
+                    route = Screen.PruebaGuiada.route,
+                    arguments = listOf(
+                        navArgument(PruebaGuiadaViewModel.ARG_TIPO) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
+                ) {
+                    PruebaGuiadaScreen(
+                        onVolver = { navController.popBackStack() },
+                        onVerGuia = { navController.navigate(Screen.Dtc.route) },
                     )
                 }
                 composable(Screen.MechanicChat.route) {
@@ -323,6 +342,7 @@ fun RevScopeNavGraph(
                         onNavigateBack = { navController.popBackStack() },
                         connectionVm = connectionVm,
                         onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
+                        destinos = DestinosDtc(onPrueba = { tipo -> navController.navigate(Screen.PruebaGuiada.withTipo(tipo.name)) }),
                     )
                 }
                 composable(Screen.Sessions.route) {

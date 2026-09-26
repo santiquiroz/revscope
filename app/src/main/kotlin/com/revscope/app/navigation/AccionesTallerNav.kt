@@ -13,6 +13,7 @@ internal fun accionesHub(nav: NavHostController): AccionesHub {
         onCodigos = ir(Screen.Dtc),
         onSensores = ir(Screen.Sensors),
         onChequeo = ir(Screen.HealthCheck),
+        onPruebasGuiadas = ir(Screen.PruebaGuiada),
         onAlDia = ir(Screen.AlDia),
         onMezcla = ir(Screen.LiveMixture),
         onEscaner = ir(Screen.Mode22Scanner),
