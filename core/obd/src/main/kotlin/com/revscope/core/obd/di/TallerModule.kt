@@ -1,6 +1,8 @@
 package com.revscope.core.obd.di
 
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.grafica.PreferenciasVref
+import com.revscope.core.obd.taller.grafica.PreferenciasVrefDataStore
 import com.revscope.core.obd.taller.pruebas.AnunciadorTaller
 import com.revscope.core.obd.taller.pruebas.AnunciadorTallerVoz
 import com.revscope.core.obd.taller.pruebas.CapturaPrueba
@@ -36,6 +38,9 @@ abstract class TallerModule {
 
     @Binds
     abstract fun bindAnunciadorTaller(impl: AnunciadorTallerVoz): AnunciadorTaller
+
+    @Binds
+    abstract fun bindPreferenciasVref(impl: PreferenciasVrefDataStore): PreferenciasVref
 }
 
 @Module

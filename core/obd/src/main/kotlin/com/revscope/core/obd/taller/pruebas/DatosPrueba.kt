@@ -17,6 +17,8 @@ data class ReferenciaVoltaje(val voltios: Double, val origen: String) {
 
     fun aVoltios(porcentaje: Double): Double = porcentaje * voltios / 100.0
 
+    fun aPorcentaje(voltiosMedidos: Double): Double = voltiosMedidos * 100.0 / voltios
+
     companion object {
         const val MIN_V = 3.0
         const val MAX_V = 5.5
