@@ -310,6 +310,38 @@ class ControladorPruebaGuiadaTest {
     }
 
     @Test
+    fun `apagar la voz a mitad de prueba calla los anuncios siguientes`() = runTest {
+        val m = montaje()
+        m.iniciarTps()
+        val antes = m.voz.dichos.size
+
+        m.controlador.cambiarVoz(false)
+        m.controlador.avanzar()
+        advanceTimeBy(6_000)
+        m.controlador.cambiarVoz(true)
+        m.controlador.avanzar()
+
+        assertEquals(antes + 1, m.voz.dichos.size)
+        assertEquals("Sostén 5 segundos", m.voz.dichos.last())
+        m.controlador.cancelar()
+    }
+
+    @Test
+    fun `la prueba terminada trae los datos con sus segmentos para dibujar la serie`() = runTest {
+        val m = montaje()
+        m.iniciarTps()
+        m.sostenerLosCuatroPasos(this)
+        advanceTimeBy(8_100)
+
+        val terminada = m.controlador.estado.first { it is EstadoPrueba.Terminada } as EstadoPrueba.Terminada
+
+        val datos = terminada.datos!!
+        assertEquals(Pasos.TODOS, datos.segmentos.map { it.clave })
+        assertTrue(datos.muestras.any { it.pid == AnalizadorBarridoTps.PID_TPS })
+        assertEquals(ReferenciaVoltaje.TIPICA, datos.vref)
+    }
+
+    @Test
     fun `una prueba sin analizador todavia no se ofrece`() = runTest {
         val m = montaje()
 

@@ -64,6 +64,7 @@ class ControladorPruebaGuiada(
 
     private class Ejecucion(val id: String, val definicion: DefinicionPrueba, val opciones: OpcionesPrueba, val inicioEpochMs: Long) {
         var progreso = Progreso(0, FasePaso.POSICIONANDO, 0)
+        var voz = opciones.voz
         val tipo: TipoPrueba get() = definicion.tipo
         val paso: PasoPrueba get() = definicion.pasos[progreso.indice]
     }
@@ -126,6 +127,12 @@ class ControladorPruebaGuiada(
     suspend fun cancelar(motivo: String = MOTIVO_USUARIO): EstadoPrueba = candado.withLock {
         val e = ejecucion ?: return@withLock descartarSinEjecucion()
         terminarPor(e, EstadoPrueba.Cancelada(e.tipo, motivo))
+    }
+
+    // Con las manos en el acelerador la voz ayuda; en un taller ruidoso o de noche, se apaga a mitad de prueba.
+    suspend fun cambiarVoz(activa: Boolean) = candado.withLock {
+        ejecucion?.voz = activa
+        ultimaSolicitud = ultimaSolicitud?.let { (tipo, opciones) -> tipo to opciones.copy(voz = activa) }
     }
 
     // Vuelve a Inactiva tras leer el resultado, la cancelación o las precondiciones.
@@ -269,7 +276,7 @@ class ControladorPruebaGuiada(
         ultimoEvento = evento
         val eventoId = registro.anotar(evento)
         anunciar(e, "Prueba terminada. ${resultado.titulo}")
-        publicar(EstadoPrueba.Terminada(resultado, eventoId))
+        publicar(EstadoPrueba.Terminada(resultado, eventoId, datos))
     }
 
     private suspend fun terminarPor(e: Ejecucion, final: EstadoPrueba): EstadoPrueba {
@@ -326,7 +333,7 @@ class ControladorPruebaGuiada(
     }
 
     private fun anunciar(e: Ejecucion, texto: String) {
-        if (e.opciones.voz) runCatching { anunciador.anunciar(texto) }.onFailure { Timber.w(it, "Prueba guiada: sin voz") }
+        if (e.voz) runCatching { anunciador.anunciar(texto) }.onFailure { Timber.w(it, "Prueba guiada: sin voz") }
     }
 
     private fun publicar(nuevo: EstadoPrueba): EstadoPrueba {

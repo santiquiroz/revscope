@@ -18,7 +18,7 @@ sealed interface EstadoPrueba {
 
     data class Analizando(val tipo: TipoPrueba) : EstadoPrueba
 
-    data class Terminada(val resultado: ResultadoPrueba, val eventoId: Long?) : EstadoPrueba
+    data class Terminada(val resultado: ResultadoPrueba, val eventoId: Long?, val datos: DatosPrueba? = null) : EstadoPrueba
 
     data class Cancelada(val tipo: TipoPrueba, val motivo: String) : EstadoPrueba
 
