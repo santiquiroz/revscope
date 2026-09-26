@@ -22,4 +22,10 @@ interface HealthReportDao {
             "ORDER BY timestamp DESC LIMIT 1",
     )
     suspend fun latestForProfileBefore(profileId: Long, before: Long): HealthReportEntity?
+
+    @Query(
+        "SELECT * FROM health_reports WHERE vehicleProfileId = :profileId AND timestamp < :before " +
+            "ORDER BY timestamp DESC LIMIT :limit",
+    )
+    suspend fun recentForProfileBefore(profileId: Long, before: Long, limit: Int): List<HealthReportEntity>
 }

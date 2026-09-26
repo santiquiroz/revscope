@@ -90,6 +90,9 @@ class HistorialChequeosEnMemoria(private val chequeos: List<ChequeoRegistrado> =
         chequeos.filter { it.vehiculoId == vehiculoId && it.instante < instante }.maxByOrNull { it.instante }
 
     override suspend fun porId(id: Long): ChequeoRegistrado? = chequeos.firstOrNull { it.id == id }
+
+    override suspend fun recientesAntesDe(vehiculoId: Long, instante: Long, limite: Int): List<ChequeoRegistrado> =
+        chequeos.filter { it.vehiculoId == vehiculoId && it.instante < instante }.sortedByDescending { it.instante }.take(limite)
 }
 
 val BENELLI = VehiculoTaller(id = 7, nombre = "Benelli TNT 150i", claveModelo = "benelli-tnt150i-2022", tipo = VehicleType.MOTORCYCLE)

@@ -19,6 +19,8 @@ interface HistorialChequeos {
     suspend fun ultimoAntesDe(vehiculoId: Long, instante: Long): ChequeoRegistrado?
 
     suspend fun porId(id: Long): ChequeoRegistrado?
+
+    suspend fun recientesAntesDe(vehiculoId: Long, instante: Long, limite: Int): List<ChequeoRegistrado>
 }
 
 class HistorialChequeosRoom @Inject constructor(private val dao: HealthReportDao) : HistorialChequeos {
@@ -27,6 +29,9 @@ class HistorialChequeosRoom @Inject constructor(private val dao: HealthReportDao
         dao.latestForProfileBefore(vehiculoId, instante)?.aChequeo()
 
     override suspend fun porId(id: Long): ChequeoRegistrado? = dao.getById(id)?.aChequeo()
+
+    override suspend fun recientesAntesDe(vehiculoId: Long, instante: Long, limite: Int): List<ChequeoRegistrado> =
+        dao.recentForProfileBefore(vehiculoId, instante, limite).map { it.aChequeo() }
 
     private fun HealthReportEntity.aChequeo(): ChequeoRegistrado {
         val guardado = HealthReportFormato.leer(resultsJson)

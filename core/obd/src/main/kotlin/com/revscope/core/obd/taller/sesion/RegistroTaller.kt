@@ -22,7 +22,14 @@ data class SolicitudSesion(
     val titulo: String? = null,
     val odometroKm: Double? = null,
     val origen: OrigenEvento = OrigenEvento.APP,
+    val chequeoBase: ChequeoBase = ChequeoBase.Ultimo,
 )
+
+sealed interface ChequeoBase {
+    data object Ultimo : ChequeoBase
+    data object Ninguno : ChequeoBase
+    data class Elegido(val id: Long) : ChequeoBase
+}
 
 // Fachada de escritura del Taller: sin sesión abierta del vehículo activo no escribe nada, y un fallo
 // al anotar nunca rompe la lectura, el borrado o la captura que lo originó.
@@ -60,7 +67,7 @@ class RegistroTaller(
             sintomasTexto = solicitud.sintomasTexto.trim(),
             notas = solicitud.notas.trim(),
             odometroKm = solicitud.odometroKm,
-            chequeoBaseId = historial.ultimoAntesDe(actual.id, ahora)?.id,
+            chequeoBaseId = chequeoBaseId(solicitud.chequeoBase, actual.id, ahora),
         )
         val id = repositorio.abrirSesion(sesion)
         val abierta = sesion.copy(id = id)
@@ -68,6 +75,14 @@ class RegistroTaller(
             guardar(abierta, EventosTaller.sintomas(sesion.sintomas, sesion.sintomasTexto, solicitud.origen))
         }
         return Result.success(abierta)
+    }
+
+    suspend fun cerrarSesion(id: Long): Boolean = repositorio.cerrarSesion(id, reloj())
+
+    suspend fun eliminarSesion(id: Long): Boolean {
+        val eliminada = repositorio.eliminarSesion(id)
+        if (eliminada) seguro { adjuntos.borrar(id) }
+        return eliminada
     }
 
     suspend fun anotar(evento: NuevoEvento): Long? = seguro {
@@ -98,6 +113,12 @@ class RegistroTaller(
 
     suspend fun anotarInstantanea(lecturas: Map<String, ObdReading>): Long? =
         anotar(EventosTaller.instantanea(lecturas, reloj(), ::nombrePid))
+
+    private suspend fun chequeoBaseId(eleccion: ChequeoBase, vehiculoId: Long, ahora: Long): Long? = when (eleccion) {
+        ChequeoBase.Ultimo -> historial.ultimoAntesDe(vehiculoId, ahora)?.id
+        ChequeoBase.Ninguno -> null
+        is ChequeoBase.Elegido -> eleccion.id
+    }
 
     private suspend fun guardar(sesion: SesionTaller, evento: NuevoEvento): Long {
         val adjunto = evento.adjuntoOrigen?.let { adjuntos.copiar(sesion.id, File(it)) }

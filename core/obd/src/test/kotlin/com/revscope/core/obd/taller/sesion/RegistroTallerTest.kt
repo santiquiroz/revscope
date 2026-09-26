@@ -268,6 +268,50 @@ class RegistroTallerTest {
     }
 
     @Test
+    fun `abrir sin chequeo base o con uno elegido respeta la elección`() = runTest {
+        val sinBase = registro.abrirSesion(SolicitudSesion(chequeoBase = ChequeoBase.Ninguno)).getOrThrow()
+        val elegido = registro.abrirSesion(SolicitudSesion(chequeoBase = ChequeoBase.Elegido(42))).getOrThrow()
+
+        assertNull(sinBase.chequeoBaseId)
+        assertEquals(42L, elegido.chequeoBaseId)
+    }
+
+    @Test
+    fun `cerrar la sesión le pone la hora de cierre y un segundo cierre no hace nada`() = runTest {
+        val sesion = abrir()
+
+        assertTrue(registro.cerrarSesion(sesion.id))
+        assertFalse(registro.cerrarSesion(sesion.id))
+
+        assertEquals(ahora, repositorio.sesion(sesion.id)?.cierre)
+        assertNull(registro.sesionAbierta())
+    }
+
+    @Test
+    fun `eliminar la sesión borra sus eventos y la carpeta de adjuntos`() = runTest {
+        val sesion = abrir()
+        val csv = carpeta.newFile("captura-cap-9.csv").apply { writeText("t_ms,pid,valor\n") }
+        registro.anotarCaptura(
+            ResumenCaptura("cap-9", 1_000, emptyList(), null, null, "detenida por el usuario", rutaCsv = csv.absolutePath),
+            emptyList(),
+        )
+        val carpetaSesion = File(carpeta.root, "taller/${sesion.id}")
+        assertTrue(carpetaSesion.isDirectory)
+
+        assertTrue(registro.eliminarSesion(sesion.id))
+
+        assertNull(repositorio.sesion(sesion.id))
+        assertTrue(repositorio.todosLosEventos.isEmpty())
+        assertFalse(carpetaSesion.exists())
+        assertTrue("el CSV original no es de la sesión y se conserva", csv.exists())
+    }
+
+    @Test
+    fun `eliminar una sesión que no existe no borra nada`() = runTest {
+        assertFalse(registro.eliminarSesion(99))
+    }
+
+    @Test
     fun `un payload enorme pierde primero la serie y conserva las estadísticas`() {
         val grande = JSONObject().put("porPid", JSONObject().put("11", 1)).put("serie", "x".repeat(70_000))
 
