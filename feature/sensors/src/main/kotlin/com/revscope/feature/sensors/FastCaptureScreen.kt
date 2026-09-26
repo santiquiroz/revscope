@@ -4,11 +4,9 @@ import com.revscope.core.designsystem.RevScopeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -19,12 +17,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -32,19 +27,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.revscope.core.designsystem.AvisoDescartable
 import com.revscope.core.designsystem.ChipSeleccion
+import com.revscope.core.designsystem.DialogoReferenciaVoltaje
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.conCifrasTabulares
+import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.obd.taller.grafica.FormatoPosicion
+import com.revscope.core.obd.taller.grafica.ResolutorVref
 import com.revscope.core.obd.telemetry.captura.EstadisticasCaptura
 import com.revscope.core.obd.telemetry.captura.EstadoCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
@@ -81,7 +71,7 @@ fun FastCaptureContent(vm: FastCaptureViewModel = hiltViewModel()) {
         if (activa != null) {
             activa.limiteHz?.let { AvisoLimite("Limitada a $it Hz para cuidar batería y temperatura del teléfono") }
             Medicion(stats, activa.inicio.pidsAceptados, vm::nombreDe)
-            GraficaCaptura(vm, activa.inicio.pidsAceptados)
+            GraficaCaptura(vm)
         }
         resumen?.takeIf { activa == null }?.let { ResumenUltima(it, vm) }
     }
@@ -178,43 +168,28 @@ private fun Medicion(stats: EstadisticasCaptura?, pids: List<String>, nombreDe: 
 private fun ms(valor: Double?): String = valor?.let { "${"%.0f".format(it)} ms" } ?: "—"
 
 @Composable
-private fun GraficaCaptura(vm: FastCaptureViewModel, pids: List<String>) {
-    val series by vm.series.collectAsState()
-    val modelProducer = remember(pids) { CartesianChartModelProducer() }
-    val conDatos = series.filterValues { it.size >= 2 }
-
-    LaunchedEffect(conDatos) {
-        if (conDatos.isEmpty()) return@LaunchedEffect
-        val origen = conDatos.values.minOf { it.first().first }
-        modelProducer.runTransaction {
-            lineSeries {
-                conDatos.values.forEach { puntos ->
-                    series(x = puntos.map { (it.first - origen) / 1_000.0 }, y = puntos.map { it.second })
-                }
-            }
-        }
-    }
-
-    Text(
-        "Últimos 10 s · ${conDatos.keys.joinToString { "$it ${vm.nombreDe(it)}" }}",
-        color = RevScopeColors.TextSecondary,
-        style = RevScopeType.bodySmall,
-    )
-    if (conDatos.isEmpty()) {
-        Box(Modifier.fillMaxWidth().height(220.dp), contentAlignment = Alignment.Center) {
-            Text("Esperando muestras…", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
-        }
-        return
-    }
-    CartesianChartHost(
-        chart = rememberCartesianChart(
-            rememberLineCartesianLayer(),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom(title = "s"),
+private fun GraficaCaptura(vm: FastCaptureViewModel) {
+    val ui by vm.grafica.collectAsState()
+    val dialogo by vm.dialogoVref.collectAsState()
+    GraficaCapturaContent(
+        ui = ui,
+        acciones = AccionesGrafica(
+            onUnidad = vm::elegirUnidad,
+            onVentana = vm::elegirVentana,
+            onPausa = vm::pausar,
+            onCambiarVref = vm::pedirVref,
         ),
-        modelProducer = modelProducer,
-        modifier = Modifier.fillMaxWidth().height(240.dp),
     )
+    if (dialogo) {
+        DialogoReferenciaVoltaje(
+            valorInicial = FormatoTaller.numero(ui.referencia.usada.voltios, 2),
+            leer = ResolutorVref::leer,
+            onGuardar = vm::guardarVref,
+            onCerrar = vm::cerrarVref,
+            medida = ui.referencia.medida?.let { FormatoPosicion.voltios(it.voltios) },
+            textoRestablecer = ResolutorVref.textoRestablecer(ui.referencia),
+        )
+    }
 }
 
 @Composable

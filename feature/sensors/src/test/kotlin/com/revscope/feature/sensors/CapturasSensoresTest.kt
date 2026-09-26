@@ -1,5 +1,11 @@
 package com.revscope.feature.sensors
 
+import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.taller.grafica.EstadoVref
+import com.revscope.core.obd.taller.grafica.UnidadPosicion
+import com.revscope.core.obd.taller.grafica.VrefSesion
+import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
+import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenPid
 import com.revscope.core.uitesting.MatrizCaptura
@@ -15,6 +21,49 @@ import org.robolectric.annotation.GraphicsMode
 class CapturasSensoresTest {
 
     private val nombres = mapOf("11" to "Posición de la mariposa", "0C" to "RPM", "05" to "Temperatura del motor")
+
+    private fun grafica(unidad: UnidadPosicion, pausada: Boolean = false) = MapeoGraficaCaptura.de(
+        EntradaGraficaCaptura(
+            series = CapturaBenelli.series(),
+            nombre = CapturaBenelli::nombre,
+            unidadPid = CapturaBenelli::unidad,
+            hz = mapOf("11" to 10.4, "0C" to 9.8),
+            unidad = unidad,
+            referencia = EstadoVref(ReferenciaVoltaje.TIPICA, null, null),
+            ventanaMs = 30_000,
+            pausada = pausada,
+            bandas = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList()),
+        ),
+    )
+
+    private fun soloTps(unidad: UnidadPosicion) = MapeoGraficaCaptura.de(
+        EntradaGraficaCaptura(
+            series = CapturaBenelli.series(conRpm = false),
+            nombre = CapturaBenelli::nombre,
+            unidadPid = CapturaBenelli::unidad,
+            hz = mapOf("11" to 10.4),
+            unidad = unidad,
+            referencia = EstadoVref(ReferenciaVoltaje(4.96, VrefSesion.ORIGEN), ReferenciaVoltaje(4.96, VrefSesion.ORIGEN), null),
+            ventanaMs = 10_000,
+            pausada = false,
+            bandas = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList()),
+        ),
+    )
+
+    @Test
+    fun graficaCapturaEnPorcentaje() = MatrizCaptura.componente("GraficaCapturaContent_pct", altoMinimoDp = 1400) {
+        GraficaCapturaContent(grafica(UnidadPosicion.PORCENTAJE), AccionesGrafica())
+    }
+
+    @Test
+    fun graficaCapturaEnVoltiosEnPausa() = MatrizCaptura.componente("GraficaCapturaContent_v_pausa", altoMinimoDp = 1400) {
+        GraficaCapturaContent(grafica(UnidadPosicion.VOLTIOS, pausada = true), AccionesGrafica())
+    }
+
+    @Test
+    fun graficaCapturaTpsEnVoltiosConBandas() = MatrizCaptura.componente("GraficaCapturaContent_tps_v", altoMinimoDp = 1400) {
+        GraficaCapturaContent(soloTps(UnidadPosicion.VOLTIOS), AccionesGrafica())
+    }
 
     @Test
     fun fastCaptureResumen() = MatrizCaptura.componente("FastCaptureResumen", altoMinimoDp = 1000) {
