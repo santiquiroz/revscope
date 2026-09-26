@@ -65,7 +65,8 @@ class IniciarPruebaGuiadaTool @Inject constructor(
 
     override val name = "iniciar_prueba_guiada"
     override val description =
-        "Arranca una prueba guiada del Taller sobre la captura rápida. TPS_BARRIDO: barrido del acelerador con el " +
+        "Arranca una prueba guiada del Taller sobre la captura rápida (la de batería, sobre una ráfaga de AT RV). " +
+            "TPS_BARRIDO: barrido del acelerador con el " +
             "motor apagado y el contacto puesto (cerrado, medio, a fondo, cerrado otra vez y un barrido lento); da el " +
             "patrón de la señal (p. ej. «señal baja en todo el recorrido», compatible con P0122) contra bandas típicas " +
             "editables. MINIMO_RETORNO: con el motor encendido y en neutro, 45 s de mínimo sin tocar el acelerador " +
@@ -73,7 +74,13 @@ class IniciarPruebaGuiadaTool @Inject constructor(
             "aceleradas a ~3 000 rpm soltando de golpe (valle, tiempo de retorno y si se apagó). ARRANQUE_FRIO: " +
             "contacto 10 s (motor, aire y ambiente deben coincidir; si difieren 5 °C o más sale como «arranque " +
             "tibio»), arranque (intentos y tiempo) y calentamiento hasta 60 °C o «Terminar» (perfil del mínimo " +
-            "rápido, apagones y saltos de la temperatura). Primero verifica las precondiciones de cada prueba: si " +
+            "rápido, apagones y saltos de la temperatura). BATERIA_CARGA: ráfaga de AT RV (el voltaje del ELM en el " +
+            "conector, con el desfase del vehículo si se calibró con el multímetro) con el contacto 10 s (≥ 12,2 V " +
+            "con la farola AHO en motos), el arranque 8 s (valle ≥ 9,6 V; si el adaptador se reinicia al arrancar " +
+            "queda como hallazgo), el mínimo 15 s y rpm altas 10 s (carga 13,5-14,5 V; más de 15 V es sobrecarga). " +
+            "MAP_BARO: 10 s con el contacto y el motor apagado; el MAP contra la barométrica del PID 33, el " +
+            "barómetro del teléfono o la altitud GPS (estimada), con |Δ| ≤ 3 kPa típico más la incertidumbre de la " +
+            "fuente. Las bandas son típicas y editables salvo que citen fuente. Primero verifica las precondiciones de cada prueba: si " +
             "algo falla devuelve qué y qué hacer. El teléfono guía cada paso por voz; los pasos sostenidos esperan a " +
             "avanzar_prueba_guiada («Listo»). Sigue el avance con get_prueba_guiada. Una prueba a la vez y no con una " +
             "captura rápida manual activa. El resultado queda en la sesión de taller abierta"

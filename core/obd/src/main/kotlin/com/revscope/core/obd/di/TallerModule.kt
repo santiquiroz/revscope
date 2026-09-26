@@ -8,6 +8,13 @@ import com.revscope.core.obd.taller.pruebas.AnunciadorTallerVoz
 import com.revscope.core.obd.taller.pruebas.CapturaPrueba
 import com.revscope.core.obd.taller.pruebas.EnlacePrueba
 import com.revscope.core.obd.taller.pruebas.EnlacePruebaObd
+import com.revscope.core.obd.taller.pruebas.FuentesAnalisis
+import com.revscope.core.obd.taller.pruebas.FuentesAnalisisApp
+import com.revscope.core.obd.taller.pruebas.LectorAmbiente
+import com.revscope.core.obd.taller.pruebas.LectorAmbienteAndroid
+import com.revscope.core.obd.taller.pruebas.PreferenciasDesfase
+import com.revscope.core.obd.taller.pruebas.PreferenciasDesfaseDataStore
+import com.revscope.core.obd.taller.pruebas.RafagaVoltaje
 import com.revscope.core.obd.taller.sesion.HistorialChequeos
 import com.revscope.core.obd.taller.sesion.HistorialChequeosRoom
 import com.revscope.core.obd.taller.sesion.TallerRepository
@@ -41,6 +48,15 @@ abstract class TallerModule {
 
     @Binds
     abstract fun bindPreferenciasVref(impl: PreferenciasVrefDataStore): PreferenciasVref
+
+    @Binds
+    abstract fun bindPreferenciasDesfase(impl: PreferenciasDesfaseDataStore): PreferenciasDesfase
+
+    @Binds
+    abstract fun bindLectorAmbiente(impl: LectorAmbienteAndroid): LectorAmbiente
+
+    @Binds
+    abstract fun bindFuentesAnalisis(impl: FuentesAnalisisApp): FuentesAnalisis
 }
 
 @Module
@@ -50,4 +66,9 @@ object TallerPruebasModule {
     // La prueba guiada corre sobre la misma captura rápida del enlace vivo: una sola a la vez.
     @Provides
     fun provideCapturaPrueba(sessionManager: ObdSessionManager): CapturaPrueba = sessionManager.captura
+
+    // La prueba de batería lee AT RV en ráfaga: comparte con la captura rápida el turno de una a la vez.
+    @Provides
+    @RafagaVoltaje
+    fun provideRafagaVoltaje(sessionManager: ObdSessionManager): CapturaPrueba = sessionManager.rafagaVoltaje
 }

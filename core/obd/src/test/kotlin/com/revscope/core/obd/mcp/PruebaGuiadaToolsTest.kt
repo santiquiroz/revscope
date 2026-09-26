@@ -75,13 +75,15 @@ class PruebaGuiadaToolsTest {
     }
 
     @Test
-    fun `iniciar rechaza un tipo sin analizador y una referencia fuera de rango`() = runTest {
+    fun `iniciar rechaza un tipo que no existe y una referencia fuera de rango`() = runTest {
         val t = tools()
 
-        val sinAnalizador = t.iniciar.llamar(JSONObject().put("tipo", "MAP_BARO"))
+        val desconocido = t.iniciar.llamar(JSONObject().put("tipo", "COMPRESION"))
         val vrefMala = t.iniciar.llamar(tps().put("vref_v", 12.0))
 
-        assertTrue(sinAnalizador.getString("error").contains("TPS_BARRIDO"))
+        assertTrue(desconocido.getString("error").contains("TPS_BARRIDO"))
+        assertTrue(desconocido.getString("error").contains("BATERIA_CARGA"))
+        assertTrue(desconocido.getString("error").contains("MAP_BARO"))
         assertTrue(vrefMala.getString("error").contains("vref_v"))
         assertTrue(t.m.captura.configs.isEmpty())
     }

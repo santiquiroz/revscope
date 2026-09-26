@@ -4,6 +4,12 @@ import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.telemetry.captura.LimitesCaptura
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 
+// De dónde salen las muestras: la captura rápida de PIDs o la ráfaga de AT RV (el voltaje lo responde el ELM).
+enum class FuenteMuestras { PIDS, VOLTAJE_ADAPTADOR }
+
+// [analizarSiSeCortaEn]: pasos en los que perder el enlace es parte de lo medido (el arranque de la prueba de
+// batería): se analiza lo capturado en vez de dar la prueba por fallida. [usaAmbiente]: pide al teléfono su
+// barómetro y su altitud al terminar.
 data class DefinicionPrueba(
     val tipo: TipoPrueba,
     val pids: List<String>,
@@ -11,6 +17,9 @@ data class DefinicionPrueba(
     val precondiciones: List<Precondicion>,
     val pasos: List<PasoPrueba>,
     val analizar: (DatosPrueba, Map<String, BandaReferencia>) -> ResultadoPrueba,
+    val fuente: FuenteMuestras = FuenteMuestras.PIDS,
+    val analizarSiSeCortaEn: Set<String> = emptySet(),
+    val usaAmbiente: Boolean = false,
 ) {
     init {
         require(pids.isNotEmpty()) { "La prueba $tipo necesita al menos un PID" }

@@ -10,6 +10,7 @@ import com.revscope.core.obd.taller.sesion.OrigenEvento
 import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.taller.sesion.TallerRepository
 import com.revscope.core.obd.taller.sesion.VehiculoActivo
+import com.revscope.core.obd.taller.sesion.VehiculoTaller
 import com.revscope.core.obd.telemetry.captura.CapturaRapida
 import com.revscope.core.obd.telemetry.captura.ConfigCaptura
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
@@ -47,6 +48,8 @@ class ControladorPruebaGuiada(
     private val scope: CoroutineScope,
     private val relojMs: () -> Long,
     private val definiciones: (TipoPrueba) -> DefinicionPrueba? = CatalogoPruebas::definicion,
+    private val rafagaVoltaje: CapturaPrueba? = null,
+    private val fuentes: FuentesAnalisis = FuentesAnalisis.NINGUNA,
 ) {
 
     @Inject
@@ -57,13 +60,23 @@ class ControladorPruebaGuiada(
         repositorio: TallerRepository,
         vehiculo: VehiculoActivo,
         anunciador: AnunciadorTaller,
+        @RafagaVoltaje rafagaVoltaje: CapturaPrueba,
+        fuentes: FuentesAnalisis,
     ) : this(
         captura, enlace, registro, repositorio, vehiculo, anunciador,
         CoroutineScope(SupervisorJob() + Dispatchers.Default), System::currentTimeMillis,
+        CatalogoPruebas::definicion, rafagaVoltaje, fuentes,
     )
 
-    private class Ejecucion(val id: String, val definicion: DefinicionPrueba, val opciones: OpcionesPrueba, val inicioEpochMs: Long) {
+    private class Ejecucion(
+        val id: String,
+        val definicion: DefinicionPrueba,
+        val opciones: OpcionesPrueba,
+        val inicioEpochMs: Long,
+        val captura: CapturaPrueba,
+    ) {
         var progreso = Progreso(0, FasePaso.POSICIONANDO, 0)
+        var ultimoT = 0L
         var voz = opciones.voz
         val tipo: TipoPrueba get() = definicion.tipo
         val paso: PasoPrueba get() = definicion.pasos[progreso.indice]
@@ -107,7 +120,7 @@ class ControladorPruebaGuiada(
     // «Listo» en un paso sostenido; «Terminar» en uno que graba hasta que el técnico diga.
     suspend fun avanzar(): Result<EstadoPrueba> = candado.withLock {
         val e = ejecucion ?: return@withLock fallo(SIN_PRUEBA)
-        val t = captura.transcurridoMs() ?: return@withLock fallo(SIN_CAPTURA)
+        val t = e.captura.transcurridoMs() ?: return@withLock fallo(SIN_CAPTURA)
         when {
             e.progreso.fase == FasePaso.POSICIONANDO -> empezarASostener(e, t)
             e.paso.modo.terminaConToque -> cerrarPaso(e, t)
@@ -118,7 +131,7 @@ class ControladorPruebaGuiada(
 
     suspend fun repetirPaso(): Result<EstadoPrueba> = candado.withLock {
         val e = ejecucion ?: return@withLock fallo(SIN_PRUEBA)
-        val t = captura.transcurridoMs() ?: return@withLock fallo(SIN_CAPTURA)
+        val t = e.captura.transcurridoMs() ?: return@withLock fallo(SIN_CAPTURA)
         e.progreso = inicioPaso(e, e.progreso.indice, t, e.progreso.segmentos)
         anunciarPaso(e)
         Result.success(publicarPaso(e, t))
@@ -148,25 +161,38 @@ class ControladorPruebaGuiada(
 
     // ── Arranque ────────────────────────────────────────────────────────────
 
-    private fun rechazoAlIniciar(tipo: TipoPrueba): String? = when {
-        ejecucion != null -> "Ya hay una prueba guiada en curso: termínala o cancélala"
-        captura.activa() -> "Detén la captura rápida primero"
-        definiciones(tipo) == null -> "La prueba «${tipo.titulo}» todavía no está disponible"
-        else -> null
+    private fun rechazoAlIniciar(tipo: TipoPrueba): String? {
+        val definicion = definiciones(tipo)
+        return when {
+            ejecucion != null -> "Ya hay una prueba guiada en curso: termínala o cancélala"
+            captura.activa() || rafagaVoltaje?.activa() == true -> "Detén la captura rápida primero"
+            definicion == null || capturaPara(definicion) == null -> "La prueba «${tipo.titulo}» todavía no está disponible"
+            else -> null
+        }
+    }
+
+    private fun capturaPara(definicion: DefinicionPrueba): CapturaPrueba? = when (definicion.fuente) {
+        FuenteMuestras.PIDS -> captura
+        FuenteMuestras.VOLTAJE_ADAPTADOR -> rafagaVoltaje
+    }
+
+    private fun pidsPara(definicion: DefinicionPrueba): List<String> = when (definicion.fuente) {
+        FuenteMuestras.PIDS -> definicion.pids + definicion.pidsOpcionales.filter(enlace::soportado)
+        FuenteMuestras.VOLTAJE_ADAPTADOR -> listOf(AnalizadorBateria.PID_VOLTAJE)
     }
 
     private suspend fun arrancar(definicion: DefinicionPrueba, opciones: OpcionesPrueba): EstadoPrueba {
-        val pids = definicion.pids + definicion.pidsOpcionales.filter(enlace::soportado)
-        val config = ConfigCaptura(pids, definicion.duracionMaximaMs, vigilar = listOf(PID_VELOCIDAD), guiada = true)
-        captura.iniciar(config).onFailure {
+        val c = checkNotNull(capturaPara(definicion))
+        val config = ConfigCaptura(pidsPara(definicion), definicion.duracionMaximaMs, vigilar = listOf(PID_VELOCIDAD), guiada = true)
+        c.iniciar(config).onFailure {
             return publicar(EstadoPrueba.Fallida(definicion.tipo, "No se pudo iniciar la captura: ${it.message}", reintentable = true))
         }
         val ahora = relojMs()
-        val e = Ejecucion("prueba-$ahora", definicion, opciones, ahora)
+        val e = Ejecucion("prueba-$ahora", definicion, opciones, ahora, c)
         ejecucion = e
         idPrueba = e.id
         ultimoEvento = null
-        val t = captura.transcurridoMs() ?: 0L
+        val t = c.transcurridoMs() ?: 0L
         e.progreso = inicioPaso(e, 0, t, emptyList())
         anunciarPaso(e)
         lanzarBucle(e)
@@ -190,16 +216,17 @@ class ControladorPruebaGuiada(
 
     private suspend fun evaluar(e: Ejecucion) {
         interrupcion(e)?.let {
-            terminarPor(e, it)
+            if (seAnalizaElCorte(e, it)) analizarCorte(e) else terminarPor(e, it)
             return
         }
-        val t = captura.transcurridoMs() ?: return
+        val t = e.captura.transcurridoMs() ?: return
+        e.ultimoT = t
         if (pasoCumplido(e, t)) cerrarPaso(e, t) else publicarPaso(e, t)
     }
 
     private fun interrupcion(e: Ejecucion): EstadoPrueba? {
         if (!enlace.conectado()) return EstadoPrueba.Fallida(e.tipo, MOTIVO_ENLACE_PERDIDO, reintentable = true)
-        if (!captura.activa()) return porFinDeCaptura(e.tipo, captura.ultimoResumen.value?.motivoFin)
+        if (!e.captura.activa()) return porFinDeCaptura(e.tipo, e.captura.ultimoResumen.value?.motivoFin)
         val kmh = velocidadDesde(e.inicioEpochMs)?.takeIf { it > 0.0 } ?: return null
         return EstadoPrueba.Cancelada(
             e.tipo,
@@ -227,11 +254,11 @@ class ControladorPruebaGuiada(
         if (p.fase == FasePaso.POSICIONANDO) return false
         if (t - p.faseDesdeMs >= e.paso.modo.limiteMs) return true
         val criterio = e.paso.terminarCuando ?: return false
-        return criterio.cumplido(muestrasDesde(p.faseDesdeMs))
+        return criterio.cumplido(muestrasDesde(e, p.faseDesdeMs))
     }
 
-    private fun muestrasDesde(desdeMs: Long): List<MuestraCaptura> =
-        captura.muestrasActuales().filter { it.tMicros / 1_000 >= desdeMs }
+    private fun muestrasDesde(e: Ejecucion, desdeMs: Long): List<MuestraCaptura> =
+        e.captura.muestrasActuales().filter { it.tMicros / 1_000 >= desdeMs }
 
     // ── Pasos ───────────────────────────────────────────────────────────────
 
@@ -265,12 +292,25 @@ class ControladorPruebaGuiada(
 
     // ── Cierre ──────────────────────────────────────────────────────────────
 
-    private suspend fun finalizar(e: Ejecucion, segmentos: List<SegmentoPaso>) {
+    // El enlace se cayó en un paso donde eso es un hallazgo: se cierra el paso donde llegó y se analiza.
+    private fun seAnalizaElCorte(e: Ejecucion, final: EstadoPrueba): Boolean =
+        final is EstadoPrueba.Fallida && final.motivo == MOTIVO_ENLACE_PERDIDO && e.paso.clave in e.definicion.analizarSiSeCortaEn &&
+            e.progreso.fase != FasePaso.POSICIONANDO
+
+    private suspend fun analizarCorte(e: Ejecucion) {
+        val p = e.progreso
+        val ultimaMuestraMs = e.captura.muestrasActuales().maxOfOrNull { it.tMicros / 1_000 } ?: 0L
+        val fin = maxOf(e.ultimoT, ultimaMuestraMs, p.faseDesdeMs)
+        finalizar(e, p.segmentos + SegmentoPaso(e.paso.clave, p.faseDesdeMs, fin, e.paso.descartarInicioMs), enlacePerdidoEn = e.paso.clave)
+    }
+
+    private suspend fun finalizar(e: Ejecucion, segmentos: List<SegmentoPaso>, enlacePerdidoEn: String? = null) {
         publicar(EstadoPrueba.Analizando(e.tipo))
         ejecucion = null
-        val resumen = captura.detener(MOTIVO_FIN_CAPTURA)
-        val datos = DatosPrueba(e.tipo, captura.muestrasActuales(), segmentos, e.opciones.vref)
-        val resultado = analizar(e.definicion, datos, bandas())
+        val resumen = e.captura.detener(MOTIVO_FIN_CAPTURA) ?: e.captura.ultimoResumen.value
+        val actual = vehiculo.actual()
+        val datos = DatosPrueba(e.tipo, e.captura.muestrasActuales(), segmentos, e.opciones.vref, contextoAnalisis(e, actual, enlacePerdidoEn))
+        val resultado = analizar(e.definicion, datos, bandas(actual))
             ?: return anotarFallida(e, EstadoPrueba.Fallida(e.tipo, "No se pudo analizar la prueba", true), segmentos, resumen?.rutaCsv)
         val evento = EventoPrueba.terminada(resultado, datos, resumen?.rutaCsv, e.opciones.origen)
         ultimoEvento = evento
@@ -281,7 +321,7 @@ class ControladorPruebaGuiada(
 
     private suspend fun terminarPor(e: Ejecucion, final: EstadoPrueba): EstadoPrueba {
         ejecucion = null
-        val resumen = captura.detener(MOTIVO_FIN_CAPTURA) ?: captura.ultimoResumen.value
+        val resumen = e.captura.detener(MOTIVO_FIN_CAPTURA) ?: e.captura.ultimoResumen.value
         if (final is EstadoPrueba.Fallida) {
             anotarFallida(e, final, e.progreso.segmentos, resumen?.rutaCsv)
         } else {
@@ -291,7 +331,7 @@ class ControladorPruebaGuiada(
     }
 
     private suspend fun anotarFallida(e: Ejecucion, fallida: EstadoPrueba.Fallida, segmentos: List<SegmentoPaso>, rutaCsv: String?) {
-        val datos = DatosPrueba(e.tipo, captura.muestrasActuales(), segmentos, e.opciones.vref)
+        val datos = DatosPrueba(e.tipo, e.captura.muestrasActuales(), segmentos, e.opciones.vref)
         registro.anotar(EventoPrueba.sinTerminar(fallida, datos, e.definicion.pasos.size, rutaCsv, e.opciones.origen))
         anunciar(e, "La prueba no terminó. ${fallida.motivo}")
         publicar(fallida)
@@ -302,8 +342,29 @@ class ControladorPruebaGuiada(
             .onFailure { Timber.w(it, "Prueba guiada: el analizador de ${definicion.tipo} falló") }
             .getOrNull()
 
-    private suspend fun bandas(): Map<String, BandaReferencia> {
-        val actual = vehiculo.actual()
+    private suspend fun contextoAnalisis(e: Ejecucion, actual: VehiculoTaller?, enlacePerdidoEn: String?) = ContextoAnalisis(
+        tipoVehiculo = actual?.tipo ?: VehicleType.MOTORCYCLE,
+        ambiente = if (e.definicion.usaAmbiente) leerFuente("el ambiente del teléfono") { fuentes.ambiente() } else null,
+        desfaseVoltaje = desfasePara(e.definicion),
+        enlacePerdidoEn = enlacePerdidoEn,
+    )
+
+    private suspend fun desfasePara(definicion: DefinicionPrueba): DesfaseVoltaje {
+        if (definicion.fuente != FuenteMuestras.VOLTAJE_ADAPTADOR) return DesfaseVoltaje.SIN_CALIBRAR
+        return leerFuente("el desfase del voltaje") { fuentes.desfaseVoltaje() } ?: DesfaseVoltaje.SIN_CALIBRAR
+    }
+
+    // Sin barómetro, sin ubicación o sin preferencias, la prueba se analiza igual: el resultado lo dice.
+    private suspend fun <T> leerFuente(que: String, leer: suspend () -> T): T? = try {
+        leer()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.w(e, "Prueba guiada: no se pudo leer $que")
+        null
+    }
+
+    private suspend fun bandas(actual: VehiculoTaller?): Map<String, BandaReferencia> {
         val tipo = actual?.tipo ?: VehicleType.MOTORCYCLE
         return try {
             repositorio.bandasResueltas(actual?.claveModelo, tipo)

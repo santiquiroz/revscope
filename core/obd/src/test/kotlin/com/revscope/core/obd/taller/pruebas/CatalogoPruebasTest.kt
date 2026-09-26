@@ -6,7 +6,6 @@ import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,12 +23,63 @@ class CatalogoPruebasTest {
     private fun muestra(tMs: Long, pid: String, valor: Double) = MuestraCaptura(tMs, tMs * 1_000, pid, valor, tMs, 50)
 
     @Test
-    fun `el catálogo ofrece el barrido, el mínimo y el arranque en frío`() {
+    fun `el catálogo ofrece las cinco pruebas guiadas`() {
+        assertEquals(TipoPrueba.entries.toList(), CatalogoPruebas.disponibles)
+        TipoPrueba.entries.forEach { assertEquals(it, CatalogoPruebas.definicion(it)!!.tipo) }
+    }
+
+    @Test
+    fun `la batería lee AT RV en ráfaga con contacto, arranque, mínimo y rpm altas, y el corte en el arranque se analiza`() {
+        val d = CatalogoPruebas.bateriaCarga
+
+        assertEquals(FuenteMuestras.VOLTAJE_ADAPTADOR, d.fuente)
+        assertEquals(listOf("VBAT"), d.pids)
+        assertEquals(listOf("CONTACTO", "ARRANQUE", "MINIMO", "RPM_ALTAS"), d.pasos.map { it.clave })
         assertEquals(
-            listOf(TipoPrueba.TPS_BARRIDO, TipoPrueba.MINIMO_RETORNO, TipoPrueba.ARRANQUE_FRIO),
-            CatalogoPruebas.disponibles,
+            listOf(ModoPaso.Grabar(10_000), ModoPaso.Grabar(8_000), ModoPaso.Grabar(15_000), ModoPaso.Sostener(10_000)),
+            d.pasos.map { it.modo },
         )
-        assertNull(CatalogoPruebas.definicion(TipoPrueba.BATERIA_CARGA))
+        assertEquals(0L, d.pasos[1].descartarInicioMs)
+        assertEquals(setOf("ARRANQUE"), d.analizarSiSeCortaEn)
+        assertTrue(d.pasos.all { d.pidPrincipal(it) == "VBAT" })
+        assertFalse(d.usaAmbiente)
+    }
+
+    @Test
+    fun `la batería pide el motor apagado y avisa de la farola con el contacto`() {
+        val r = CatalogoPruebas.bateriaCarga.precondiciones.map { it.evaluar(ctx("0C" to 0.0)) }
+
+        assertTrue(r.all { it.cumple })
+        val farola = r.single { it.texto.contains("farola") }
+        assertTrue(farola.aviso)
+        assertTrue(farola.texto, farola.texto.contains("AHO"))
+        val encendido = CatalogoPruebas.bateriaCarga.precondiciones.map { it.evaluar(ctx("0C" to 1_400.0)) }.filterNot { it.cumple }
+        assertTrue(encendido.single().queHacer!!.contains("antes de arrancar"))
+    }
+
+    @Test
+    fun `el MAP contra la barométrica graba 10 s con el contacto, pide el ambiente y lee el PID 33 si lo hay`() {
+        val d = CatalogoPruebas.mapBaro
+
+        assertEquals(FuenteMuestras.PIDS, d.fuente)
+        assertEquals(listOf("0B"), d.pids)
+        assertEquals(listOf("33"), d.pidsOpcionales)
+        assertEquals(listOf(ModoPaso.Grabar(10_000)), d.pasos.map { it.modo })
+        assertTrue(d.usaAmbiente)
+    }
+
+    @Test
+    fun `sin PID 33 el MAP avisa que la referencia saldrá del teléfono o de la altitud estimada`() {
+        val sinBaro = CatalogoPruebas.mapBaro.precondiciones.map { it.evaluar(ctx("0C" to 0.0, soportados = setOf("0B"))) }
+        val conBaro = CatalogoPruebas.mapBaro.precondiciones.map { it.evaluar(ctx("0C" to 0.0, soportados = setOf("0B", "33"))) }
+        val sinMap = CatalogoPruebas.mapBaro.precondiciones.map { it.evaluar(ctx("0C" to 0.0, soportados = emptySet())) }
+
+        assertTrue(sinBaro.all { it.cumple })
+        val aviso = sinBaro.single { it.texto.contains("barométrica") }
+        assertTrue(aviso.aviso)
+        assertTrue(aviso.queHacer!!.plano(), aviso.queHacer!!.plano().contains("estimada, ±3 kPa"))
+        assertFalse(conBaro.single { it.texto.contains("barométrica") }.aviso)
+        assertEquals(listOf("MAP no disponible en esta ECU (PID 0B)"), sinMap.filterNot { it.cumple }.map { it.texto })
     }
 
     @Test

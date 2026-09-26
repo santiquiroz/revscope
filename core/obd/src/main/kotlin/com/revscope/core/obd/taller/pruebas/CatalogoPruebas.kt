@@ -2,10 +2,12 @@ package com.revscope.core.obd.taller.pruebas
 
 import com.revscope.core.obd.taller.pruebas.AnalizadorArranqueFrio.Pasos as PasosArranque
 import com.revscope.core.obd.taller.pruebas.AnalizadorBarridoTps.Pasos
+import com.revscope.core.obd.taller.pruebas.AnalizadorBateria.Pasos as PasosBateria
+import com.revscope.core.obd.taller.pruebas.AnalizadorMapBaro.Pasos as PasosMap
 import com.revscope.core.obd.taller.pruebas.AnalizadorMinimo.Pasos as PasosMinimo
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 
-// Las pruebas guiadas que ya tienen analizador; las demás de TipoPrueba llegan en sus propias tareas.
+// Las pruebas guiadas del Taller, cada una con su analizador.
 object CatalogoPruebas {
 
     private const val SOSTENER_MS = 5_000L
@@ -16,6 +18,9 @@ object CatalogoPruebas {
     private const val CONTACTO_MS = 10_000L
     private const val ARRANQUE_MAX_MS = 15_000L
     private const val CALENTAMIENTO_MAX_MS = 10 * 60_000L
+    private const val RAFAGA_ARRANQUE_MS = 8_000L
+    private const val CARGA_MINIMO_MS = 15_000L
+    private const val RPM_ALTAS_MS = 10_000L
 
     val barridoTps = DefinicionPrueba(
         tipo = TipoPrueba.TPS_BARRIDO,
@@ -115,7 +120,75 @@ object CatalogoPruebas {
         analizar = AnalizadorArranqueFrio::analizar,
     )
 
-    private val definiciones = listOf(barridoTps, minimoRetorno, arranqueFrio).associateBy { it.tipo }
+    val bateriaCarga = DefinicionPrueba(
+        tipo = TipoPrueba.BATERIA_CARGA,
+        pids = listOf(AnalizadorBateria.PID_VOLTAJE),
+        precondiciones = listOf(
+            Precondicion.AdaptadorConectado,
+            Precondicion.MotorApagado("Apaga el motor y deja el contacto puesto: la prueba mide el reposo antes de arrancar"),
+            Precondicion.MotoDetenida,
+            Precondicion.LucesConContacto,
+        ),
+        pasos = listOf(
+            PasoPrueba(
+                clave = PasosBateria.CONTACTO,
+                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.CONTACTO),
+                instruccion = "Contacto puesto y motor apagado: no arranques todavía",
+                modo = ModoPaso.Grabar(CONTACTO_MS),
+            ),
+            PasoPrueba(
+                clave = PasosBateria.ARRANQUE,
+                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.ARRANQUE),
+                instruccion = "Arranca ahora, como lo haces siempre",
+                modo = ModoPaso.Grabar(RAFAGA_ARRANQUE_MS),
+                descartarInicioMs = 0,
+            ),
+            PasoPrueba(
+                clave = PasosBateria.MINIMO,
+                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.MINIMO),
+                instruccion = "Déjalo en mínimo sin acelerar",
+                modo = ModoPaso.Grabar(CARGA_MINIMO_MS),
+            ),
+            PasoPrueba(
+                clave = PasosBateria.RPM_ALTAS,
+                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.RPM_ALTAS),
+                instruccion = "Acelera en neutro hasta unas 3 000-4 000 rpm y sostenlas",
+                modo = ModoPaso.Sostener(RPM_ALTAS_MS),
+            ),
+        ),
+        analizar = AnalizadorBateria::analizar,
+        fuente = FuenteMuestras.VOLTAJE_ADAPTADOR,
+        analizarSiSeCortaEn = setOf(PasosBateria.ARRANQUE),
+    )
+
+    val mapBaro = DefinicionPrueba(
+        tipo = TipoPrueba.MAP_BARO,
+        pids = listOf(AnalizadorMapBaro.PID_MAP),
+        pidsOpcionales = listOf(AnalizadorMapBaro.PID_BARO),
+        precondiciones = listOf(
+            Precondicion.AdaptadorConectado,
+            Precondicion.MotorApagado("Apaga el motor y deja el contacto puesto: con el motor girando hay vacío y el MAP baja"),
+            Precondicion.MotoDetenida,
+            Precondicion.PidDisponible(
+                AnalizadorMapBaro.PID_MAP,
+                "MAP",
+                "Mide la señal del MAP con el multímetro (plantilla MAP)",
+            ),
+            Precondicion.BarometricaDisponible,
+        ),
+        pasos = listOf(
+            PasoPrueba(
+                clave = PasosMap.CONTACTO,
+                titulo = TextosMapBaro.TITULOS_PASO.getValue(PasosMap.CONTACTO),
+                instruccion = "Contacto puesto y motor apagado: no toques el acelerador",
+                modo = ModoPaso.Grabar(CONTACTO_MS),
+            ),
+        ),
+        analizar = AnalizadorMapBaro::analizar,
+        usaAmbiente = true,
+    )
+
+    private val definiciones = listOf(barridoTps, minimoRetorno, arranqueFrio, bateriaCarga, mapBaro).associateBy { it.tipo }
 
     val disponibles: List<TipoPrueba> get() = TipoPrueba.entries.filter { it in definiciones }
 

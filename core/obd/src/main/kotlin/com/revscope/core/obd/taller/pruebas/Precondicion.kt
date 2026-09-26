@@ -102,6 +102,32 @@ sealed interface Precondicion {
         private const val PID_IAT = "0F"
     }
 
+    // No se puede leer si la farola está prendida: se avisa para que el voltaje en reposo se lea con esa carga.
+    data object LucesConContacto : Precondicion {
+        override fun evaluar(ctx: ContextoPrueba) = ResultadoPrecondicion(
+            "Farola y luces: en muchas motos la farola queda encendida con el contacto (AHO)",
+            cumple = true,
+            "El voltaje en reposo baja por eso y la banda lo tiene en cuenta; en un carro, apaga las luces antes de empezar",
+            aviso = true,
+        )
+    }
+
+    // Sin PID 33 la prueba sigue con el barómetro del teléfono o la altitud GPS, que es una estimación.
+    data object BarometricaDisponible : Precondicion {
+        override fun evaluar(ctx: ContextoPrueba) = if (ctx.soportado(PID_BARO)) {
+            ResultadoPrecondicion("Presión barométrica de la ECU disponible (PID $PID_BARO)", cumple = true)
+        } else {
+            ResultadoPrecondicion(
+                "La ECU no informa la presión barométrica (PID $PID_BARO)",
+                cumple = true,
+                "Se usará el barómetro del teléfono o, si no tiene, la altitud GPS (estimada, ±3 kPa): activa la ubicación",
+                aviso = true,
+            )
+        }
+
+        private const val PID_BARO = "33"
+    }
+
     data object MotoDetenida : Precondicion {
         override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
             val kmh = ctx.velocidadKmh()

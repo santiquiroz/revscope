@@ -342,11 +342,12 @@ class ControladorPruebaGuiadaTest {
     }
 
     @Test
-    fun `una prueba sin analizador todavia no se ofrece`() = runTest {
+    fun `la prueba de batería sin la ráfaga de voltaje no se ofrece`() = runTest {
         val m = montaje()
 
-        val intento = m.controlador.iniciar(TipoPrueba.MAP_BARO)
+        val intento = m.controlador.iniciar(TipoPrueba.BATERIA_CARGA)
 
-        assertEquals("La prueba «MAP contra presión barométrica» todavía no está disponible", intento.exceptionOrNull()?.message)
+        assertEquals("La prueba «Batería y carga» todavía no está disponible", intento.exceptionOrNull()?.message)
+        assertTrue(m.captura.configs.isEmpty())
     }
 }

@@ -95,11 +95,19 @@ class AnunciadorFalso : AnunciadorTaller {
 }
 
 // El controlador real con todo falso menos el registro de la sesión, que es el de verdad sobre memoria.
-class MontajePrueba(scope: TestScope, carpeta: File, valorEn: (Long) -> Double = GuionBenelli::pct) {
+// [voltajeEn]: el guion de la ráfaga de AT RV; sin él, la prueba de batería no se ofrece.
+class MontajePrueba(
+    scope: TestScope,
+    carpeta: File,
+    valorEn: (Long) -> Double = GuionBenelli::pct,
+    voltajeEn: ((Long) -> Double)? = null,
+    fuentes: FuentesAnalisis = FuentesAnalisis.NINGUNA,
+) {
     val epoch = 1_758_848_000_000L
     private val virtual = scope.testScheduler
     val reloj: () -> Long = { epoch + virtual.currentTime }
     val captura = CapturaFalsa({ virtual.currentTime }, valorEn)
+    val rafaga = voltajeEn?.let { CapturaFalsa({ virtual.currentTime }, it, hz = 20.0) }
     val enlace = EnlaceFalso()
     val voz = AnunciadorFalso()
     val repositorio = TallerRepositoryEnMemoria()
@@ -110,6 +118,8 @@ class MontajePrueba(scope: TestScope, carpeta: File, valorEn: (Long) -> Double =
     )
     val controlador = ControladorPruebaGuiada(
         captura, enlace, registro, repositorio, { vehiculo }, voz, scope.backgroundScope, reloj,
+        rafagaVoltaje = rafaga,
+        fuentes = fuentes,
     )
 
     suspend fun abrirSesion() = registro.abrirSesion(SolicitudSesion()).getOrThrow()
