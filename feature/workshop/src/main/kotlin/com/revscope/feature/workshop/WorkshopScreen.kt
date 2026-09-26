@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop
 
+import com.revscope.core.designsystem.RevScopeColors
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,7 +39,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,10 +46,6 @@ import androidx.compose.ui.unit.sp
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 
-private val AccentColor = Color(0xFFE8FF00)
-private val SurfaceColor = Color(0xFF12121A)
-private val TextColor = Color(0xFFE6E8F0)
-private val TextMutedColor = Color(0xFF6B7089)
 
 private data class WorkshopTool(
     val icon: ImageVector,
@@ -97,12 +93,12 @@ fun WorkshopScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text("Taller", color = TextColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("Taller", color = RevScopeColors.TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Box(Modifier.padding(top = 8.dp)) { selectorVehiculo() }
             if (!isConnected) {
                 Text(
                     "Conecta el adaptador para usar las herramientas de diagnóstico",
-                    color = TextMutedColor, fontSize = 13.sp,
+                    color = RevScopeColors.TextSecondary, fontSize = 13.sp,
                     modifier = Modifier.padding(top = 4.dp),
                 )
             }
@@ -182,7 +178,7 @@ private fun buildWorkshopSections(
 private fun SectionHeader(title: String) {
     Text(
         title.uppercase(),
-        color = TextMutedColor,
+        color = RevScopeColors.TextSecondary,
         fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(top = 8.dp),
@@ -193,7 +189,7 @@ private fun SectionHeader(title: String) {
 private fun ToolCard(tool: WorkshopTool, enabled: Boolean) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = SurfaceColor,
+        color = RevScopeColors.Surface,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = tool.onOpen),
@@ -205,19 +201,19 @@ private fun ToolCard(tool: WorkshopTool, enabled: Boolean) {
             Icon(
                 tool.icon,
                 contentDescription = null,
-                tint = if (enabled) AccentColor else TextMutedColor,
+                tint = if (enabled) RevScopeColors.Accent else RevScopeColors.TextSecondary,
                 modifier = Modifier.size(28.dp),
             )
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(
                     tool.title,
-                    color = if (enabled) TextColor else TextMutedColor,
+                    color = if (enabled) RevScopeColors.TextPrimary else RevScopeColors.TextSecondary,
                     fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     if (enabled) tool.description else "Requiere conexión",
-                    color = TextMutedColor, fontSize = 12.sp,
+                    color = RevScopeColors.TextSecondary, fontSize = 12.sp,
                 )
             }
         }

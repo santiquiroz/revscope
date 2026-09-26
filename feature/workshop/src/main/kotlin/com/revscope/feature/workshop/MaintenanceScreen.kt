@@ -1,5 +1,8 @@
 package com.revscope.feature.workshop
 
+import com.revscope.core.designsystem.EmptyState
+import com.revscope.core.designsystem.AccionEstado
+import com.revscope.core.designsystem.RevScopeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -59,19 +62,12 @@ import com.revscope.core.obd.legal.DocumentStatusCalculator.Nivel
 import com.revscope.core.obd.trip.MaintenanceCalculator
 import kotlin.math.roundToLong
 
-private val BgColor = Color(0xFF0A0A0F)
-private val SurfaceColor = Color(0xFF12121A)
-private val AccentColor = Color(0xFFE8FF00)
-private val TextColor = Color(0xFFE6E8F0)
-private val TextMutedColor = Color(0xFF6B7089)
-private val NivelOkColor = Color(0xFF4CAF50)
-private val NivelAtencionColor = Color(0xFFFFC107)
-private val NivelVencidoColor = Color(0xFFFF5252)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MaintenanceScreen(
     onNavigateBack: () -> Unit,
+    onElegirVehiculo: () -> Unit = {},
     vm: MaintenanceViewModel = hiltViewModel(),
 ) {
     val profile by vm.activeProfile.collectAsState()
@@ -92,20 +88,20 @@ fun MaintenanceScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
-        containerColor = BgColor,
+        containerColor = RevScopeColors.Background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
-        Column(Modifier.fillMaxSize().padding(innerPadding).background(BgColor).statusBarsPadding()) {
+        Column(Modifier.fillMaxSize().padding(innerPadding).background(RevScopeColors.Background).statusBarsPadding()) {
             Row(
                 Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = RevScopeColors.TextPrimary)
                 }
                 Text(
                     "Mantenimiento",
-                    color = TextColor,
+                    color = RevScopeColors.TextPrimary,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -114,12 +110,12 @@ fun MaintenanceScreen(
                     onClick = { vm.exportCsv(context) },
                     enabled = estados.isNotEmpty(),
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+                    Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = RevScopeColors.Accent)
                 }
             }
 
             if (profile == null) {
-                EmptyProfileState()
+                EmptyProfileState(onElegirVehiculo)
                 return@Column
             }
 
@@ -170,25 +166,20 @@ fun MaintenanceScreen(
 }
 
 @Composable
-private fun EmptyProfileState() {
-    Column(
-        Modifier.fillMaxSize().padding(top = 48.dp, start = 24.dp, end = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            "Activa un vehículo en Perfiles para configurar su mantenimiento",
-            color = TextMutedColor,
-            fontSize = 13.sp,
-        )
-    }
+private fun EmptyProfileState(onElegirVehiculo: () -> Unit) {
+    EmptyState(
+        mensaje = "Activa un vehículo en Perfiles para configurar su mantenimiento.",
+        accion = AccionEstado("Elegir vehículo", onElegirVehiculo),
+        modifier = Modifier.padding(top = 24.dp, start = 16.dp, end = 16.dp),
+    )
 }
 
 @Composable
 private fun EmptyOdometerHint() {
-    Surface(shape = RoundedCornerShape(14.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Text(
             "Ingresa el kilometraje actual de tu vehículo para empezar",
-            color = TextMutedColor,
+            color = RevScopeColors.TextSecondary,
             fontSize = 13.sp,
             modifier = Modifier.padding(14.dp),
         )
@@ -202,9 +193,9 @@ private fun OdometerField(odometroActual: Double, onSave: (Double) -> Unit) {
     LaunchedEffect(odometroActual) {
         if (!edited) text = odometroActual.roundToLong().toString()
     }
-    Surface(shape = RoundedCornerShape(14.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            Text("Kilometraje actual", color = TextMutedColor, fontSize = 12.sp)
+            Text("Kilometraje actual", color = RevScopeColors.TextSecondary, fontSize = 12.sp)
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = text,
@@ -213,10 +204,10 @@ private fun OdometerField(odometroActual: Double, onSave: (Double) -> Unit) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentColor,
-                        unfocusedBorderColor = SurfaceColor,
-                        focusedTextColor = TextColor,
-                        unfocusedTextColor = TextColor,
+                        focusedBorderColor = RevScopeColors.Accent,
+                        unfocusedBorderColor = RevScopeColors.Surface,
+                        focusedTextColor = RevScopeColors.TextPrimary,
+                        unfocusedTextColor = RevScopeColors.TextPrimary,
                     ),
                 )
                 Spacer(Modifier.width(8.dp))
@@ -227,7 +218,7 @@ private fun OdometerField(odometroActual: Double, onSave: (Double) -> Unit) {
                             edited = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentColor, contentColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent, contentColor = Color.Black),
                 ) { Text("Guardar") }
             }
         }
@@ -241,25 +232,25 @@ private fun MaintenanceItemCard(
     onRegistrarServicio: () -> Unit,
     onEditarIntervalo: () -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(14.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     estado.item.nombre,
-                    color = TextColor,
+                    color = RevScopeColors.TextPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = onEditarIntervalo) {
-                    Icon(Icons.Default.Edit, "Editar intervalo", tint = TextMutedColor)
+                    Icon(Icons.Default.Edit, "Editar intervalo", tint = RevScopeColors.TextSecondary)
                 }
             }
             Spacer(Modifier.height(6.dp))
             LinearProgressIndicator(
                 progress = { progresoIntervalo(estado, odometroActual) },
                 color = nivelColor(estado.nivel),
-                trackColor = BgColor,
+                trackColor = RevScopeColors.Background,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(6.dp))
@@ -272,13 +263,13 @@ private fun MaintenanceItemCard(
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onRegistrarServicio, contentPadding = PaddingValues(0.dp)) {
-                    Text("Registrar servicio", color = AccentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Registrar servicio", color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Text(
                 "Cada ${estado.item.intervaloKm.roundToLong()} km",
-                color = TextMutedColor,
-                fontSize = 11.sp,
+                color = RevScopeColors.TextSecondary,
+                fontSize = 12.sp,
             )
         }
     }
@@ -296,23 +287,23 @@ private fun kmRestantesTexto(kmRestantes: Double): String {
 }
 
 private fun nivelColor(nivel: Nivel): Color = when (nivel) {
-    Nivel.OK -> NivelOkColor
-    Nivel.ATENCION -> NivelAtencionColor
-    Nivel.VENCIDO -> NivelVencidoColor
-    Nivel.SIN_CONFIGURAR -> TextMutedColor
+    Nivel.OK -> RevScopeColors.Success
+    Nivel.ATENCION -> RevScopeColors.Warning
+    Nivel.VENCIDO -> RevScopeColors.Danger
+    Nivel.SIN_CONFIGURAR -> RevScopeColors.TextSecondary
 }
 
 @Composable
 private fun AddItemButton(onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = SurfaceColor,
+        color = RevScopeColors.Surface,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = AccentColor)
+            Icon(Icons.Default.Add, contentDescription = null, tint = RevScopeColors.Accent)
             Spacer(Modifier.width(8.dp))
-            Text("Agregar ítem", color = AccentColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("Agregar ítem", color = RevScopeColors.Accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }

@@ -2,22 +2,19 @@ package com.revscope.feature.workshop
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -28,24 +25,30 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.BarraConVolver
+import com.revscope.core.designsystem.ErrorState
+import com.revscope.core.designsystem.NivelBadge
+import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.workshop.DiagnosticRules
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val AccentColor = Color(0xFFE8FF00)
-private val SurfaceColor = Color(0xFF12121A)
-private val TextColor = Color(0xFFE6E8F0)
-private val TextMutedColor = Color(0xFF6B7089)
-private val ErrorColor = Color(0xFFFF5252)
+internal data class AccionesChequeo(
+    val onVolver: () -> Unit = {},
+    val onEscanear: () -> Unit = {},
+    val onExportarCsv: () -> Unit = {},
+    val onCompartir: () -> Unit = {},
+)
 
 @Composable
 fun HealthCheckScreen(
@@ -54,92 +57,108 @@ fun HealthCheckScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    HealthCheckContent(
+        state = state,
+        acciones = AccionesChequeo(
+            onVolver = onNavigateBack,
+            onEscanear = viewModel::runHealthCheck,
+            onExportarCsv = { viewModel.exportCsv(context) },
+            onCompartir = { viewModel.share(context) },
+        ),
+    )
+}
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
-            }
-            Text(
-                "Chequeo de salud",
-                color = TextColor,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            if (state is HealthCheckViewModel.UiState.Done) {
-                IconButton(onClick = { viewModel.exportCsv(context) }) {
-                    Icon(Icons.Default.Download, "Exportar CSV", tint = AccentColor)
-                }
-                IconButton(onClick = { viewModel.share(context) }) {
-                    Icon(Icons.Default.PhotoCamera, "Compartir informe", tint = AccentColor)
-                }
-            }
+@Composable
+internal fun HealthCheckContent(state: HealthCheckViewModel.UiState, acciones: AccionesChequeo) {
+    Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
+        BarraConVolver(titulo = "Chequeo de salud", onVolver = acciones.onVolver) {
+            if (state is HealthCheckViewModel.UiState.Done) AccionesInforme(acciones)
         }
-
-        Button(
-            onClick = viewModel::runHealthCheck,
-            enabled = state !is HealthCheckViewModel.UiState.Running,
-            colors = ButtonDefaults.buttonColors(containerColor = AccentColor, contentColor = Color.Black),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxSize(),
         ) {
-            Text(if (state is HealthCheckViewModel.UiState.Running) "Escaneando…" else "Escanear ahora")
+            item(key = "escanear") { BotonEscanear(state, acciones.onEscanear) }
+            contenidoChequeo(state, acciones.onEscanear)
         }
-
-        HealthCheckContent(state)
     }
 }
 
 @Composable
-private fun HealthCheckContent(state: HealthCheckViewModel.UiState) {
-    when (state) {
-        is HealthCheckViewModel.UiState.Idle -> Text(
-            "Un toque y RevScope revisa códigos de falla, readiness para la tecnomecánica, " +
-                "mezcla, sensor O2, batería y temperatura.",
-            color = TextMutedColor,
-            fontSize = 13.sp,
-        )
-        is HealthCheckViewModel.UiState.Running -> RunningIndicator(state.paso)
-        is HealthCheckViewModel.UiState.Error -> Text(state.mensaje, color = ErrorColor, fontSize = 14.sp)
-        is HealthCheckViewModel.UiState.Done -> DoneResults(state)
+private fun AccionesInforme(acciones: AccionesChequeo) {
+    IconButton(onClick = acciones.onExportarCsv) {
+        Icon(Icons.Default.Download, "Exportar CSV", tint = RevScopeColors.Accent)
     }
+    IconButton(onClick = acciones.onCompartir) {
+        Icon(Icons.Default.Share, "Compartir informe", tint = RevScopeColors.Accent)
+    }
+}
+
+@Composable
+private fun BotonEscanear(state: HealthCheckViewModel.UiState, onEscanear: () -> Unit) {
+    val corriendo = state is HealthCheckViewModel.UiState.Running
+    Button(
+        onClick = onEscanear,
+        enabled = !corriendo,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = RevScopeColors.Accent,
+            contentColor = RevScopeColors.Background,
+        ),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+    ) {
+        Text(if (corriendo) "Escaneando…" else "Escanear ahora", style = RevScopeType.label, textAlign = TextAlign.Center)
+    }
+}
+
+private fun LazyListScope.contenidoChequeo(state: HealthCheckViewModel.UiState, onReintentar: () -> Unit) {
+    when (state) {
+        is HealthCheckViewModel.UiState.Idle -> item(key = "intro") { Introduccion() }
+        is HealthCheckViewModel.UiState.Running -> item(key = "progreso") { RunningIndicator(state.paso) }
+        is HealthCheckViewModel.UiState.Error -> item(key = "error") { ErrorState(state.mensaje, onReintentar) }
+        is HealthCheckViewModel.UiState.Done -> resultados(state)
+    }
+}
+
+@Composable
+private fun Introduccion() {
+    Text(
+        "Un toque y RevScope revisa códigos de falla, readiness para la tecnomecánica, " +
+            "mezcla, sensor O2, batería y temperatura.",
+        color = RevScopeColors.TextSecondary,
+        style = RevScopeType.body,
+    )
 }
 
 @Composable
 private fun RunningIndicator(paso: String) {
-    LinearProgressIndicator(Modifier.fillMaxWidth(), color = AccentColor)
-    Text(paso, color = TextMutedColor, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LinearProgressIndicator(Modifier.fillMaxWidth(), color = RevScopeColors.Accent)
+        Text(
+            paso,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.body,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+    }
 }
 
-@Composable
-private fun DoneResults(done: HealthCheckViewModel.UiState.Done) {
-    val fecha = SimpleDateFormat("d MMM yyyy, HH:mm", Locale("es")).format(Date(done.timestamp))
-    Text(
-        "Último chequeo: $fecha",
-        color = TextMutedColor,
-        fontSize = 12.sp,
-        modifier = Modifier.padding(bottom = 8.dp),
-    )
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(done.items) { item -> DiagnosisRow(item) }
+private fun LazyListScope.resultados(done: HealthCheckViewModel.UiState.Done) {
+    item(key = "fecha") {
+        val fecha = SimpleDateFormat("d MMM yyyy, HH:mm", Locale("es")).format(Date(done.timestamp))
+        Text("Último chequeo: $fecha", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
+    items(done.items) { item -> DiagnosisRow(item) }
 }
 
 @Composable
 private fun DiagnosisRow(d: DiagnosticRules.Diagnosis) {
-    val color = when (d.nivel) {
-        DiagnosticRules.Nivel.OK -> Color(0xFF4CAF50)
-        DiagnosticRules.Nivel.ATENCION -> Color(0xFFFFC107)
-        DiagnosticRules.Nivel.FALLA -> ErrorColor
-    }
-    Surface(shape = RoundedCornerShape(12.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
-            Box(Modifier.padding(top = 5.dp).size(10.dp).background(color, CircleShape))
-            Column(Modifier.padding(start = 12.dp)) {
-                Text(d.titulo, color = TextColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(d.causaProbable, color = TextMutedColor, fontSize = 12.sp)
-                Text(d.area, color = TextMutedColor, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
-            }
+    Surface(shape = RoundedCornerShape(12.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            NivelBadge(nivelDiagnostico(d.nivel))
+            Text(d.titulo, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+            Text(d.causaProbable, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+            Text(d.area, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
     }
 }

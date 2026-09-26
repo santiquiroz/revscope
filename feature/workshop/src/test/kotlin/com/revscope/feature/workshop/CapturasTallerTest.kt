@@ -3,6 +3,7 @@ package com.revscope.feature.workshop
 import com.revscope.core.obd.legal.DocumentStatusCalculator.DocStatus
 import com.revscope.core.obd.legal.DocumentStatusCalculator.DocType
 import com.revscope.core.obd.legal.DocumentStatusCalculator.Nivel
+import com.revscope.core.obd.workshop.DiagnosticRules
 import com.revscope.core.uitesting.MatrizCaptura
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,5 +47,34 @@ class CapturasTallerTest {
             onReiniciar = {},
             onVolver = {},
         )
+    }
+
+    private val diagnosticos = listOf(
+        DiagnosticRules.Diagnosis(
+            DiagnosticRules.Nivel.FALLA,
+            "Códigos de falla",
+            "P0122: sensor de posición del acelerador con señal baja",
+            "Revisa el conector del TPS, la alimentación de 5 V y la masa.",
+        ),
+        DiagnosticRules.Diagnosis(
+            DiagnosticRules.Nivel.ATENCION,
+            "Batería",
+            "Voltaje con contacto puesto: 12,0 V",
+            "Algo bajo con el motor apagado; revisa la carga con el motor encendido.",
+        ),
+        DiagnosticRules.Diagnosis(DiagnosticRules.Nivel.OK, "Mezcla", "Ajuste largo +2,3 %", "Dentro de lo normal."),
+    )
+
+    @Test
+    fun healthCheckContent() = MatrizCaptura.pantalla("HealthCheckContent", altoMinimoDp = 1100) {
+        HealthCheckContent(
+            HealthCheckViewModel.UiState.Done(diagnosticos, listOf("P0122"), timestamp = 1_790_000_000_000),
+            AccionesChequeo(),
+        )
+    }
+
+    @Test
+    fun healthCheckContentError() = MatrizCaptura.pantalla("HealthCheckContent_error") {
+        HealthCheckContent(HealthCheckViewModel.UiState.Error("Conecta el adaptador primero"), AccionesChequeo())
     }
 }

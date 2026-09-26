@@ -247,13 +247,17 @@ fun RevScopeNavGraph(
                 }
                 composable(Screen.AlDia.route) {
                     AlDiaScreen(
+                        onNavigateBack = { navController.popBackStack() },
                         onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
                         onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
                         onOpenMaintenance = { navController.navigate(Screen.Maintenance.route) },
                     )
                 }
                 composable(Screen.Maintenance.route) {
-                    MaintenanceScreen(onNavigateBack = { navController.popBackStack() })
+                    MaintenanceScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onElegirVehiculo = { navController.navigate(Screen.VehicleProfile.route) },
+                    )
                 }
                 composable(Screen.HealthCheck.route) {
                     HealthCheckScreen(onNavigateBack = { navController.popBackStack() })
