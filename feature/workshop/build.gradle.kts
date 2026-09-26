@@ -40,6 +40,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
+    testImplementation(libs.coroutines.test)
     testImplementation(project(":core:ui-testing"))
 }
 

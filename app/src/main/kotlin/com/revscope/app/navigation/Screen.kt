@@ -9,6 +9,10 @@ sealed class Screen(val route: String) {
     object AiValue : Screen("ai_value")
     object Dashboard : Screen("dashboard")
     object Workshop : Screen("workshop")
+    object TallerNuevaSesion : Screen("taller_nueva_sesion")
+    object TallerSesion : Screen("taller_sesion/{sesionId}") {
+        fun withId(sesionId: Long) = "taller_sesion/$sesionId"
+    }
     object AlDia : Screen("al_dia")
     object HealthCheck : Screen("health_check")
     object LiveMixture : Screen("live_mixture")

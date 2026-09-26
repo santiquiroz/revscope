@@ -59,7 +59,11 @@ import com.revscope.feature.workshop.Mode06Screen
 import com.revscope.feature.workshop.O2WaveScreen
 import com.revscope.feature.workshop.OdometerScreen
 import com.revscope.feature.workshop.SpeedComparisonScreen
-import com.revscope.feature.workshop.WorkshopScreen
+import com.revscope.feature.workshop.taller.DestinosSesion
+import com.revscope.feature.workshop.taller.NuevaSesionScreen
+import com.revscope.feature.workshop.taller.SesionTallerScreen
+import com.revscope.feature.workshop.taller.SesionTallerViewModel
+import com.revscope.feature.workshop.taller.TallerHubScreen
 
 internal data class BottomNavItem(
     val screen: Screen,
@@ -213,23 +217,32 @@ fun RevScopeNavGraph(
                     )
                 }
                 composable(Screen.Workshop.route) {
-                    WorkshopScreen(
-                        connectionVm = connectionVm,
+                    TallerHubScreen(
                         selectorVehiculo = selectorVehiculo,
-                        onOpenAlDia = { navController.navigate(Screen.AlDia.route) },
-                        onOpenHealthCheck = { navController.navigate(Screen.HealthCheck.route) },
-                        onOpenDtc = { navController.navigate(Screen.Dtc.route) },
-                        onOpenLiveMixture = { navController.navigate(Screen.LiveMixture.route) },
-                        onOpenSensors = { navController.navigate(Screen.Sensors.route) },
-                        onOpenScanner = { navController.navigate(Screen.Mode22Scanner.route) },
-                        onOpenGearAnalyzer = { navController.navigate(Screen.GearAnalyzer.route) },
-                        onOpenProfiles = { navController.navigate(Screen.VehicleProfile.route) },
-                        onOpenMaintenance = { navController.navigate(Screen.Maintenance.route) },
-                        onOpenO2Wave = { navController.navigate(Screen.O2Wave.route) },
-                        onOpenMode06 = { navController.navigate(Screen.Mode06.route) },
-                        onOpenOdometer = { navController.navigate(Screen.Odometer.route) },
-                        onOpenSpeedComparison = { navController.navigate(Screen.SpeedComparison.route) },
-                        onOpenMechanicChat = { navController.navigate(Screen.MechanicChat.route) },
+                        acciones = accionesHub(navController),
+                    )
+                }
+                composable(Screen.TallerNuevaSesion.route) {
+                    NuevaSesionScreen(
+                        onVolver = { navController.popBackStack() },
+                        onSesionAbierta = { id ->
+                            navController.navigate(Screen.TallerSesion.withId(id)) {
+                                popUpTo(Screen.TallerNuevaSesion.route) { inclusive = true }
+                            }
+                        },
+                    )
+                }
+                composable(
+                    route = Screen.TallerSesion.route,
+                    arguments = listOf(navArgument(SesionTallerViewModel.ARG_SESION) { type = NavType.LongType }),
+                ) {
+                    SesionTallerScreen(
+                        destinos = DestinosSesion(
+                            onVolver = { navController.popBackStack() },
+                            onLeerCodigos = { navController.navigate(Screen.Dtc.route) },
+                            onCaptura = { navController.navigate(Screen.Sensors.route) },
+                            onChequeo = { navController.navigate(Screen.HealthCheck.route) },
+                        ),
                     )
                 }
                 composable(Screen.MechanicChat.route) {
