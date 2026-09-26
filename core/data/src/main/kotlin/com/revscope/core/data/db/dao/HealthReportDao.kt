@@ -13,4 +13,13 @@ interface HealthReportDao {
 
     @Query("SELECT * FROM health_reports ORDER BY timestamp DESC LIMIT 1")
     suspend fun latest(): HealthReportEntity?
+
+    @Query("SELECT * FROM health_reports WHERE id = :id")
+    suspend fun getById(id: Long): HealthReportEntity?
+
+    @Query(
+        "SELECT * FROM health_reports WHERE vehicleProfileId = :profileId AND timestamp < :before " +
+            "ORDER BY timestamp DESC LIMIT 1",
+    )
+    suspend fun latestForProfileBefore(profileId: Long, before: Long): HealthReportEntity?
 }
