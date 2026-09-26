@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 
 data class SegmentoPaso(val clave: String, val inicioMs: Long, val finMs: Long, val descartarInicioMs: Long = 0) {
@@ -27,11 +28,21 @@ data class ReferenciaVoltaje(val voltios: Double, val origen: String) {
     }
 }
 
+// Lo que algunos analizadores necesitan además de las muestras: el tipo de vehículo (la farola con el contacto),
+// el ambiente que leyó el teléfono, el desfase de AT RV y el paso en el que se perdió el enlace, si se perdió.
+data class ContextoAnalisis(
+    val tipoVehiculo: VehicleType = VehicleType.MOTORCYCLE,
+    val ambiente: LecturasAmbiente? = null,
+    val desfaseVoltaje: DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR,
+    val enlacePerdidoEn: String? = null,
+)
+
 data class DatosPrueba(
     val tipo: TipoPrueba,
     val muestras: List<MuestraCaptura>,
     val segmentos: List<SegmentoPaso>,
     val vref: ReferenciaVoltaje = ReferenciaVoltaje.TIPICA,
+    val contexto: ContextoAnalisis = ContextoAnalisis(),
 ) {
     fun segmento(clave: String): SegmentoPaso? = segmentos.firstOrNull { it.clave == clave }
 
