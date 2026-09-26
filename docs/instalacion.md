@@ -59,7 +59,7 @@ RevScope puede transmitir el ritmo cardíaco desde un Galaxy Watch (Wear OS) al 
 
 1. En el reloj: **Ajustes → Acerca de** → toca la versión de software **5 veces** (activa modo desarrollador).
 2. Activa **Depuración ADB** y **Depuración inalámbrica**, y anota la `IP:PUERTO` mostrada.
-3. En tu PC, con el repo clonado, compila (el wrapper de Gradle no viene en el repo, ver [desarrollo.md](desarrollo.md#compilar)): `gradle :wear:assembleDebug`.
+3. En tu PC, con el repo clonado, compila con el wrapper incluido (ver [desarrollo.md](desarrollo.md#compilar)): `./gradlew :wear:assembleDebug` (en Windows, `gradlew.bat`).
 4. Conecta y sube el APK: `adb connect IP:PUERTO` seguido de `adb install wear/build/outputs/apk/debug/wear-debug.apk`.
 5. Abre la app en el reloj — no hace falta configurar nada más: usa el **mismo `applicationId`** (`com.revscope.app`) que el teléfono y se comunica solo por la Wearable Data Layer API. Toca **▶** en el reloj para transmitir el pulso; aparece integrado a los gauges y a las vueltas del reporte de viaje.
 
