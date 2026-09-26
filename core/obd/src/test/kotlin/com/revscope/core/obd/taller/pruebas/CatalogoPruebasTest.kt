@@ -88,7 +88,7 @@ class CatalogoPruebasTest {
         val tibio = Precondicion.MotorFrio.evaluar(ctx("05" to 32.0, "0F" to 27.0))
         val sinDatos = Precondicion.MotorFrio.evaluar(ctx())
 
-        assertEquals("Motor frío (motor 24 °C, aire 23 °C)", frio.texto)
+        assertEquals("Motor frío (motor 24 °C, aire 23 °C)", frio.texto.plano())
         assertFalse(frio.aviso)
         assertTrue(tibio.cumple)
         assertTrue(tibio.aviso)

@@ -47,7 +47,7 @@ object TextosArranqueFrio {
         PatronArranque.NORMAL -> "arrancó al primer intento${enTiempo(a)}"
     }
 
-    private fun enTiempo(a: AnalisisArranqueFrio): String = a.arranque.tiempoS?.let { " en ${seg(it)} s" }.orEmpty()
+    private fun enTiempo(a: AnalisisArranqueFrio): String = a.arranque.tiempoS?.let { " en ${seg(it)} s" }.orEmpty()
 
     // ── Interpretación ──────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ object TextosArranqueFrio {
         if (!r.arranco) return if (r.intentos == 0) "El motor no giró durante el paso de arranque." else "No quedó encendido en ${intentos(r.intentos)}."
         val intento = if (r.intentos == 1) "al primer intento" else "al ${r.intentos}.º intento"
         val apagones = if (a.apagones > 0) " Después se apagó ${veces(a.apagones)}." else ""
-        return "Arrancó $intento, ${seg(r.tiempoS ?: 0.0)} s después de pedirlo.$apagones"
+        return "Arrancó $intento, ${seg(r.tiempoS ?: 0.0)} s después de pedirlo.$apagones"
     }
 
     private fun fraseCalentamiento(a: AnalisisArranqueFrio): String? {
@@ -95,13 +95,13 @@ object TextosArranqueFrio {
         if (p?.baja == null) return null
         val verbo = if (p.rpmFin <= p.rpmInicio) "bajó" else "subió"
         val cierre = if (p.baja) "como se espera" else "y debería bajar a medida que calienta"
-        return "El mínimo rápido $verbo de ${rpm(p.rpmInicio)} a ${rpm(p.rpmFin)} rpm mientras el motor pasaba de " +
+        return "El mínimo rápido $verbo de ${rpm(p.rpmInicio)} a ${rpm(p.rpmFin)} rpm mientras el motor pasaba de " +
             "${grados(p.ectInicioC)} a ${grados(p.ectFinC)}, $cierre."
     }
 
     private fun fraseSaltos(a: AnalisisArranqueFrio): String? {
         val mayor = a.saltosEct.maxByOrNull { abs(it.delta) } ?: return null
-        return "La temperatura del motor saltó ${grados(abs(mayor.delta))} en ${seg(mayor.duracionMs / 1_000.0)} s: " +
+        return "La temperatura del motor saltó ${grados(abs(mayor.delta))} en ${seg(mayor.duracionMs / 1_000.0)} s: " +
             "compatible con P0119 (señal intermitente del sensor de temperatura del motor) o con un falso contacto en su conector."
     }
 
@@ -115,10 +115,10 @@ object TextosArranqueFrio {
         }
         if (a.arranque.arranco && a.arranque.intentos > 1) add("Arrancó al ${a.arranque.intentos}.º intento")
         if (a.apagones > 0) add("Se apagó ${veces(a.apagones)} después de arrancar")
-        a.saltosEct.forEach { add("La temperatura del motor saltó ${grados(abs(it.delta))} en ${seg(it.duracionMs / 1_000.0)} s") }
+        a.saltosEct.forEach { add("La temperatura del motor saltó ${grados(abs(it.delta))} en ${seg(it.duracionMs / 1_000.0)} s") }
         if (a.ectBajaMientrasCalienta) add("La temperatura del motor bajó ${grados(a.caidaEctMaxC)} mientras calentaba")
         if (a.perfil?.baja == false) {
-            add("El mínimo rápido subió de ${rpm(a.perfil.rpmInicio)} a ${rpm(a.perfil.rpmFin)} rpm mientras calentaba")
+            add("El mínimo rápido subió de ${rpm(a.perfil.rpmInicio)} a ${rpm(a.perfil.rpmFin)} rpm mientras calentaba")
         }
     }
 
@@ -149,7 +149,7 @@ object TextosArranqueFrio {
         medidaArranque(a.arranque),
         "Apagones después de arrancar: ${a.apagones}",
         a.perfil?.let { p ->
-            "Mínimo rápido: ${rpm(p.rpmInicio)} rpm con ${grados(p.ectInicioC)} → ${rpm(p.rpmFin)} rpm con ${grados(p.ectFinC)}"
+            "Mínimo rápido: ${rpm(p.rpmInicio)} rpm con ${grados(p.ectInicioC)} → ${rpm(p.rpmFin)} rpm con ${grados(p.ectFinC)}"
         },
         medidaCalentamiento(a),
         "Saltos de la temperatura del motor: " + if (a.saltosEct.isEmpty()) "ninguno" else a.saltosEct.size.toString(),
@@ -170,7 +170,7 @@ object TextosArranqueFrio {
     }
 
     private fun medidaArranque(r: ArranqueMedido): String = if (r.arranco) {
-        "Arranque: ${intentos(r.intentos)}, ${seg(r.tiempoS ?: 0.0)} s hasta prender"
+        "Arranque: ${intentos(r.intentos)}, ${seg(r.tiempoS ?: 0.0)} s hasta prender"
     } else {
         "Arranque: no prendió (${intentos(r.intentos)})"
     }
@@ -183,13 +183,13 @@ object TextosArranqueFrio {
     // ── Formato ─────────────────────────────────────────────────────────────
 
     private fun duracion(s: Double): String =
-        if (s < 120) "${seg(s)} s" else "${FormatoTaller.numero(s / 60, 1)} min"
+        if (s < 120) "${seg(s)} s" else "${FormatoTaller.numero(s / 60, 1)} min"
 
     private fun veces(n: Int) = if (n == 1) "1 vez" else "$n veces"
 
     private fun intentos(n: Int) = if (n == 1) "1 intento" else "$n intentos"
 
-    private fun grados(x: Double) = "${FormatoTaller.numero(x, 0)} °C"
+    private fun grados(x: Double) = "${FormatoTaller.numero(x, 0)} °C"
 
     private fun rpm(x: Double) = FormatoTaller.numero(x, 0)
 

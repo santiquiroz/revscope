@@ -84,7 +84,7 @@ sealed interface Precondicion {
             return ResultadoPrecondicion(
                 "Motor tibio ($medidas): la prueba seguirá como «arranque tibio»",
                 cumple = true,
-                "Para un arranque en frío de verdad, repítela tras el reposo de la noche (≥ 6 h, típico)",
+                "Para un arranque en frío de verdad, repítela tras el reposo de la noche (≥ 6 h, típico)",
                 aviso = true,
             )
         }
@@ -96,7 +96,7 @@ sealed interface Precondicion {
             aviso = true,
         )
 
-        private fun grados(x: Double) = "${FormatoTaller.numero(x, 0)} °C"
+        private fun grados(x: Double) = "${FormatoTaller.numero(x, 0)} °C"
 
         private const val PID_ECT = "05"
         private const val PID_IAT = "0F"

@@ -22,7 +22,7 @@ class AnalizadorArranqueFrioTest {
 
     private val moto = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
 
-    private fun resultado(p: Perfil) = AnalizadorArranqueFrio.analizar(datos(p), moto)
+    private fun resultado(p: Perfil) = AnalizadorArranqueFrio.analizar(datos(p), moto).plano()
 
     private fun analisis(p: Perfil) = resultado(p).detalle as AnalisisArranqueFrio
 
@@ -166,7 +166,7 @@ class AnalizadorArranqueFrioTest {
     @Test
     fun `las medidas dicen la condición, los intentos y el calentamiento`() {
         val a = analisis(Perfil(ectContacto = 32.0, iatContacto = 27.0, rpmArranque = dosIntentos(), ectCalentamiento = calentar(desde = 32.0)))
-        val medidas = TextosArranqueFrio.medidas(a)
+        val medidas = TextosArranqueFrio.medidas(a).map { it.plano() }
 
         assertTrue(medidas.toString(), "En contacto: motor 32 °C, aire 27 °C · tibio" in medidas)
         assertTrue(medidas.toString(), "Arranque: 2 intentos, 3,5 s hasta prender" in medidas)

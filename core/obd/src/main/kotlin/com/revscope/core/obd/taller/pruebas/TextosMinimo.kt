@@ -8,6 +8,8 @@ import com.revscope.core.obd.taller.referencia.PosicionEnBanda
 // Redacción del mínimo y retorno: cifras medidas, la banda con su origen y «compatible con…», nunca un dictamen.
 object TextosMinimo {
 
+    private val RPM_S = TextoBanda.unidad("rpm/s")
+
     val TITULOS_PASO = mapOf(
         Pasos.MINIMO to "Mínimo",
         Pasos.RETORNO_1 to "Retorno 1",
@@ -55,7 +57,7 @@ object TextosMinimo {
             frasesMinimo(a, m),
             fraseBanda(a),
             fraseRetornos(a),
-            a.ectMediaC?.let { "Motor a ${FormatoTaller.numero(it, 0)} °C durante el mínimo." },
+            a.ectMediaC?.let { "Motor a ${FormatoTaller.numero(it, 0)} °C durante el mínimo." },
             compatibilidad(a.patron),
         ).joinToString(" ")
     }
@@ -63,12 +65,12 @@ object TextosMinimo {
     private fun frasesMinimo(a: AnalisisMinimo, m: EstadisticaMinimo): String {
         val deriva = a.comprobacion(ClavesBanda.MINIMO_DERIVA_MAX)
         val base = if (deriva?.cumple == false) {
-            "El mínimo ${if (m.derivaRpmS < 0) "cayó" else "subió"} de ${rpm(m.inicioRpm)} a ${rpm(m.finRpm)} rpm en " +
-                "${FormatoTaller.compacto(FormatoTaller.redondear(m.duracionS, 1))} s (${FormatoTaller.numero(m.derivaRpmS, 0)} rpm/s)"
+            "El mínimo ${if (m.derivaRpmS < 0) "cayó" else "subió"} de ${rpm(m.inicioRpm)} a ${rpm(m.finRpm)} rpm en " +
+                "${FormatoTaller.compacto(FormatoTaller.redondear(m.duracionS, 1))} s (${FormatoTaller.numero(m.derivaRpmS, 0)} $RPM_S)"
         } else {
-            "El mínimo quedó en ${rpm(m.mediaRpm)} rpm de media, con desviación de ${rpm(m.desviacionRpm)} rpm"
+            "El mínimo quedó en ${rpm(m.mediaRpm)} rpm de media, con desviación de ${rpm(m.desviacionRpm)} rpm"
         }
-        val oscila = m.oscilacion?.let { ", y oscila ±${rpm(it.amplitudRpm)} rpm${it.periodoS?.let { p -> " cada ${seg(p)} s" }.orEmpty()}" }
+        val oscila = m.oscilacion?.let { ", y oscila ±${rpm(it.amplitudRpm)} rpm${it.periodoS?.let { p -> " cada ${seg(p)} s" }.orEmpty()}" }
         return base + oscila.orEmpty() + if (m.inestable) ": inestable${bandasEstabilidad(a)}." else "."
     }
 
@@ -82,7 +84,7 @@ object TextosMinimo {
     // Con el mínimo inestable, la media no dice dónde queda el ralentí: la banda se calla.
     private fun fraseBanda(a: AnalisisMinimo): String? {
         val c = mediaFueraDeBanda(a)?.takeIf { it.banda != null } ?: return null
-        return "La media, ${rpm(c.valor ?: 0.0)} rpm, queda ${TextoBanda.lado(c.posicion)} de la banda " +
+        return "La media, ${rpm(c.valor ?: 0.0)} rpm, queda ${TextoBanda.lado(c.posicion)} de la banda " +
             "(${TextoBanda.citar(checkNotNull(c.banda), 0)})."
     }
 
@@ -92,8 +94,8 @@ object TextosMinimo {
         if (a.apagonesAlSoltar > 0) return "Al soltar el acelerador se apagó ${a.apagonesAlSoltar} de ${validos.size} veces."
         val peor = validos.minBy { it.valleFraccion ?: 1.0 }
         val tiempos = validos.mapNotNull { it.tiempoS }
-        val vuelta = if (tiempos.isEmpty()) "" else " y volvió al mínimo en ${seg(tiempos.max())} s como mucho"
-        return "Al soltar, el valle más bajo fue de ${rpm(peor.valleRpm ?: 0.0)} rpm " +
+        val vuelta = if (tiempos.isEmpty()) "" else " y volvió al mínimo en ${seg(tiempos.max())} s como mucho"
+        return "Al soltar, el valle más bajo fue de ${rpm(peor.valleRpm ?: 0.0)} rpm " +
             "(${pct(peor.valleFraccion)} del mínimo)$vuelta."
     }
 
@@ -118,16 +120,16 @@ object TextosMinimo {
     }
 
     private fun hallazgoInestable(m: EstadisticaMinimo): String {
-        val osc = m.oscilacion?.let { ", oscila ±${rpm(it.amplitudRpm)} rpm" }.orEmpty()
-        return "Mínimo inestable: deriva de ${FormatoTaller.numero(m.derivaRpmS, 1)} rpm/s y desviación de " +
-            "${rpm(m.desviacionRpm)} rpm$osc"
+        val osc = m.oscilacion?.let { ", oscila ±${rpm(it.amplitudRpm)} rpm" }.orEmpty()
+        return "Mínimo inestable: deriva de ${FormatoTaller.numero(m.derivaRpmS, 1)} $RPM_S y desviación de " +
+            "${rpm(m.desviacionRpm)} rpm$osc"
     }
 
     private fun hallazgoRetorno(r: RetornoMedido): String? {
         val nombre = TITULOS_PASO[r.clave] ?: r.clave
         return when {
-            !r.acelerada -> "$nombre: no se detectó la acelerada (llegó a ${rpm(r.picoRpm)} rpm); no cuenta"
-            !r.seApago && r.tiempoS == null -> "$nombre: no volvió a ±10 % del mínimo antes de terminar el paso"
+            !r.acelerada -> "$nombre: no se detectó la acelerada (llegó a ${rpm(r.picoRpm)} rpm); no cuenta"
+            !r.seApago && r.tiempoS == null -> "$nombre: no volvió a ±10 % del mínimo antes de terminar el paso"
             else -> null
         }
     }
@@ -135,13 +137,13 @@ object TextosMinimo {
     private fun hallazgoValle(a: AnalisisMinimo): String? {
         val c = a.comprobacion(ClavesBanda.RETORNO_VALLE_MIN)?.takeIf { !it.cumple && a.apagonesAlSoltar == 0 } ?: return null
         val banda = c.banda?.let { " (${TextoBanda.citar(it, 0)})" }.orEmpty()
-        return "Valle al soltar de ${FormatoTaller.numero(c.valor ?: 0.0, 0)} % del mínimo, por debajo de la banda$banda"
+        return "Valle al soltar de ${FormatoTaller.numero(c.valor ?: 0.0, 0)} % del mínimo, por debajo de la banda$banda"
     }
 
     private fun hallazgoBanda(a: AnalisisMinimo): String? {
         val c = mediaFueraDeBanda(a) ?: return null
         val banda = c.banda?.let { " (${TextoBanda.citar(it, 0)})" }.orEmpty()
-        return "Mínimo de ${rpm(c.valor ?: 0.0)} rpm, ${TextoBanda.lado(c.posicion)} de la banda$banda"
+        return "Mínimo de ${rpm(c.valor ?: 0.0)} rpm, ${TextoBanda.lado(c.posicion)} de la banda$banda"
     }
 
     private fun mediaFueraDeBanda(a: AnalisisMinimo): Comprobacion? {
@@ -157,7 +159,7 @@ object TextosMinimo {
         } else {
             "el acelerador puede no cerrar del todo o el tope estar desajustado"
         }
-        return "TPS en ralentí ${FormatoTaller.numero(t.minV, 2)}-${FormatoTaller.numero(t.maxV, 2)} V, " +
+        return "TPS en ralentí ${FormatoTaller.numero(t.minV, 2)}-${FormatoTaller.numero(t.maxV, 2)} V, " +
             "${TextoBanda.lado(t.posicion)} de la banda de cerrado$banda: $consecuencia"
     }
 
@@ -183,25 +185,25 @@ object TextosMinimo {
     fun medidas(a: AnalisisMinimo): List<String> {
         val m = a.minimo ?: return emptyList()
         return listOfNotNull(
-            "Mínimo: media ${rpm(m.mediaRpm)} rpm, desviación ${rpm(m.desviacionRpm)} rpm, de ${rpm(m.minRpm)} a " +
-                "${rpm(m.maxRpm)} rpm (${m.n} muestras en ${seg(m.duracionS)} s)",
-            "Deriva: ${FormatoTaller.numero(m.derivaRpmS, 1)} rpm/s (de ${rpm(m.inicioRpm)} a ${rpm(m.finRpm)} rpm)",
-            "Oscilación: " + (m.oscilacion?.let { o -> "±${rpm(o.amplitudRpm)} rpm${o.periodoS?.let { " cada ${seg(it)} s" }.orEmpty()}" } ?: "no"),
+            "Mínimo: media ${rpm(m.mediaRpm)} rpm, desviación ${rpm(m.desviacionRpm)} rpm, de ${rpm(m.minRpm)} a " +
+                "${rpm(m.maxRpm)} rpm (${m.n} muestras en ${seg(m.duracionS)} s)",
+            "Deriva: ${FormatoTaller.numero(m.derivaRpmS, 1)} $RPM_S (de ${rpm(m.inicioRpm)} a ${rpm(m.finRpm)} rpm)",
+            "Oscilación: " + (m.oscilacion?.let { o -> "±${rpm(o.amplitudRpm)} rpm${o.periodoS?.let { " cada ${seg(it)} s" }.orEmpty()}" } ?: "no"),
             a.tpsRalenti?.let { t ->
-                "TPS en ralentí: ${FormatoTaller.numero(t.minV, 2)}-${FormatoTaller.numero(t.maxV, 2)} V " +
-                    "(media ${FormatoTaller.numero(t.mediaV, 2)} V)"
+                "TPS en ralentí: ${FormatoTaller.numero(t.minV, 2)}-${FormatoTaller.numero(t.maxV, 2)} V " +
+                    "(media ${FormatoTaller.numero(t.mediaV, 2)} V)"
             },
-            a.ectMediaC?.let { "Motor a ${FormatoTaller.numero(it, 0)} °C durante el mínimo" },
+            a.ectMediaC?.let { "Motor a ${FormatoTaller.numero(it, 0)} °C durante el mínimo" },
         ) + a.retornos.map(::medidaRetorno)
     }
 
     private fun medidaRetorno(r: RetornoMedido): String {
         val nombre = TITULOS_PASO[r.clave] ?: r.clave
         return when {
-            !r.acelerada -> "$nombre: sin acelerada (máximo ${rpm(r.picoRpm)} rpm)"
-            r.seApago -> "$nombre: pico ${rpm(r.picoRpm)} rpm y se apagó al soltar"
-            else -> "$nombre: pico ${rpm(r.picoRpm)} rpm, valle ${rpm(r.valleRpm ?: 0.0)} rpm (${pct(r.valleFraccion)} del mínimo), " +
-                (r.tiempoS?.let { "volvió en ${seg(it)} s" } ?: "no volvió a ±10 % del mínimo")
+            !r.acelerada -> "$nombre: sin acelerada (máximo ${rpm(r.picoRpm)} rpm)"
+            r.seApago -> "$nombre: pico ${rpm(r.picoRpm)} rpm y se apagó al soltar"
+            else -> "$nombre: pico ${rpm(r.picoRpm)} rpm, valle ${rpm(r.valleRpm ?: 0.0)} rpm (${pct(r.valleFraccion)} del mínimo), " +
+                (r.tiempoS?.let { "volvió en ${seg(it)} s" } ?: "no volvió a ±10 % del mínimo")
         }
     }
 
@@ -218,5 +220,5 @@ object TextosMinimo {
 
     private fun seg(x: Double) = FormatoTaller.numero(x, 1)
 
-    private fun pct(fraccion: Double?) = "${FormatoTaller.numero((fraccion ?: 0.0) * 100, 0)} %"
+    private fun pct(fraccion: Double?) = "${FormatoTaller.numero((fraccion ?: 0.0) * 100, 0)} %"
 }

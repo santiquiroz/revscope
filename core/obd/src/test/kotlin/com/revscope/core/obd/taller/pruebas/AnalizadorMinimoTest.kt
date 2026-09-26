@@ -37,8 +37,10 @@ class AnalizadorMinimoTest {
         descartarMinimoMs = 0,
     )
 
+    private fun analizarPlano(d: DatosPrueba, bandas: Map<String, BandaReferencia>) = AnalizadorMinimo.analizar(d, bandas).plano()
+
     private fun analisis(d: DatosPrueba, bandas: Map<String, BandaReferencia> = moto) =
-        AnalizadorMinimo.analizar(d, bandas).detalle as AnalisisMinimo
+        analizarPlano(d, bandas).detalle as AnalisisMinimo
 
     @Test
     fun `la caída de 2 010 a 1 454 rpm en 9 s da una deriva de -62 rpm por segundo y un mínimo inestable`() {
@@ -54,7 +56,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `el caso Benelli se apaga 2 de 3 veces al soltar y es una falla`() {
-        val resultado = AnalizadorMinimo.analizar(benelli, moto)
+        val resultado = analizarPlano(benelli, moto)
         val a = resultado.detalle as AnalisisMinimo
 
         assertEquals(PatronMinimo.SE_APAGA, a.patron)
@@ -69,7 +71,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `el TPS en ralentí por debajo de la banda de cerrado queda como hallazgo`() {
-        val resultado = AnalizadorMinimo.analizar(benelli, moto)
+        val resultado = analizarPlano(benelli, moto)
         val tps = (resultado.detalle as AnalisisMinimo).tpsRalenti!!
 
         assertEquals(PosicionEnBanda.BAJO, tps.posicion)
@@ -84,7 +86,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `solo el TPS fuera de banda con un mínimo sano pide atención y sugiere el barrido`() {
-        val resultado = AnalizadorMinimo.analizar(datos(estable(), sanos, tpsPct = 2.75), moto)
+        val resultado = analizarPlano(datos(estable(), sanos, tpsPct = 2.75), moto)
 
         assertEquals(PatronMinimo.TPS_RALENTI_FUERA, (resultado.detalle as AnalisisMinimo).patron)
         assertEquals(Veredicto.ATENCION, resultado.veredicto)
@@ -93,7 +95,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `un mínimo estable sintético con retornos sanos está OK`() {
-        val resultado = AnalizadorMinimo.analizar(datos(estable(), sanos), moto)
+        val resultado = analizarPlano(datos(estable(), sanos), moto)
         val a = resultado.detalle as AnalisisMinimo
         val m = a.minimo!!
 
@@ -125,7 +127,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `un valle bajo el 70 % del mínimo sin apagarse pide atención`() {
-        val resultado = AnalizadorMinimo.analizar(datos(estable(), List(3) { retornoSano(valle = 800.0) }), moto)
+        val resultado = analizarPlano(datos(estable(), List(3) { retornoSano(valle = 800.0) }), moto)
 
         assertEquals(PatronMinimo.RETORNO_BAJO, (resultado.detalle as AnalisisMinimo).patron)
         assertEquals(Veredicto.ATENCION, resultado.veredicto)
@@ -144,7 +146,7 @@ class AnalizadorMinimoTest {
     @Test
     fun `un mínimo fuera de la banda del vehículo pide atención y cita la banda`() {
         val carro = ResolutorBandas.resolverTodas(VehicleType.CAR, emptyList())
-        val resultado = AnalizadorMinimo.analizar(datos(estable(), sanos), carro)
+        val resultado = analizarPlano(datos(estable(), sanos), carro)
 
         assertEquals(PatronMinimo.FUERA_DE_BANDA, (resultado.detalle as AnalisisMinimo).patron)
         assertTrue(resultado.interpretacion, resultado.interpretacion.contains("600–900 rpm"))
@@ -155,14 +157,14 @@ class AnalizadorMinimoTest {
         val propia = BandaReferencia(ClavesBanda.MINIMO_RPM, 1_300.0, 1_500.0, "rpm", OrigenBanda.USUARIO)
         val bandas = ResolutorBandas.resolverTodas(VehicleType.CAR, listOf(propia))
 
-        val resultado = AnalizadorMinimo.analizar(datos(estable(), sanos), bandas)
+        val resultado = analizarPlano(datos(estable(), sanos), bandas)
 
         assertEquals(Veredicto.OK, resultado.veredicto)
     }
 
     @Test
     fun `un retorno sin acelerada no cuenta y se avisa`() {
-        val resultado = AnalizadorMinimo.analizar(datos(estable(), listOf(retornoSano(), sinAcelerar(), retornoSano())), moto)
+        val resultado = analizarPlano(datos(estable(), listOf(retornoSano(), sinAcelerar(), retornoSano())), moto)
         val a = resultado.detalle as AnalisisMinimo
 
         assertFalse(a.retornos[1].acelerada)
@@ -173,7 +175,7 @@ class AnalizadorMinimoTest {
     fun `sin RPM en el mínimo no hay veredicto y se pide repetir`() {
         val sinRpm = DatosPrueba(TipoPrueba.MINIMO_RETORNO, emptyList(), listOf(SegmentoPaso(AnalizadorMinimo.Pasos.MINIMO, 0, 45_000)))
 
-        val resultado = AnalizadorMinimo.analizar(sinRpm, moto)
+        val resultado = analizarPlano(sinRpm, moto)
 
         assertEquals(Veredicto.ATENCION, resultado.veredicto)
         assertEquals(PatronMinimo.SIN_DATOS, (resultado.detalle as AnalisisMinimo).patron)
@@ -181,7 +183,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `las medidas del caso Benelli dan la deriva y cada retorno en una línea`() {
-        val medidas = TextosMinimo.medidas(analisis(benelli))
+        val medidas = TextosMinimo.medidas(analisis(benelli)).map { it.plano() }
 
         assertTrue(medidas.toString(), "Deriva: -61,8 rpm/s (de 2010 a 1454 rpm)" in medidas)
         assertTrue(medidas.toString(), "TPS en ralentí: 0,14-0,16 V (media 0,15 V)" in medidas)
@@ -191,7 +193,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `el detalle en JSON lleva el patrón, la deriva y cada retorno`() {
-        val json = AnalizadorMinimo.analizar(benelli, moto).detalle.json()
+        val json = analizarPlano(benelli, moto).detalle.json()
 
         assertEquals("SE_APAGA", json.getString("patron"))
         assertEquals(-61.8, json.getJSONObject("minimo").getDouble("derivaRpmS"), 0.1)
