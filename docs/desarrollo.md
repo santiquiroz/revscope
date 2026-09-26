@@ -64,12 +64,16 @@ El corazón del proyecto vive en `core/obd/src/main/kotlin/com/revscope/core/obd
 
   | Prioridad | Intervalo | Uso |
   |---|---|---|
-  | 1 | 100 ms | RPM, velocidad, marcha — lo que alimenta los gauges |
-  | 2 | 500 ms | Temperatura, boost, voltaje |
-  | 3 | 2 000 ms | Datos de baja frecuencia |
-  | 4 | 1 000 ms | PIDs de Taller — **solo sondean con `setWorkshopMode(true)`**, es decir, mientras una pantalla de diagnóstico está abierta, para no gastar ancho de banda del enlace cuando nadie los está viendo |
+  | 1 | 100 ms | RPM, velocidad, mariposa — lo que alimenta los gauges |
+  | 2 | 500 ms | Carga, refrigerante, MAF, MAP, torque |
+  | 3 | 2 000 ms | Temperaturas, fuel trims, O2, consumo |
+  | 4 | 1 000 ms | PIDs de Taller (incluidos pedal y mariposa `45`/`47`/`49`/`4A`/`4B`/`4C`/`5A`) — **solo sondean con `setWorkshopMode(true)`**, es decir, mientras una pantalla de diagnóstico está abierta, para no gastar ancho de banda del enlace cuando nadie los está viendo |
+
+  El voltaje no es un PID: lo lee `VoltagePoller` con `AT RV` cada 10 s. Esos intervalos son el preset `SamplingPreset.ESTANDAR_2S`; los demás presets (1 s, 500 ms, 250 ms, Máximo) aplican `mín(base, preset)` y el scheduler vivo los toma con `setPreset`. El periodo es **a tasa fija**: el siguiente ciclo arranca en `inicioCiclo + intervalo` (reloj monotónico inyectable para los tests), sin sumar la duración de las peticiones. Con la pantalla apagada (`setIdleMode`) los grupos se estiran ×5/×3/×2, salvo con un espectador MCP (`McpActivityTracker`: alguna `tools/call` en los últimos 60 s). El multiplicador de `BUFFER FULL` se duplica hasta ×8 y se divide entre 2 tras 30 s sin eventos. `setPaused(true)` detiene los grupos antes de cada petición (lo usa la captura rápida).
 
 - **Batching CAN**: en vehículos con protocolo CAN, `PidScheduler` empaqueta varios PIDs de Modo 01 en una sola petición (`packIntoFrames`), aprovechando que **un frame CAN carga 7 bytes útiles** de respuesta; si el ELM rechaza la sintaxis multi-PID, se desactiva el batching automáticamente y cae a sondeo individual.
+- **Compuerta y concesión de diagnóstico** (`telemetry/PollingGate.kt`, `session/DiagnosticLease.kt`): el sondeo toma la compuerta por petición (`GatedTransport`) y una lectura de DTC la retiene durante toda su secuencia (03 → 07 → 0A → 02…), acotada por timeout, sin soltar el adaptador ni el viaje. Quien deja el ELM en un estado no estándar registra un `AjusteConcesion` para devolverlo al estándar mientras dura la concesión.
+- **Captura rápida** (`telemetry/captura/`): `CapturaRapida` pausa los grupos, aplica el afinado (`ElmSpeedTuning`: `AT SH 7E0` + `AT CRA 7E8` solo en CAN 11-bit, `AT AT 2`; lo rechazado se omite) y `FastPoller` sondea 1-6 PIDs con varios por trama y sufijo `1`, con guardia de refrigerante cada 5 s. `RateMeter` mide Hz por PID y latencia p50/p95, `FastCaptureBuffer` es el anillo de 200 000 muestras con cursor (`seq`) que pagina `get_captura`, `CapturaCsv` + `ArchivoCaptura` escriben el CSV en ms y `CaptureSafeguards` decide continuar, limitar a 10 Hz o detener. Corre en el scope del enlace y revierte todo en un `finally` NonCancellable. Las muestras entran al mismo flujo que el sondeo; `SessionRecorder` guarda como mucho una fila cada ~90 ms por PID.
 - **Circuit breaker**: `MAX_CONSECUTIVE_LINK_FAILURES = 3` — tres pares petición/respuesta fallidos seguidos y `PidScheduler` da el enlace por muerto, lo que dispara la clasificación de pérdida de enlace en `ObdSessionManager`.
 - **Clasificación motor-apagado vs falla transitoria**: antes de soltar el transporte, `ObdSessionManager.classifyLinkLoss` sondea `AT RV\r` (voltaje — si el adaptador sigue respondiendo, sigue alimentado) y luego `010C\r` (RPM). Adaptador vivo + ECU en silencio = **motor apagado** → cierre limpio (`finalShutdown`, para GPS/IMU, notificación resumen). Cualquier otra combinación = **falla transitoria** → reintento.
 - **Backoff de reconexión**: `15s → 30s → 60s → 60s` (`AUTO_RECONNECT_BACKOFF_MS`), con 15s de gracia final antes de rendirse y cerrar limpio.

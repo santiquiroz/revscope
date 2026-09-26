@@ -71,7 +71,7 @@ El centro de diagnóstico y mantenimiento, organizado en tres secciones. Las her
 
 - **Códigos de falla (DTC)** — lee los códigos activos, pendientes y permanentes (cada uno con su etiqueta), el estado del testigo de falla (MIL) y el freeze frame con el código que lo guardó; los explica con IA (si configuraste una API key) y permite borrarlos de la memoria del ECU. Funciona con el viaje grabando o después de finalizarlo, sin desconectar: el sondeo se pausa solo mientras dura la lectura.
 - **Mezcla y combustión** — fuel trims cortos y largos, hasta cuatro sensores de oxígeno, lambda comandado y flujo de aire (MAF), todo interpretado en vivo con un diagnóstico por regla (mezcla pobre/rica, sensor perezoso, etc.) sin necesitar IA ni conexión a internet.
-- **Gráficas de sensores** — cualquier PID disponible del vehículo, en una curva en tiempo real con ejes y unidades.
+- **Gráficas de sensores** — cualquier PID que el vehículo soporte, en una curva en tiempo real de los últimos 30 s con ejes y unidades. El botón de la barra abre la **Captura rápida**: eliges de 1 a 6 PIDs (o el atajo «Pedal y mariposa (49, 4A, 11)») y la app los lee lo más rápido que permita el adaptador, con la tasa medida en Hz, una gráfica de los últimos 10 s y exportación a CSV con tiempos en milisegundos. Sirve para diagnosticar un sensor que cambia rápido, como el pedal del acelerador: con el contacto puesto y el motor apagado (o en ralentí), barre el pedal despacio de 0 a 100 %. Mientras dura, los demás gauges quedan en pausa. Detalle y salvaguardas en [Configuración → Muestreo OBD](configuracion.md#muestreo-obd).
 - **Escáner avanzado (Mode 22)** — barre direcciones para descubrir PIDs propietarios del fabricante que no están documentados en el estándar OBD2 (por ejemplo, modos de manejo o sensores adicionales de motos).
 - **Onda sensor O2** — gráfica en vivo de los últimos 60 segundos de voltaje del sensor de oxígeno, con la banda visual de mezcla pobre/rica y un contador de cruces por minuto por el umbral de conmutación (un sensor sano cruza con frecuencia).
 - **Resultados a bordo (Mode 06)** — las pruebas de monitoreo interno que corre el propio fabricante, agrupadas por identificador (MID) con su valor, límites y si pasó o falló — útil para comparar antes y después de una reparación.
@@ -122,6 +122,7 @@ Cada fila navega o ajusta una función; el detalle completo de cada sección —
 | Radares de velocidad | Descarga y actualización de la base de radares |
 | Inteligencia artificial | Proveedor de IA, API key, modelo y prueba de conexión |
 | Detección de caída | Contacto de emergencia y activación de la alarma con SMS |
+| Muestreo OBD | Frecuencia de lectura de sensores (Estándar 2 s, 1 s, 500 ms, 250 ms o Máximo) y duración máxima de la captura rápida |
 | Servidor MCP (red local) | Exponer el estado del vehículo a asistentes de IA de tu red WiFi |
 | Copia de seguridad | Exportar/importar todos tus datos, y respaldo automático semanal |
 | PIDs personalizados | Definiciones extra de parámetros del fabricante |

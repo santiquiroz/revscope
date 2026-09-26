@@ -30,7 +30,7 @@ No debería pasar: cada versión que cambia la estructura de la base de datos in
 
 ### ¿Gasta mucha batería tener la app abierta?
 
-RevScope apaga sola la grabación, el GPS y los sensores en cuanto detecta que el motor se apagó (o, en un viaje GPS, tras varios minutos sin movimiento), así que dejar la app abierta durante todo el día sin conducir no debería drenar la batería de forma notable. Mientras hay un viaje activo sí usa GPS/Bluetooth de forma constante, como cualquier app de navegación.
+RevScope apaga sola la grabación, el GPS y los sensores en cuanto detecta que el motor se apagó (o, en un viaje GPS, tras varios minutos sin movimiento), así que dejar la app abierta durante todo el día sin conducir no debería drenar la batería de forma notable. Mientras hay un viaje activo sí usa GPS/Bluetooth de forma constante, como cualquier app de navegación. Los presets de muestreo rápidos (250 ms, Máximo) y la captura rápida de Taller → Sensores gastan más batería y calientan más el teléfono: la captura tiene tope de duración y se detiene sola con batería por debajo de 15 % o el teléfono muy caliente (ver [Muestreo OBD](configuracion.md#muestreo-obd)).
 
 ### ¿Puedo ver la presión de las llantas?
 

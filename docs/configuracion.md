@@ -1,6 +1,6 @@
 # Configuración
 
-> Índice: [Vehículo](#vehículo) · [Alertas de audio y vibración](#alertas-de-audio-y-vibración) · [Alertas de voz por categoría](#alertas-de-voz-por-categoría) · [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) · [Radares](#radares-de-velocidad) · [Combustible](#combustible) · [Inteligencia artificial](#inteligencia-artificial) · [Detección de caída](#detección-de-caída) · [Mapa](#mapa) · [Avisos en segundo plano](#avisos-en-segundo-plano) · [Servidor MCP](#servidor-mcp-red-local) · [Copia de seguridad](#copia-de-seguridad) · [PIDs personalizados](#pids-personalizados) · [Pico y placa](#pico-y-placa)
+> Índice: [Vehículo](#vehículo) · [Alertas de audio y vibración](#alertas-de-audio-y-vibración) · [Alertas de voz por categoría](#alertas-de-voz-por-categoría) · [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) · [Radares](#radares-de-velocidad) · [Combustible](#combustible) · [Inteligencia artificial](#inteligencia-artificial) · [Detección de caída](#detección-de-caída) · [Mapa](#mapa) · [Avisos en segundo plano](#avisos-en-segundo-plano) · [Muestreo OBD](#muestreo-obd) · [Servidor MCP](#servidor-mcp-red-local) · [Copia de seguridad](#copia-de-seguridad) · [PIDs personalizados](#pids-personalizados) · [Pico y placa](#pico-y-placa)
 >
 > Ver también: [Instalación](instalacion.md) · [Manual de usuario](manual-usuario.md) · [FAQ](faq.md) · [Desarrollo](desarrollo.md)
 
@@ -197,23 +197,58 @@ Herramientas (*tools*) de lectura, siempre disponibles con el servidor activo:
 
 | Tool | Qué devuelve |
 |---|---|
-| `get_estado` | Estado actual del vehículo: conexión, viaje (`grabando` / `sin_viaje` / `sin_enlace`), permisos del MCP, perfil activo y lecturas en vivo con su edad en ms |
+| `get_estado` | Estado actual del vehículo: conexión, viaje (`grabando` / `sin_viaje` / `sin_enlace`), muestreo (preset y si hay captura rápida), permisos del MCP, perfil activo y lecturas en vivo con su edad en ms. Es una **foto**: la frecuencia con la que la ves la ponen tus llamadas, no el adaptador. Para ver un sensor a alta tasa usa `iniciar_captura` + `get_captura` |
 | `get_viajes` | Últimos viajes del vehículo activo con sus estadísticas (distancia, velocidad, eco score) |
 | `get_viaje_detalle` | Detalle agregado de un viaje puntual por su id (distancia, velocidad, combustible, lanzamientos) |
 | `get_chequeo_salud` | Último chequeo de salud del vehículo — hallazgos por área con su nivel (OK/ATENCION/FALLA) |
 | `get_dtc` | Códigos de falla leídos en vivo: activos (03), pendientes (07), permanentes (0A), testigo MIL, conteo según la ECU y freeze frame con el DTC que lo guardó. **Funciona durante o después de un viaje sin cortar la conexión**: el sondeo se pausa solo mientras dura la lectura. Argumentos opcionales: `modos` (`["activos","pendientes","permanentes"]`), `freeze_frame` (por defecto `true`) e `incluir_crudo` (respuesta cruda del ECU por comando). Caché de 10 s por combinación de argumentos y como mucho una lectura al ECU cada 5 s |
 | `get_mantenimiento` | Ítems de mantenimiento configurados y kilómetros restantes para cada uno |
 | `get_documentos` | Estado de documentos del vehículo activo: SOAT, tecnomecánica, pico y placa, seguro y licencia |
+| `get_muestreo` | Preset del sondeo normal, si hay captura rápida activa (y su límite de Hz si la frenan las salvaguardas), tasa medida por PID, peticiones/s, latencia p50/p95, qué la limita y el adaptador (nombre, versión ELM, protocolo) |
+| `get_captura` | Muestras de la captura rápida desde un cursor: `capturaId`, `desde_seq` (0 al inicio, luego `seqSiguiente`), `max` (hasta 2000) y `pids` opcional. Devuelve series por PID con `t_ms` (relativo al inicio) y `v`, más `perdidas` > 0 si el cursor quedó fuera del búfer. Consultando cada 1-2 s recibes **todas** las muestras capturadas entre una llamada y la siguiente. Sigue respondiendo después de detener la captura, mientras esté en memoria |
 
-Herramientas de control, **apagadas por defecto**. Solo aparecen en `tools/list` si activas sus permisos en **Ajustes → Avanzado y diagnóstico → Servidor MCP**; si un cliente las llama sin permiso recibe un error que dice dónde activarlas. Estos permisos **no viajan en la copia de seguridad**: restaurar nunca concede control remoto.
+Herramientas de control, **apagadas por defecto** (el interruptor se llama «Permitir control desde MCP (viaje, muestreo, captura)»). Solo aparecen en `tools/list` si activas sus permisos en **Ajustes → Avanzado y diagnóstico → Servidor MCP**; si un cliente las llama sin permiso recibe un error que dice dónde activarlas. Estos permisos **no viajan en la copia de seguridad**: restaurar nunca concede control remoto.
 
 | Tool | Permiso | Qué hace |
 |---|---|---|
 | `finalizar_viaje` | Permitir control desde MCP | Cierra el viaje en curso (queda en el historial con sus estadísticas) y deja el adaptador conectado: el sondeo sigue y `get_dtc` responde. Idempotente: sin viaje no hace nada |
 | `iniciar_viaje` | Permitir control desde MCP | Abre un viaje nuevo sobre el adaptador ya conectado. Falla si no hay adaptador o ya hay un viaje grabando |
+| `set_muestreo` | Permitir control desde MCP | Cambia el preset del sondeo normal: `estandar_2s`, `1s`, `500ms`, `250ms` o `maximo` (ver [Muestreo OBD](#muestreo-obd)) |
+| `iniciar_captura` | Permitir control desde MCP | Arranca la captura rápida de 1 a 6 PIDs de modo 01 (`pids: ["49","4A","11"]`), con `duracion_s` de 1 a 600 (60 por defecto). Devuelve el `capturaId`, los PIDs aceptados y no soportados, cómo se agrupan por petición (`lotes`) y las técnicas que el adaptador aceptó |
+| `detener_captura` | Permitir control desde MCP | Detiene la captura y vuelve al muestreo normal. Devuelve n, Hz, mín, máx y media por PID, latencia p50/p95, el motivo de fin y la ruta del CSV en el teléfono |
 | `borrar_dtc` | Permitir borrar códigos desde MCP (exige también el anterior) | Borra los códigos (modo 04) y relee los activos antes y después. Exige `confirmar: "BORRAR"` y el vehículo **detenido** (velocidad 0 con una lectura de menos de 2 s). Si la ECU responde `7F 04 22` (condiciones no correctas, típico con el motor encendido) lo informa. Deja un aviso en el teléfono. **Reinicia los monitores de readiness**: la revisión técnico-mecánica puede rechazar el vehículo hasta completar ciclos de manejo |
 
 **Seguridad**: el servidor solo se enlaza a tu IP de **WiFi** (nunca datos móviles) y un vigilante interno revisa cada 60 segundos que esa IP siga siendo la misma — si cambias de red o pierdes el WiFi, se apaga solo. Actívalo únicamente en redes de confianza (tu casa, tu taller).
+
+## Muestreo OBD
+
+**Ajustes → Avanzado y diagnóstico → Muestreo OBD.** Controla cada cuánto se leen los sensores en el uso normal (todos los PIDs a la vez). La regla es `intervalo = mín(intervalo base del grupo, preset)`:
+
+| Preset | RPM, velocidad, mariposa | Carga, refrigerante, MAF, MAP, torque | Temperaturas, trims, O2, consumo | Taller | Nota |
+|---|---|---|---|---|---|
+| **Estándar (2 s)**, por defecto | 100 ms | 500 ms | 2 s | 1 s | Igual que hasta v1.19 |
+| 1 s | 100 ms | 500 ms | 1 s | 1 s | |
+| 500 ms | 100 ms | 500 ms | 500 ms | 500 ms | |
+| 250 ms | 100 ms | 250 ms | 250 ms | 250 ms | Más batería y calor |
+| Máximo | sin espera | sin espera | sin espera | sin espera | El adaptador fija la tasa real: más batería y calor |
+
+Son intervalos objetivo: el intervalo cuenta desde el inicio de cada ciclo, así que la duración de las peticiones ya no se suma, pero todos los grupos comparten un canal serie de una sola vía (cada petición por Bluetooth tarda unos 30-150 ms) y el adaptador pone el techo. Con la pantalla del teléfono apagada los intervalos se estiran (×5, ×3 y ×2) para ahorrar batería, **salvo** que un cliente MCP haya llamado alguna tool en los últimos 60 s. Tras un `BUFFER FULL` del adaptador los intervalos se duplican (hasta ×8) y vuelven a la mitad cada 30 s sin eventos.
+
+**Captura rápida.** Para ver uno o pocos sensores a la tasa de un escáner profesional (por ejemplo el pedal del acelerador, PIDs `49`/`4A`, junto con la mariposa `11`) está **Taller → Sensores → Captura rápida** (botón de la barra superior) o las tools `iniciar_captura` / `get_captura` / `detener_captura` del MCP:
+
+- Sondea solo de 1 a 6 PIDs elegidos; los demás gauges quedan en pausa mientras dura. Sigue leyendo el refrigerante cada 5 s (alerta de sobrecalentamiento) y el voltaje cada 10 s.
+- Técnicas, cada una se omite si el adaptador responde `?`: varios PIDs por petición en CAN (3 PIDs de 1 byte caben en una trama), sufijo de número de respuestas (`01 49 4A 11 1`), direccionamiento físico al ECM (`AT SH 7E0` + `AT CRA 7E8`, solo CAN 11-bit), `AT AT 2` y lectura de baja latencia del Bluetooth. Todo se revierte al terminar, también si se pierde el enlace. Una lectura de DTC durante la captura se hace con el header funcional y la captura sigue después.
+- Muestra la **tasa medida** (Hz por PID, peticiones/s, latencia p50/p95 y qué la limita). No promete una cifra: depende del adaptador, del protocolo y de la ECU. Como referencia no verificada, un adaptador ELM genuino por Bluetooth clásico en CAN 500k podría rondar 20-35 peticiones/s y los clones baratos o K-line bastante menos.
+- Guarda un CSV mientras corre en `cache/exports/revscope-captura-AAAAMMDD-HHmmss.csv` (se conservan las 5 últimas): una línea `# revscope-captura v1; adaptador=…; elm=…; protocolo=…; pids=…; inicio=…; tecnicas=…` y luego `epoch_ms,t_ms,pid,nombre,valor,unidad,lote,latencia_ms`, con `epoch_ms` y `t_ms` enteros en ms. Al terminar se puede compartir ese CSV o uno **ancho** (`epoch_ms,t_ms,<pid>,…`, una fila por petición).
+- En la grabación del viaje (Room) se guarda como mucho una fila cada ~100 ms por PID, así la captura no infla la base de datos.
+
+| Ajuste | Por defecto | Detalle |
+|---|---|---|
+| Preset de muestreo | Estándar (2 s) | Tabla de arriba. Viaja en la copia de seguridad |
+| Captura rápida: duración máxima | 5 min | 1, 5, 10 o 30 min. Desde el MCP el máximo es 10 min |
+| Última tasa medida | — | Hz por PID y latencia p50 de la última captura de esta sesión |
+
+**Salvaguardas de la captura** (se evalúan cada segundo): se detiene al llegar a la duración máxima, con la batería del teléfono por debajo de 15 % sin cargar, con el teléfono muy caliente (estado térmico SEVERE, Android 10+) o si más del 30 % de al menos 50 peticiones falla ("el adaptador no sostiene la captura"). Con calor moderado o batería por debajo de 30 % sin cargar se limita a 10 Hz. Al detenerse por cualquier causa se vuelve al muestreo normal y se muestra el motivo.
 
 ## Copia de seguridad
 
