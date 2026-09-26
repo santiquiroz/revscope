@@ -1,0 +1,1905 @@
+{
+  "version": 1,
+  "fuenteDescripciones": "SAE J2012 (descripción genérica de códigos P0xxx)",
+  "aviso": "Orientación general, no es el procedimiento del fabricante",
+  "codigos": [
+    {
+      "codigo": "P0105",
+      "titulo": "Circuito del sensor de presión absoluta del múltiple (MAP) / presión barométrica: falla del circuito",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Conector del MAP suelto o sulfatado",
+        "Cable de señal, referencia o masa abierto",
+        "Sensor MAP dañado",
+        "Falla de la referencia de 5 V que comparte con otros sensores (TPS)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector",
+          "detalle": "Sulfato, pines flojos o doblados; limpia con limpiacontactos y vuelve a medir."
+        },
+        {
+          "paso": "Medir referencia, masa y señal en el conector",
+          "detalle": "Contacto puesto: referencia ≈5 V y masa ≈0 V (típico). La señal con motor apagado debe ser proporcional a la presión barométrica.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Comparar el MAP con la presión barométrica",
+          "detalle": "Con motor apagado y contacto puesto el MAP debe leer casi lo mismo que la presión atmosférica del lugar.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En monocilíndricos el vacío del múltiple pulsa mucho: la lectura del MAP en marcha oscila más que en un carro y eso es normal."
+      ],
+      "relacionados": [
+        "P0106",
+        "P0107",
+        "P0108",
+        "P0109"
+      ]
+    },
+    {
+      "codigo": "P0106",
+      "titulo": "Circuito del sensor de presión absoluta del múltiple (MAP) / presión barométrica: rango o desempeño",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Manguera de vacío rota, suelta o con obstrucción",
+        "Entrada de aire falsa en el múltiple o en el cuerpo de inyección",
+        "Sensor MAP descalibrado o dañado",
+        "Problema mecánico que cambia el vacío (válvulas, compresión)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Comparar el MAP con la presión barométrica",
+          "detalle": "Con motor apagado y contacto puesto el MAP debe leer casi lo mismo que la presión atmosférica del lugar.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Revisar la toma de vacío",
+          "detalle": "Si el sensor va conectado por manguera: que no esté rota, doblada, suelta ni con agua o aceite adentro."
+        },
+        {
+          "paso": "Medir referencia, masa y señal en el conector",
+          "detalle": "Contacto puesto: referencia ≈5 V y masa ≈0 V (típico). La señal con motor apagado debe ser proporcional a la presión barométrica.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Buscar entradas de aire falsas",
+          "detalle": "Revisa abrazaderas y el acople del cuerpo de inyección al múltiple con el motor en mínimo."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "La ECU compara el MAP con la posición del acelerador y las rpm: un desfase sostenido dispara este código aunque el circuito esté completo."
+      ],
+      "relacionados": [
+        "P0105",
+        "P0107",
+        "P0108",
+        "P0109"
+      ]
+    },
+    {
+      "codigo": "P0107",
+      "titulo": "Circuito del sensor de presión absoluta del múltiple (MAP) / presión barométrica: circuito con señal baja",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Cable de señal a masa o cortado",
+        "Referencia de 5 V ausente o baja",
+        "Conector del MAP desconectado o sulfatado",
+        "Sensor MAP dañado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector",
+          "detalle": "Sulfato, pines flojos o doblados; limpia con limpiacontactos y vuelve a medir."
+        },
+        {
+          "paso": "Medir referencia, masa y señal en el conector",
+          "detalle": "Contacto puesto: referencia ≈5 V y masa ≈0 V (típico). La señal con motor apagado debe ser proporcional a la presión barométrica.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Mirar si el TPS también falla",
+          "detalle": "Si hay a la vez un código del TPS, sospecha de la referencia de 5 V común o de la masa de sensores."
+        },
+        {
+          "paso": "Comparar el MAP con la presión barométrica",
+          "detalle": "Con motor apagado y contacto puesto el MAP debe leer casi lo mismo que la presión atmosférica del lugar.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "El MAP y el TPS suelen compartir la referencia de 5 V: un corto en uno puede tumbar al otro."
+      ],
+      "relacionados": [
+        "P0105",
+        "P0106",
+        "P0108",
+        "P0109",
+        "P0122"
+      ]
+    },
+    {
+      "codigo": "P0108",
+      "titulo": "Circuito del sensor de presión absoluta del múltiple (MAP) / presión barométrica: circuito con señal alta",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Masa del sensor abierta o con resistencia",
+        "Señal en corto con la referencia de 5 V o con 12 V",
+        "Manguera de vacío desconectada (el sensor ve presión atmosférica en todo momento)",
+        "Sensor MAP dañado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar la toma de vacío",
+          "detalle": "Si el sensor va conectado por manguera: que no esté rota, doblada, suelta ni con agua o aceite adentro."
+        },
+        {
+          "paso": "Medir referencia, masa y señal en el conector",
+          "detalle": "Contacto puesto: referencia ≈5 V y masa ≈0 V (típico). La señal con motor apagado debe ser proporcional a la presión barométrica.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Medir la masa contra el negativo de la batería",
+          "detalle": "Con contacto puesto debe ser ≈0 V (típico); si marca más, hay resistencia en la masa.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Comparar el MAP con la presión barométrica",
+          "detalle": "Con motor apagado y contacto puesto el MAP debe leer casi lo mismo que la presión atmosférica del lugar.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0105",
+        "P0106",
+        "P0107",
+        "P0109",
+        "P0123"
+      ]
+    },
+    {
+      "codigo": "P0109",
+      "titulo": "Circuito del sensor de presión absoluta del múltiple (MAP) / presión barométrica: intermitente",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Mal contacto en el conector o en los terminales",
+        "Cableado rozado que hace corto al mover el manubrio o con vibración",
+        "Sensor MAP con falla intermitente"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector",
+          "detalle": "Sulfato, pines flojos o doblados; limpia con limpiacontactos y vuelve a medir."
+        },
+        {
+          "paso": "Mover el arnés mientras miras la lectura",
+          "detalle": "Con motor apagado y contacto puesto, mueve suavemente el cableado y el manubrio: la lectura del MAP no debe saltar."
+        },
+        {
+          "paso": "Comparar el MAP con la presión barométrica",
+          "detalle": "Con motor apagado y contacto puesto el MAP debe leer casi lo mismo que la presión atmosférica del lugar.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En moto el arnés pasa cerca de la dirección y del motor: vibración y calor sueltan terminales con el tiempo."
+      ],
+      "relacionados": [
+        "P0105",
+        "P0106",
+        "P0107",
+        "P0108"
+      ]
+    },
+    {
+      "codigo": "P0110",
+      "titulo": "Circuito del sensor de temperatura del aire de admisión (IAT) 1: falla del circuito",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Conector del IAT suelto o sulfatado",
+        "Cable abierto o en corto",
+        "Sensor IAT dañado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables rozados cerca de la caja del filtro."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Comparar IAT con la temperatura ambiente en frío",
+          "detalle": "Con la moto fría (varias horas apagada) el IAT debe leer cerca de la temperatura ambiente y del motor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En algunas motos el IAT va integrado con el MAP en un mismo sensor: revisa el catálogo del modelo antes de comprar el repuesto."
+      ],
+      "relacionados": [
+        "P0111",
+        "P0112",
+        "P0113",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0111",
+      "titulo": "Circuito del sensor de temperatura del aire de admisión (IAT) 1: rango o desempeño",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor IAT descalibrado",
+        "Sensor ubicado cerca de una fuente de calor (motor, escape)",
+        "Mal contacto que altera la resistencia"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Comparar IAT con la temperatura ambiente en frío",
+          "detalle": "Con la moto fría (varias horas apagada) el IAT debe leer cerca de la temperatura ambiente y del motor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables rozados cerca de la caja del filtro."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Con la moto detenida y caliente el aire bajo el tanque se calienta mucho: la comparación válida es en frío."
+      ],
+      "relacionados": [
+        "P0110",
+        "P0112",
+        "P0113",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0112",
+      "titulo": "Circuito del sensor de temperatura del aire de admisión (IAT) 1: circuito con señal baja",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Cable de señal a masa",
+        "Sensor IAT en corto interno",
+        "Humedad en el conector"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables rozados cerca de la caja del filtro."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Comparar IAT con la temperatura ambiente en frío",
+          "detalle": "Con la moto fría (varias horas apagada) el IAT debe leer cerca de la temperatura ambiente y del motor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Señal baja en un sensor de temperatura NTC se lee como temperatura muy alta."
+      ],
+      "relacionados": [
+        "P0110",
+        "P0111",
+        "P0113",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0113",
+      "titulo": "Circuito del sensor de temperatura del aire de admisión (IAT) 1: circuito con señal alta",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor IAT desconectado",
+        "Cable de señal o de masa abierto",
+        "Sensor IAT dañado (abierto)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables rozados cerca de la caja del filtro."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Comparar IAT con la temperatura ambiente en frío",
+          "detalle": "Con la moto fría (varias horas apagada) el IAT debe leer cerca de la temperatura ambiente y del motor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Señal alta en un sensor NTC se lee como temperatura muy baja (p. ej. −40 °C): suele ser circuito abierto."
+      ],
+      "relacionados": [
+        "P0110",
+        "P0111",
+        "P0112",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0114",
+      "titulo": "Circuito del sensor de temperatura del aire de admisión (IAT) 1: intermitente",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Mal contacto en el conector",
+        "Cable rozado que hace corto con la vibración",
+        "Sensor IAT con falla intermitente"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables rozados cerca de la caja del filtro."
+        },
+        {
+          "paso": "Mover el arnés mientras miras la lectura",
+          "detalle": "Con contacto puesto, mueve el cableado del sensor: la temperatura no debe saltar."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0110",
+        "P0111",
+        "P0112",
+        "P0113"
+      ]
+    },
+    {
+      "codigo": "P0115",
+      "titulo": "Circuito del sensor de temperatura del motor/refrigerante (ECT) 1: falla del circuito",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Conector del sensor suelto o sulfatado",
+        "Cable abierto o en corto",
+        "Sensor de temperatura dañado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables cocinados por el calor del motor."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Comparar el motor con el aire en frío",
+          "detalle": "Con la moto fría (varias horas apagada) ECT e IAT deben leer casi lo mismo; una diferencia de más de ≈5 °C (típico) apunta a un sensor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos refrigeradas por aire este sensor suele medir la temperatura de la culata o del aceite, no la de un refrigerante.",
+        "Sin una lectura de temperatura confiable la ECU enriquece la mezcla y el arranque en frío se vuelve difícil."
+      ],
+      "relacionados": [
+        "P0116",
+        "P0117",
+        "P0118",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0116",
+      "titulo": "Circuito del sensor de temperatura del motor/refrigerante (ECT) 1: rango o desempeño",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor descalibrado (lee distinto a la temperatura real)",
+        "Termostato abierto o ausente en motos refrigeradas por líquido",
+        "Mal contacto que altera la resistencia"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Comparar el motor con el aire en frío",
+          "detalle": "Con la moto fría (varias horas apagada) ECT e IAT deben leer casi lo mismo; una diferencia de más de ≈5 °C (típico) apunta a un sensor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Ver cómo sube la temperatura al calentar",
+          "detalle": "La temperatura del motor debe subir pareja durante los primeros minutos en mínimo, sin saltos."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos refrigeradas por aire este sensor suele medir la temperatura de la culata o del aceite, no la de un refrigerante."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0117",
+        "P0118",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0117",
+      "titulo": "Circuito del sensor de temperatura del motor/refrigerante (ECT) 1: circuito con señal baja",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Cable de señal a masa",
+        "Sensor en corto interno",
+        "Humedad o sulfato en el conector"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables cocinados por el calor del motor."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Comparar el motor con el aire en frío",
+          "detalle": "Con la moto fría (varias horas apagada) ECT e IAT deben leer casi lo mismo; una diferencia de más de ≈5 °C (típico) apunta a un sensor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Señal baja en un sensor NTC se lee como motor muy caliente: la ECU puede empobrecer la mezcla en frío."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0116",
+        "P0118",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0118",
+      "titulo": "Circuito del sensor de temperatura del motor/refrigerante (ECT) 1: circuito con señal alta",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor desconectado",
+        "Cable de señal o de masa abierto",
+        "Sensor dañado (abierto)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables cocinados por el calor del motor."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Comparar el motor con el aire en frío",
+          "detalle": "Con la moto fría (varias horas apagada) ECT e IAT deben leer casi lo mismo; una diferencia de más de ≈5 °C (típico) apunta a un sensor.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Señal alta en un sensor NTC se lee como motor muy frío (p. ej. −40 °C): la ECU enriquece de más y la moto se ahoga."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0116",
+        "P0117",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0119",
+      "titulo": "Circuito del sensor de temperatura del motor/refrigerante (ECT) 1: intermitente o errático",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Mal contacto en el conector",
+        "Cable rozado o cocinado que falla con la vibración o el calor",
+        "Sensor con falla intermitente"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cables cocinados por el calor del motor."
+        },
+        {
+          "paso": "Mover el arnés mientras miras la lectura",
+          "detalle": "Con contacto puesto, mueve el cableado del sensor: la temperatura no debe saltar."
+        },
+        {
+          "paso": "Medir el sensor con el multímetro",
+          "detalle": "Sensor de 2 cables: la señal depende de la temperatura; compara con la tabla del manual del modelo.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos refrigeradas por aire este sensor suele medir la temperatura de la culata o del aceite, no la de un refrigerante."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0116",
+        "P0117",
+        "P0118"
+      ]
+    },
+    {
+      "codigo": "P0120",
+      "titulo": "Sensor/interruptor de posición del acelerador/mariposa «A»: falla del circuito",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Conector del TPS suelto o sulfatado",
+        "Cable de señal, referencia o masa abierto",
+        "Sensor dañado o no equivalente al original",
+        "Falla de la referencia de 5 V que comparte con otros sensores (MAP)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector",
+          "detalle": "Sulfato, pines doblados o flojos; limpiar con limpiacontactos."
+        },
+        {
+          "paso": "Medir el conector con el multímetro",
+          "detalle": "Referencia ≈5 V, masa ≈0 V y señal subiendo pareja (típico).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Barrido guiado del TPS",
+          "detalle": "Cerrado, medio, a fondo y cerrado, con motor apagado y contacto puesto.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Confirmar que el TPS instalado es el original",
+          "detalle": "Compara la referencia con la del modelo (Conocimiento del modelo)."
+        },
+        {
+          "paso": "Borrar el código y reaprender el mínimo",
+          "detalle": "Con el procedimiento del manual de servicio del modelo.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con ECU de pocos PIDs (K-line, p. ej. Delphi MT05) la posición se ve como % de la referencia de 5 V: ≈10 % cerrado y ≈90 % a fondo es lo típico de un TPS sano.",
+        "Un TPS genérico puede encajar en el cuerpo de inyección sin ser equivalente al original."
+      ],
+      "relacionados": [
+        "P0121",
+        "P0122",
+        "P0123",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0121",
+      "titulo": "Sensor/interruptor de posición del acelerador/mariposa «A»: rango o desempeño",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Pista del sensor gastada (zonas muertas o saltos en el recorrido)",
+        "Sensor no equivalente al original (otra curva)",
+        "Tope de la mariposa desajustado o mínimo mal ajustado",
+        "Mal contacto que altera la señal"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Barrido guiado del TPS",
+          "detalle": "Cerrado, medio, a fondo y cerrado, con motor apagado y contacto puesto.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Confirmar que el TPS instalado es el original",
+          "detalle": "Compara la referencia con la del modelo (Conocimiento del modelo)."
+        },
+        {
+          "paso": "Medir el conector con el multímetro",
+          "detalle": "Referencia ≈5 V, masa ≈0 V y señal subiendo pareja (típico).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Revisar el tope y el cable del acelerador",
+          "detalle": "La mariposa debe cerrar completa y el cable tener un juego libre pequeño."
+        },
+        {
+          "paso": "Borrar el código y reaprender el mínimo",
+          "detalle": "Con el procedimiento del manual de servicio del modelo.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con ECU de pocos PIDs (K-line, p. ej. Delphi MT05) la posición se ve como % de la referencia de 5 V: ≈10 % cerrado y ≈90 % a fondo es lo típico de un TPS sano.",
+        "La ECU compara la posición con las rpm y el MAP: una señal que no concuerda con la carga dispara este código."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0122",
+        "P0123",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0122",
+      "titulo": "Sensor/interruptor de posición del acelerador/mariposa «A»: circuito con señal baja",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor dañado o no equivalente al original (p. ej. repuesto genérico con otra curva)",
+        "Mal contacto en el conector o en los terminales (sulfato, pines flojos)",
+        "Referencia de 5 V baja o masa con resistencia (compártela con otros sensores: MAP)",
+        "Cable de señal a masa o cortado",
+        "Orden de pines equivocado en un sensor no original"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Confirmar que el TPS instalado es el original",
+          "detalle": "Compara la referencia con la del modelo (Conocimiento del modelo)."
+        },
+        {
+          "paso": "Barrido guiado del TPS",
+          "detalle": "Cerrado, medio, a fondo y cerrado, con motor apagado y contacto puesto.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Medir el conector con el multímetro",
+          "detalle": "Referencia ≈5 V, masa ≈0 V y señal subiendo pareja (típico).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Revisar el conector",
+          "detalle": "Sulfato, pines doblados o flojos; limpiar con limpiacontactos."
+        },
+        {
+          "paso": "Si no es original, verificar el orden de pines con el ohmímetro",
+          "detalle": "El cursor (resistencia variable) debe ir al cable de señal."
+        },
+        {
+          "paso": "Medir de nuevo después de corregir",
+          "detalle": "Repite el barrido: la señal debe cubrir casi todo el recorrido (≈10 % a ≈90 %, típico).",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Borrar el código y reaprender el mínimo",
+          "detalle": "Con el procedimiento del manual de servicio del modelo.",
+          "accion": "DTC:BORRAR"
+        },
+        {
+          "paso": "Probar en frío",
+          "detalle": "Al día siguiente, arranque en frío guiado.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        }
+      ],
+      "notasMoto": [
+        "En motos con ECU de pocos PIDs (K-line, p. ej. Delphi MT05) la posición se ve como % de la referencia de 5 V: ≈10 % cerrado y ≈90 % a fondo es lo típico de un TPS sano.",
+        "Un TPS genérico puede encajar en el cuerpo de inyección sin ser equivalente al original.",
+        "Si la referencia y la masa miden bien y la señal es baja en todo el recorrido pero sube pareja, apunta al sensor o al contacto sensor-conector."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0121",
+        "P0123",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0123",
+      "titulo": "Sensor/interruptor de posición del acelerador/mariposa «A»: circuito con señal alta",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Masa del sensor abierta o con resistencia",
+        "Señal en corto con la referencia de 5 V",
+        "Sensor dañado o no equivalente al original",
+        "Orden de pines equivocado en un sensor no original"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Barrido guiado del TPS",
+          "detalle": "Cerrado, medio, a fondo y cerrado, con motor apagado y contacto puesto.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Medir el conector con el multímetro",
+          "detalle": "Referencia ≈5 V, masa ≈0 V y señal subiendo pareja (típico).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Revisar el conector",
+          "detalle": "Sulfato, pines doblados o flojos; limpiar con limpiacontactos."
+        },
+        {
+          "paso": "Si no es original, verificar el orden de pines con el ohmímetro",
+          "detalle": "El cursor (resistencia variable) debe ir al cable de señal."
+        },
+        {
+          "paso": "Borrar el código y reaprender el mínimo",
+          "detalle": "Con el procedimiento del manual de servicio del modelo.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con ECU de pocos PIDs (K-line, p. ej. Delphi MT05) la posición se ve como % de la referencia de 5 V: ≈10 % cerrado y ≈90 % a fondo es lo típico de un TPS sano.",
+        "Un TPS genérico puede encajar en el cuerpo de inyección sin ser equivalente al original."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0121",
+        "P0122",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0124",
+      "titulo": "Sensor/interruptor de posición del acelerador/mariposa «A»: circuito intermitente",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Pista del sensor gastada en una zona",
+        "Mal contacto en el conector con la vibración",
+        "Cable rozado cerca de la dirección o del motor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Barrido guiado del TPS",
+          "detalle": "Cerrado, medio, a fondo y cerrado, con motor apagado y contacto puesto.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Revisar el conector",
+          "detalle": "Sulfato, pines doblados o flojos; limpiar con limpiacontactos."
+        },
+        {
+          "paso": "Mover el arnés mientras miras la señal",
+          "detalle": "Con motor apagado y contacto puesto, mueve suavemente el cableado del TPS: la señal no debe saltar."
+        },
+        {
+          "paso": "Medir el conector con el multímetro",
+          "detalle": "Referencia ≈5 V, masa ≈0 V y señal subiendo pareja (típico).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Borrar el código y reaprender el mínimo",
+          "detalle": "Con el procedimiento del manual de servicio del modelo.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con ECU de pocos PIDs (K-line, p. ej. Delphi MT05) la posición se ve como % de la referencia de 5 V: ≈10 % cerrado y ≈90 % a fondo es lo típico de un TPS sano."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0121",
+        "P0122",
+        "P0123"
+      ]
+    },
+    {
+      "codigo": "P0130",
+      "titulo": "Circuito del sensor de oxígeno (banco 1, sensor 1): falla",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Conector o cable del sensor dañado",
+        "Sensor de oxígeno agotado o contaminado",
+        "Fuga en el escape antes del sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cable del sensor",
+          "detalle": "El cable pasa cerca del escape: busca aislante derretido, pines sulfatados o el conector suelto."
+        },
+        {
+          "paso": "Buscar fugas en el escape antes del sensor",
+          "detalle": "Una fuga deja entrar aire y el sensor lee mezcla pobre aunque no lo sea."
+        },
+        {
+          "paso": "Mirar la señal con el motor caliente",
+          "detalle": "En circuito cerrado un sensor de zirconio sano oscila entre ≈0,1 y ≈0,9 V (típico); en Sensores revisa si el PID del O2 cambia."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Muchas motos pequeñas no tienen sensor de oxígeno o lo tienen sin calefactor: si tu moto no lo trae, este código no aplica y conviene revisar la lectura."
+      ],
+      "relacionados": [
+        "P0131",
+        "P0132",
+        "P0133",
+        "P0134",
+        "P0135"
+      ]
+    },
+    {
+      "codigo": "P0131",
+      "titulo": "Circuito del sensor de oxígeno (banco 1, sensor 1): voltaje bajo",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Fuga en el escape antes del sensor",
+        "Mezcla realmente pobre (entrada de aire, inyector sucio, baja presión de combustible)",
+        "Cable de señal a masa",
+        "Sensor de oxígeno agotado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Buscar fugas en el escape antes del sensor",
+          "detalle": "Una fuga deja entrar aire y el sensor lee mezcla pobre aunque no lo sea."
+        },
+        {
+          "paso": "Revisar el conector y el cable del sensor",
+          "detalle": "El cable pasa cerca del escape: busca aislante derretido, pines sulfatados o el conector suelto."
+        },
+        {
+          "paso": "Mirar la señal con el motor caliente",
+          "detalle": "En circuito cerrado un sensor de zirconio sano oscila entre ≈0,1 y ≈0,9 V (típico); en Sensores revisa si el PID del O2 cambia."
+        },
+        {
+          "paso": "Revisar los ajustes de combustible",
+          "detalle": "Si el ajuste corto y largo están muy positivos, la mezcla es de verdad pobre: sigue la guía de P0171."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0132",
+        "P0133",
+        "P0134",
+        "P0135",
+        "P0171"
+      ]
+    },
+    {
+      "codigo": "P0132",
+      "titulo": "Circuito del sensor de oxígeno (banco 1, sensor 1): voltaje alto",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Mezcla realmente rica (inyector goteando, sensor de temperatura mal)",
+        "Cable de señal en corto con el calefactor o con voltaje",
+        "Sensor contaminado (aceite, silicona, combustible)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cable del sensor",
+          "detalle": "El cable pasa cerca del escape: busca aislante derretido, pines sulfatados o el conector suelto."
+        },
+        {
+          "paso": "Mirar la señal con el motor caliente",
+          "detalle": "En circuito cerrado un sensor de zirconio sano oscila entre ≈0,1 y ≈0,9 V (típico); en Sensores revisa si el PID del O2 cambia."
+        },
+        {
+          "paso": "Revisar los ajustes de combustible",
+          "detalle": "Si los ajustes están muy negativos, la mezcla es de verdad rica: sigue la guía de P0172."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0133",
+        "P0134",
+        "P0135",
+        "P0172"
+      ]
+    },
+    {
+      "codigo": "P0133",
+      "titulo": "Circuito del sensor de oxígeno (banco 1, sensor 1): respuesta lenta",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor de oxígeno envejecido",
+        "Sensor contaminado por aceite o combustible",
+        "Fuga en el escape antes del sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Mirar la señal con el motor caliente",
+          "detalle": "En circuito cerrado un sensor de zirconio sano oscila entre ≈0,1 y ≈0,9 V (típico); en Sensores revisa si el PID del O2 cambia."
+        },
+        {
+          "paso": "Buscar fugas en el escape antes del sensor",
+          "detalle": "Una fuga deja entrar aire y el sensor lee mezcla pobre aunque no lo sea."
+        },
+        {
+          "paso": "Revisar el conector y el cable del sensor",
+          "detalle": "El cable pasa cerca del escape: busca aislante derretido, pines sulfatados o el conector suelto."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0132",
+        "P0134",
+        "P0135"
+      ]
+    },
+    {
+      "codigo": "P0134",
+      "titulo": "Circuito del sensor de oxígeno (banco 1, sensor 1): sin actividad detectada",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor sin calentar (calefactor dañado)",
+        "Cable de señal abierto",
+        "Sensor de oxígeno agotado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cable del sensor",
+          "detalle": "El cable pasa cerca del escape: busca aislante derretido, pines sulfatados o el conector suelto."
+        },
+        {
+          "paso": "Mirar la señal con el motor caliente",
+          "detalle": "En circuito cerrado un sensor de zirconio sano oscila entre ≈0,1 y ≈0,9 V (típico); en Sensores revisa si el PID del O2 cambia."
+        },
+        {
+          "paso": "Revisar si también está P0135",
+          "detalle": "Sin calefactor el sensor tarda mucho en activarse y la ECU no ve actividad."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos que pasan mucho tiempo en mínimo el escape se enfría y el sensor puede quedar inactivo si no tiene calefactor."
+      ],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0132",
+        "P0133",
+        "P0135"
+      ]
+    },
+    {
+      "codigo": "P0135",
+      "titulo": "Circuito del sensor de oxígeno (banco 1, sensor 1): falla del circuito del calefactor",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Calefactor del sensor abierto",
+        "Fusible o alimentación del calefactor cortada",
+        "Conector o cable dañado por el calor del escape"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cable del sensor",
+          "detalle": "El cable pasa cerca del escape: busca aislante derretido, pines sulfatados o el conector suelto."
+        },
+        {
+          "paso": "Revisar el fusible del calefactor",
+          "detalle": "Consulta el diagrama del modelo para saber qué fusible lo alimenta."
+        },
+        {
+          "paso": "Medir la resistencia del calefactor",
+          "detalle": "Sensor desconectado, entre los dos cables del calefactor: compara con el valor del manual del modelo."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0132",
+        "P0133",
+        "P0134"
+      ]
+    },
+    {
+      "codigo": "P0171",
+      "titulo": "Sistema demasiado pobre (banco 1)",
+      "sistema": "Mezcla",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Entrada de aire falsa (múltiple, acople del cuerpo de inyección, manguera de vacío)",
+        "Inyector sucio o parcialmente tapado",
+        "Baja presión de combustible (filtro o bomba)",
+        "Sensor MAP, IAT o de temperatura del motor leyendo mal",
+        "Fuga en el escape antes del sensor de oxígeno"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Buscar entradas de aire falsas",
+          "detalle": "Con el motor en mínimo revisa abrazaderas, el acople del cuerpo de inyección y las mangueras."
+        },
+        {
+          "paso": "Comparar el MAP con la presión barométrica",
+          "detalle": "Con motor apagado el MAP debe leer casi la presión atmosférica.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Mirar el mínimo y el ajuste de combustible",
+          "detalle": "Un ajuste que baja mucho al acelerar apunta a entrada de aire; si sube con la carga, a combustible.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Revisar filtro y presión de combustible",
+          "detalle": "Según el manual del modelo."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con pocos PIDs puede que la ECU no reporte el ajuste de combustible: entonces el MAP y las temperaturas son la mejor pista."
+      ],
+      "relacionados": [
+        "P0172",
+        "P0131",
+        "P0106",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0172",
+      "titulo": "Sistema demasiado rico (banco 1)",
+      "sistema": "Mezcla",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Inyector goteando o con mala pulverización",
+        "Sensor de temperatura del motor leyendo frío",
+        "Filtro de aire tapado",
+        "Presión de combustible alta (regulador)",
+        "Sensor MAP leyendo presión alta"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el filtro de aire",
+          "detalle": "Sucio o empapado limita el aire y enriquece la mezcla."
+        },
+        {
+          "paso": "Comparar el motor con el aire en frío",
+          "detalle": "Un sensor de temperatura que lee frío con el motor caliente enriquece la mezcla.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Comparar el MAP con la presión barométrica",
+          "detalle": "Con motor apagado el MAP debe leer casi la presión atmosférica.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Revisar el inyector",
+          "detalle": "Goteo o chorro irregular; limpieza por ultrasonido si hace falta."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0171",
+        "P0132",
+        "P0118",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0201",
+      "titulo": "Circuito del inyector del cilindro 1: abierto o con falla",
+      "sistema": "Inyector",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Conector del inyector suelto o sulfatado",
+        "Bobina del inyector abierta",
+        "Cable de mando o alimentación cortado",
+        "Driver de la ECU dañado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector del inyector",
+          "detalle": "Sulfato, pines flojos o el seguro roto."
+        },
+        {
+          "paso": "Medir la resistencia del inyector",
+          "detalle": "Inyector desconectado: los de alta impedancia suelen dar 10-16 Ω (típico); compara con el manual.",
+          "accion": "MULTIMETRO:INYECTOR"
+        },
+        {
+          "paso": "Verificar alimentación con contacto puesto",
+          "detalle": "Uno de los pines debe tener voltaje de batería con contacto puesto.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En un monocilíndrico este es el único inyector: si falla, la moto no arranca o se apaga."
+      ],
+      "relacionados": [
+        "P0300",
+        "P0301",
+        "P0171"
+      ]
+    },
+    {
+      "codigo": "P0230",
+      "titulo": "Circuito primario de la bomba de combustible: falla",
+      "sistema": "Combustible",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Relé de la bomba dañado",
+        "Fusible fundido",
+        "Conector de la bomba suelto o sulfatado",
+        "Bomba de combustible dañada"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Escuchar la bomba al dar contacto",
+          "detalle": "Debe sonar unos segundos al dar contacto; si no suena, revisa fusible y relé."
+        },
+        {
+          "paso": "Revisar fusible y relé",
+          "detalle": "Consulta el diagrama del modelo."
+        },
+        {
+          "paso": "Medir el voltaje de batería",
+          "detalle": "Con voltaje bajo la bomba y el relé fallan.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En muchas motos la bomba va dentro del tanque junto con el flotador del nivel: revisa el conector del tanque."
+      ],
+      "relacionados": [
+        "P0171",
+        "P0562"
+      ]
+    },
+    {
+      "codigo": "P0300",
+      "titulo": "Falla de encendido aleatoria o en varios cilindros detectada",
+      "sistema": "Encendido",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Bujía gastada, sucia o con la calibración abierta",
+        "Capuchón o cable de bujía dañado",
+        "Mezcla pobre (entrada de aire, inyector)",
+        "Bobina de encendido débil",
+        "Combustible contaminado o con agua"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar la bujía y el capuchón",
+          "detalle": "Color, desgaste y calibración según el manual del modelo."
+        },
+        {
+          "paso": "Mirar la estabilidad del mínimo",
+          "detalle": "Un mínimo que tiembla o cae sin razón acompaña a las fallas de encendido.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Revisar entradas de aire y combustible",
+          "detalle": "Una mezcla pobre también produce fallas de encendido."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Si el testigo de falla parpadea, baja el ritmo y revisa pronto: las fallas de encendido pueden dañar el catalizador.",
+        "En un monocilíndrico P0300 y P0301 suelen señalar lo mismo."
+      ],
+      "relacionados": [
+        "P0301",
+        "P0351",
+        "P0171",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0301",
+      "titulo": "Falla de encendido detectada en el cilindro 1",
+      "sistema": "Encendido",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Bujía gastada, sucia o con la calibración abierta",
+        "Capuchón o cable de bujía dañado",
+        "Bobina de encendido débil",
+        "Inyector del cilindro 1 sucio",
+        "Baja compresión (válvulas o anillos)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar la bujía y el capuchón",
+          "detalle": "Color, desgaste y calibración según el manual del modelo."
+        },
+        {
+          "paso": "Mirar la estabilidad del mínimo",
+          "detalle": "Un mínimo que tiembla o cae sin razón acompaña a las fallas de encendido.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Medir la resistencia del inyector",
+          "detalle": "Compara con el manual del modelo.",
+          "accion": "MULTIMETRO:INYECTOR"
+        },
+        {
+          "paso": "Medir la compresión",
+          "detalle": "Con un compresómetro, según el manual del modelo."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Si el testigo de falla parpadea, baja el ritmo y revisa pronto: las fallas de encendido pueden dañar el catalizador."
+      ],
+      "relacionados": [
+        "P0300",
+        "P0351",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0335",
+      "titulo": "Circuito del sensor de posición del cigüeñal (CKP) «A»: falla",
+      "sistema": "CKP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Conector del sensor suelto o sulfatado",
+        "Cable abierto o en corto (pasa cerca del motor)",
+        "Sensor CKP dañado",
+        "Rueda fónica (dientes del volante) dañada o sucia"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado del CKP",
+          "detalle": "Sulfato, pines flojos o cable rozado con la tapa del volante."
+        },
+        {
+          "paso": "Mirar si hay rpm al dar arranque",
+          "detalle": "Si la ECU no ve rpm al dar arranque, no inyecta ni da chispa."
+        },
+        {
+          "paso": "Medir la resistencia del sensor",
+          "detalle": "Sensor inductivo desconectado: compara con el valor del manual del modelo."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Sin señal del CKP la moto no arranca o se apaga en marcha."
+      ],
+      "relacionados": [
+        "P0336",
+        "P0300"
+      ]
+    },
+    {
+      "codigo": "P0336",
+      "titulo": "Circuito del sensor de posición del cigüeñal (CKP) «A»: rango o desempeño",
+      "sistema": "CKP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor sucio (limaduras metálicas) o con distancia incorrecta a la rueda fónica",
+        "Rueda fónica con dientes dañados",
+        "Interferencia por cables de bujía o del regulador cerca del cable del CKP",
+        "Mal contacto intermitente"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector y el cableado del CKP",
+          "detalle": "Sulfato, pines flojos o cable rozado."
+        },
+        {
+          "paso": "Revisar la ruta del cable",
+          "detalle": "Que no vaya junto al cable de bujía ni al regulador."
+        },
+        {
+          "paso": "Inspeccionar sensor y rueda fónica",
+          "detalle": "Con la tapa abierta: limaduras en el imán y dientes completos."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0335"
+      ]
+    },
+    {
+      "codigo": "P0351",
+      "titulo": "Circuito primario/secundario de la bobina de encendido «A»: falla",
+      "sistema": "Encendido",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Conector de la bobina suelto o sulfatado",
+        "Bobina dañada (primario abierto o en corto)",
+        "Cable de mando desde la ECU cortado",
+        "Falla de alimentación de la bobina"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar el conector de la bobina",
+          "detalle": "Sulfato, pines flojos o el seguro roto."
+        },
+        {
+          "paso": "Verificar alimentación con contacto puesto",
+          "detalle": "Un pin de la bobina debe tener voltaje de batería.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Medir la resistencia del primario y del secundario",
+          "detalle": "Bobina desconectada: compara con el valor del manual del modelo."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En moto la bobina suele ir bajo el tanque y recibe calor y agua: revisa el conector primero."
+      ],
+      "relacionados": [
+        "P0300",
+        "P0301"
+      ]
+    },
+    {
+      "codigo": "P0500",
+      "titulo": "Sensor de velocidad del vehículo (VSS) «A»: falla",
+      "sistema": "Velocidad",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Conector del sensor suelto o sulfatado",
+        "Cable abierto o en corto",
+        "Sensor de velocidad dañado",
+        "Imán o rueda dentada del sensor dañado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Comparar la velocidad de la ECU con la del GPS",
+          "detalle": "En Conducir, con la moto rodando: si la ECU marca 0 y el GPS no, el sensor no reporta."
+        },
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato, pines flojos o cable rozado con la cadena."
+        },
+        {
+          "paso": "Revisar el sensor y su soporte",
+          "detalle": "Limaduras en el imán o el sensor flojo."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En muchas motos el sensor de velocidad lee la salida de la caja o la rueda trasera: revisa también la cadena de su soporte."
+      ],
+      "relacionados": [
+        "P0501"
+      ]
+    },
+    {
+      "codigo": "P0501",
+      "titulo": "Sensor de velocidad del vehículo (VSS) «A»: rango o desempeño",
+      "sistema": "Velocidad",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor sucio o con distancia incorrecta",
+        "Llanta o piñones de otra medida (la ECU espera otra relación)",
+        "Mal contacto intermitente"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Comparar la velocidad de la ECU con la del GPS",
+          "detalle": "En Conducir: una diferencia constante apunta a otra medida de llanta o de piñones."
+        },
+        {
+          "paso": "Revisar el sensor y su soporte",
+          "detalle": "Limaduras en el imán o el sensor flojo."
+        },
+        {
+          "paso": "Revisar el conector y el cableado",
+          "detalle": "Sulfato o pines flojos."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En muchas motos el sensor de velocidad lee la salida de la caja o la rueda trasera: revisa también la cadena de su soporte."
+      ],
+      "relacionados": [
+        "P0500"
+      ]
+    },
+    {
+      "codigo": "P0505",
+      "titulo": "Sistema de control del aire de ralentí (IAC): falla",
+      "sistema": "Ralentí",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Válvula de control de aire sucia o pegada",
+        "Conector de la válvula suelto o sulfatado",
+        "Válvula dañada",
+        "Pasos de aire del cuerpo de inyección tapados"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Prueba de mínimo y retorno",
+          "detalle": "Mínimo estable con motor caliente y que no caiga al soltar el acelerador.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Limpiar el cuerpo de inyección y los pasos de aire",
+          "detalle": "Con limpiador de cuerpo de aceleración, sin forzar la mariposa; luego reaprende el mínimo según el manual."
+        },
+        {
+          "paso": "Revisar el conector de la válvula",
+          "detalle": "Sulfato o pines flojos."
+        },
+        {
+          "paso": "Verificar que el TPS lee cerrado",
+          "detalle": "Si el TPS no marca cerrado, la ECU no entra en modo mínimo.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con válvula de control de aire (IAC/ISC) el mínimo lo regula esa válvula; en otras el mínimo depende de un tornillo en el cuerpo de inyección."
+      ],
+      "relacionados": [
+        "P0506",
+        "P0507"
+      ]
+    },
+    {
+      "codigo": "P0506",
+      "titulo": "Sistema de control del aire de ralentí: rpm más bajas de lo esperado",
+      "sistema": "Ralentí",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Cuerpo de inyección o pasos de aire sucios",
+        "Válvula de control de aire pegada o lenta",
+        "TPS que no marca cerrado o no equivalente",
+        "Carga eléctrica alta con batería débil"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Prueba de mínimo y retorno",
+          "detalle": "Mínimo estable con motor caliente y que no caiga al soltar el acelerador.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Verificar que el TPS lee cerrado",
+          "detalle": "Si el TPS no marca cerrado, la ECU no entra en modo mínimo.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Limpiar el cuerpo de inyección y los pasos de aire",
+          "detalle": "Con limpiador de cuerpo de aceleración, sin forzar la mariposa; luego reaprende el mínimo según el manual."
+        },
+        {
+          "paso": "Revisar batería y carga",
+          "detalle": "Con voltaje bajo el mínimo cae al encender luces.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con válvula de control de aire (IAC/ISC) el mínimo lo regula esa válvula; en otras el mínimo depende de un tornillo en el cuerpo de inyección.",
+        "Si el mínimo cae solo en frío, haz además la prueba de arranque en frío."
+      ],
+      "relacionados": [
+        "P0505",
+        "P0507",
+        "P0122"
+      ]
+    },
+    {
+      "codigo": "P0507",
+      "titulo": "Sistema de control del aire de ralentí: rpm más altas de lo esperado",
+      "sistema": "Ralentí",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Entrada de aire falsa después de la mariposa",
+        "Cable del acelerador sin juego (mariposa no cierra)",
+        "Válvula de control de aire pegada abierta",
+        "Sensor de temperatura leyendo frío"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Prueba de mínimo y retorno",
+          "detalle": "Mínimo estable con motor caliente y que no caiga al soltar el acelerador.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Revisar el juego del cable del acelerador",
+          "detalle": "La mariposa debe cerrar completa al soltar."
+        },
+        {
+          "paso": "Buscar entradas de aire falsas",
+          "detalle": "Revisa abrazaderas y el acople del cuerpo de inyección."
+        },
+        {
+          "paso": "Comparar el motor con el aire en frío",
+          "detalle": "Un sensor de temperatura que lee frío sube el mínimo.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En motos con válvula de control de aire (IAC/ISC) el mínimo lo regula esa válvula; en otras el mínimo depende de un tornillo en el cuerpo de inyección."
+      ],
+      "relacionados": [
+        "P0505",
+        "P0506"
+      ]
+    },
+    {
+      "codigo": "P0560",
+      "titulo": "Voltaje del sistema: falla",
+      "sistema": "Eléctrico",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Batería débil o dañada",
+        "Bornes o masas flojos o sulfatados",
+        "Regulador/rectificador dañado",
+        "Estator (alternador) dañado"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Prueba guiada de batería y carga",
+          "detalle": "Contacto puesto, caída al arrancar y carga con el motor encendido.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Medir la batería con el multímetro",
+          "detalle": "En reposo ≥ ≈12,4 V y en carga ≈13,5-14,5 V (típico).",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Revisar bornes y masas",
+          "detalle": "Bornes sulfatados o flojos y la masa del chasis al motor."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "En moto la farola suele quedar encendida con contacto: la batería se descarga rápido si se deja el contacto puesto con el motor apagado."
+      ],
+      "relacionados": [
+        "P0561",
+        "P0562",
+        "P0563"
+      ]
+    },
+    {
+      "codigo": "P0561",
+      "titulo": "Voltaje del sistema: inestable",
+      "sistema": "Eléctrico",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Bornes o masas flojos",
+        "Regulador/rectificador fallando",
+        "Conector del estator quemado o flojo"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Revisar bornes y masas",
+          "detalle": "Bornes sulfatados o flojos y la masa del chasis al motor."
+        },
+        {
+          "paso": "Prueba guiada de batería y carga",
+          "detalle": "Contacto puesto, caída al arrancar y carga con el motor encendido.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Revisar el conector del estator al regulador",
+          "detalle": "Suele recalentarse: pines quemados o plástico derretido."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0560",
+        "P0562",
+        "P0563"
+      ]
+    },
+    {
+      "codigo": "P0562",
+      "titulo": "Voltaje del sistema: bajo",
+      "sistema": "Eléctrico",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Batería descargada o dañada",
+        "Estator o regulador sin cargar",
+        "Consumo parásito (accesorios, alarma)",
+        "Bornes o masas flojos"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Prueba guiada de batería y carga",
+          "detalle": "Contacto puesto, caída al arrancar y carga con el motor encendido.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Medir la batería con el multímetro",
+          "detalle": "En reposo ≥ ≈12,4 V y en carga ≈13,5-14,5 V (típico).",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Revisar bornes y masas",
+          "detalle": "Bornes sulfatados o flojos y la masa del chasis al motor."
+        },
+        {
+          "paso": "Revisar accesorios instalados",
+          "detalle": "Alarmas, cargadores USB o luces extra que consumen con la moto apagada."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Con voltaje bajo los sensores y la bomba trabajan mal y pueden aparecer otros códigos: atiende primero este."
+      ],
+      "relacionados": [
+        "P0560",
+        "P0561",
+        "P0563"
+      ]
+    },
+    {
+      "codigo": "P0563",
+      "titulo": "Voltaje del sistema: alto",
+      "sistema": "Eléctrico",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Regulador/rectificador dañado (sobrecarga)",
+        "Masa del regulador floja",
+        "Batería con celda dañada"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Prueba guiada de batería y carga",
+          "detalle": "Contacto puesto, caída al arrancar y carga con el motor encendido.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Medir la batería con el multímetro",
+          "detalle": "En reposo ≥ ≈12,4 V y en carga ≈13,5-14,5 V (típico).",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Revisar la masa y el conector del regulador",
+          "detalle": "Una masa floja hace que el regulador no limite el voltaje."
+        },
+        {
+          "paso": "Borrar el código y confirmar",
+          "detalle": "Con la causa corregida, borra el código con la moto detenida y vuelve a leer después de rodar: si la falla sigue, el código regresa.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Por encima de ≈15 V (típico) se queman bombillos y se daña la batería o la ECU: no sigas rodando mucho así."
+      ],
+      "relacionados": [
+        "P0560",
+        "P0561",
+        "P0562"
+      ]
+    },
+    {
+      "codigo": "P0601",
+      "titulo": "Módulo de control: error de suma de verificación de la memoria interna",
+      "sistema": "ECU",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Falla interna de la ECU",
+        "Programación de la ECU interrumpida o alterada",
+        "Voltaje inestable que corrompe la memoria"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Descartar voltaje bajo o inestable",
+          "detalle": "Una batería o carga deficiente puede provocar errores de memoria.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Revisar bornes y masas",
+          "detalle": "Bornes sulfatados o flojos y la masa del chasis al motor."
+        },
+        {
+          "paso": "Borrar y volver a leer",
+          "detalle": "Si el código vuelve de inmediato, la ECU necesita revisión en un taller especializado.",
+          "accion": "DTC:BORRAR"
+        },
+        {
+          "paso": "Consultar reprogramación o cambio",
+          "detalle": "Solo con el procedimiento y la ECU del fabricante del modelo."
+        }
+      ],
+      "notasMoto": [
+        "Si la ECU fue reprogramada (remap), este código puede venir de ahí: coméntalo en el taller."
+      ],
+      "relacionados": [
+        "P0560",
+        "P0562"
+      ]
+    }
+  ]
+}
