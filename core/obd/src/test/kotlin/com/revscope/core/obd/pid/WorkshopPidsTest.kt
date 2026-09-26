@@ -41,4 +41,22 @@ class WorkshopPidsTest {
             assertEquals("PID $pid", 4, registry.getDefinition(pid)!!.priority)
         }
     }
+
+    @Test
+    fun `pedal y mariposa existen con prioridad 4 y escala porcentual`() {
+        listOf("45", "47", "49", "4A", "4B", "4C", "5A").forEach { pid ->
+            val def = registry.getDefinition(pid)
+            assertNotNull("PID $pid", def)
+            assertEquals("PID $pid", 4, def!!.priority)
+            assertEquals("PID $pid", "%", def.unit)
+            assertEquals(100.0, registry.evaluate(pid, byteArrayOf(0xFF.toByte()))!!.value, 0.01)
+            assertEquals(50.2, registry.evaluate(pid, byteArrayOf(0x80.toByte()))!!.value, 0.1)
+        }
+    }
+
+    @Test
+    fun `pedal y mariposa caben en una sola trama con tres pids`() {
+        val bytes = listOf("49", "4A", "11").sumOf { 1 + registry.getDefinition(it)!!.bytes }
+        assertEquals(6, bytes)
+    }
 }

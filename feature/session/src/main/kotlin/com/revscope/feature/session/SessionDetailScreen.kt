@@ -456,7 +456,7 @@ private fun ReportContent(
                     .height(220.dp),
             )
             Text(
-                "x: % acelerador · y: G (+acelera / −frena) · banda diagonal sana = entrega pareja",
+                "x: % mariposa (PID 11) · y: G (+acelera / −frena) · banda diagonal sana = entrega pareja",
                 color = TextMutedColor,
                 fontSize = 10.sp,
             )

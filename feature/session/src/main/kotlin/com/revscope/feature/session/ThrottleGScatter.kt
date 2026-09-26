@@ -91,6 +91,6 @@ fun ThrottleGScatter(
         // Axis names in the corners, raised above the tick row they belong to — this
         // chart plots longitudinal G (accel/brake), not lateral G.
         drawAxisText("G longitudinal", size.width - margin, 10.dp.toPx(), rightPaint)
-        drawAxisText("% acelerador", size.width - margin, raisedRow, rightPaint)
+        drawAxisText("% mariposa (PID 11)", size.width - margin, raisedRow, rightPaint)
     }
 }

@@ -310,5 +310,89 @@
     "min": 0,
     "max": 429496729.5,
     "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "45",
+    "name": "Relative throttle position",
+    "nameEs": "Mariposa relativa",
+    "bytes": 1,
+    "formula": "A*100/255",
+    "unit": "%",
+    "min": 0,
+    "max": 100,
+    "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "47",
+    "name": "Absolute throttle position B",
+    "nameEs": "Mariposa B",
+    "bytes": 1,
+    "formula": "A*100/255",
+    "unit": "%",
+    "min": 0,
+    "max": 100,
+    "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "49",
+    "name": "Accelerator pedal position D",
+    "nameEs": "Pedal acelerador D",
+    "bytes": 1,
+    "formula": "A*100/255",
+    "unit": "%",
+    "min": 0,
+    "max": 100,
+    "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "4A",
+    "name": "Accelerator pedal position E",
+    "nameEs": "Pedal acelerador E",
+    "bytes": 1,
+    "formula": "A*100/255",
+    "unit": "%",
+    "min": 0,
+    "max": 100,
+    "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "4B",
+    "name": "Accelerator pedal position F",
+    "nameEs": "Pedal acelerador F",
+    "bytes": 1,
+    "formula": "A*100/255",
+    "unit": "%",
+    "min": 0,
+    "max": 100,
+    "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "4C",
+    "name": "Commanded throttle actuator",
+    "nameEs": "Mariposa comandada",
+    "bytes": 1,
+    "formula": "A*100/255",
+    "unit": "%",
+    "min": 0,
+    "max": 100,
+    "priority": 4
+  },
+  {
+    "mode": "01",
+    "pid": "5A",
+    "name": "Relative accelerator pedal position",
+    "nameEs": "Pedal relativo",
+    "bytes": 1,
+    "formula": "A*100/255",
+    "unit": "%",
+    "min": 0,
+    "max": 100,
+    "priority": 4
   }
 ]
