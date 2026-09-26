@@ -1,5 +1,13 @@
 package com.revscope.feature.settings
 
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.RevScopeColors
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,14 +22,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val SurfaceColor = Color(0xFF12121A)
-private val AccentColor = Color(0xFFE8FF00)
-private val TextMutedColor = Color(0xFF6B7089)
 
 /** Header tappable de una sección colapsable de Ajustes: título + contador + chevron animado. */
 @Composable
@@ -38,24 +42,25 @@ internal fun SettingsSectionHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
-            .clickable(onClick = onToggle)
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
+            .clickable(onClickLabel = if (expanded) "Plegar" else "Desplegar", role = Role.Button, onClick = onToggle)
+            .semantics { stateDescription = if (expanded) "Desplegada" else "Plegada" }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             title,
-            color = AccentColor,
+            color = RevScopeColors.Accent,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
-        Text("$itemCount", color = TextMutedColor, fontSize = 12.sp)
-        Text(
-            "⌄",
-            color = TextMutedColor,
-            fontSize = 16.sp,
+        Text("$itemCount", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        Icon(
+            Icons.Default.KeyboardArrowDown,
+            contentDescription = null,
+            tint = RevScopeColors.TextSecondary,
             modifier = Modifier.rotate(chevronRotation),
         )
     }

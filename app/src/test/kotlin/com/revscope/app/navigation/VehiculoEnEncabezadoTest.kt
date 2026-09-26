@@ -27,7 +27,7 @@ class VehiculoEnEncabezadoTest {
         assertTrue(vehiculo.esMoto)
         assertEquals(RevScopeColors.Success, vehiculo.colorEstado)
         assertEquals(
-            "Vehículo: Benelli TNT 150i. Adaptador: Android-Vlink. Toca para cambiar de vehículo",
+            "Vehículo: Benelli TNT 150i. Adaptador: Android-Vlink conectado. Toca para cambiar de vehículo",
             descripcionSelectorVehiculo(vehiculo),
         )
     }

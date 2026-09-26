@@ -22,10 +22,16 @@ fun connectionStatusLabel(state: ConnectionState): String = when (state) {
     ConnectionState.Disconnected -> "Sin conexión"
 }
 
+// El punto de color no le dice nada a TalkBack: la descripción nombra el estado.
+fun estadoEnlaceAccesible(state: ConnectionState): String = when (state) {
+    is ConnectionState.Connected -> "${state.deviceName} conectado"
+    else -> connectionStatusLabel(state)
+}
+
 fun vehiculoEnEncabezado(state: ConnectionState, perfil: VehicleProfileEntity?): VehiculoEnEncabezado =
     VehiculoEnEncabezado(
         nombre = perfil?.name,
         esMoto = perfil?.type == "MOTORCYCLE",
-        estadoEnlace = connectionStatusLabel(state),
+        estadoEnlace = estadoEnlaceAccesible(state),
         colorEstado = connectionStatusColor(state),
     )

@@ -1,6 +1,10 @@
 package com.revscope.feature.settings
 
-import androidx.compose.foundation.clickable
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.RevScopeColors
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,9 +26,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.obd.telemetry.SamplingPreset
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 
-private val AccentColor = Color(0xFFE8FF00)
-private val TextPrimaryColor = Color(0xFFF0F0F8)
-private val TextMutedColor = Color(0xFF6B7089)
 
 @Composable
 internal fun MuestreoObdCard(vm: SamplingSettingsViewModel = hiltViewModel()) {
@@ -37,13 +38,13 @@ internal fun MuestreoObdCard(vm: SamplingSettingsViewModel = hiltViewModel()) {
         Text(
             "Cada cuánto se leen los sensores en el uso normal. Para ver uno o pocos sensores lo más " +
                 "rápido posible (pedal, mariposa) usa Taller → Sensores → Captura rápida.",
-            color = TextMutedColor,
-            fontSize = 11.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
         SamplingPreset.entries.forEach { opcion ->
             PresetRow(opcion, selected = opcion == preset) { vm.updatePreset(opcion) }
         }
-        Text("Captura rápida: duración máxima", color = TextPrimaryColor, fontSize = 13.sp)
+        Text("Captura rápida: duración máxima", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SamplingSettingsViewModel.OPCIONES_MAX_CAPTURA_MIN.forEach { minutos ->
                 FilterChip(
@@ -51,17 +52,17 @@ internal fun MuestreoObdCard(vm: SamplingSettingsViewModel = hiltViewModel()) {
                     onClick = { vm.updateMaxCapturaMin(minutos) },
                     label = { Text("$minutos min", fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AccentColor,
+                        selectedContainerColor = RevScopeColors.Accent,
                         selectedLabelColor = Color(0xFF0A0A0F),
-                        labelColor = TextMutedColor,
+                        labelColor = RevScopeColors.TextSecondary,
                     ),
                 )
             }
         }
         Text(
             ultima?.let(::resumenTasa) ?: "Última tasa medida: todavía no hay capturas en esta sesión.",
-            color = TextMutedColor,
-            fontSize = 11.sp,
+            color = RevScopeColors.TextSecondary,
+            style = RevScopeType.bodySmall,
         )
     }
 }
@@ -75,17 +76,20 @@ private fun resumenTasa(r: ResumenCaptura): String {
 @Composable
 private fun PresetRow(preset: SamplingPreset, selected: Boolean, onSelect: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
             selected = selected,
-            onClick = onSelect,
-            colors = RadioButtonDefaults.colors(selectedColor = AccentColor, unselectedColor = TextMutedColor),
+            onClick = null,
+            colors = RadioButtonDefaults.colors(selectedColor = RevScopeColors.Accent, unselectedColor = RevScopeColors.TextSecondary),
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text(preset.etiqueta, color = TextPrimaryColor, fontSize = 13.sp)
-            notaDe(preset)?.let { Text(it, color = TextMutedColor, fontSize = 11.sp) }
+            Text(preset.etiqueta, color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+            notaDe(preset)?.let { Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall) }
         }
     }
 }
