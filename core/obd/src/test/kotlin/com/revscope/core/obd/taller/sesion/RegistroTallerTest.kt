@@ -9,6 +9,7 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
 import com.revscope.core.obd.taller.ReductorSerie
+import com.revscope.core.obd.taller.dtc.PasosGuia
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenPid
@@ -304,6 +305,24 @@ class RegistroTallerTest {
         assertTrue(repositorio.todosLosEventos.isEmpty())
         assertFalse(carpetaSesion.exists())
         assertTrue("el CSV original no es de la sesión y se conserva", csv.exists())
+    }
+
+    @Test
+    fun `marcar y desmarcar un paso de la guía queda en la sesión abierta`() = runTest {
+        val sesion = abrir()
+
+        registro.marcarPaso(PasosGuia.clave("P0122", 2), marcado = true)
+        val conDos = registro.marcarPaso(PasosGuia.clave("P0122", 3), marcado = true)
+        val sinDos = registro.marcarPaso(PasosGuia.clave("P0122", 2), marcado = false)
+
+        assertEquals(setOf("P0122#2", "P0122#3"), conDos?.pasosMarcados)
+        assertEquals(setOf("P0122#3"), sinDos?.pasosMarcados)
+        assertEquals(setOf("P0122#3"), repositorio.sesion(sesion.id)?.pasosMarcados)
+    }
+
+    @Test
+    fun `sin sesión abierta marcar un paso no guarda nada`() = runTest {
+        assertNull(registro.marcarPaso(PasosGuia.clave("P0122", 1), marcado = true))
     }
 
     @Test

@@ -114,6 +114,12 @@ class RegistroTaller(
     suspend fun anotarInstantanea(lecturas: Map<String, ObdReading>): Long? =
         anotar(EventosTaller.instantanea(lecturas, reloj(), ::nombrePid))
 
+    suspend fun marcarPaso(clave: String, marcado: Boolean): SesionTaller? = seguro {
+        val sesion = sesionAbierta() ?: return@seguro null
+        val pasos = if (marcado) sesion.pasosMarcados + clave else sesion.pasosMarcados - clave
+        sesion.copy(pasosMarcados = pasos).also { repositorio.actualizarSesion(it) }
+    }
+
     private suspend fun chequeoBaseId(eleccion: ChequeoBase, vehiculoId: Long, ahora: Long): Long? = when (eleccion) {
         ChequeoBase.Ultimo -> historial.ultimoAntesDe(vehiculoId, ahora)?.id
         ChequeoBase.Ninguno -> null
