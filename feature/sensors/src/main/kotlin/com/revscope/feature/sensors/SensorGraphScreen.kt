@@ -16,6 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -86,6 +91,7 @@ fun SensorGraphScreen(
     // Fresh producer per PID: cancelling a runTransaction mid-flight (old code keyed
     // the effect on `history`) leaves Vico with an empty partial → crash on next update.
     val modelProducer = remember(selectedPid) { CartesianChartModelProducer() }
+    var modoCaptura by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         vm.observeReadings(connectionVm)
@@ -114,18 +120,36 @@ fun SensorGraphScreen(
     ) {
         TopAppBar(
             title = {
-                Text("Sensores", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (modoCaptura) "Captura rápida" else "Sensores",
+                    color = TextPrimaryColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
             },
             actions = {
-                IconButton(
-                    onClick = { scope.launch { exportSensorHistory(context, currentDef, history) } },
-                    enabled = currentDef != null && history.isNotEmpty(),
-                ) {
-                    Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+                IconButton(onClick = { modoCaptura = !modoCaptura }) {
+                    Icon(
+                        if (modoCaptura) Icons.Default.ShowChart else Icons.Default.Speed,
+                        contentDescription = if (modoCaptura) "Volver a la gráfica" else "Captura rápida",
+                        tint = AccentColor,
+                    )
+                }
+                if (!modoCaptura) {
+                    IconButton(
+                        onClick = { scope.launch { exportSensorHistory(context, currentDef, history) } },
+                        enabled = currentDef != null && history.isNotEmpty(),
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
         )
+
+        if (modoCaptura) {
+            FastCaptureContent()
+            return@Column
+        }
 
         Row(
             modifier = Modifier

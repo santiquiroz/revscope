@@ -4,6 +4,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.telemetry.captura.EstadoCaptura
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
@@ -24,8 +25,9 @@ class GetEstadoTool @Inject constructor(
 
     override val name = "get_estado"
     override val description =
-        "Estado actual del vehículo: conexión, viaje (grabando / sin viaje), permisos del MCP, perfil activo " +
-            "y lecturas en vivo con su edad en ms"
+        "Estado actual del vehículo: conexión, viaje (grabando / sin viaje), muestreo (preset y captura rápida), " +
+            "permisos del MCP, perfil activo y lecturas en vivo con su edad en ms. Es una foto: para ver un " +
+            "sensor a alta tasa usa iniciar_captura y get_captura"
     override val inputSchema: JSONObject = McpSchemas.noArguments()
 
     private var nowMs: () -> Long = { System.currentTimeMillis() }
@@ -38,6 +40,7 @@ class GetEstadoTool @Inject constructor(
             .put("adaptador", (state as? ConnectionState.Connected)?.deviceName ?: JSONObject.NULL)
             .put("viaje", viajeJson(sessionManager.estadoViaje.value))
             .put("viajeGpsActivo", sessionManager.isGpsSessionActive.value)
+            .put("muestreo", muestreoJson())
             .put("permisos", JSONArray(permisos.actuales().map { it.name.lowercase() }.sorted()))
             .put("perfilActivo", profile?.let(::perfilJson) ?: JSONObject.NULL)
             .put("lecturasEnVivo", lecturasJson())
@@ -55,6 +58,14 @@ class GetEstadoTool @Inject constructor(
         val json = JSONObject().put("estado", DtcScanJson.estadoViaje(estado))
         if (estado is EstadoViaje.Grabando) json.put("id", estado.sessionId).put("inicioMs", estado.inicioMs)
         return json
+    }
+
+    private fun muestreoJson(): JSONObject {
+        val activa = sessionManager.captura.estado.value as? EstadoCaptura.Activa
+        return JSONObject()
+            .put("preset", sessionManager.muestreoPreset.value.claveMcp)
+            .put("capturaActiva", activa != null)
+            .put("capturaId", activa?.inicio?.id ?: JSONObject.NULL)
     }
 
     private fun perfilJson(profile: VehicleProfileEntity): JSONObject =

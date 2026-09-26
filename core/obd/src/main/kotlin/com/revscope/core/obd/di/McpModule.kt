@@ -1,6 +1,11 @@
 package com.revscope.core.obd.di
 
 import com.revscope.core.obd.mcp.BorrarDtcTool
+import com.revscope.core.obd.mcp.DetenerCapturaTool
+import com.revscope.core.obd.mcp.GetCapturaTool
+import com.revscope.core.obd.mcp.GetMuestreoTool
+import com.revscope.core.obd.mcp.IniciarCapturaTool
+import com.revscope.core.obd.mcp.SetMuestreoTool
 import com.revscope.core.obd.mcp.FinalizarViajeTool
 import com.revscope.core.obd.mcp.GetChequeoSaludTool
 import com.revscope.core.obd.mcp.GetDocumentosTool
@@ -21,8 +26,9 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 /**
- * Las 7 tools de lectura (plan6 Task 4) más las de control (finalizar/iniciar viaje) y borrado de
- * DTC, que el dispatcher solo lista y ejecuta si el dueño activó sus permisos en Ajustes.
+ * Las tools de lectura (plan6 Task 4, get_muestreo y get_captura) más las de control (viaje, preset de
+ * muestreo y captura rápida) y borrado de DTC, que el dispatcher solo lista y ejecuta si el dueño
+ * activó sus permisos en Ajustes.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -41,9 +47,15 @@ object McpModule {
         finalizarViaje: FinalizarViajeTool,
         iniciarViaje: IniciarViajeTool,
         borrarDtc: BorrarDtcTool,
+        getMuestreo: GetMuestreoTool,
+        setMuestreo: SetMuestreoTool,
+        iniciarCaptura: IniciarCapturaTool,
+        getCaptura: GetCapturaTool,
+        detenerCaptura: DetenerCapturaTool,
     ): List<McpTool> = listOf(
         getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
+        getMuestreo, setMuestreo, iniciarCaptura, getCaptura, detenerCaptura,
     )
 
     @Provides

@@ -14,15 +14,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val HISTORY_SIZE = 60
+// Ventana por tiempo, no por cantidad: a 10 Hz 60 muestras eran 6 s y a 0,5 Hz dos minutos.
+private const val HISTORY_WINDOW_MS = 30_000L
 
 @HiltViewModel
 class SensorViewModel @Inject constructor(
     private val registry: PidRegistry,
 ) : ViewModel() {
 
-    val availablePids: List<PidDefinition> = registry.allDefinitions()
-        .sortedBy { it.priority }
+    /** Solo lo que el vehículo soporta (todo antes de conectar); los modos 21/22 no pasan por el bitmap. */
+    val availablePids: List<PidDefinition>
+        get() = registry.allDefinitions()
+            .filter { it.mode != "01" || registry.isSupported(it.pid) }
+            .sortedBy { it.priority }
 
     private val _selectedPid = MutableStateFlow(availablePids.firstOrNull()?.pid ?: "0C")
     val selectedPid: StateFlow<String> = _selectedPid.asStateFlow()
@@ -43,13 +47,15 @@ class SensorViewModel @Inject constructor(
             connectionVm.readings.collect { map ->
                 val pid = _selectedPid.value
                 val reading = map[pid] ?: return@collect
-                val current = _history.value
-                _history.value = if (current.size >= HISTORY_SIZE) {
-                    current.drop(1) + reading
-                } else {
-                    current + reading
-                }
+                _history.value = appendToWindow(_history.value, reading)
             }
         }
+    }
+
+    private fun appendToWindow(current: List<ObdReading>, reading: ObdReading): List<ObdReading> {
+        // El mapa emite con cada PID que cambia: la misma lectura del PID elegido llega repetida.
+        if (current.lastOrNull()?.timestamp == reading.timestamp) return current
+        val cutoff = reading.timestamp - HISTORY_WINDOW_MS
+        return current.dropWhile { it.timestamp < cutoff } + reading
     }
 }

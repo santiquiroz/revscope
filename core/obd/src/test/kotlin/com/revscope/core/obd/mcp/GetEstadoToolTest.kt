@@ -4,6 +4,9 @@ import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.telemetry.SamplingPreset
+import com.revscope.core.obd.telemetry.captura.CapturaRapida
+import com.revscope.core.obd.telemetry.captura.EstadoCaptura
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -22,6 +25,10 @@ class GetEstadoToolTest {
         every { manager.activeProfile } returns MutableStateFlow(null)
         every { manager.isGpsSessionActive } returns MutableStateFlow(false)
         every { manager.estadoViaje } returns MutableStateFlow(EstadoViaje.Grabando(sessionId = 3L, inicioMs = 500L))
+        every { manager.muestreoPreset } returns MutableStateFlow(SamplingPreset.MEDIO_SEGUNDO)
+        every { manager.captura } returns mockk<CapturaRapida> {
+            every { estado } returns MutableStateFlow(EstadoCaptura.Inactiva)
+        }
         every { manager.readings } returns MutableStateFlow(mapOf("0C" to ObdReading("0C", 800.0, "rpm", timestamp = 9_700L)))
         val permisos = mockk<McpPermisosProvider>()
         coEvery { permisos.actuales() } returns setOf(McpPermiso.LECTURA, McpPermiso.CONTROL)
@@ -33,5 +40,7 @@ class GetEstadoToolTest {
         assertEquals(3L, viaje.getLong("id"))
         assertEquals("[\"control\",\"lectura\"]", json.getJSONArray("permisos").toString())
         assertEquals(300L, json.getJSONObject("lecturasEnVivo").getJSONObject("0C").getLong("edadMs"))
+        assertEquals("500ms", json.getJSONObject("muestreo").getString("preset"))
+        assertEquals(false, json.getJSONObject("muestreo").getBoolean("capturaActiva"))
     }
 }

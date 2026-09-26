@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.telemetry.SamplingPreset
+import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +23,22 @@ import javax.inject.Inject
 @HiltViewModel
 class SamplingSettingsViewModel @Inject constructor(
     private val settings: DataStore<Preferences>,
+    manager: ObdSessionManager,
 ) : ViewModel() {
+
+    val ultimaCaptura: StateFlow<ResumenCaptura?> = manager.captura.ultimoResumen
+
+    val maxCapturaMin: StateFlow<Int> = settings.data
+        .map { it[PreferencesKeys.FAST_CAPTURE_MAX_MIN] ?: DEFAULT_MAX_CAPTURA_MIN }
+        .catch { emit(DEFAULT_MAX_CAPTURA_MIN) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DEFAULT_MAX_CAPTURA_MIN)
+
+    fun updateMaxCapturaMin(minutos: Int) {
+        viewModelScope.launch {
+            runCatching { settings.edit { it[PreferencesKeys.FAST_CAPTURE_MAX_MIN] = minutos.coerceIn(1, 30) } }
+                .onFailure { Timber.w(it, "SamplingSettings: no se pudo guardar la duración de captura") }
+        }
+    }
 
     val preset: StateFlow<SamplingPreset> = settings.data
         .map { SamplingPreset.desdeClave(it[PreferencesKeys.SAMPLING_PRESET]) }
@@ -33,5 +50,10 @@ class SamplingSettingsViewModel @Inject constructor(
             runCatching { settings.edit { it[PreferencesKeys.SAMPLING_PRESET] = value.name } }
                 .onFailure { Timber.w(it, "SamplingSettings: no se pudo guardar el preset") }
         }
+    }
+
+    companion object {
+        const val DEFAULT_MAX_CAPTURA_MIN = 5
+        val OPCIONES_MAX_CAPTURA_MIN = listOf(1, 5, 10, 30)
     }
 }

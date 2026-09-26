@@ -186,6 +186,8 @@ class ObdSessionManager @Inject constructor(
         override fun info() = InfoAdaptador(currentDeviceName, elmVersion, protocoloDpn, protocoloEsCan)
     }
 
+    fun infoAdaptador(): InfoAdaptador = enlaceCaptura.info()
+
     /** Captura rápida (Taller → Sensores y MCP): una a la vez, sobre el enlace vivo. */
     val captura = CapturaRapida(
         enlace = enlaceCaptura,

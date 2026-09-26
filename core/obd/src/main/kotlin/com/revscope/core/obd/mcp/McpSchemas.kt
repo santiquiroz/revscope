@@ -44,4 +44,18 @@ object McpSchemas {
             .put("type", "array")
             .put("items", JSONObject().put("type", "string").put("enum", JSONArray(valores)))
             .put("description", descripcion)
+
+    fun arrayDeStrings(descripcion: String): JSONObject =
+        JSONObject()
+            .put("type", "array")
+            .put("items", JSONObject().put("type", "string"))
+            .put("description", descripcion)
+
+    fun entero(descripcion: String): JSONObject = JSONObject().put("type", "integer").put("description", descripcion)
+
+    fun texto(descripcion: String): JSONObject = JSONObject().put("type", "string").put("description", descripcion)
+
+    /** Strings no vacíos de un argumento array (null o ausente = lista vacía). */
+    fun strings(array: JSONArray?): List<String> =
+        (0 until (array?.length() ?: 0)).mapNotNull { i -> array?.optString(i)?.trim()?.takeIf { it.isNotEmpty() } }
 }

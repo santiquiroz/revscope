@@ -21,10 +21,11 @@ internal fun McpPermisosToggles(viajeVm: ViajeObdSettingsViewModel = hiltViewMod
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ToggleRow(
-            "Permitir control desde MCP (viaje)",
+            "Permitir control desde MCP (viaje, muestreo, captura)",
             control,
             viajeVm::updateMcpControlEnabled,
-            subtitle = "El PC puede finalizar e iniciar viajes con finalizar_viaje / iniciar_viaje. " +
+            subtitle = "El PC puede finalizar e iniciar viajes, cambiar el muestreo y hacer capturas rápidas " +
+                "(finalizar_viaje, iniciar_viaje, set_muestreo, iniciar_captura, detener_captura). " +
                 "Solo en redes de confianza: el token viaja sin cifrar por la WiFi.",
         )
         if (control) {

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.obd.telemetry.SamplingPreset
+import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 
 private val AccentColor = Color(0xFFE8FF00)
 private val TextPrimaryColor = Color(0xFFF0F0F8)
@@ -26,6 +29,8 @@ private val TextMutedColor = Color(0xFF6B7089)
 @Composable
 internal fun MuestreoObdCard(vm: SamplingSettingsViewModel = hiltViewModel()) {
     val preset by vm.preset.collectAsState()
+    val maxMin by vm.maxCapturaMin.collectAsState()
+    val ultima by vm.ultimaCaptura.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle("Muestreo OBD")
@@ -38,7 +43,33 @@ internal fun MuestreoObdCard(vm: SamplingSettingsViewModel = hiltViewModel()) {
         SamplingPreset.entries.forEach { opcion ->
             PresetRow(opcion, selected = opcion == preset) { vm.updatePreset(opcion) }
         }
+        Text("Captura rápida: duración máxima", color = TextPrimaryColor, fontSize = 13.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SamplingSettingsViewModel.OPCIONES_MAX_CAPTURA_MIN.forEach { minutos ->
+                FilterChip(
+                    selected = minutos == maxMin,
+                    onClick = { vm.updateMaxCapturaMin(minutos) },
+                    label = { Text("$minutos min", fontSize = 12.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = AccentColor,
+                        selectedLabelColor = Color(0xFF0A0A0F),
+                        labelColor = TextMutedColor,
+                    ),
+                )
+            }
+        }
+        Text(
+            ultima?.let(::resumenTasa) ?: "Última tasa medida: todavía no hay capturas en esta sesión.",
+            color = TextMutedColor,
+            fontSize = 11.sp,
+        )
     }
+}
+
+private fun resumenTasa(r: ResumenCaptura): String {
+    val porPid = r.porPid.joinToString(" · ") { "${it.pid} ${"%.1f".format(it.hz)} Hz" }
+    val latencia = r.latenciaP50Ms?.let { " · latencia p50 ${"%.0f".format(it)} ms" }.orEmpty()
+    return "Última tasa medida: $porPid$latencia"
 }
 
 @Composable

@@ -29,6 +29,12 @@ object PreferencesKeys {
      */
     val SAMPLING_PRESET = stringPreferencesKey("sampling_preset")
 
+    /** PIDs elegidos para la captura rápida, CSV hex (default "49,4A,11": pedal D, pedal E y mariposa). */
+    val FAST_CAPTURE_PIDS = stringPreferencesKey("fast_capture_pids")
+
+    /** Duración máxima de la captura rápida en minutos, 1-30 (default 5). */
+    val FAST_CAPTURE_MAX_MIN = intPreferencesKey("fast_capture_max_min")
+
     /** true = metric units (km/h, °C), false = imperial (mph, °F) */
     val UNITS_METRIC = booleanPreferencesKey("units_metric")
 
