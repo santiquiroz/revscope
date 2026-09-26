@@ -37,6 +37,7 @@ fun ConfirmarDestructivoDialog(
     avisos: List<String> = emptyList(),
     mensaje: String? = null,
     confirmarHabilitado: Boolean = true,
+    textoCancelar: String = "Cancelar",
     contenidoExtra: @Composable () -> Unit = {},
 ) {
     AlertDialog(
@@ -60,7 +61,7 @@ fun ConfirmarDestructivoDialog(
         },
         dismissButton = {
             TextButton(onClick = onCancelar, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Cancelar", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                Text(textoCancelar, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
             }
         },
     )
