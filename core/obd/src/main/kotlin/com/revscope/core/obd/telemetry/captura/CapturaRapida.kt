@@ -204,10 +204,26 @@ class CapturaRapida(
     private fun afinadoDe(bt: Transport) = ElmSpeedTuning { cmd -> bt.exchange(cmd, TIMEOUT_AT_MS) }
 
     private fun ajusteConcesion(afinado: ElmSpeedTuning) = object : AjusteConcesion {
-        override suspend fun antesDeConceder() = afinado.quitarDireccionFisica()
+        override suspend fun antesDeConceder() {
+            afinado.quitarDireccionFisica()
+        }
+
         override suspend fun despuesDeConceder() {
             afinado.aplicarDireccionFisica()
         }
+    }
+
+    // Si al cerrar no se pudo quitar el filtro al ECM, cada lectura de diagnóstico lo reintenta antes de empezar.
+    private fun reintentoQuitarDireccion(bt: Transport) = object : AjusteConcesion {
+        override suspend fun antesDeConceder() {
+            // Un enlace nuevo reinicia el ELM (AT Z): ya no hay filtro que quitar.
+            if (!bt.isConnected) return gate.fijarAjusteConcesion(null)
+            val afinado = afinadoDe(bt)
+            afinado.sincronizar()
+            if (afinado.quitarDireccionFisica()) gate.fijarAjusteConcesion(null)
+        }
+
+        override suspend fun despuesDeConceder() = Unit
     }
 
     // ── Ejecución ───────────────────────────────────────────────────────────
@@ -300,11 +316,20 @@ class CapturaRapida(
     private suspend fun revertirAfinado(s: Sesion) {
         runCatching {
             gate.sondear {
-                gate.fijarAjusteConcesion(null)
-                afinadoDe(s.transporte).revertir(s.tecnicasElm)
+                val pendientes = afinadoDe(s.transporte).revertir(s.tecnicasElm)
+                fijarAjusteTrasRevertir(s, pendientes)
+                if (pendientes.isNotEmpty()) Timber.e("CapturaRapida: el ELM quedó con $pendientes sin revertir")
             }
         }.onFailure { Timber.w(it, "CapturaRapida: no se pudo revertir el afinado del ELM") }
         runCatching { s.transporte.setLowLatency(false) }
+    }
+
+    /** Llamar con el canal tomado. */
+    private fun fijarAjusteTrasRevertir(s: Sesion, pendientes: Set<TecnicaCaptura>) {
+        when {
+            TecnicaCaptura.DIRECCION_FISICA in pendientes -> gate.fijarAjusteConcesion(reintentoQuitarDireccion(s.transporte))
+            TecnicaCaptura.DIRECCION_FISICA in s.tecnicasElm -> gate.fijarAjusteConcesion(null)
+        }
     }
 
     private fun resumen(s: Sesion, ruta: String?): ResumenCaptura {

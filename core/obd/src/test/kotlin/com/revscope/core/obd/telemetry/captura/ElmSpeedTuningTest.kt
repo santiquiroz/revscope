@@ -3,8 +3,12 @@ package com.revscope.core.obd.telemetry.captura
 import com.revscope.core.obd.testing.FakeElmTransport
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ElmSpeedTuningTest {
@@ -55,6 +59,51 @@ class ElmSpeedTuningTest {
         }
         job.join()
 
-        assertEquals(listOf("ATCRA", "ATSH7DF", "ATAT1"), fake.comandos)
+        assertEquals(listOf("ATE0", "ATCRA", "ATSH7DF", "ATAT1"), fake.comandos)
+    }
+
+    private fun elmQueSigueOcupado() = FakeElmTransport(latenciaMs = { 50L }) { cmd ->
+        if (cmd.startsWith("AT")) "OK\r\r>" else "41492E\r\r>"
+    }.apply { modelarInterrupcion = true }
+
+    private fun TestScope.cancelarAMitad(fake: FakeElmTransport) {
+        val peticion = launch { fake.exchange("01 49 1\r", 1_000) }
+        advanceTimeBy(20)
+        peticion.cancel()
+        runCurrent()
+    }
+
+    @Test
+    fun `revertir tras cancelar a mitad de una peticion resincroniza y quita filtro header y timing`() = runTest {
+        val fake = elmQueSigueOcupado()
+        cancelarAMitad(fake)
+        val todo = setOf(TecnicaCaptura.DIRECCION_FISICA, TecnicaCaptura.TIMING_AGRESIVO)
+
+        val pendientes = afinado(fake).revertir(todo)
+
+        assertEquals(emptySet<TecnicaCaptura>(), pendientes)
+        assertEquals("el primer ATE0 se pierde con STOPPED", listOf("ATE0", "ATE0", "ATE0"), fake.comandos.take(3))
+        assertEquals(listOf("ATCRA", "ATSH7DF", "ATAT1"), fake.ejecutados.takeLast(3))
+    }
+
+    @Test
+    fun `un AT interrumpido con STOPPED se reintenta aunque luego llegue el signo de pregunta rezagado`() = runTest {
+        val fake = elmQueSigueOcupado()
+        cancelarAMitad(fake)
+
+        val quitada = afinado(fake).quitarDireccionFisica()
+
+        assertTrue(quitada)
+        assertEquals(listOf("ATCRA", "ATCRA", "ATCRA", "ATSH7DF"), fake.comandos)
+        assertTrue("ATCRA" in fake.ejecutados)
+    }
+
+    @Test
+    fun `sin intercambio cortado revertir no reintenta`() = runTest {
+        val fake = elmQueSigueOcupado()
+
+        afinado(fake).revertir(setOf(TecnicaCaptura.DIRECCION_FISICA))
+
+        assertEquals(listOf("ATE0", "ATCRA", "ATSH7DF"), fake.comandos)
     }
 }

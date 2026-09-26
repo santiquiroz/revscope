@@ -261,4 +261,41 @@ class CapturaRapidaTest {
         assertFalse(TecnicaCaptura.DIRECCION_FISICA in inicio.tecnicas)
         assertFalse(fake.comandos.any { it.startsWith("ATSH") || it.startsWith("ATCRA") })
     }
+
+    @Test
+    fun `detener a mitad de un intercambio deja el ELM sin filtro aunque el primer comando se pierda`() = runTest {
+        val fake = fake().apply { modelarInterrupcion = true }
+        val m = montar(fake)
+
+        m.captura.iniciar(pedal).getOrThrow()
+        advanceTimeBy(510)
+        m.captura.detener()
+
+        assertTrue("STOPPED" in fake.log.first { it.comando == "ATE0" }.respuesta)
+        assertEquals(listOf("ATCRA", "ATSH7DF", "ATAT1"), fake.ejecutados.takeLast(3))
+    }
+
+    @Test
+    fun `si el filtro no se pudo quitar la siguiente lectura de diagnostico lo reintenta una vez`() = runTest {
+        var intentosCra = 0
+        val fake = FakeElmTransport(latenciaMs = { 20L }) { cmd ->
+            when {
+                cmd == "ATCRA" -> if (intentosCra++ == 0) "?>" else "OK>"
+                cmd.startsWith("AT") -> "OK>"
+                cmd.startsWith("01494A11") -> "41492E4A171180>"
+                cmd == "03" -> "4300>"
+                else -> "NO DATA>"
+            }
+        }
+        val m = montar(fake)
+        m.captura.iniciar(pedal).getOrThrow()
+        advanceTimeBy(500)
+        m.captura.detener()
+        val alCerrar = fake.comandos.size
+
+        m.gate.conceder("dtc") { fake.exchange("03\r", 1_000) }
+        m.gate.conceder("dtc") { fake.exchange("03\r", 1_000) }
+
+        assertEquals(listOf("ATE0", "ATCRA", "ATSH7DF", "03", "03"), fake.comandos.drop(alCerrar))
+    }
 }
