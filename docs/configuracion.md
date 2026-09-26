@@ -12,6 +12,7 @@ Esta página describe cada sección de la pestaña **Ajustes**, en el mismo orde
 |---|---|---|
 | Vehículo activo | Fila de navegación a Perfiles de vehículo — muestra el nombre del vehículo activo o "Ninguno" | — |
 | Preguntar vehículo al inicio | Si está activo, la app pregunta qué vehículo usar cada vez que abre desde cero | Activado |
+| Iniciar viaje automáticamente al moverse (Herramientas) | Con el adaptador conectado y sin viaje (tras **Finalizar viaje (seguir conectado)**), abre un viaje al sostener 10 km/h durante 5 s | Activado |
 
 ## Alertas de audio y vibración
 
@@ -192,17 +193,25 @@ Configuración de ejemplo para Claude Desktop (`claude_desktop_config.json` o el
 }
 ```
 
-Herramientas (*tools*) que expone, todas de solo lectura:
+Herramientas (*tools*) de lectura, siempre disponibles con el servidor activo:
 
 | Tool | Qué devuelve |
 |---|---|
-| `get_estado` | Estado actual del vehículo: conexión, perfil activo y lecturas en vivo |
+| `get_estado` | Estado actual del vehículo: conexión, viaje (`grabando` / `sin_viaje` / `sin_enlace`), permisos del MCP, perfil activo y lecturas en vivo con su edad en ms |
 | `get_viajes` | Últimos viajes del vehículo activo con sus estadísticas (distancia, velocidad, eco score) |
 | `get_viaje_detalle` | Detalle agregado de un viaje puntual por su id (distancia, velocidad, combustible, lanzamientos) |
 | `get_chequeo_salud` | Último chequeo de salud del vehículo — hallazgos por área con su nivel (OK/ATENCION/FALLA) |
-| `get_dtc` | Códigos de falla (DTC) activos leídos en vivo del vehículo — requiere adaptador conectado |
+| `get_dtc` | Códigos de falla leídos en vivo: activos (03), pendientes (07), permanentes (0A), testigo MIL, conteo según la ECU y freeze frame con el DTC que lo guardó. **Funciona durante o después de un viaje sin cortar la conexión**: el sondeo se pausa solo mientras dura la lectura. Argumentos opcionales: `modos` (`["activos","pendientes","permanentes"]`), `freeze_frame` (por defecto `true`) e `incluir_crudo` (respuesta cruda del ECU por comando). Caché de 10 s por combinación de argumentos y como mucho una lectura al ECU cada 5 s |
 | `get_mantenimiento` | Ítems de mantenimiento configurados y kilómetros restantes para cada uno |
 | `get_documentos` | Estado de documentos del vehículo activo: SOAT, tecnomecánica, pico y placa, seguro y licencia |
+
+Herramientas de control, **apagadas por defecto**. Solo aparecen en `tools/list` si activas sus permisos en **Ajustes → Avanzado y diagnóstico → Servidor MCP**; si un cliente las llama sin permiso recibe un error que dice dónde activarlas. Estos permisos **no viajan en la copia de seguridad**: restaurar nunca concede control remoto.
+
+| Tool | Permiso | Qué hace |
+|---|---|---|
+| `finalizar_viaje` | Permitir control desde MCP | Cierra el viaje en curso (queda en el historial con sus estadísticas) y deja el adaptador conectado: el sondeo sigue y `get_dtc` responde. Idempotente: sin viaje no hace nada |
+| `iniciar_viaje` | Permitir control desde MCP | Abre un viaje nuevo sobre el adaptador ya conectado. Falla si no hay adaptador o ya hay un viaje grabando |
+| `borrar_dtc` | Permitir borrar códigos desde MCP (exige también el anterior) | Borra los códigos (modo 04) y relee los activos antes y después. Exige `confirmar: "BORRAR"` y el vehículo **detenido** (velocidad 0 con una lectura de menos de 2 s). Si la ECU responde `7F 04 22` (condiciones no correctas, típico con el motor encendido) lo informa. Deja un aviso en el teléfono. **Reinicia los monitores de readiness**: la revisión técnico-mecánica puede rechazar el vehículo hasta completar ciclos de manejo |
 
 **Seguridad**: el servidor solo se enlaza a tu IP de **WiFi** (nunca datos móviles) y un vigilante interno revisa cada 60 segundos que esa IP siga siendo la misma — si cambias de red o pierdes el WiFi, se apaga solo. Actívalo únicamente en redes de confianza (tu casa, tu taller).
 

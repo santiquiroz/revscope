@@ -25,6 +25,11 @@ Contenido, de arriba hacia abajo:
 - **Banner de "Vehículo al día"** (rojo, tocable): solo aparece cuando el vehículo activo tiene algo que requiere tu atención hoy — un documento vencido o pico y placa vigente ahora mismo. Tocarlo lleva directo a la tarjeta correspondiente en Taller. Si todo está en orden, no aparece nada.
 - **Banner de alerta activa**: mensajes puntuales de anomalías detectadas o de resultados de 0-100/0-60 recién logrados ("🏁 0-100 en 6.42s"), visibles por 5 segundos.
 - **Botón "Iniciar viaje GPS"**: solo se ofrece cuando no hay ningún adaptador conectado ni conectándose. Arranca un viaje grabado únicamente con GPS + sensores del celular (ruta, velocidad, inclinación, fuerzas G) — sin necesitar el ELM327. Con el viaje GPS activo el botón cambia a **"Finalizar viaje GPS"** y los gauges que dependen del ECU (RPM, marcha, temperatura, boost) se ven atenuados con la nota "requieren adaptador", mientras que el velocímetro usa la velocidad GPS.
+- **Pastilla de viaje** (con el adaptador conectado): **"● Grabando viaje"** o **"● Conectado · sin viaje"**. Tocarla muestra las acciones:
+  - **Finalizar viaje (seguir conectado)**, con confirmación: guarda el viaje en el historial y deja el adaptador conectado. Los gauges, el voltaje y las alertas siguen en vivo, y puedes leer los códigos de falla (Taller o `get_dtc` por MCP) sin reconectar. La notificación pasa a "sin viaje (diagnóstico)" y trae el botón **Iniciar viaje**.
+  - **Iniciar viaje**: abre un viaje nuevo sobre la misma conexión (también aparece como botón grande mientras no hay viaje).
+  - **Desconectar adaptador**: suelta el Bluetooth y cierra el viaje, como antes.
+  - Conectar el adaptador sigue iniciando un viaje, igual que siempre. Con **Iniciar viaje automáticamente al moverse** (Ajustes → Vehículo y garage → Herramientas, activo por defecto), si hay conexión sin viaje y mantienes 10 km/h durante 5 s se abre uno solo y lo avisa ("Viaje iniciado automáticamente"). Si finalizas el viaje andando, primero hay que detenerse para que se vuelva a armar.
 - **Gauge de RPM**, con el borde de toda la pantalla iluminándose como *shift light*: color acento cuando llegas al 95% de la línea roja configurada para el vehículo activo, y rojo pleno al cruzarla.
 - **Velocímetro**, con una pequeña pastilla debajo que indica la fuente: **OBD** o **GPS**. Se puede tocar para alternar manualmente entre la velocidad que reporta el ECU y la del GPS del celular — útil si el adaptador da lecturas erráticas o para comparar con el [comparador de velocímetros](#taller) de Taller.
 - **Marcha calculada**, **temperatura del motor** y **barra de boost** (turbo), lado a lado.
@@ -64,7 +69,7 @@ El centro de diagnóstico y mantenimiento, organizado en tres secciones. Las her
 
 ### Diagnóstico
 
-- **Códigos de falla (DTC)** — lee los códigos activos del vehículo, los explica con IA (si configuraste una API key) y permite borrarlos de la memoria del ECU.
+- **Códigos de falla (DTC)** — lee los códigos activos, pendientes y permanentes (cada uno con su etiqueta), el estado del testigo de falla (MIL) y el freeze frame con el código que lo guardó; los explica con IA (si configuraste una API key) y permite borrarlos de la memoria del ECU. Funciona con el viaje grabando o después de finalizarlo, sin desconectar: el sondeo se pausa solo mientras dura la lectura.
 - **Mezcla y combustión** — fuel trims cortos y largos, hasta cuatro sensores de oxígeno, lambda comandado y flujo de aire (MAF), todo interpretado en vivo con un diagnóstico por regla (mezcla pobre/rica, sensor perezoso, etc.) sin necesitar IA ni conexión a internet.
 - **Gráficas de sensores** — cualquier PID disponible del vehículo, en una curva en tiempo real con ejes y unidades.
 - **Escáner avanzado (Mode 22)** — barre direcciones para descubrir PIDs propietarios del fabricante que no están documentados en el estándar OBD2 (por ejemplo, modos de manejo o sensores adicionales de motos).
