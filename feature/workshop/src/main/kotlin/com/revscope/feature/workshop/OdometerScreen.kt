@@ -1,10 +1,10 @@
 package com.revscope.feature.workshop
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.AvisoDescartable
+import com.revscope.core.designsystem.FilaEtiquetaValor
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.workshop.DiagnosticRules
 import com.revscope.core.obd.workshop.OdometerChecker
@@ -69,78 +72,79 @@ fun OdometerScreen(
     val context = LocalContext.current
     val isConnected = connectionState is ConnectionState.Connected
 
-    Column(Modifier.fillMaxSize().background(BgColor).statusBarsPadding().padding(16.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
-            }
-            Text(
-                "Verificación de kilometraje",
-                color = TextColor,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
+    // Una sola lista: con letra grande, la Column fija dejaba el histórico sin alto.
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(BgColor).statusBarsPadding(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item(key = "encabezado") {
+            EncabezadoOdometro(
+                puedeExportar = historial.isNotEmpty(),
+                onVolver = onNavigateBack,
+                onExportar = { viewModel.exportCsv(context) },
             )
-            IconButton(onClick = { viewModel.exportCsv(context) }, enabled = historial.isNotEmpty()) {
-                Icon(Icons.Default.Download, "Exportar CSV", tint = AccentColor)
+        }
+        item(key = "leer") {
+            Button(
+                onClick = viewModel::leerAhora,
+                enabled = isConnected && !leyendoAhora,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentColor, contentColor = Color.Black),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (leyendoAhora) "Leyendo…" else "Leer ahora")
             }
         }
-
-        Button(
-            onClick = viewModel::leerAhora,
-            enabled = isConnected && !leyendoAhora,
-            colors = ButtonDefaults.buttonColors(containerColor = AccentColor, contentColor = Color.Black),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-        ) {
-            Text(if (leyendoAhora) "Leyendo…" else "Leer ahora")
-        }
-
         if (!isConnected) {
-            Text(
-                "Conecta el adaptador para leer el odómetro del vehículo",
-                color = TextMutedColor,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(bottom = 12.dp),
-            )
+            item(key = "sin_conexion") {
+                Text("Conecta el adaptador para leer el odómetro del vehículo", color = TextMutedColor, fontSize = 13.sp)
+            }
         }
-
-        mensaje?.let {
-            Text(
-                "$it (toca para cerrar)",
-                color = WarnColor,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(bottom = 12.dp).clickable(onClick = viewModel::dismissMensaje),
-            )
+        mensaje?.let { texto ->
+            item(key = "mensaje") {
+                AvisoDescartable(texto = texto, onDescartar = viewModel::dismissMensaje, color = WarnColor)
+            }
         }
-
         if (isConnected && soportado == false) {
-            NoSoportadoCard()
-            Spacer(Modifier.height(12.dp))
+            item(key = "no_soportado") { NoSoportadoCard() }
         }
-
-        OdometerContent(lastCheck, historial)
+        odometroItems(lastCheck, historial)
     }
 }
 
 @Composable
-private fun OdometerContent(
+private fun EncabezadoOdometro(puedeExportar: Boolean, onVolver: () -> Unit, onExportar: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onVolver) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
+        }
+        Text(
+            "Verificación de kilometraje",
+            color = TextColor,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onExportar, enabled = puedeExportar) {
+            Icon(Icons.Default.Download, "Exportar CSV", tint = AccentColor)
+        }
+    }
+}
+
+private fun LazyListScope.odometroItems(
     lastCheck: OdometerChecker.Result?,
     historial: List<OdometerVerifier.Reading>,
 ) {
     val ultima = lastCheck?.reading ?: historial.lastOrNull()
     if (ultima == null) {
-        EmptyState()
+        item(key = "vacio") { EmptyState() }
         return
     }
-    UltimaLecturaCard(ultima, lastCheck?.diagnosis)
-    Spacer(Modifier.height(16.dp))
-    Text("Histórico", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-    LazyColumn(
-        modifier = Modifier.padding(top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        items(historial.asReversed()) { lectura -> HistorialRow(lectura) }
+    item(key = "ultima") { UltimaLecturaCard(ultima, lastCheck?.diagnosis) }
+    item(key = "titulo_historico") {
+        Text("Histórico", color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
+    items(historial.asReversed()) { lectura -> HistorialRow(lectura) }
 }
 
 @Composable
@@ -213,18 +217,12 @@ private fun EstadoRow(d: DiagnosticRules.Diagnosis) {
 @Composable
 private fun HistorialRow(lectura: OdometerVerifier.Reading) {
     Surface(shape = RoundedCornerShape(10.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(formatFecha(lectura.epochMs), color = TextMutedColor, fontSize = 12.sp)
-            Text(
-                "${lectura.km.roundToLong()} km",
-                color = TextColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        FilaEtiquetaValor(
+            etiqueta = formatFecha(lectura.epochMs),
+            valor = "${lectura.km.roundToLong()} km",
+            colorValor = TextColor,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+        )
     }
 }
 

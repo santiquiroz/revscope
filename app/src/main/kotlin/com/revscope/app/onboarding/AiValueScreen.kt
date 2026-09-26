@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -115,11 +116,12 @@ fun AiValueContent(
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = vm::testAiConnection,
                 enabled = !aiTesting,
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceColor),
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             ) {
                 Text(if (aiTesting) "Probando…" else "Probar", color = TextPrimaryColor)
             }
@@ -129,6 +131,7 @@ fun AiValueContent(
                     onDone()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             ) {
                 Text("Guardar", color = BgColor, fontWeight = FontWeight.SemiBold)
             }

@@ -1,7 +1,6 @@
 package com.revscope.feature.sensors
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,6 +41,10 @@ import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.revscope.core.designsystem.AvisoDescartable
+import com.revscope.core.designsystem.ChipSeleccion
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.obd.telemetry.captura.EstadisticasCaptura
 import com.revscope.core.obd.telemetry.captura.EstadoCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
@@ -47,7 +52,6 @@ import com.revscope.core.obd.telemetry.captura.SeleccionPids
 import kotlinx.coroutines.launch
 
 private val SurfaceColor = Color(0xFF12121A)
-private val SurfaceHighColor = Color(0xFF1C1C28)
 private val AccentColor = Color(0xFFE8FF00)
 private val BgColor = Color(0xFF0A0A0F)
 private val TextPrimaryColor = Color(0xFFF0F0F8)
@@ -79,9 +83,9 @@ fun FastCaptureContent(vm: FastCaptureViewModel = hiltViewModel()) {
         )
         if (activa == null) SelectorPids(vm, seleccion)
         BotonCaptura(activa != null, conectado && seleccion.isNotEmpty(), vm::iniciar, vm::detener)
-        mensaje?.let { Aviso(it) { vm.descartarMensaje() } }
+        mensaje?.let { AvisoDescartable(texto = it, onDescartar = vm::descartarMensaje, color = WarningColor) }
         if (activa != null) {
-            activa.limiteHz?.let { Aviso("Limitada a $it Hz para cuidar batería y temperatura del teléfono") {} }
+            activa.limiteHz?.let { AvisoLimite("Limitada a $it Hz para cuidar batería y temperatura del teléfono") }
             Medicion(stats, activa.inicio.pidsAceptados, vm::nombreDe)
             GraficaCaptura(vm, activa.inicio.pidsAceptados)
         }
@@ -118,19 +122,7 @@ private fun SelectorPids(vm: FastCaptureViewModel, seleccion: List<String>) {
 
 @Composable
 private fun Chip(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .background(if (seleccionado) AccentColor else SurfaceHighColor, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    ) {
-        Text(
-            texto,
-            fontSize = 12.sp,
-            fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal,
-            color = if (seleccionado) BgColor else TextMutedColor,
-        )
-    }
+    ChipSeleccion(texto = texto, seleccionado = seleccionado, onClick = onClick)
 }
 
 @Composable
@@ -149,7 +141,7 @@ private fun BotonCaptura(activa: Boolean, habilitado: Boolean, onIniciar: () -> 
 }
 
 @Composable
-private fun Aviso(texto: String, onDescartar: () -> Unit) {
+private fun AvisoLimite(texto: String) {
     Text(
         texto,
         color = WarningColor,
@@ -157,7 +149,6 @@ private fun Aviso(texto: String, onDescartar: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(SurfaceColor, RoundedCornerShape(8.dp))
-            .clickable(onClick = onDescartar)
             .padding(10.dp),
     )
 }
@@ -236,6 +227,21 @@ private fun GraficaCaptura(vm: FastCaptureViewModel, pids: List<String>) {
 private fun ResumenUltima(resumen: ResumenCaptura, vm: FastCaptureViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    FastCaptureResumen(
+        resumen = resumen,
+        nombreDe = vm::nombreDe,
+        onExportarLargo = { scope.launch { vm.exportarLargo(context) } },
+        onExportarAncho = { scope.launch { vm.exportarAncho(context) } },
+    )
+}
+
+@Composable
+internal fun FastCaptureResumen(
+    resumen: ResumenCaptura,
+    nombreDe: (String) -> String,
+    onExportarLargo: () -> Unit,
+    onExportarAncho: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -251,20 +257,25 @@ private fun ResumenUltima(resumen: ResumenCaptura, vm: FastCaptureViewModel) {
         )
         resumen.porPid.forEach { p ->
             Text(
-                "${p.pid} ${vm.nombreDe(p.pid)}: ${p.n} muestras · ${"%.1f".format(p.hz)} Hz · " +
+                "${p.pid} ${nombreDe(p.pid)}: ${p.n} muestras · ${"%.1f".format(p.hz)} Hz · " +
                     "${"%.1f".format(p.min)}–${"%.1f".format(p.max)}",
                 color = TextPrimaryColor,
-                fontSize = 12.sp,
+                style = RevScopeType.bodySmall.conCifrasTabulares(),
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = { scope.launch { vm.exportarLargo(context) } },
-                enabled = resumen.rutaCsv != null,
-            ) { Text("CSV (una fila por muestra)", color = AccentColor, fontSize = 12.sp) }
-            OutlinedButton(onClick = { scope.launch { vm.exportarAncho(context) } }) {
-                Text("CSV ancho", color = AccentColor, fontSize = 12.sp)
-            }
-        }
+        // Dos botones de ancho completo: en una fila, el primero aplastaba al segundo.
+        BotonCsv("CSV (una fila por muestra)", habilitado = resumen.rutaCsv != null, onClick = onExportarLargo)
+        BotonCsv("CSV ancho (una fila por lote)", habilitado = true, onClick = onExportarAncho)
+    }
+}
+
+@Composable
+private fun BotonCsv(texto: String, habilitado: Boolean, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = habilitado,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+    ) {
+        Text(texto, color = if (habilitado) AccentColor else TextMutedColor, fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }

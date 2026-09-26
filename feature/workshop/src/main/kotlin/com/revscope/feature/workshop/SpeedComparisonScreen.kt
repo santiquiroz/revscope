@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -28,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.TextoAjustable
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.workshop.SpeedDeltaAverager
 import kotlin.math.roundToInt
@@ -48,17 +52,35 @@ fun SpeedComparisonScreen(
     val obdSpeed by viewModel.obdSpeedKmh.collectAsState()
     val gpsSpeed by viewModel.gpsSpeedKmh.collectAsState()
     val averageDeltaPercent by viewModel.averageDeltaPercent.collectAsState()
-    val isConnected = connectionState is ConnectionState.Connected
+    SpeedComparisonContent(
+        conectado = connectionState is ConnectionState.Connected,
+        velocidadObd = obdSpeed,
+        velocidadGps = gpsSpeed,
+        promedioPorcentaje = averageDeltaPercent,
+        onReiniciar = viewModel::resetAverage,
+        onVolver = onNavigateBack,
+    )
+}
 
+@Composable
+internal fun SpeedComparisonContent(
+    conectado: Boolean,
+    velocidadObd: Double?,
+    velocidadGps: Double?,
+    promedioPorcentaje: Double?,
+    onReiniciar: () -> Unit,
+    onVolver: () -> Unit,
+) {
     Column(
         Modifier
             .fillMaxSize()
             .background(BgColor)
             .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onNavigateBack) {
+            IconButton(onClick = onVolver) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
             }
             Text(
@@ -71,15 +93,15 @@ fun SpeedComparisonScreen(
         }
 
         when {
-            !isConnected -> EmptyState("Conecta el adaptador para comparar velocímetros")
-            gpsSpeed == null -> EmptyState(
+            !conectado -> EmptyState("Conecta el adaptador para comparar velocímetros")
+            velocidadGps == null -> EmptyState(
                 "Esperando señal GPS — asegúrate de tener buena vista del cielo y de estar en movimiento",
             )
             else -> ComparisonContent(
-                obdSpeed = obdSpeed ?: 0.0,
-                gpsSpeed = gpsSpeed,
-                averageDeltaPercent = averageDeltaPercent,
-                onReset = viewModel::resetAverage,
+                obdSpeed = velocidadObd ?: 0.0,
+                gpsSpeed = velocidadGps,
+                averageDeltaPercent = promedioPorcentaje,
+                onReset = onReiniciar,
             )
         }
     }
@@ -108,9 +130,9 @@ private fun ComparisonContent(
     val deltaPercent = deltaPercentOrNull(obdSpeed, gps)
 
     Spacer(Modifier.height(16.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        SpeedColumn("OBD", obdSpeed)
-        SpeedColumn("GPS", gps)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        SpeedColumn("OBD", obdSpeed, Modifier.weight(1f))
+        SpeedColumn("GPS", gps, Modifier.weight(1f))
     }
 
     Spacer(Modifier.height(20.dp))
@@ -132,9 +154,15 @@ private fun deltaPercentOrNull(obdKmh: Double, gpsKmh: Double): Double? =
     if (gpsKmh > SpeedDeltaAverager.MIN_GPS_SPEED_KMH) SpeedDeltaAverager.deltaPercent(obdKmh, gpsKmh) else null
 
 @Composable
-private fun SpeedColumn(label: String, speed: Double) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(speed.roundToInt().toString(), color = TextColor, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+private fun SpeedColumn(label: String, speed: Double, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        TextoAjustable(
+            texto = speed.roundToInt().toString(),
+            estilo = RevScopeType.numeros.copy(fontSize = 44.sp),
+            color = TextColor,
+            minimo = 20.sp,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Text(label, color = TextMutedColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -147,7 +175,7 @@ private fun DeltaCard(deltaAbs: Double, deltaPercent: Double?) {
             Text(
                 "%+.1f km/h".format(deltaAbs),
                 color = TextColor,
-                fontSize = 22.sp,
+                style = RevScopeType.numeros.copy(fontSize = 22.sp),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 2.dp),
             )
@@ -169,7 +197,7 @@ private fun AverageCard(averageDeltaPercent: Double?, onReset: () -> Unit) {
             Text(
                 averageDeltaPercent?.let { "%+.1f%%".format(it) } ?: "--",
                 color = AccentColor,
-                fontSize = 26.sp,
+                style = RevScopeType.numeros.copy(fontSize = 26.sp),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 4.dp),
             )

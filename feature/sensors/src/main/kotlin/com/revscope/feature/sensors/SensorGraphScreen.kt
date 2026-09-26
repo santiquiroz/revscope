@@ -1,7 +1,6 @@
 package com.revscope.feature.sensors
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.ShowChart
@@ -43,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.Context
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import kotlinx.coroutines.launch
@@ -159,23 +158,11 @@ fun SensorGraphScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             vm.availablePids.forEach { def ->
-                val selected = def.pid == selectedPid
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = if (selected) AccentColor else SurfaceHighColor,
-                            shape = RoundedCornerShape(16.dp),
-                        )
-                        .clickable { vm.selectPid(def.pid) }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = def.nameEs,
-                        fontSize = 12.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (selected) BgColor else TextMutedColor,
-                    )
-                }
+                ChipSeleccion(
+                    texto = def.nameEs,
+                    seleccionado = def.pid == selectedPid,
+                    onClick = { vm.selectPid(def.pid) },
+                )
             }
         }
 

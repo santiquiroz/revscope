@@ -36,6 +36,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -57,6 +59,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.ChipSeleccion
+import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.legal.CityRegistry
@@ -512,7 +516,8 @@ private fun AdapterLinkSection(
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Medium,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), itemVerticalAlignment = Alignment.CenterVertically) {
             Button(
                 onClick = onLink,
                 enabled = isConnected,
@@ -537,27 +542,20 @@ private fun TypeChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .background(
-                color = if (selected) AccentColor else SurfaceHighColor,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(modifier = Modifier.size(16.dp)) {
-            icon()
-        }
-        Text(
-            text = label,
-            color = if (selected) BgColor else TextMutedColor,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 13.sp,
-        )
-    }
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label, fontSize = 13.sp) },
+        leadingIcon = { Box(modifier = Modifier.size(18.dp)) { icon() } },
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = SurfaceHighColor,
+            labelColor = RevScopeColors.TextSecondary,
+            iconColor = RevScopeColors.TextSecondary,
+            selectedContainerColor = AccentColor,
+            selectedLabelColor = BgColor,
+            selectedLeadingIconColor = BgColor,
+        ),
+    )
 }
 
 private fun fuelTypeLabel(fuelType: String): String = when (fuelType) {
@@ -572,22 +570,7 @@ private fun FuelTypeChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .background(
-                color = if (selected) AccentColor else SurfaceHighColor,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = label,
-            color = if (selected) BgColor else TextMutedColor,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 13.sp,
-        )
-    }
+    ChipSeleccion(texto = label, seleccionado = selected, onClick = onClick)
 }
 
 @Composable

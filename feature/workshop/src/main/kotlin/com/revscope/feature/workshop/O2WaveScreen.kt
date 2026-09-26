@@ -1,6 +1,5 @@
 package com.revscope.feature.workshop
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,13 +11,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -47,6 +45,7 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.obd.workshop.DiagnosticRules
 
 private val AccentColor = Color(0xFFE8FF00)
@@ -116,7 +115,7 @@ fun O2WaveScreen(
         }
     }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNavigateBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
@@ -215,17 +214,5 @@ private fun SensorSelector(sensors: List<String>, selected: String, onSelect: (S
 
 @Composable
 private fun SensorChip(pid: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected) AccentColor else SurfaceHighColor,
-        modifier = Modifier.clickable(onClick = onClick),
-    ) {
-        Text(
-            "O2 ${SENSOR_LABELS[pid] ?: pid}",
-            color = if (selected) SurfaceColor else TextMutedColor,
-            fontSize = 12.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        )
-    }
+    ChipSeleccion(texto = "O2 ${SENSOR_LABELS[pid] ?: pid}", seleccionado = selected, onClick = onClick)
 }

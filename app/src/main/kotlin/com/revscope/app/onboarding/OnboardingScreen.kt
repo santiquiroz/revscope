@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -151,7 +152,7 @@ private fun WizardBar(
             Button(
                 onClick = onNext,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text(
                     if (step == OnboardingViewModel.TOTAL_STEPS - 1) "Empezar" else "Siguiente",
@@ -265,7 +266,7 @@ private fun Step1Vehicle(vm: OnboardingViewModel) {
             onClick = { vm.createFirstProfile(name, type, plate) },
             enabled = !profileCreated,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            modifier = Modifier.height(48.dp),
+            modifier = Modifier.heightIn(min = 48.dp),
         ) {
             if (profileCreated) {
                 Icon(Icons.Default.Check, contentDescription = null, tint = BgColor)
@@ -284,7 +285,7 @@ private fun VehicleTypeChip(label: String, active: Boolean, onClick: () -> Unit)
         color = if (active) AccentColor else SurfaceColor,
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier
-            .height(48.dp)
+            .heightIn(min = 48.dp)
             .clickable(onClick = onClick),
     ) {
         Box(
@@ -350,7 +351,7 @@ private fun Step2Adapter(vm: OnboardingViewModel, onFinished: (goToAdapterScan: 
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .heightIn(min = 48.dp),
             ) {
                 Text("Continuar", color = BgColor, fontWeight = FontWeight.SemiBold)
             }

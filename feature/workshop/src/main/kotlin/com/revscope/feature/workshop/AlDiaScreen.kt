@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,7 +66,6 @@ private val NivelVencidoColor = Color(0xFFFF5252)
 
 private const val SIMIT_URL = "https://www.fcm.org.co/simit/"
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlDiaScreen(
     onOpenHealthCheck: () -> Unit,
@@ -78,68 +79,85 @@ fun AlDiaScreen(
     val maintenanceEstados by vm.maintenanceEstados.collectAsState()
     val zoneBrief by vm.zoneBrief.collectAsState()
 
-    Column(
+    AlDiaContent(
+        vehiculo = profile?.let { VehiculoAlDia(nombre = it.name, placa = it.plate) },
+        estados = statuses,
+        licenciaVenceEn = licenseExpiresAt,
+        mantenimientoNivel = MaintenanceCalculator.peorNivel(maintenanceEstados),
+        mantenimientoDetalle = MaintenanceCalculator.detalleTexto(maintenanceEstados),
+        zoneBrief = zoneBrief,
+        acciones = AccionesAlDia(
+            onChequeo = onOpenHealthCheck,
+            onPerfiles = onOpenProfiles,
+            onMantenimiento = onOpenMaintenance,
+            onCambiarLicencia = vm::setLicenseExpiresAt,
+        ),
+    )
+}
+
+internal data class VehiculoAlDia(val nombre: String, val placa: String?)
+
+internal data class AccionesAlDia(
+    val onChequeo: () -> Unit = {},
+    val onPerfiles: () -> Unit = {},
+    val onMantenimiento: () -> Unit = {},
+    val onCambiarLicencia: (Long?) -> Unit = {},
+)
+
+// Ancho mínimo de tarjeta que crece con la letra: con 200 % la rejilla pasa a una columna
+// en vez de partir «Tecnomecánica» a mitad de palabra.
+private val ANCHO_MIN_TARJETA = 150.dp
+
+@Composable
+internal fun AlDiaContent(
+    vehiculo: VehiculoAlDia?,
+    estados: List<DocumentStatusCalculator.DocStatus>,
+    licenciaVenceEn: Long?,
+    mantenimientoNivel: DocumentStatusCalculator.Nivel,
+    mantenimientoDetalle: String,
+    zoneBrief: com.revscope.core.obd.service.ZoneBriefHolder.ZoneBrief?,
+    acciones: AccionesAlDia,
+) {
+    val escalaLetra = LocalDensity.current.fontScale
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = ANCHO_MIN_TARJETA * escalaLetra),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(16.dp),
         modifier = Modifier
             .fillMaxSize()
             .background(BgColor)
-            .statusBarsPadding()
-            .padding(16.dp),
+            .statusBarsPadding(),
     ) {
-        Text("Vehículo al día", color = TextColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-
-        val activeProfile = profile
-        if (activeProfile == null) {
-            EmptyState(onOpenProfiles)
-            return@Column
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Text("Vehículo al día", color = TextColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         }
-
-        Text(
-            activeProfile.name,
-            color = TextMutedColor,
-            fontSize = 13.sp,
-            modifier = Modifier.padding(top = 2.dp, bottom = 12.dp),
-        )
-
-        zoneBrief?.let { brief ->
-            ZoneBriefCard(brief)
-            Spacer(Modifier.height(12.dp))
+        if (vehiculo == null) {
+            item(span = { GridItemSpan(maxLineSpan) }) { EmptyState(acciones.onPerfiles) }
+            return@LazyVerticalGrid
         }
-
-        val soat = statuses.find(DocumentStatusCalculator.DocType.SOAT)
-        val rtm = statuses.find(DocumentStatusCalculator.DocType.RTM)
-        val picoYPlaca = statuses.find(DocumentStatusCalculator.DocType.PICO_Y_PLACA)
-        val todoRiesgo = statuses.find(DocumentStatusCalculator.DocType.TODO_RIESGO)
-        val licencia = statuses.find(DocumentStatusCalculator.DocType.LICENCIA)
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            soat?.let { item { DocCard(it, onOpenProfiles) } }
-            rtm?.let {
-                item {
-                    DocCard(it, onOpenProfiles) {
-                        TextButton(onClick = onOpenHealthCheck, contentPadding = PaddingValues(0.dp)) {
-                            Text("Chequeo mecánico", color = AccentColor, fontSize = 12.sp)
-                        }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Text(vehiculo.nombre, color = TextMutedColor, fontSize = 13.sp)
+        }
+        zoneBrief?.let { brief -> item(span = { GridItemSpan(maxLineSpan) }) { ZoneBriefCard(brief) } }
+        estados.find(DocumentStatusCalculator.DocType.SOAT)?.let { item { DocCard(it, acciones.onPerfiles) } }
+        estados.find(DocumentStatusCalculator.DocType.RTM)?.let {
+            item {
+                DocCard(it, acciones.onPerfiles) {
+                    TextButton(onClick = acciones.onChequeo, contentPadding = PaddingValues(0.dp)) {
+                        Text("Chequeo mecánico", color = AccentColor, fontSize = 12.sp)
                     }
                 }
             }
-            picoYPlaca?.let { item { DocCard(it, onOpenProfiles) } }
-            item { MultasCard(plate = activeProfile.plate) }
-            todoRiesgo?.let { item { DocCard(it, onOpenProfiles) } }
-            item {
-                MaintenanceCard(
-                    nivel = MaintenanceCalculator.peorNivel(maintenanceEstados),
-                    detalle = MaintenanceCalculator.detalleTexto(maintenanceEstados),
-                    onClick = onOpenMaintenance,
-                )
-            }
-            licencia?.let {
-                item { LicenseCard(status = it, expiresAt = licenseExpiresAt, onChange = vm::setLicenseExpiresAt) }
-            }
+        }
+        estados.find(DocumentStatusCalculator.DocType.PICO_Y_PLACA)?.let { item { DocCard(it, acciones.onPerfiles) } }
+        item { MultasCard(plate = vehiculo.placa) }
+        estados.find(DocumentStatusCalculator.DocType.TODO_RIESGO)?.let { item { DocCard(it, acciones.onPerfiles) } }
+        item {
+            MaintenanceCard(nivel = mantenimientoNivel, detalle = mantenimientoDetalle, onClick = acciones.onMantenimiento)
+        }
+        estados.find(DocumentStatusCalculator.DocType.LICENCIA)?.let {
+            item { LicenseCard(status = it, expiresAt = licenciaVenceEn, onChange = acciones.onCambiarLicencia) }
         }
     }
 }
@@ -199,7 +217,13 @@ private fun DocCardContent(
         Row(verticalAlignment = Alignment.CenterVertically) {
             NivelDot(status.nivel)
             Spacer(Modifier.width(8.dp))
-            Text(status.titulo, color = TextColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                status.titulo,
+                color = TextColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
         }
         Spacer(Modifier.height(8.dp))
         Text(
@@ -240,7 +264,7 @@ private fun MultasCard(plate: String?) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NivelDot(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR)
                 Spacer(Modifier.width(8.dp))
-                Text("Multas", color = TextColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("Multas", color = TextColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             }
             Spacer(Modifier.height(8.dp))
             Text("Consulta comparendos en el sistema SIMIT", color = TextMutedColor, fontSize = 12.sp)
@@ -266,7 +290,7 @@ private fun MaintenanceCard(nivel: DocumentStatusCalculator.Nivel, detalle: Stri
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NivelDot(nivel)
                 Spacer(Modifier.width(8.dp))
-                Text("Mantenimiento", color = TextColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("Mantenimiento", color = TextColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             }
             Spacer(Modifier.height(8.dp))
             Text(detalle, color = TextColor, fontSize = 12.sp)
@@ -333,7 +357,7 @@ private fun LicenseCard(
 private fun EmptyState(onOpenProfiles: () -> Unit) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(top = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

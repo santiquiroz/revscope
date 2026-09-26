@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.FilaEtiquetaValor
+import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.common.export.CsvShare
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -136,15 +138,13 @@ private fun MixtureRowCard(
 
     Surface(shape = RoundedCornerShape(12.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row.label, color = TextColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Text(
-                    "%.1f %s".format(reading.value, reading.unit),
-                    color = AccentColor,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            FilaEtiquetaValor(
+                etiqueta = row.label,
+                valor = "%.1f %s".format(reading.value, reading.unit),
+                colorEtiqueta = TextColor,
+                colorValor = AccentColor,
+                estiloEtiqueta = RevScopeType.label,
+            )
             if (definition != null) {
                 val range = definition.max - definition.min
                 val progress = if (range != 0.0) {

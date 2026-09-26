@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.designsystem.FilaEtiquetaValor
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.intelligence.gear.AdaptiveGearLearner
 import com.revscope.core.intelligence.gear.GearCluster
@@ -87,6 +90,7 @@ fun GearAnalyzerScreen(
                     color = if (isCalibrated) SuccessColor else AccentColor,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
+                    modifier = Modifier.weight(1f),
                 )
                 val totalObs = gearTable.sumOf { it.observationCount }
                 val needed = gearTable.size * AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR
@@ -143,22 +147,14 @@ private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "Ratio: %.2f".format(cluster.centerRatio),
-                    color = TextPrimaryColor,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = "${cluster.observationCount} obs",
-                    color = TextMutedColor,
-                    fontSize = 12.sp,
-                )
-            }
+            FilaEtiquetaValor(
+                etiqueta = "Ratio: %.2f".format(cluster.centerRatio),
+                valor = "${cluster.observationCount} obs",
+                colorEtiqueta = TextPrimaryColor,
+                colorValor = TextMutedColor,
+                estiloEtiqueta = RevScopeType.label,
+                estiloValor = RevScopeType.bodySmall.conCifrasTabulares(),
+            )
             Spacer(Modifier.height(4.dp))
             val progress = (cluster.observationCount / AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR.toFloat()).coerceIn(0f, 1f)
             LinearProgressIndicator(
