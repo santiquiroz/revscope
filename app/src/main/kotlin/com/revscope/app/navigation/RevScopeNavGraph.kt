@@ -300,6 +300,7 @@ fun RevScopeNavGraph(
                 }
                 composable(Screen.Dtc.route) {
                     DtcScreen(
+                        onNavigateBack = { navController.popBackStack() },
                         connectionVm = connectionVm,
                         onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
                     )

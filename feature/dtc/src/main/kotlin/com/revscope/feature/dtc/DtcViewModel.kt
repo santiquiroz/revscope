@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.diagnostics.FreezeFrame
+import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
+import com.revscope.core.obd.diagnostics.ReglasBorradoDtc
 import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
@@ -21,7 +23,7 @@ sealed class DtcUiState {
     object Reading : DtcUiState()
     object Clearing : DtcUiState()
     data class HasCodes(val codes: List<DtcCodeUi>) : DtcUiState()
-    object Cleared : DtcUiState()
+    data class Borrado(val resultado: ResultadoBorradoUi) : DtcUiState()
     data class Error(val message: String) : DtcUiState()
 }
 
@@ -47,6 +49,9 @@ class DtcViewModel @Inject constructor(
 
     private val _estadoMil = MutableStateFlow<String?>(null)
     val estadoMil: StateFlow<String?> = _estadoMil.asStateFlow()
+
+    private val _confirmacionBorrado = MutableStateFlow<ConfirmacionBorradoDtc?>(null)
+    val confirmacionBorrado: StateFlow<ConfirmacionBorradoDtc?> = _confirmacionBorrado.asStateFlow()
 
     fun readDtcCodes(connectionVm: ConnectionViewModel) {
         viewModelScope.launch {
@@ -87,23 +92,48 @@ class DtcViewModel @Inject constructor(
         return scan.conteoSegunEcu?.let { "$luz · la ECU reporta $it código(s) confirmados" } ?: luz
     }
 
-    private fun mensajeDeError(e: Throwable): String =
+    private fun mensajeDeError(e: Throwable, porDefecto: String = "Error leyendo DTCs"): String =
         if (e is IllegalStateException && e.message == "Not connected") "Conecta el adaptador primero"
-        else e.message ?: "Error leyendo DTCs"
+        else e.message ?: porDefecto
 
-    fun clearDtcCodes(connectionVm: ConnectionViewModel) {
-        viewModelScope.launch {
-            _state.value = DtcUiState.Clearing
-            connectionVm.clearDtcCodes()
-                .onSuccess { _state.value = DtcUiState.Cleared }
-                .onFailure { e -> _state.value = DtcUiState.Error(e.message ?: "Error borrando DTCs") }
-        }
+    fun solicitarBorrado(connectionVm: ConnectionViewModel, ahoraMs: Long = System.currentTimeMillis()) {
+        val codigos = (_state.value as? DtcUiState.HasCodes)?.codes?.map { it.dtc.code } ?: return
+        _confirmacionBorrado.value = ConfirmacionBorradoDtc(codigos, rechazoConfirmado(connectionVm, ahoraMs))
     }
 
-    fun reset() {
-        _state.value = DtcUiState.Idle
-        _freezeFrame.value = emptyList()
-        _estadoMil.value = null
+    fun cancelarBorrado() {
+        _confirmacionBorrado.value = null
+    }
+
+    fun confirmarBorrado(
+        connectionVm: ConnectionViewModel,
+        declaraDetenido: Boolean,
+        ahoraMs: Long = System.currentTimeMillis(),
+    ) {
+        val pendiente = _confirmacionBorrado.value ?: return
+        val rechazo = rechazoConfirmado(connectionVm, ahoraMs)
+        if (!permiteBorrarDesdeUi(rechazo, declaraDetenido)) {
+            _confirmacionBorrado.value = pendiente.copy(rechazo = rechazo)
+            return
+        }
+        _confirmacionBorrado.value = null
+        borrar(connectionVm)
+    }
+
+    private fun rechazoConfirmado(connectionVm: ConnectionViewModel, ahoraMs: Long): RechazoBorradoDtc? =
+        ReglasBorradoDtc.evaluar(
+            confirmado = true,
+            velocidad = connectionVm.readings.value[ReglasBorradoDtc.PID_VELOCIDAD],
+            ahoraMs = ahoraMs,
+        )
+
+    private fun borrar(connectionVm: ConnectionViewModel) {
+        viewModelScope.launch {
+            _state.value = DtcUiState.Clearing
+            connectionVm.borrarDtcConRelectura(LEASE_OWNER)
+                .onSuccess { _state.value = DtcUiState.Borrado(resultadoBorradoUi(it)) }
+                .onFailure { e -> _state.value = DtcUiState.Error(mensajeDeError(e, "Error borrando DTCs")) }
+        }
     }
 
     private companion object {

@@ -632,13 +632,6 @@ class ObdSessionManager @Inject constructor(
     suspend fun borrarDtcConRelectura(owner: String): Result<BorradoDtc> =
         withDiagnosticLease(owner, DTC_FULL_READ_TIMEOUT_MS) { bt -> dtcReader.borrar(bt, protocoloEsCan) }
 
-    /** Clears all stored DTCs (Mode 04) under a diagnostic lease. */
-    suspend fun clearDtcCodes(): Result<Unit> =
-        withDiagnosticLease("clearDtcCodes") { bt ->
-            bt.exchange("04\r", DTC_TIMEOUT_MS)
-            Unit
-        }
-
     /** Raw serialized command exchange for diagnostic tooling (Mode 22 scanner). */
     suspend fun rawExchange(command: String, timeoutMs: Long = DTC_TIMEOUT_MS): Result<String> {
         val bt = transport ?: return Result.failure(IllegalStateException("Not connected"))

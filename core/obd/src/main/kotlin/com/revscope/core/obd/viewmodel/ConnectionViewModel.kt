@@ -7,6 +7,7 @@ import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.connection.AdapterType
 import com.revscope.core.obd.connection.BleScanner
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.DtcLectura
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.model.DtcCode
@@ -74,7 +75,7 @@ class ConnectionViewModel @Inject constructor(
 
     suspend fun readActiveDtc(): Result<List<DtcCode>> = manager.readActiveDtc()
 
-    suspend fun clearDtcCodes(): Result<Unit> = manager.clearDtcCodes()
+    suspend fun borrarDtcConRelectura(owner: String): Result<BorradoDtc> = manager.borrarDtcConRelectura(owner)
 
     suspend fun leerDtcCompleto(owner: String, opciones: DtcLectura = DtcLectura()): Result<DtcScan> =
         manager.leerDtcCompleto(owner, opciones)
