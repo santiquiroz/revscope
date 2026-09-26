@@ -39,7 +39,7 @@ class EscalaPosicionTest {
         assertEquals(0.3, cerrado.min, 1e-9)
         assertEquals(1.0, cerrado.max, 1e-9)
         assertEquals("Cerrado típico", cerrado.etiquetaCorta)
-        assertEquals("Cerrado: 0,3–1,0 V (≈6–20 %) · Típico (editable)", cerrado.descripcion)
+        assertEquals("Cerrado: 0,3–1,0 V (≈6–20 %) · Típico (editable)", cerrado.descripcion)
     }
 
     @Test
@@ -64,6 +64,14 @@ class EscalaPosicionTest {
         assertEquals(1, escala.size)
         assertEquals("Cerrado según fuente", escala.single().etiquetaCorta)
         assertTrue(escala.single().descripcion.endsWith("Fuente: Catálogo de partes Auteco"))
+    }
+
+    @Test
+    fun `la tendencia es estable dentro del umbral y si no sube o baja`() {
+        assertEquals("estable", Tendencia.de(listOf(0.45, 0.47, 0.46), estableHasta = 0.06))
+        assertEquals("estable", Tendencia.de(listOf(0.45), estableHasta = 0.06))
+        assertEquals("subiendo", Tendencia.de(listOf(0.12, 0.3, 0.47), estableHasta = 0.06))
+        assertEquals("bajando", Tendencia.de(listOf(0.9, 0.5, 0.14), estableHasta = 0.06))
     }
 
     @Test

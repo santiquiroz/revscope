@@ -46,6 +46,12 @@ object ResolutorVref {
 
     fun leer(texto: String): Double? =
         texto.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it in ReferenciaVoltaje.MIN_V..ReferenciaVoltaje.MAX_V }
+
+    // Quitar el valor editado vuelve a lo medido en la sesión, o a la típica si no hay medición.
+    fun textoRestablecer(estado: EstadoVref): String? {
+        if (estado.editadaV == null) return null
+        return estado.medida?.let { "Usar la del multímetro (${FormatoPosicion.voltios(it.voltios)})" } ?: "Volver a 5,0 V típico"
+    }
 }
 
 interface PreferenciasVref {

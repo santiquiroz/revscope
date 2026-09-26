@@ -58,6 +58,15 @@ class FuenteVrefTest {
     }
 
     @Test
+    fun `restablecer solo se ofrece con un valor editado y dice a donde vuelve`() {
+        val medida = ReferenciaVoltaje(4.96, VrefSesion.ORIGEN)
+
+        assertNull(ResolutorVref.textoRestablecer(EstadoVref(medida, medida, null)))
+        assertEquals("Usar la del multímetro (4,96 V)", ResolutorVref.textoRestablecer(EstadoVref(ReferenciaVoltaje.editada(4.9), medida, 4.9)))
+        assertEquals("Volver a 5,0 V típico", ResolutorVref.textoRestablecer(EstadoVref(ReferenciaVoltaje.editada(4.9), null, 4.9)))
+    }
+
+    @Test
     fun `el texto de la vref acepta coma o punto y solo dentro del rango`() {
         assertEquals(4.98, ResolutorVref.leer("4,98")!!, 1e-9)
         assertEquals(4.98, ResolutorVref.leer(" 4.98 ")!!, 1e-9)

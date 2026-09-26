@@ -63,9 +63,12 @@ object BandasPosicion {
         OrigenBanda.USUARIO -> "editado por ti"
     }
 
-    private fun rangoV(min: Double, max: Double) = "${FormatoTaller.numero(min, 1)}–${FormatoTaller.numero(max, 1)} V"
+    // Espacio duro antes de la unidad: con letra grande el «%» o la «V» no quedan solos en otra línea.
+    private fun rangoV(min: Double, max: Double) = "${FormatoTaller.numero(min, 1)}–${FormatoTaller.numero(max, 1)}${NBSP}V"
 
-    private fun rangoPct(min: Double, max: Double) = "${FormatoTaller.compacto(min)}–${FormatoTaller.compacto(max)} %"
+    private fun rangoPct(min: Double, max: Double) = "${FormatoTaller.compacto(min)}–${FormatoTaller.compacto(max)}${NBSP}%"
+
+    private const val NBSP = ' '
 }
 
 object FormatoPosicion {
@@ -79,4 +82,13 @@ object FormatoPosicion {
     }
 
     fun ambos(porcentaje: Double, vref: ReferenciaVoltaje): String = "${porcentaje(porcentaje)} · ${voltios(vref.aVoltios(porcentaje))}"
+}
+
+// Cómo va una señal en la ventana visible, para el resumen accesible de las gráficas en vivo.
+object Tendencia {
+    fun de(valores: List<Double>, estableHasta: Double): String = when {
+        valores.size < 2 || valores.max() - valores.min() <= estableHasta -> "estable"
+        valores.last() > valores.first() -> "subiendo"
+        else -> "bajando"
+    }
 }
