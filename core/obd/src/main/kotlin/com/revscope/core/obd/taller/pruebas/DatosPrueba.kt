@@ -45,4 +45,7 @@ data class DatosPrueba(
             .sortedBy { it.tMs }
             .toList()
     }
+
+    // Lo útil de varios pasos seguidos, como una sola serie en el tiempo de la captura.
+    fun serie(pid: String, claves: List<String>): List<Punto> = claves.flatMap { serie(pid, it) }.sortedBy { it.tMs }
 }
