@@ -1,5 +1,7 @@
 package com.revscope.feature.gear
 
+import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.BarraConVolver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,8 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,29 +37,21 @@ import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.intelligence.gear.AdaptiveGearLearner
 import com.revscope.core.intelligence.gear.GearCluster
-import javax.inject.Inject
 
-private val BgColor = Color(0xFF0A0A0F)
-private val SurfaceColor = Color(0xFF12121A)
-private val SurfaceHighColor = Color(0xFF1C1C28)
-private val AccentColor = Color(0xFFE8FF00)
-private val SuccessColor = Color(0xFF00E676)
-private val WarningColor = Color(0xFFFF8C00)
-private val TextPrimaryColor = Color(0xFFF0F0F8)
-private val TextMutedColor = Color(0xFF6B7089)
 
 /** Thirds-based gear color logic matching GearDisplay */
 private fun gearColorByThirds(gear: Int, gearCount: Int): Color = when {
-    gear <= 0 -> TextMutedColor
-    gear <= gearCount / 3 -> SuccessColor
-    gear <= gearCount * 2 / 3 -> AccentColor
-    gear <= gearCount -> WarningColor
-    else -> TextMutedColor
+    gear <= 0 -> RevScopeColors.TextSecondary
+    gear <= gearCount / 3 -> RevScopeColors.Success
+    gear <= gearCount * 2 / 3 -> RevScopeColors.Accent
+    gear <= gearCount -> RevScopeColors.Warning
+    else -> RevScopeColors.TextSecondary
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GearAnalyzerScreen(
+    onNavigateBack: () -> Unit,
     orchestrator: IntelligenceOrchestrator = hiltViewModel<GearAnalyzerViewModel>().orchestrator,
 ) {
     val gearTable by orchestrator.gearLearner.gearTable.collectAsState()
@@ -68,26 +60,23 @@ fun GearAnalyzerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgColor),
+            .background(RevScopeColors.Background),
     ) {
-        TopAppBar(
-            title = { Text("Marchas", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
-        )
+        BarraConVolver(titulo = "Marchas", onVolver = onNavigateBack)
 
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             // Calibration status banner
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceHighColor, RoundedCornerShape(8.dp))
+                    .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(8.dp))
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (isCalibrated) "Tabla calibrada ✓" else "Calibrando…",
-                    color = if (isCalibrated) SuccessColor else AccentColor,
+                    text = if (isCalibrated) "Tabla calibrada" else "Calibrando…",
+                    color = if (isCalibrated) RevScopeColors.Success else RevScopeColors.Accent,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     modifier = Modifier.weight(1f),
@@ -96,8 +85,8 @@ fun GearAnalyzerScreen(
                 val needed = gearTable.size * AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR
                 Text(
                     text = "$totalObs / $needed obs",
-                    color = TextMutedColor,
-                    fontSize = 12.sp,
+                    color = RevScopeColors.TextSecondary,
+                    style = RevScopeType.bodySmall,
                 )
             }
 
@@ -105,8 +94,8 @@ fun GearAnalyzerScreen(
 
             Text(
                 "Tabla de ratios velocidad/RPM",
-                color = TextMutedColor,
-                fontSize = 12.sp,
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.height(8.dp))
@@ -125,7 +114,7 @@ private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceColor, RoundedCornerShape(8.dp))
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -133,7 +122,7 @@ private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .background(SurfaceHighColor, RoundedCornerShape(6.dp)),
+                .background(RevScopeColors.SurfaceHigh, RoundedCornerShape(6.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -150,8 +139,8 @@ private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
             FilaEtiquetaValor(
                 etiqueta = "Ratio: %.2f".format(cluster.centerRatio),
                 valor = "${cluster.observationCount} obs",
-                colorEtiqueta = TextPrimaryColor,
-                colorValor = TextMutedColor,
+                colorEtiqueta = RevScopeColors.TextPrimary,
+                colorValor = RevScopeColors.TextSecondary,
                 estiloEtiqueta = RevScopeType.label,
                 estiloValor = RevScopeType.bodySmall.conCifrasTabulares(),
             )
@@ -164,7 +153,7 @@ private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp)),
                 color = gearColor,
-                trackColor = SurfaceHighColor,
+                trackColor = RevScopeColors.SurfaceHigh,
             )
         }
     }

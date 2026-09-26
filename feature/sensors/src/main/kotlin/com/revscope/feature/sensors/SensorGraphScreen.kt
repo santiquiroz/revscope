@@ -1,5 +1,7 @@
 package com.revscope.feature.sensors
 
+import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.BarraConVolver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -20,8 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,12 +59,6 @@ import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.revscope.core.common.format.formatElapsedMmSs
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 
-private val BgColor = Color(0xFF0A0A0F)
-private val SurfaceColor = Color(0xFF12121A)
-private val SurfaceHighColor = Color(0xFF1C1C28)
-private val AccentColor = Color(0xFFE8FF00)
-private val TextPrimaryColor = Color(0xFFF0F0F8)
-private val TextMutedColor = Color(0xFF6B7089)
 
 /** Bottom-axis tick label — the x value is already elapsed seconds since the first reading. */
 private val ElapsedTimeFormatter = object : CartesianValueFormatter {
@@ -79,6 +72,7 @@ private val ElapsedTimeFormatter = object : CartesianValueFormatter {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SensorGraphScreen(
+    onNavigateBack: () -> Unit,
     connectionVm: ConnectionViewModel = hiltViewModel(),
     vm: SensorViewModel = hiltViewModel(),
 ) {
@@ -115,22 +109,17 @@ fun SensorGraphScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgColor),
+            .background(RevScopeColors.Background),
     ) {
-        TopAppBar(
-            title = {
-                Text(
-                    if (modoCaptura) "Captura rápida" else "Sensores",
-                    color = TextPrimaryColor,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            },
-            actions = {
+        BarraConVolver(
+            titulo = if (modoCaptura) "Captura rápida" else "Sensores",
+            onVolver = onNavigateBack,
+            acciones = {
                 IconButton(onClick = { modoCaptura = !modoCaptura }) {
                     Icon(
                         if (modoCaptura) Icons.Default.ShowChart else Icons.Default.Speed,
                         contentDescription = if (modoCaptura) "Volver a la gráfica" else "Captura rápida",
-                        tint = AccentColor,
+                        tint = RevScopeColors.Accent,
                     )
                 }
                 if (!modoCaptura) {
@@ -138,11 +127,10 @@ fun SensorGraphScreen(
                         onClick = { scope.launch { exportSensorHistory(context, currentDef, history) } },
                         enabled = currentDef != null && history.isNotEmpty(),
                     ) {
-                        Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+                        Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = RevScopeColors.Accent)
                     }
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
         )
 
         if (modoCaptura) {
@@ -179,12 +167,12 @@ fun SensorGraphScreen(
                     text = latestReading?.value?.let { "%.1f".format(it) } ?: "--",
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AccentColor,
+                    color = RevScopeColors.Accent,
                 )
                 Text(
                     text = currentDef.unit,
                     fontSize = 16.sp,
-                    color = TextMutedColor,
+                    color = RevScopeColors.TextSecondary,
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
             }
@@ -217,7 +205,7 @@ fun SensorGraphScreen(
             ) {
                 Text(
                     "Esperando datos del sensor…",
-                    color = TextMutedColor,
+                    color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
             }

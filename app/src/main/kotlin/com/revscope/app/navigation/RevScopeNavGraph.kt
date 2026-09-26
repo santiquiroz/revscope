@@ -297,10 +297,13 @@ fun RevScopeNavGraph(
                     )
                 }
                 composable(Screen.GearAnalyzer.route) {
-                    GearAnalyzerScreen()
+                    GearAnalyzerScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(Screen.Sensors.route) {
-                    SensorGraphScreen(connectionVm = connectionVm)
+                    SensorGraphScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        connectionVm = connectionVm,
+                    )
                 }
                 composable(Screen.Dtc.route) {
                     DtcScreen(
