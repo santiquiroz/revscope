@@ -12,6 +12,7 @@ import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
+import javax.inject.Qualifier
 
 interface CapturaPrueba {
     val ultimoResumen: StateFlow<ResumenCaptura?>
@@ -21,6 +22,11 @@ interface CapturaPrueba {
     fun transcurridoMs(): Long?
     fun muestrasActuales(): List<MuestraCaptura>
 }
+
+// La ráfaga de AT RV de la prueba de batería, distinta de la captura rápida de PIDs.
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class RafagaVoltaje
 
 interface EnlacePrueba {
     fun conectado(): Boolean
@@ -35,6 +41,19 @@ class EnlacePruebaObd @Inject constructor(
     override fun conectado(): Boolean = sessionManager.connectionState.value is ConnectionState.Connected
     override fun lecturas(): Map<String, ObdReading> = sessionManager.readings.value
     override fun soportado(pid: String): Boolean = registry.getDefinition(pid) != null && registry.isSupported(pid)
+}
+
+// Lo que el analizador toma de fuera de la captura al terminar: el ambiente del teléfono y el desfase de AT RV.
+interface FuentesAnalisis {
+    suspend fun ambiente(): LecturasAmbiente?
+    suspend fun desfaseVoltaje(): DesfaseVoltaje
+
+    companion object {
+        val NINGUNA = object : FuentesAnalisis {
+            override suspend fun ambiente(): LecturasAmbiente? = null
+            override suspend fun desfaseVoltaje(): DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR
+        }
+    }
 }
 
 fun interface AnunciadorTaller {
