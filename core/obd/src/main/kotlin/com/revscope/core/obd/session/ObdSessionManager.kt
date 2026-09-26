@@ -54,6 +54,8 @@ import com.revscope.core.obd.telemetry.captura.ArchivoCaptura
 import com.revscope.core.obd.telemetry.captura.CapturaRapida
 import com.revscope.core.obd.telemetry.captura.EnlaceCaptura
 import com.revscope.core.obd.telemetry.captura.InfoAdaptador
+import com.revscope.core.obd.telemetry.captura.MuestreadorVoltaje
+import com.revscope.core.obd.telemetry.captura.TurnoCaptura
 import com.revscope.core.obd.telemetry.SessionRecorder
 import com.revscope.core.obd.trip.MaintenanceCalculator
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -180,6 +182,9 @@ class ObdSessionManager @Inject constructor(
         override fun pausarSondeo(pausado: Boolean) {
             activeScheduler?.setPaused(pausado)
         }
+        override fun pausarVoltaje(pausado: Boolean) {
+            voltagePoller.pausado = pausado
+        }
         override fun publicar(reading: ObdReading) {
             capturaLecturas.tryEmit(reading)
         }
@@ -190,6 +195,8 @@ class ObdSessionManager @Inject constructor(
 
     private val lectorDispositivo = AndroidLectorDispositivo(appContext)
 
+    private val turnoCaptura = TurnoCaptura()
+
     /** Captura rápida (Taller → Sensores y MCP): una a la vez, sobre el enlace vivo. */
     val captura = CapturaRapida(
         enlace = enlaceCaptura,
@@ -197,6 +204,15 @@ class ObdSessionManager @Inject constructor(
         registry = registry,
         nuevoSumidero = { ArchivoCaptura(CsvShare.exportsDir(appContext)) },
         dispositivo = lectorDispositivo,
+        turno = turnoCaptura,
+    )
+
+    /** Ráfaga de AT RV de la prueba de batería: comparte el turno con la captura rápida. */
+    val rafagaVoltaje = MuestreadorVoltaje(
+        enlace = enlaceCaptura,
+        gate = pollingGate,
+        turno = turnoCaptura,
+        nuevoSumidero = { ArchivoCaptura(CsvShare.exportsDir(appContext)) },
     )
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private val odometerHistoryStore = OdometerHistoryStore(settings)

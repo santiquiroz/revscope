@@ -33,6 +33,9 @@ interface EnlaceCaptura {
     fun pausarSondeo(pausado: Boolean)
     fun publicar(reading: ObdReading)
     fun info(): InfoAdaptador
+
+    // El AT RV periódico corre fuera del programador: la ráfaga de voltaje lo pausa aparte.
+    fun pausarVoltaje(pausado: Boolean) = Unit
 }
 
 /**
@@ -50,6 +53,7 @@ class CapturaRapida(
     private val relojNanos: () -> Long = System::nanoTime,
     private val relojEpochMs: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val turno: TurnoCaptura = TurnoCaptura(),
 ) : CapturaPrueba {
     private class Sesion(
         val inicio: InicioCaptura,
@@ -89,7 +93,7 @@ class CapturaRapida(
         val scope = enlace.scopeEnlace()
         if (bt == null || scope == null) return Result.failure(IllegalStateException("Sin adaptador conectado"))
         val (defs, noSoportados) = seleccionar(config.pids).getOrElse { return Result.failure(it) }
-        val nueva = prepararSesion(bt, defs, noSoportados, config).getOrElse { return Result.failure(it) }
+        val nueva = prepararConTurno(bt, defs, noSoportados, config).getOrElse { return Result.failure(it) }
         sesion = nueva
         motivoFin = null
         _estado.value = EstadoCaptura.Activa(nueva.inicio, nueva.inicioEpochMs, limiteHz = null)
@@ -137,6 +141,22 @@ class CapturaRapida(
     private fun esCapturable(pid: String): Boolean {
         val def = registry.getDefinition(pid) ?: return false
         return def.mode == "01" && registry.isSupported(pid)
+    }
+
+    private suspend fun prepararConTurno(
+        bt: Transport,
+        defs: List<PidDefinition>,
+        noSoportados: List<String>,
+        config: ConfigCaptura,
+    ): Result<Sesion> {
+        if (!turno.tomar(TurnoCaptura.CAPTURA_RAPIDA)) return Result.failure(IllegalStateException(TurnoCaptura.ocupado(turno.ocupadoPor)))
+        val preparada = try {
+            prepararSesion(bt, defs, noSoportados, config)
+        } catch (e: Throwable) {
+            turno.soltar(TurnoCaptura.CAPTURA_RAPIDA)
+            throw e
+        }
+        return preparada.onFailure { turno.soltar(TurnoCaptura.CAPTURA_RAPIDA) }
     }
 
     private suspend fun prepararSesion(
@@ -319,6 +339,7 @@ class CapturaRapida(
         _estadisticas.value = s.medidor.estadisticas(transcurridoMs(s))
         _ultimoResumen.value = resumen(s, ruta)
         _estado.value = EstadoCaptura.Inactiva
+        turno.soltar(TurnoCaptura.CAPTURA_RAPIDA)
     }
 
     private suspend fun revertirAfinado(s: Sesion) {

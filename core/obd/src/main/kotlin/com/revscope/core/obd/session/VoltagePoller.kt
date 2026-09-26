@@ -17,20 +17,14 @@ class VoltagePoller {
 
     private var job: Job? = null
 
+    // La ráfaga de la prueba de batería lee AT RV sin pausa: mientras tanto este sondeo no pregunta.
+    @Volatile var pausado: Boolean = false
+
     fun start(scope: CoroutineScope, bt: Transport, onReading: (ObdReading) -> Unit) {
         job?.cancel()
         job = scope.launch {
             while (true) {
-                try {
-                    val raw = bt.exchange("AT RV\r", VOLTAGE_TIMEOUT_MS)
-                    parseVoltage(raw)?.let { volts ->
-                        onReading(ObdReading(pid = ObdSessionManager.VBAT_PID, value = volts, unit = "V"))
-                    }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Timber.w(e, "VoltagePoller: voltage poll failed")
-                }
+                if (!pausado) leer(bt, onReading)
                 delay(VOLTAGE_POLL_INTERVAL_MS)
             }
         }
@@ -38,6 +32,19 @@ class VoltagePoller {
 
     fun stop() {
         job?.cancel()
+    }
+
+    private suspend fun leer(bt: Transport, onReading: (ObdReading) -> Unit) {
+        try {
+            val raw = bt.exchange("AT RV\r", VOLTAGE_TIMEOUT_MS)
+            parseVoltage(raw)?.let { volts ->
+                onReading(ObdReading(pid = ObdSessionManager.VBAT_PID, value = volts, unit = "V"))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "VoltagePoller: voltage poll failed")
+        }
     }
 
     companion object {
