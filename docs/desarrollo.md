@@ -19,7 +19,7 @@ Multi-module Gradle project, declared in `settings.gradle.kts` (20 módulos):
 | `:core:obd` | Todo el pipeline OBD2/GPS/IMU: transporte Bluetooth, `PidScheduler`, `ObdSessionManager`, alertas, pico y placa, MCP, safety (caída) |
 | `:core:maps` | Motor de mapas MapLibre: estilos, cascada de tiles (`.pmtiles` local > `.pmtiles` remoto > ráster OSM) y descarga del mapa offline de Colombia |
 | `:core:navigation` | Navegación turn-by-turn sobre Ferrostar: parseo de rutas OSRM, maniobras y voz |
-| `:core:designsystem` | Tokens (`RevScopeColors`, `RevScopeType` con cifras tabulares), `RevScopeTheme` y componentes compartidos (selector de vehículo, chips, avisos, filas etiqueta/valor, texto que se ajusta) |
+| `:core:designsystem` | Tokens (`RevScopeColors`, `RevScopeType` con cifras tabulares), `RevScopeTheme` y componentes compartidos (selector de vehículo, chips, avisos, filas etiqueta/valor, texto que se ajusta, `NivelBadge`, `EmptyState`, `ErrorState`, `ConfirmarDestructivoDialog`, `BarraConVolver`, `IndicadorPasos`) |
 | `:core:ui-testing` | `MatrizCaptura`: capturas JVM con Roborazzi sobre Robolectric (solo `testImplementation`) |
 | `:feature:dashboard` | Pantalla Conducir, escáner de adaptador, Modo Pista |
 | `:feature:map` | Pestaña Mapa (MapLibre): mapa en vivo, búsqueda (Photon), rutas (OSRM), navegación, mapa social |
@@ -68,6 +68,16 @@ Las pantallas y componentes Compose tocados se renderizan en la JVM con `MatrizC
 ### Regla de `Row` con texto y acciones
 
 En un `Row` con texto y una acción (botón, ícono o enlace), **el texto lleva `Modifier.weight(1f)`** (o `weight(1f, fill = false)` si no debe estirarse). `Row` mide primero los hijos sin peso y en orden: si el texto no tiene peso se queda con casi todo el ancho y la acción recibe el sobrante, que Compose parte letra por letra (fue el caso de la tarjeta «Configurar adaptador» de Conducir). Si la acción puede crecer —etiquetas largas o letra al 200 %— se apila en una `Column` o se usa `FlowRow`. Pares etiqueta/valor: `FilaEtiquetaValor` del sistema de diseño. Áreas táctiles de 48 dp: preferir `Button`, `IconButton`, `TextButton`, `FilterChip` o `Surface(onClick)` con `heightIn(min = 48.dp)` en vez de `Modifier.clickable` sobre un `Text`.
+
+### Semántica, contraste y estados
+
+- **Estados con ícono y texto**: `NivelBadge(NivelEstado.OK | ATENCION | FALLA | SIN_DATO)`, nunca un punto de color solo.
+- **Texto informativo en `TextSecondary`** (5,8:1 sobre `SurfaceHigh`); `TextMuted` (3,45:1) queda para bordes, decoración y deshabilitados. Mínimo 12 sp; 10 sp solo en la atribución de OSM. Texto sobre `Danger` en `Background`.
+- **Acciones destructivas** con `ConfirmarDestructivoDialog`: título con la pregunta, qué se pierde y qué se conserva, botón rojo con el verbo («Borrar viaje») y «Cancelar». El estado del diálogo vive en el contenido sin estado (`remember`) o en el ViewModel si hay reglas (DTC: `ReglasBorradoDtc`, compartida con el MCP).
+- **Pantallas secundarias** con `BarraConVolver` (descripción «Volver»); vacíos con `EmptyState(mensaje, AccionEstado)`; errores con `ErrorState(mensaje, onReintentar)` que repite la operación; textos de progreso con `liveRegion = Polite`; flujos guiados con `IndicadorPasos`.
+- Filas con `Switch`, `Checkbox` o `RadioButton`: `Modifier.toggleable`/`selectable` en la fila con su `Role` y el control con `onCheckedChange = null`/`onClick = null`, para que TalkBack lea la etiqueta junto al estado.
+- `contentDescription` en español en todo ícono sin texto.
+- Las capturas JVM no esperan animaciones infinitas (una `LinearProgressIndicator` indeterminada deja a Robolectric esperando minutos): no se capturan estados con progreso indeterminado. Los diálogos se capturan con `MatrizCaptura.dialogo`, que toma la pantalla con todas sus ventanas.
 
 Convenciones:
 - **`org.junit.Assert`** (`assertEquals`, `assertTrue`, `assertNull`…) como base, no Truth ni Kotest — sigue el estilo de los tests ya existentes en el módulo antes de escribir uno nuevo.

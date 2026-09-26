@@ -65,12 +65,13 @@ El centro de diagnóstico y mantenimiento, organizado en tres secciones. Las her
 
 ### Estado
 
-- **Vehículo al día** — grid con el estado de SOAT, tecnomecánica, pico y placa de hoy, multas, todo riesgo, mantenimiento y licencia de conducción del vehículo activo, cada uno con semáforo verde/ámbar/rojo/gris. Las fechas de vencimiento y la ciudad de pico y placa se configuran en **Perfiles de vehículo** (sección Vehículo, más abajo); el detalle de las reglas de pico y placa está en [Configuración → Pico y placa](configuracion.md#pico-y-placa).
+- **Vehículo al día** — grid con el estado de SOAT, tecnomecánica, pico y placa de hoy, multas, todo riesgo, mantenimiento y licencia de conducción del vehículo activo, cada uno con su estado en ícono y texto («OK», «Atención», «Vencido», «Sin configurar»), no solo con color. Las fechas de vencimiento y la ciudad de pico y placa se configuran en **Perfiles de vehículo** (sección Vehículo, más abajo); el detalle de las reglas de pico y placa está en [Configuración → Pico y placa](configuracion.md#pico-y-placa).
 - **Chequeo de salud** — un botón, "Escanear ahora": en 10-15 segundos con el motor encendido lee códigos de falla, los monitores de readiness (qué tan lista está la tecnomecánica), fuel trims, sensor de oxígeno, batería y temperatura, y devuelve un diagnóstico interpretado en español con semáforo por ítem. El resultado se guarda como histórico y se puede compartir como imagen (📷, para enviarle al mecánico) o exportar en CSV.
 
 ### Diagnóstico
 
 - **Códigos de falla (DTC)** — lee los códigos activos, pendientes y permanentes (cada uno con su etiqueta), el estado del testigo de falla (MIL) y el freeze frame con el código que lo guardó; los explica con IA (si configuraste una API key) y permite borrarlos de la memoria del ECU. Funciona con el viaje grabando o después de finalizarlo, sin desconectar: el sondeo se pausa solo mientras dura la lectura.
+  - **Borrar DTCs** pide confirmación y avisa qué se pierde: los monitores de readiness quedan incompletos (la tecnomecánica puede rechazar el vehículo hasta completar ciclos de manejo), el freeze frame se borra y el código vuelve si la falla sigue. Solo borra con el vehículo detenido, con la misma regla que la herramienta `borrar_dtc` del MCP (velocidad 0 con una lectura de menos de 2 s). Si la ECU no reporta velocidad reciente (pasa en muchas motos o sin sondeo), la app pide marcar «Confirmo que el vehículo está detenido». Después del borrado relee la ECU y muestra los códigos de antes y de después: si el código sigue, lo dice; si la ECU rechaza el borrado (7F 04 22), indica apagar el motor y dejar el contacto puesto.
 - **Mezcla y combustión** — fuel trims cortos y largos, hasta cuatro sensores de oxígeno, lambda comandado y flujo de aire (MAF), todo interpretado en vivo con un diagnóstico por regla (mezcla pobre/rica, sensor perezoso, etc.) sin necesitar IA ni conexión a internet.
 - **Gráficas de sensores** — cualquier PID que el vehículo soporte, en una curva en tiempo real de los últimos 30 s con ejes y unidades. El botón de la barra abre la **Captura rápida**: eliges de 1 a 6 PIDs (o el atajo «Pedal y mariposa (49, 4A, 11)») y la app los lee lo más rápido que permita el adaptador, con la tasa medida en Hz, una gráfica de los últimos 10 s y exportación a CSV con tiempos en milisegundos. Sirve para diagnosticar un sensor que cambia rápido, como el pedal del acelerador: con el contacto puesto y el motor apagado (o en ralentí), barre el pedal despacio de 0 a 100 %. Mientras dura, los demás gauges quedan en pausa. Detalle y salvaguardas en [Configuración → Muestreo OBD](configuracion.md#muestreo-obd).
 - **Escáner avanzado (Mode 22)** — barre direcciones para descubrir PIDs propietarios del fabricante que no están documentados en el estándar OBD2 (por ejemplo, modos de manejo o sensores adicionales de motos).
@@ -81,7 +82,7 @@ El centro de diagnóstico y mantenimiento, organizado en tres secciones. Las her
 ### Vehículo
 
 - **Analizador de marchas** — calibra la relación entre RPM y velocidad para cada marcha del vehículo, para que el indicador de marcha del panel de Conducir sea preciso.
-- **Perfiles de vehículo** — todos los vehículos guardados: tipo (carro/moto), combustible, línea roja y RPM máximo del gauge, VIN, placa, ciudad de pico y placa, fechas de documentos y el adaptador Bluetooth vinculado.
+- **Perfiles de vehículo** — todos los vehículos guardados: tipo (carro/moto), combustible, línea roja y RPM máximo del gauge, VIN, placa, ciudad de pico y placa, fechas de documentos y el adaptador Bluetooth vinculado. Eliminar un vehículo pide confirmación; sus viajes se conservan en el historial (filtro «Todos»).
 - **Mantenimiento** — ítems por kilometraje (aceite, llantas, batería, kit de arrastre en motos…) con el odómetro del vehículo editable, barra de progreso del intervalo y botón "Registrar servicio" por ítem.
 - **Verificación de kilometraje** — lee el odómetro real reportado por el ECU (solo vehículos que lo expongan por OBD2 estándar) y guarda un histórico para detectar manipulación: alerta si el odómetro retrocede o si avanza mucho menos que la distancia GPS registrada por la app.
 - **Comparar velocímetros** — velocidad del OBD contra la del GPS lado a lado, en vivo, con el promedio acumulado de la sesión — para medir cuánto sobre-marca tu velocímetro de fábrica.
@@ -92,7 +93,9 @@ El historial de sesiones grabadas, con filtros y comparación.
 
 - **Filtros por vehículo**: fila de chips ("Todos", uno por cada perfil guardado, "Sin vehículo") para ver solo los viajes de una moto o carro en particular.
 - Cada viaje en la lista muestra fecha, adaptador (o "GPS" si fue un viaje sin adaptador), duración, RPM máximo, velocidad máxima y distancia.
-- **Comparar ⚖ A/B**: toca la balanza en un viaje para marcarlo como "A", luego toca la balanza en otro para abrir la comparación lado a lado.
+- **Comparar A/B**: toca el botón «Comparar» (flechas) en un viaje para marcarlo como "A", luego tócalo en otro para abrir la comparación lado a lado. En la gráfica de velocidad, A va en línea continua y B en línea discontinua.
+- **Borrar un viaje** pide confirmación con su fecha y distancia: se borran también su telemetría, la ruta GPS y las vueltas.
+- Sin viajes guardados, la pestaña lo dice y ofrece «Iniciar un viaje», que lleva a Conducir.
 
 Al abrir un viaje se muestra el **reporte completo**:
 
