@@ -16,6 +16,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 
+private const val SEPARADOR_ORIGEN = " · "
+
 data class InformeTaller(
     val generadoEn: Long,
     val titulo: String,
@@ -186,15 +188,17 @@ class ArmadorInformeTaller @Inject constructor() {
         }
     }
 
+    // Solo el rango: la etiqueta de origen que sigue («· Fuente: Manual TNT 150i») también trae números.
     private fun limites(referencia: String): Pair<Double?, Double?> {
-        val numeros = Regex("-?\\d+(?:[.,]\\d+)?").findAll(referencia).map {
+        val rango = referencia.substringBefore(SEPARADOR_ORIGEN)
+        val numeros = Regex("-?\\d+(?:[.,]\\d+)?").findAll(rango).map {
             it.value.replace(',', '.').toDoubleOrNull()
         }.filterNotNull().take(2).toList()
         return when (numeros.size) {
             0 -> null to null
             1 -> when {
-                referencia.contains('≥') || referencia.contains(">=") -> numeros[0] to null
-                referencia.contains('≤') || referencia.contains("<=") -> null to numeros[0]
+                rango.contains('≥') || rango.contains(">=") -> numeros[0] to null
+                rango.contains('≤') || rango.contains("<=") -> null to numeros[0]
                 else -> numeros[0] to numeros[0]
             }
             else -> numeros[0] to numeros[1]
