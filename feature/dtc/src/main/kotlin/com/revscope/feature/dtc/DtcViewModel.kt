@@ -3,6 +3,7 @@ package com.revscope.feature.dtc
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.intelligence.IntelligenceOrchestrator
+import com.revscope.core.obd.diagnostics.AvisoLecturaDtc
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.diagnostics.FreezeFrame
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
@@ -61,7 +62,7 @@ class DtcViewModel @Inject constructor(
     fun readDtcCodes(connectionVm: ConnectionViewModel) {
         viewModelScope.launch {
             _state.value = DtcUiState.Reading
-            _detalle.update { it.copy(mil = null, freezeFrame = null, lecturaEnSesion = false) }
+            _detalle.update { it.copy(mil = null, freezeFrame = null, lecturaEnSesion = false, avisoLectura = null) }
             connectionVm.leerDtcCompleto(LEASE_OWNER)
                 .onSuccess { scan ->
                     mostrarLectura(scan)
@@ -157,7 +158,13 @@ class DtcViewModel @Inject constructor(
         ultimaLectura = scan
         val codigos = agruparPorCodigo(scan.todos, guias::guia)
         _detalle.update {
-            it.copy(mil = milUi(scan), freezeFrame = freezeFrameUi(scan.freezeFrame), guiasAbiertas = guiasAbiertasAlLeer(codigos))
+            it.copy(
+                mil = milUi(scan),
+                freezeFrame = freezeFrameUi(scan.freezeFrame),
+                guiasAbiertas = guiasAbiertasAlLeer(codigos),
+                avisoLectura = AvisoLecturaDtc.de(scan),
+                sinCodigos = AvisoLecturaDtc.sinCodigos(scan),
+            )
         }
         _state.value = DtcUiState.HasCodes(codigos)
     }

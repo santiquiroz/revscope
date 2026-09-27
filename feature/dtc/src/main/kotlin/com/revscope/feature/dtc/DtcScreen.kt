@@ -179,8 +179,9 @@ private fun LazyListScope.contenidoSegunEstado(pantalla: DtcPantallaUi, acciones
 private fun LazyListScope.lecturaConCodigos(codes: List<DtcCodeUi>, pantalla: DtcPantallaUi, acciones: AccionesDtc) {
     val detalle = pantalla.detalle
     detalle.mil?.let { mil -> item(key = "mil") { TarjetaMil(mil) } }
-    if (codes.isEmpty()) {
-        item(key = "sin_codigos") { StatusContent("Sin códigos activos, pendientes ni permanentes", NivelEstado.OK) }
+    detalle.avisoLectura?.let { aviso -> item(key = "aviso_lectura") { StatusContent(aviso, NivelEstado.ATENCION) } }
+    detalle.sinCodigos?.takeIf { codes.isEmpty() }?.let { texto ->
+        item(key = "sin_codigos") { StatusContent(texto, NivelEstado.OK) }
     }
     items(codes, key = { it.codigo }) { item ->
         TarjetaCodigoDtc(

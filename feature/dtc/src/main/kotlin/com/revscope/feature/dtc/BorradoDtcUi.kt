@@ -13,12 +13,18 @@ data class ResultadoBorradoUi(
     val antes: List<String>,
     val despues: List<String>,
     val rechazadoPorEcu: Boolean,
+    val enviado: Boolean = true,
+    val antesLeido: Boolean = true,
+    val despuesLeido: Boolean = true,
 )
 
 fun resultadoBorradoUi(borrado: BorradoDtc): ResultadoBorradoUi = ResultadoBorradoUi(
     antes = borrado.antes.activos.map { it.code },
     despues = borrado.despues.activos.map { it.code },
     rechazadoPorEcu = borrado.rechazadoPorCondiciones,
+    enviado = borrado.respuestaCruda != null,
+    antesLeido = borrado.antes.activosConfirmados,
+    despuesLeido = borrado.despues.activosConfirmados,
 )
 
 // Sin 0D reciente (muchas motos no lo reportan o no hay sondeo) la persona puede declarar que el
@@ -56,9 +62,16 @@ fun textoResultadoBorrado(resultado: ResultadoBorradoUi): String = when {
     resultado.rechazadoPorEcu ->
         "La ECU rechazó el borrado (7F 04 22: condiciones no correctas). Muchas ECU solo borran con el motor " +
             "apagado: apaga el motor, deja el contacto puesto y vuelve a intentarlo. Los códigos siguen guardados."
+    !resultado.enviado ->
+        "No se pudo enviar el borrado: el adaptador no respondió. Vuelve a leer los códigos antes de intentarlo otra vez."
     resultado.despues.isNotEmpty() ->
         "Se envió el borrado, pero la ECU sigue reportando ${resultado.despues.joinToString()}: la falla sigue presente."
-    else -> "Códigos borrados. Antes: ${codigosOSinCodigos(resultado.antes)}. Después: sin códigos activos."
+    !resultado.despuesLeido ->
+        "Se envió el borrado, pero no se pudo releer la ECU para confirmarlo. Vuelve a leer los códigos."
+    else -> "Códigos borrados. Antes: ${textoAntes(resultado)}. Después: sin códigos activos."
 }
+
+private fun textoAntes(resultado: ResultadoBorradoUi): String =
+    if (resultado.antesLeido) codigosOSinCodigos(resultado.antes) else "no se pudieron leer"
 
 private fun codigosOSinCodigos(codigos: List<String>): String = codigos.joinToString().ifEmpty { "sin códigos activos" }

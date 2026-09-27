@@ -13,6 +13,8 @@ import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.taller.sesion.Sintoma
 import com.revscope.core.obd.taller.sesion.SolicitudSesion
 
+const val SIN_CODIGOS_LECTURA_COMPLETA = "Sin códigos activos, pendientes ni permanentes"
+
 sealed interface ExplicacionIa {
     data object NoPedida : ExplicacionIa
     data object Cargando : ExplicacionIa
@@ -47,6 +49,8 @@ data class DetalleDtc(
     val pasosSinSesion: Set<String> = emptySet(),
     val bloqueoBorrado: String? = null,
     val mensaje: String? = null,
+    val avisoLectura: String? = null,
+    val sinCodigos: String? = SIN_CODIGOS_LECTURA_COMPLETA,
 ) {
     val pasosMarcados: Set<String>
         get() = (sesion as? SesionDtcUi.Abierta)?.pasosMarcados ?: pasosSinSesion

@@ -8,6 +8,7 @@ import com.revscope.core.common.export.CsvShare
 import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.diagnostics.AvisoLecturaDtc
 import com.revscope.core.obd.diagnostics.DtcLectura
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.model.ObdReading
@@ -169,17 +170,25 @@ class HealthCheckViewModel @Inject constructor(
 
     private fun buildDtcDiagnosis(scan: DtcScanResult): DiagnosticRules.Diagnosis = when {
         scan.readFailed -> DiagnosticRules.Diagnosis(
-            DiagnosticRules.Nivel.ATENCION, "DTC", "Lectura de códigos incompleta",
-            "Se perdió el enlace durante el escaneo — repite el chequeo",
+            DiagnosticRules.Nivel.ATENCION, "DTC", "Lectura de códigos incompleta", detalleLecturaFallida(scan.scan),
         )
-        scan.codes.isEmpty() -> DiagnosticRules.Diagnosis(
-            DiagnosticRules.Nivel.OK, "DTC", "Sin códigos de falla", "Memoria de fallas limpia",
-        )
+        scan.codes.isEmpty() -> diagnosticoSinCodigos(scan.scan)
         else -> DiagnosticRules.Diagnosis(
             DiagnosticRules.Nivel.FALLA, "DTC",
             "${scan.codes.size} códigos: ${scan.codes.joinToString()}",
             "Ábrelos en Códigos de falla para explicación con IA",
         )
+    }
+
+    private fun detalleLecturaFallida(scan: DtcScan?): String =
+        if (scan != null && !scan.enlacePerdido) AvisoLecturaDtc.ACTIVOS_SIN_RESPUESTA
+        else "Se perdió el enlace durante el escaneo — repite el chequeo"
+
+    private fun diagnosticoSinCodigos(scan: DtcScan?): DiagnosticRules.Diagnosis {
+        val parcial = scan?.takeIf { it.serviciosFallidos.isNotEmpty() }
+        val titulo = parcial?.let(AvisoLecturaDtc::sinCodigos) ?: "Sin códigos de falla"
+        val detalle = scan?.let(AvisoLecturaDtc::de) ?: "Memoria de fallas limpia"
+        return DiagnosticRules.Diagnosis(DiagnosticRules.Nivel.OK, "DTC", titulo, detalle)
     }
 
     private suspend fun readReadiness(): ReadinessParser.ReadinessStatus? {
@@ -236,7 +245,7 @@ class HealthCheckViewModel @Inject constructor(
         val codes = scan.activos.map { it.code } +
             scan.pendientes.map { "${it.code} (pendiente)" } +
             scan.permanentes.map { "${it.code} (permanente)" }
-        return DtcScanResult(codes, readFailed = scan.enlacePerdido, scan = scan)
+        return DtcScanResult(codes, readFailed = scan.enlacePerdido || !scan.activosConfirmados, scan = scan)
     }
 
     private suspend fun persist(

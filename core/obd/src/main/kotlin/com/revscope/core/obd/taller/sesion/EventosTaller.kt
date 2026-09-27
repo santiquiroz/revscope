@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.obd.diagnostics.AvisoLecturaDtc
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.mcp.DtcScanJson
@@ -96,37 +97,64 @@ object EventosTaller {
 
     private fun resumenLectura(scan: DtcScan): String {
         val partes = buildList {
-            if (scan.enlacePerdido) add("Lectura incompleta: se perdió el enlace")
+            lecturaIncompleta(scan)?.let(::add)
             if (scan.activos.isNotEmpty()) add("Activos: ${scan.activos.joinToString { it.code }}")
             if (scan.pendientes.isNotEmpty()) add("Pendientes: ${scan.pendientes.joinToString { it.code }}")
             if (scan.permanentes.isNotEmpty()) add("Permanentes: ${scan.permanentes.joinToString { it.code }}")
-            if (scan.todos.isEmpty() && !scan.enlacePerdido) add("Sin códigos")
+            sinCodigos(scan)?.let(::add)
+            serviciosSinRespuesta(scan)?.let(::add)
             scan.milEncendida?.let { add(if (it) "testigo encendido" else "testigo apagado") }
         }
         return partes.joinToString(" · ")
     }
 
+    private fun lecturaIncompleta(scan: DtcScan): String? = when {
+        scan.enlacePerdido -> "Lectura incompleta: se perdió el enlace"
+        !scan.activosConfirmados -> "Lectura incompleta: la ECU no respondió a los códigos activos"
+        else -> null
+    }
+
+    private fun sinCodigos(scan: DtcScan): String? = when {
+        scan.enlacePerdido -> null
+        scan.serviciosFallidos.isEmpty() -> "Sin códigos".takeIf { scan.todos.isEmpty() }
+        else -> AvisoLecturaDtc.sinCodigos(scan)
+    }
+
+    private fun serviciosSinRespuesta(scan: DtcScan): String? {
+        if (scan.enlacePerdido || !scan.activosConfirmados || scan.serviciosFallidos.isEmpty()) return null
+        return "sin respuesta a " + scan.serviciosFallidos.sortedBy { it.ordinal }.joinToString { AvisoLecturaDtc.etiqueta(it) }
+    }
+
     private fun veredictoLectura(scan: DtcScan): Veredicto = when {
         scan.enlacePerdido -> Veredicto.ATENCION
         scan.activos.isNotEmpty() || scan.permanentes.isNotEmpty() -> Veredicto.FALLA
-        scan.pendientes.isNotEmpty() -> Veredicto.ATENCION
+        scan.pendientes.isNotEmpty() || !scan.activosConfirmados -> Veredicto.ATENCION
         else -> Veredicto.OK
     }
 
     private fun resumenBorrado(borrado: BorradoDtc): String {
-        val antes = borrado.antes.activos.joinToString { it.code }.ifEmpty { "sin códigos" }
+        val antes = if (borrado.antes.activosConfirmados) {
+            borrado.antes.activos.joinToString { it.code }.ifEmpty { "sin códigos" }
+        } else {
+            "no se pudieron leer"
+        }
         val despues = borrado.despues.activos.joinToString { it.code }
         return when {
             borrado.rechazadoPorCondiciones ->
                 "La ECU rechazó el borrado (condiciones no correctas): apaga el motor y deja el contacto"
-            despues.isEmpty() ->
-                "Antes: $antes · después: sin códigos. Los monitores quedan incompletos hasta completar ciclos de manejo"
-            else -> "Antes: $antes · volvieron: $despues (la falla sigue presente)"
+            borrado.respuestaCruda == null -> "No se pudo enviar el borrado: el adaptador no respondió"
+            despues.isNotEmpty() -> "Antes: $antes · volvieron: $despues (la falla sigue presente)"
+            !borrado.despues.activosConfirmados ->
+                "Antes: $antes · se envió el borrado, pero no se pudo releer la ECU para confirmarlo"
+            else -> "Antes: $antes · después: sin códigos. Los monitores quedan incompletos hasta completar ciclos de manejo"
         }
     }
 
-    private fun veredictoBorrado(borrado: BorradoDtc): Veredicto =
-        if (borrado.rechazadoPorCondiciones || borrado.despues.activos.isNotEmpty()) Veredicto.ATENCION else Veredicto.OK
+    private fun veredictoBorrado(borrado: BorradoDtc): Veredicto = when {
+        borrado.rechazadoPorCondiciones || borrado.respuestaCruda == null -> Veredicto.ATENCION
+        borrado.despues.activos.isNotEmpty() || !borrado.despues.activosConfirmados -> Veredicto.ATENCION
+        else -> Veredicto.OK
+    }
 
     private fun resumenChequeo(items: List<DiagnosticRules.Diagnosis>): String {
         if (items.isEmpty()) return "Sin hallazgos"

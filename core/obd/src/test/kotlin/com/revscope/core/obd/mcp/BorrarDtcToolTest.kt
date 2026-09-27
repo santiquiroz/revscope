@@ -8,6 +8,7 @@ import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
+import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.session.ObdSessionManager
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -114,5 +115,31 @@ class BorrarDtcToolTest {
 
         assertEquals(McpPermiso.BORRADO, tool.permiso)
         assertTrue(tool.description.contains("técnico-mecánica"))
+    }
+
+    @Test
+    fun `sin relectura valida no dice que borro ni que quedo limpio`() = runTest {
+        val m = manager(detenido())
+        val fallida = scan().copy(serviciosFallidos = setOf(DtcServicio.ACTIVOS))
+        coEvery { m.borrarDtcConRelectura(any()) } returns
+            Result.success(BorradoDtc("44", rechazadoPorCondiciones = false, antes = scan("P0300"), despues = fallida))
+
+        val json = JSONObject(tool(m).call(JSONObject().put("confirmar", "BORRAR")))
+
+        assertFalse(json.getBoolean("verificado"))
+        assertFalse(json.getJSONObject("despues").getBoolean("completa"))
+        assertEquals("03", json.getJSONObject("despues").getJSONArray("serviciosSinRespuesta").getString(0))
+        assertTrue(json.getString("mensaje").contains("no se pudo confirmar"))
+    }
+
+    @Test
+    fun `si los codigos vuelven el mensaje lo dice`() = runTest {
+        val m = manager(detenido())
+        coEvery { m.borrarDtcConRelectura(any()) } returns
+            Result.success(BorradoDtc("44", rechazadoPorCondiciones = false, antes = scan("P0300"), despues = scan("P0300")))
+
+        val json = JSONObject(tool(m).call(JSONObject().put("confirmar", "BORRAR")))
+
+        assertTrue(json.getString("mensaje").contains("sigue reportando P0300"))
     }
 }

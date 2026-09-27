@@ -65,7 +65,8 @@ class BorrarDtcTool @Inject constructor(
     private fun exito(borrado: BorradoDtc): String {
         notifier.avisar("El MCP borró los códigos de falla", "Antes: ${codigos(borrado.antes.activos.map { it.code })}")
         return JSONObject()
-            .put("borrado", !borrado.rechazadoPorCondiciones)
+            .put("borrado", borrado.respuestaCruda != null && !borrado.rechazadoPorCondiciones)
+            .put("verificado", borrado.despues.activosConfirmados)
             .put("rechazadoPorCondiciones", borrado.rechazadoPorCondiciones)
             .put("respuesta", borrado.respuestaCruda ?: JSONObject.NULL)
             .put("antes", DtcScanJson.scan(borrado.antes, incluirCrudo = false, nombrePid = ::nombrePid))
@@ -74,9 +75,16 @@ class BorrarDtcTool @Inject constructor(
             .toString()
     }
 
-    private fun mensaje(borrado: BorradoDtc): String =
-        if (borrado.rechazadoPorCondiciones) "el ECU rechazó el borrado (7F 04 22: condiciones no correctas; apaga el motor y deja el contacto)"
-        else "códigos borrados; los monitores de readiness quedan incompletos hasta completar ciclos de manejo"
+    private fun mensaje(borrado: BorradoDtc): String = when {
+        borrado.rechazadoPorCondiciones ->
+            "el ECU rechazó el borrado (7F 04 22: condiciones no correctas; apaga el motor y deja el contacto)"
+        borrado.respuestaCruda == null -> "no se pudo enviar el borrado: el adaptador no respondió"
+        borrado.despues.activos.isNotEmpty() ->
+            "se envió el borrado, pero el ECU sigue reportando ${codigos(borrado.despues.activos.map { it.code })}: la falla sigue presente"
+        !borrado.despues.activosConfirmados ->
+            "se envió el borrado, pero la relectura falló y no se pudo confirmar; vuelve a leer con get_dtc"
+        else -> "códigos borrados; los monitores de readiness quedan incompletos hasta completar ciclos de manejo"
+    }
 
     private fun codigos(codes: List<String>): String = codes.joinToString().ifEmpty { "sin códigos activos" }
 

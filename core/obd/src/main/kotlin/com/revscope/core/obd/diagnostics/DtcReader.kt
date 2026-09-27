@@ -23,8 +23,12 @@ data class DtcScan(
     val crudo: Map<String, String>,
     val errores: List<String>,
     val enlacePerdido: Boolean = false,
+    val serviciosFallidos: Set<DtcServicio> = emptySet(),
 ) {
     val todos: List<DtcCode> get() = activos + pendientes + permanentes
+
+    // Una lista de activos vacía solo significa «sin códigos» si el 03 tuvo respuesta válida.
+    val activosConfirmados: Boolean get() = DtcServicio.ACTIVOS !in serviciosFallidos
 }
 
 data class DtcLectura(
@@ -64,6 +68,7 @@ class DtcReader(private val registry: PidRegistry) {
                 crudo = crudo.toMap(),
                 errores = errores.toList(),
                 enlacePerdido = enlaceCaido,
+                serviciosFallidos = serviciosFallidos.toSet(),
             )
         }
 
@@ -85,7 +90,9 @@ class DtcReader(private val registry: PidRegistry) {
         esCan: Boolean?,
     ): List<DtcCode> {
         if (servicio !in opciones.servicios) return emptyList()
-        val raw = pedir(servicio.comando) ?: return emptyList()
+        val raw = pedir(servicio.comando)
+        if (raw == null || esFallo(raw)) serviciosFallidos += servicio
+        if (raw == null) return emptyList()
         return DtcResponseParser.parse(raw, servicio, esCan).map { DtcCode(code = it, mode = modoDe(servicio)) }
     }
 
@@ -134,6 +141,7 @@ class DtcReader(private val registry: PidRegistry) {
     private class Secuencia(private val bt: Transport) {
         val crudo = linkedMapOf<String, String>()
         val errores = mutableListOf<String>()
+        val serviciosFallidos = mutableSetOf<DtcServicio>()
         var enlaceCaido = false
             private set
 
@@ -141,9 +149,7 @@ class DtcReader(private val registry: PidRegistry) {
             if (enlaceCaido) return null
             val raw = intercambiar(comando) ?: return null
             crudo[comando] = ResponseParser.cleanResponse(raw)
-            if (ResponseParser.isErrorResponse(raw) && !ResponseParser.isNoData(raw)) {
-                errores += "$comando: ${ResponseParser.cleanResponse(raw)}"
-            }
+            if (esFallo(raw)) errores += "$comando: ${ResponseParser.cleanResponse(raw)}"
             return raw
         }
 
@@ -165,3 +171,6 @@ class DtcReader(private val registry: PidRegistry) {
         val FREEZE_FRAME_PIDS = listOf("0C", "0D", "05", "04", "11", "06", "07", "0B", "0F", "49", "4A")
     }
 }
+
+// NO DATA es una respuesta válida: muchas ECU la dan en vez de 43 00 cuando no hay códigos.
+private fun esFallo(raw: String): Boolean = ResponseParser.isErrorResponse(raw) && !ResponseParser.isNoData(raw)

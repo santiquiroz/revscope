@@ -21,6 +21,8 @@ internal object DtcScanJson {
             .put("conteoSegunEcu", scan.conteoSegunEcu ?: JSONObject.NULL)
             .put("freezeFrame", scan.freezeFrame?.let { freezeFrame(it, nombrePid) } ?: JSONObject.NULL)
             .put("errores", JSONArray(scan.errores))
+            .put("completa", scan.serviciosFallidos.isEmpty() && !scan.enlacePerdido)
+            .put("serviciosSinRespuesta", JSONArray(scan.serviciosFallidos.sortedBy { it.ordinal }.map { it.comando }))
         if (incluirCrudo) json.put("crudo", JSONObject(scan.crudo as Map<*, *>))
         return json
     }

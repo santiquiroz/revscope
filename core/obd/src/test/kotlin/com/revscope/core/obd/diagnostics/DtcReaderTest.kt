@@ -119,4 +119,29 @@ class DtcReaderTest {
         assertTrue(borrado.rechazadoPorCondiciones)
         assertEquals(listOf("P0133"), borrado.despues.activos.map { it.code })
     }
+
+    @Test
+    fun `una respuesta de error en 03 deja los activos sin confirmar`() = runTest {
+        val scan = DtcReader(registry).leer(elm(mapOf("03" to "CAN ERROR>")), esCan = true)
+
+        assertFalse(scan.activosConfirmados)
+        assertEquals(setOf(DtcServicio.ACTIVOS), scan.serviciosFallidos)
+    }
+
+    @Test
+    fun `los servicios que no alcanzan a leerse por el enlace caido quedan como fallidos`() = runTest {
+        val scan = DtcReader(registry).leer(elm().apply { fallarDespuesDe(2) }, esCan = true)
+
+        assertTrue(scan.activosConfirmados)
+        assertEquals(setOf(DtcServicio.PENDIENTES, DtcServicio.PERMANENTES), scan.serviciosFallidos)
+    }
+
+    @Test
+    fun `NO DATA es una respuesta valida sin codigos`() = runTest {
+        val scan = DtcReader(registry).leer(elm(mapOf("03" to "NO DATA>", "0A" to "NO DATA>")), esCan = true)
+
+        assertTrue(scan.activos.isEmpty())
+        assertTrue(scan.serviciosFallidos.isEmpty())
+        assertTrue(scan.activosConfirmados)
+    }
 }

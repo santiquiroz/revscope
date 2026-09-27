@@ -2,6 +2,7 @@ package com.revscope.feature.dtc
 
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.intelligence.dtc.DtcExplanation
+import com.revscope.core.obd.diagnostics.AvisoLecturaDtc
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
@@ -9,6 +10,7 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.protocol.DtcServicio
 import com.revscope.core.obd.taller.dtc.BaseConocimientoDtc
 import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.taller.sesion.SesionTaller
@@ -331,5 +333,26 @@ class DtcViewModelTest {
             "Códigos borrados. Antes: P0122. Después: sin códigos activos.",
             textoResultadoBorrado(limpio),
         )
+    }
+
+    @Test
+    fun `una lectura sin respuesta al 03 avisa y no muestra sin codigos`() {
+        coEvery { connectionVm.leerDtcCompleto(any(), any()) } returns
+            Result.success(scan().copy(serviciosFallidos = setOf(DtcServicio.ACTIVOS)))
+
+        val vm = vmConCodigos()
+
+        assertEquals(AvisoLecturaDtc.ACTIVOS_SIN_RESPUESTA, vm.detalle.value.avisoLectura)
+        assertNull(vm.detalle.value.sinCodigos)
+    }
+
+    @Test
+    fun `una lectura completa sin codigos lo dice sin aviso`() {
+        coEvery { connectionVm.leerDtcCompleto(any(), any()) } returns Result.success(scan())
+
+        val vm = vmConCodigos()
+
+        assertNull(vm.detalle.value.avisoLectura)
+        assertEquals(SIN_CODIGOS_LECTURA_COMPLETA, vm.detalle.value.sinCodigos)
     }
 }
