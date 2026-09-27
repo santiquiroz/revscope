@@ -12,6 +12,7 @@ import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.Veredicto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -170,4 +171,31 @@ class AnalizadorBarridoTpsTest {
         cerrado2 = listOf(sanoCerrado),
         barrido = barrido,
     )
+
+    @Test
+    fun `sin muestras del barrido lento no se declara normal ni sin zonas muertas`() {
+        val resultado = AnalizadorBarridoTps.analizar(sinBarridoLento(sano), tipicas)
+        val a = resultado.detalle as AnalisisBarridoTps
+
+        assertEquals(PatronTps.SIN_BARRIDO, a.patron)
+        assertEquals(Veredicto.ATENCION, resultado.veredicto)
+        assertFalse(a.barridoEvaluado)
+        assertNull(a.comprobacion(AnalizadorBarridoTps.CLAVE_SIN_ZONAS_MUERTAS))
+        assertTrue(resultado.interpretacion, resultado.interpretacion.contains("no se buscaron saltos ni zonas muertas"))
+        assertTrue(resultado.siguientePaso!!, resultado.siguientePaso!!.contains("barre el acelerador despacio"))
+    }
+
+    @Test
+    fun `sin barrido lento la senal baja se mantiene y avisa que falto el barrido`() {
+        val resultado = AnalizadorBarridoTps.analizar(sinBarridoLento(benelli), tipicas)
+
+        assertEquals(PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO, (resultado.detalle as AnalisisBarridoTps).patron)
+        assertTrue(
+            resultado.hallazgos.toString(),
+            resultado.hallazgos.any { it.startsWith("No llegaron muestras suficientes del barrido lento") },
+        )
+    }
+
+    private fun sinBarridoLento(datos: DatosPrueba) =
+        datos.copy(segmentos = datos.segmentos.filterNot { it.clave == AnalizadorBarridoTps.Pasos.BARRIDO_LENTO })
 }

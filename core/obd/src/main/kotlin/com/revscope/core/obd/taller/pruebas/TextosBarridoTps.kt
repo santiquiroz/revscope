@@ -10,6 +10,9 @@ import com.revscope.core.obd.taller.sesion.Veredicto
 // Redacción de «compatible con…», citando cada banda con su origen (típica, con fuente o editada).
 object TextosBarridoTps {
 
+    private const val SIN_BARRIDO_EVALUADO =
+        "no llegaron muestras suficientes del barrido lento, así que no se buscaron saltos ni zonas muertas"
+
     val TITULOS_PASO = mapOf(
         Pasos.CERRADO_1 to "Cerrado",
         Pasos.MEDIO to "Medio",
@@ -46,6 +49,7 @@ object TextosBarridoTps {
         PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO -> "Señal baja en todo el recorrido, pareja y estable"
         PatronTps.SENAL_ALTA -> "Señal alta con el acelerador cerrado"
         PatronTps.RANGO_DESEMPENO -> "Señal fuera de rango o irregular"
+        PatronTps.SIN_BARRIDO -> "Pasos sostenidos dentro de lo típico, sin el barrido lento"
         PatronTps.NORMAL -> "Señal del TPS dentro de lo típico"
     }
 
@@ -58,6 +62,7 @@ object TextosBarridoTps {
         PatronTps.SENAL_ALTA -> "Mide con el multímetro la masa y la señal del TPS (plantilla TPS) con el acelerador cerrado"
         PatronTps.RANGO_DESEMPENO ->
             "Revisa el tope mecánico del acelerador y repite la prueba; si se repite, mide la señal con el multímetro"
+        PatronTps.SIN_BARRIDO -> "Repite la prueba y, cuando la app lo pida, barre el acelerador despacio de cerrado a fondo"
         PatronTps.NORMAL -> null
     }
 
@@ -73,6 +78,10 @@ object TextosBarridoTps {
         PatronTps.RANGO_DESEMPENO ->
             "Recorre ${v(a.recorridoV)}, pero ${a.comprobaciones.filterNot { it.cumple }.joinToString("; ") { falla(it, a) }}: " +
                 "compatible con P0121 (rango o desempeño del TPS) o con un ajuste mecánico del tope."
+        PatronTps.SIN_BARRIDO ->
+            "Cerrado ${v(a.cerradoV)} (${bandaDe(a, ClavesBanda.TPS_CERRADO_V)}), a fondo ${v(a.fondoV)} " +
+                "(${bandaDe(a, ClavesBanda.TPS_FONDO_V)}) y recorrido ${v(a.recorridoV)}: estable y en orden en los " +
+                "pasos sostenidos, pero $SIN_BARRIDO_EVALUADO."
         PatronTps.NORMAL ->
             "Cerrado ${v(a.cerradoV)} (${bandaDe(a, ClavesBanda.TPS_CERRADO_V)}), a fondo ${v(a.fondoV)} " +
                 "(${bandaDe(a, ClavesBanda.TPS_FONDO_V)}) y recorrido ${v(a.recorridoV)}: estable, en orden y sin " +
@@ -97,6 +106,7 @@ object TextosBarridoTps {
     private fun hallazgos(a: AnalisisBarridoTps): List<String> = buildList {
         a.comprobaciones.filterNot { it.cumple }.forEach { add(falla(it, a).replaceFirstChar(Char::uppercase)) }
         irregularidades(a)?.let(::add)
+        if (!a.barridoEvaluado && a.patron != PatronTps.SIN_BARRIDO) add(SIN_BARRIDO_EVALUADO.replaceFirstChar(Char::uppercase))
         if (a.bajaConfianza) {
             add("Tasa de ${hz(a.tasaHz)}, por debajo de 8 Hz: la detección de saltos y zonas muertas es de baja confianza")
         }

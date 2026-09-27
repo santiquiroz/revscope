@@ -15,6 +15,9 @@ object AnalizadorBarridoTps {
     const val CLAVE_ORDEN = "TPS_ORDEN"
     const val CLAVE_SIN_ZONAS_MUERTAS = "TPS_SIN_ZONAS_MUERTAS"
 
+    // Con menos muestras del barrido lento no hay recorrido que revisar: saltos y zonas muertas quedarían sin buscar.
+    const val MIN_MUESTRAS_BARRIDO = 10
+
     object Pasos {
         const val CERRADO_1 = "CERRADO_1"
         const val MEDIO = "MEDIO"
@@ -43,6 +46,7 @@ object AnalizadorBarridoTps {
         fun media(clave: String) = pasos.first { it.clave == clave }.mediaV
         val cerrado = media(Pasos.CERRADO_1)
         val fondo = media(Pasos.A_FONDO)
+        val barrido = serieV(datos, Pasos.BARRIDO_LENTO)
         val base = AnalisisBarridoTps(
             vref = datos.vref,
             pasos = pasos,
@@ -53,9 +57,10 @@ object AnalizadorBarridoTps {
             repetibilidadV = abs(media(Pasos.CERRADO_2) - cerrado),
             ruidoMaxV = pasos.filter { it.clave in Pasos.SOSTENIDOS }.maxOf { it.ppV },
             comprobaciones = emptyList(),
-            irregularidades = irregularidades(datos, cerrado, fondo),
+            irregularidades = irregularidades(datos, barrido, cerrado, fondo),
             tasaHz = tasaHz(datos),
             patron = PatronTps.NORMAL,
+            barridoEvaluado = barrido.size >= MIN_MUESTRAS_BARRIDO,
         )
         val comprobado = base.copy(comprobaciones = comprobaciones(base, bandas))
         return comprobado.copy(patron = patron(comprobado))
@@ -70,8 +75,7 @@ object AnalizadorBarridoTps {
         datos.serie(PID_TPS, clave).map { it.copy(valor = datos.vref.aVoltios(it.valor)) }
 
     // Los cortes se buscan fuera de los pasos en cerrado; saltos y zonas muertas, en el barrido lento.
-    private fun irregularidades(datos: DatosPrueba, cerradoV: Double, fondoV: Double): List<Irregularidad> {
-        val barrido = serieV(datos, Pasos.BARRIDO_LENTO)
+    private fun irregularidades(datos: DatosPrueba, barrido: List<Punto>, cerradoV: Double, fondoV: Double): List<Irregularidad> {
         val umbral = DetectorSenal.umbralCorte(cerradoV)
         val cortes = listOf(Pasos.MEDIO, Pasos.A_FONDO, Pasos.BARRIDO_LENTO)
             .flatMap { DetectorSenal.cortes(serieV(datos, it), umbral) }
@@ -86,7 +90,7 @@ object AnalizadorBarridoTps {
         return segmentos.sumOf { datos.serie(PID_TPS, it.clave).size } * 1_000.0 / ms
     }
 
-    private fun comprobaciones(a: AnalisisBarridoTps, bandas: Map<String, BandaReferencia>): List<Comprobacion> = listOf(
+    private fun comprobaciones(a: AnalisisBarridoTps, bandas: Map<String, BandaReferencia>): List<Comprobacion> = listOfNotNull(
         Comprobacion.contra(ClavesBanda.TPS_CERRADO_V, "Cerrado", a.cerradoV, "V", bandas),
         Comprobacion.contra(ClavesBanda.TPS_FONDO_V, "A fondo", a.fondoV, "V", bandas),
         Comprobacion.contra(ClavesBanda.TPS_RECORRIDO_MIN_V, "Recorrido", a.recorridoV, "V", bandas),
@@ -94,7 +98,8 @@ object AnalizadorBarridoTps {
         Comprobacion.contra(ClavesBanda.TPS_REPETIBILIDAD_V, "Repetibilidad del cerrado", a.repetibilidadV, "V", bandas),
         Comprobacion.contra(ClavesBanda.TPS_LINEALIDAD, "Linealidad (medio)", a.linealidad, "", bandas),
         Comprobacion.siNo(CLAVE_ORDEN, "Orden cerrado < medio < fondo", a.ordenCorrecto),
-        Comprobacion.siNo(CLAVE_SIN_ZONAS_MUERTAS, "Sin zonas muertas", a.cuenta(TipoIrregularidad.ZONA_MUERTA) == 0),
+        Comprobacion.siNo(CLAVE_SIN_ZONAS_MUERTAS, "Sin zonas muertas", a.cuenta(TipoIrregularidad.ZONA_MUERTA) == 0)
+            .takeIf { a.barridoEvaluado },
     )
 
     private fun patron(a: AnalisisBarridoTps): PatronTps = when {
@@ -102,6 +107,7 @@ object AnalizadorBarridoTps {
         esSenalBaja(a) -> PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO
         posicion(a, ClavesBanda.TPS_CERRADO_V) == PosicionEnBanda.ALTO -> PatronTps.SENAL_ALTA
         a.comprobaciones.any { !it.cumple } -> PatronTps.RANGO_DESEMPENO
+        !a.barridoEvaluado -> PatronTps.SIN_BARRIDO
         else -> PatronTps.NORMAL
     }
 

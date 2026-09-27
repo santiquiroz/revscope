@@ -12,6 +12,7 @@ enum class PatronTps(val veredicto: Veredicto) {
     SENAL_BAJA_TODO_EL_RECORRIDO(Veredicto.FALLA),
     SENAL_ALTA(Veredicto.FALLA),
     RANGO_DESEMPENO(Veredicto.ATENCION),
+    SIN_BARRIDO(Veredicto.ATENCION),
     NORMAL(Veredicto.OK),
 }
 
@@ -49,6 +50,7 @@ data class AnalisisBarridoTps(
     val irregularidades: List<Irregularidad>,
     val tasaHz: Double,
     val patron: PatronTps,
+    val barridoEvaluado: Boolean = true,
 ) : DetallePrueba {
 
     val recorridoV: Double get() = fondoV - cerradoV
@@ -78,6 +80,7 @@ data class AnalisisBarridoTps(
         .put("ordenCorrecto", ordenCorrecto)
         .put("tasaHz", FormatoTaller.redondear(tasaHz, 1))
         .put("bajaConfianza", bajaConfianza)
+        .put("barridoEvaluado", barridoEvaluado)
         .put("pasos", JSONArray(pasos.map(::pasoJson)))
         .put("comprobaciones", JSONArray(comprobaciones.map(::comprobacionJson)))
         .put("irregularidades", JSONArray(irregularidades.map(::irregularidadJson)))

@@ -69,7 +69,7 @@ internal object TextosPrueba {
         PatronTps.SENAL_ALTA -> "P0123"
         PatronTps.CORTES_O_SALTOS -> "P0124"
         PatronTps.RANGO_DESEMPENO -> "P0121"
-        PatronTps.NORMAL -> null
+        PatronTps.SIN_BARRIDO, PatronTps.NORMAL -> null
     }
 
     fun hz(valor: Double): String = "${FormatoTaller.numero(valor, 1)} Hz"
