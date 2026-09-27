@@ -118,7 +118,7 @@ private fun SelectorSensor(actual: SensorMultimetro, sensores: List<SensorMultim
                 nombreCorto(s),
                 seleccionado = s == actual,
                 onClick = { onSensor(s) },
-                modifier = Modifier.semantics { contentDescription = s.titulo },
+                modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = s.titulo },
             )
         }
     }

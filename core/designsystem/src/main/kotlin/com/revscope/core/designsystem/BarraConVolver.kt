@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
@@ -44,7 +45,7 @@ fun BarraConVolver(
                 .heightIn(min = 56.dp)
                 .padding(end = 4.dp),
         ) {
-            IconButton(onClick = onVolver) {
+            IconButton(onClick = onVolver, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, DESCRIPCION_VOLVER, tint = RevScopeColors.TextPrimary)
             }
             TituloBarra(titulo, subtitulo, Modifier.weight(1f).padding(vertical = 8.dp))
