@@ -62,6 +62,10 @@ RevScope combina OpenStreetMap y el registro oficial de la ANSV, y se actualiza 
 
 Por ahora RevScope trae reglas listas para Medellín y Bogotá; Cali aparece en el listado pero sin rotación configurada todavía. El motor interno ya soporta reglas 100% personalizadas en formato JSON (ver [Configuración → Pico y placa](configuracion.md#pico-y-placa) para el esquema exacto), pero a la fecha de esta guía **todavía no existe un campo en Ajustes** para pegar ese JSON desde la app — es una limitación conocida, no un error tuyo.
 
+### ¿Los valores típicos son especificaciones de fábrica?
+
+No. **Típico** es una orientación general; **Fuente** identifica la cita o procedencia del dato; **Editado por ti** indica un ajuste que hiciste para tu modelo. RevScope no inventa especificaciones del fabricante: para confirmar los valores de tu vehículo, consulta su manual de servicio.
+
 ## Otras plataformas
 
 ### ¿Tiene detección de caída confiable?

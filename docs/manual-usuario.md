@@ -79,6 +79,14 @@ Una sesión reúne todo lo que haces con un vehículo mientras buscas una falla,
 - **Agregar a la sesión** (la barra de abajo) abre las acciones: Leer códigos, Prueba guiada, Captura rápida, Chequeo de salud, Instantánea de sensores (una foto de los valores actuales, por ejemplo con el motor apagado y el contacto puesto) y Nota. Solo se puede agregar a la sesión abierta del vehículo activo; si la sesión es de otro vehículo, la pantalla lo dice.
 - El menú ⋮ tiene **Cerrar sesión** (con confirmación; la sesión queda de solo lectura) y **Eliminar sesión** (confirmación que dice cuántos eventos y archivos CSV se pierden; los chequeos de salud y los viajes se conservan y los códigos de la ECU no se tocan).
 
+### Generar informe
+
+En **Taller**, inicia una sesión de diagnóstico; desde **Agregar a la sesión → Prueba guiada** ejecuta las pruebas que correspondan y registra las mediciones con **Agregar a la sesión → Medición con multímetro** (o desde **Multímetro**). Luego abre el menú ⋮ de la sesión y toca **Generar informe** para ver la vista previa del informe HTML. Es un archivo autocontenido con diez secciones: **Encabezado**, **Conclusión**, **Medición con multímetro**, **Lo que registró la ECU** y su línea de tiempo, **Comparación con el chequeo anterior**, **Interpretación**, **¿Es el repuesto correcto?**, **Qué revisar, en orden**, **Pendiente por confirmar** y **Fuentes**. Desde la vista previa puedes **Editar interpretación**, **Compartir** o **Imprimir o PDF**; en el diálogo de impresión también puedes guardar como PDF.
+
+Los CSV adjuntos a los eventos no se incluyen en la copia de seguridad. El informe se puede regenerar con el payload de la sesión respaldado, aunque esos adjuntos no estén disponibles.
+
+**Prueba manual del informe:** genera un informe HTML real desde una sesión con datos, ábrelo en Chrome de escritorio y comprueba que se vea correctamente con el tema claro y oscuro (según `prefers-color-scheme`), en un ancho de 360 px y al imprimir o guardar como PDF.
+
 ### Conocimiento del modelo y referencias
 
 Primero abre **Taller → Más herramientas → Vehículo → Perfiles de vehículo**, edita el perfil y elige su **Modelo de referencia**. La lista se filtra según sea carro o moto; si no aparece el modelo exacto, deja **Sin modelo de referencia** en vez de usar datos de otro vehículo.
