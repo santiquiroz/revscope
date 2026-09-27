@@ -7,3 +7,9 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.roborazzi) apply false
 }
+
+// Las capturas Roborazzi de pantallas largas (la sesión del Taller) agotaban de forma intermitente los 512 MB
+// por defecto del worker de tests en la corrida completa (OutOfMemoryError al rasterizar).
+subprojects {
+    tasks.withType<Test>().configureEach { maxHeapSize = "1g" }
+}
