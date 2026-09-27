@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -124,7 +125,11 @@ fun SessionDetailScreen(
                             }
                         }
                     }) {
-                        Text("📷", fontSize = 18.sp)
+                        Icon(
+                            Icons.Outlined.PhotoCamera,
+                            contentDescription = "Compartir imagen del viaje",
+                            tint = RevScopeColors.TextPrimary,
+                        )
                     }
                     ExportMenuButton(
                         expanded = showExportMenu,
