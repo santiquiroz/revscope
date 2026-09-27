@@ -83,6 +83,33 @@ class VeredictoMultimetroTest {
     }
 
     @Test
+    fun `no compara con la ECU hasta medir cerrado y a fondo`() {
+        val soloCerrado = casoBenelli.filterNot {
+            it.funcion == FuncionCable.SENAL && it.condicion != CondicionesMultimetro.CERRADO
+        }
+        val ecu = LecturasEcu(
+            "Prueba guiada «Barrido del TPS» de esta sesión",
+            mapOf(CondicionesMultimetro.CERRADO to 0.12, CondicionesMultimetro.FONDO to 0.89),
+        )
+
+        val r = VeredictoMultimetro.combinar(tps, soloCerrado, bandas, ecu)
+
+        assertNull(r.ecu)
+    }
+
+    @Test
+    fun `no compara si a la lectura de la ECU le falta cerrado o a fondo`() {
+        val ecuSoloCerrado = LecturasEcu(
+            "Prueba guiada «Barrido del TPS» de esta sesión",
+            mapOf(CondicionesMultimetro.CERRADO to 0.12),
+        )
+
+        val r = VeredictoMultimetro.combinar(tps, casoBenelli, bandas, ecuSoloCerrado)
+
+        assertNull(r.ecu)
+    }
+
+    @Test
     fun `si el sensor entrega bien y la ECU recibe menos apunta al cableado del lado de la ECU`() {
         val sano = casoBenelli.filter { it.funcion != FuncionCable.SENAL } + listOf(
             v(FuncionCable.SENAL, CondicionesMultimetro.CERRADO, 0.6),

@@ -30,6 +30,7 @@ object ComparadorEcu {
 
     fun comparar(plantilla: PlantillaCableado, senal: Map<String, Double>, ecu: LecturasEcu?): ComparacionEcu? {
         if (ecu == null) return null
+        if (!hayCondicionesRequeridas(plantilla.condicionesEcu, senal, ecu.voltiosPorCondicion)) return null
         val filas = plantilla.condiciones.map { it.clave }
             .filter { it in plantilla.condicionesEcu }
             .mapNotNull { c -> fila(c, senal[c], ecu.voltiosPorCondicion[c]) }
@@ -37,6 +38,12 @@ object ComparadorEcu {
         val resultado = resultado(filas)
         return ComparacionEcu(ecu.origen, filas, resultado, texto(resultado, filas, plantilla))
     }
+
+    private fun hayCondicionesRequeridas(
+        condiciones: Set<String>,
+        senal: Map<String, Double>,
+        ecu: Map<String, Double>,
+    ): Boolean = senal.keys.containsAll(condiciones) && ecu.keys.containsAll(condiciones)
 
     private fun fila(condicion: String, multimetro: Double?, ecu: Double?): FilaComparacionEcu? {
         if (multimetro == null || ecu == null) return null
