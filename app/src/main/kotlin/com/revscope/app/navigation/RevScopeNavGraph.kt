@@ -69,6 +69,8 @@ import com.revscope.feature.workshop.taller.NuevaSesionScreen
 import com.revscope.feature.workshop.taller.SesionTallerScreen
 import com.revscope.feature.workshop.taller.SesionTallerViewModel
 import com.revscope.feature.workshop.taller.TallerHubScreen
+import com.revscope.feature.workshop.taller.modelo.ConocimientoModeloScreen
+import com.revscope.feature.workshop.taller.modelo.ReferenciasScreen
 
 internal data class BottomNavItem(
     val screen: Screen,
@@ -278,6 +280,15 @@ fun RevScopeNavGraph(
                     ),
                 ) {
                     MultimetroScreen(onVolver = { navController.popBackStack() })
+                }
+                composable(Screen.ConocimientoModelo.route) {
+                    ConocimientoModeloScreen(
+                        onVolver = { navController.popBackStack() },
+                        onReferencias = { navController.navigate(Screen.ReferenciasModelo.route) },
+                    )
+                }
+                composable(Screen.ReferenciasModelo.route) {
+                    ReferenciasScreen(onVolver = { navController.popBackStack() })
                 }
                 composable(Screen.MechanicChat.route) {
                     MechanicChatScreen(

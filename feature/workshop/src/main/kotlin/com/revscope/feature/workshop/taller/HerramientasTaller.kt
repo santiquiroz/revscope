@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -40,6 +41,7 @@ data class AccionesHub(
     val onMantenimiento: () -> Unit = {},
     val onOdometro: () -> Unit = {},
     val onVelocimetros: () -> Unit = {},
+    val onConocimientoModelo: () -> Unit = {},
 )
 
 data class HerramientaTaller(
@@ -158,6 +160,13 @@ internal object HerramientasTaller {
         GrupoHerramientas(
             "Vehículo",
             listOf(
+                HerramientaTaller(
+                    Icons.Filled.MenuBook,
+                    "Conocimiento del modelo",
+                    "ECU, repuestos, cableado y referencias con su fuente",
+                    false,
+                    a.onConocimientoModelo,
+                ),
                 HerramientaTaller(
                     Icons.Filled.Settings,
                     "Analizador de marchas",

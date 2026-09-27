@@ -10,12 +10,15 @@ import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.modelo.ResumenModelo
+import com.revscope.core.obd.taller.sesion.TallerRepository
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import javax.inject.Inject
@@ -25,12 +28,20 @@ class VehicleViewModel @Inject constructor(
     private val profileDao: VehicleProfileDao,
     private val registry: PidRegistry,
     private val sessionManager: ObdSessionManager,
+    private val repositorioTaller: TallerRepository,
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
         .stateInSafe(viewModelScope, emptyList(), started = SharingStarted.Eagerly)
 
     val availablePids: List<PidDefinition> = registry.allDefinitions().sortedBy { it.nameEs }
+
+    private val _modelosReferencia = MutableStateFlow<List<ResumenModelo>>(emptyList())
+    val modelosReferencia: StateFlow<List<ResumenModelo>> = _modelosReferencia.asStateFlow()
+
+    private val _estadoModelosReferencia = MutableStateFlow<EstadoCargaModelosReferencia>(
+        EstadoCargaModelosReferencia.Cargando,
+    )
 
     // Form state for new/edit profile
     private val _formName = MutableStateFlow("")
@@ -83,10 +94,18 @@ class VehicleViewModel @Inject constructor(
     private val _formInsuranceExpiresAt = MutableStateFlow<Long?>(null)
     val formInsuranceExpiresAt: StateFlow<Long?> = _formInsuranceExpiresAt.asStateFlow()
 
+    private val _formKnowledgeKey = MutableStateFlow<String?>(null)
+    val formKnowledgeKey: StateFlow<String?> = _formKnowledgeKey.asStateFlow()
+
+    init {
+        viewModelScope.launch { observarModelosReferencia() }
+    }
+
     fun setName(v: String) { _formName.value = v }
 
     fun setType(type: String) {
         _formType.value = type
+        _formKnowledgeKey.value = claveModeloSegunEstado(_formKnowledgeKey.value, type, _estadoModelosReferencia.value)
         if (_editingProfile.value == null) applyTypeDefaults(type)
     }
 
@@ -112,6 +131,26 @@ class VehicleViewModel @Inject constructor(
     fun setSoatExpiresAt(v: Long?) { _formSoatExpiresAt.value = v }
     fun setRtmExpiresAt(v: Long?) { _formRtmExpiresAt.value = v }
     fun setInsuranceExpiresAt(v: Long?) { _formInsuranceExpiresAt.value = v }
+    fun setKnowledgeKey(v: String?) {
+        _formKnowledgeKey.value = claveModeloSegunEstado(v, _formType.value, _estadoModelosReferencia.value)
+    }
+
+    private suspend fun observarModelosReferencia() {
+        repositorioTaller.observarModelos()
+            .catch { _estadoModelosReferencia.value = EstadoCargaModelosReferencia.Fallo }
+            .collect(::actualizarModelosReferencia)
+    }
+
+    private fun actualizarModelosReferencia(modelos: List<ResumenModelo>) {
+        _modelosReferencia.value = modelos
+        val estado = EstadoCargaModelosReferencia.Cargados(modelos)
+        _estadoModelosReferencia.value = estado
+        _formKnowledgeKey.value = claveModeloSegunEstado(
+            _formKnowledgeKey.value,
+            _formType.value,
+            estado,
+        )
+    }
 
     /** Reads the VIN from the connected vehicle (Mode 09 02) into the form. */
     fun readVinFromVehicle(connectionVm: ConnectionViewModel) {
@@ -174,6 +213,11 @@ class VehicleViewModel @Inject constructor(
         _formSoatExpiresAt.value = profile.soatExpiresAt
         _formRtmExpiresAt.value = profile.rtmExpiresAt
         _formInsuranceExpiresAt.value = profile.insuranceExpiresAt
+        _formKnowledgeKey.value = claveModeloSegunEstado(
+            profile.knowledgeKey,
+            profile.type,
+            _estadoModelosReferencia.value,
+        )
     }
 
     fun cancelEditing() = resetForm()
@@ -200,6 +244,11 @@ class VehicleViewModel @Inject constructor(
         val maxRpm = (_formMaxRpm.value.toIntOrNull() ?: 8_000).coerceIn(3_000, 20_000)
         val redline = (_formRedlineRpm.value.toIntOrNull() ?: 6_500).coerceIn(2_000, maxRpm)
         val gearCount = (_formGearCount.value.toIntOrNull() ?: 6).coerceIn(3, 8)
+        val knowledgeKey = claveModeloSegunEstado(
+            _formKnowledgeKey.value,
+            _formType.value,
+            _estadoModelosReferencia.value,
+        )
         viewModelScope.launch {
             val editing = _editingProfile.value
             val plate = _formPlate.value.trim().ifEmpty { null }
@@ -218,6 +267,7 @@ class VehicleViewModel @Inject constructor(
                     soatExpiresAt = _formSoatExpiresAt.value,
                     rtmExpiresAt = _formRtmExpiresAt.value,
                     insuranceExpiresAt = _formInsuranceExpiresAt.value,
+                    knowledgeKey = knowledgeKey,
                 )
                 profileDao.update(updated)
                 sessionManager.notifyProfileUpdated(updated)
@@ -239,6 +289,7 @@ class VehicleViewModel @Inject constructor(
                         soatExpiresAt = _formSoatExpiresAt.value,
                         rtmExpiresAt = _formRtmExpiresAt.value,
                         insuranceExpiresAt = _formInsuranceExpiresAt.value,
+                        knowledgeKey = knowledgeKey,
                     )
                 )
             }
@@ -270,9 +321,34 @@ class VehicleViewModel @Inject constructor(
         _formSoatExpiresAt.value = null
         _formRtmExpiresAt.value = null
         _formInsuranceExpiresAt.value = null
+        _formKnowledgeKey.value = null
     }
 
     private companion object {
         val DEFAULT_PIDS = setOf("0C", "0D", "05")
     }
+}
+
+internal fun modeloReferenciaValido(
+    clave: String?,
+    tipo: String,
+    modelos: List<ResumenModelo>,
+): String? = clave?.takeIf { seleccion ->
+    modelos.any { modelo -> modelo.clave == seleccion && modelo.tipo.name == tipo }
+}
+
+internal sealed interface EstadoCargaModelosReferencia {
+    data object Cargando : EstadoCargaModelosReferencia
+    data object Fallo : EstadoCargaModelosReferencia
+    data class Cargados(val modelos: List<ResumenModelo>) : EstadoCargaModelosReferencia
+}
+
+internal fun claveModeloSegunEstado(
+    clave: String?,
+    tipo: String,
+    estado: EstadoCargaModelosReferencia,
+): String? = when (estado) {
+    EstadoCargaModelosReferencia.Cargando, EstadoCargaModelosReferencia.Fallo -> clave
+
+    is EstadoCargaModelosReferencia.Cargados -> modeloReferenciaValido(clave, tipo, estado.modelos)
 }

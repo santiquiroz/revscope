@@ -63,6 +63,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.legal.CityRegistry
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
+import com.revscope.core.obd.taller.modelo.ResumenModelo
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,6 +92,8 @@ fun VehicleProfileScreen(
     val formSoatExpiresAt by vm.formSoatExpiresAt.collectAsState()
     val formRtmExpiresAt by vm.formRtmExpiresAt.collectAsState()
     val formInsuranceExpiresAt by vm.formInsuranceExpiresAt.collectAsState()
+    val formKnowledgeKey by vm.formKnowledgeKey.collectAsState()
+    val modelosReferencia by vm.modelosReferencia.collectAsState()
     val activeProfile by connectionVm.activeProfile.collectAsState()
     val connectionState by connectionVm.connectionState.collectAsState()
     val lastAdapterAddress by connectionVm.lastAdapterAddress.collectAsState()
@@ -216,6 +219,12 @@ fun VehicleProfileScreen(
                     onUnlink = { vm.unlinkAdapter() },
                 )
             }
+
+            ModeloReferenciaDropdown(
+                modelos = modelosReferencia.filter { it.tipo.name == formType },
+                seleccionado = formKnowledgeKey,
+                onSeleccionar = vm::setKnowledgeKey,
+            )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -347,6 +356,57 @@ fun VehicleProfileScreen(
                 ) {
                     Text("Cancelar edición", color = RevScopeColors.TextPrimary)
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModeloReferenciaDropdown(
+    modelos: List<ResumenModelo>,
+    seleccionado: String?,
+    onSeleccionar: (String?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val nombre = modelos.firstOrNull { it.clave == seleccionado }?.nombre ?: "Sin modelo de referencia"
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = nombre,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Modelo de referencia", color = RevScopeColors.TextSecondary) },
+            supportingText = {
+                Text(
+                    "Aporta ECU, repuestos, cableado y referencias citadas.",
+                    color = RevScopeColors.TextSecondary,
+                )
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = RevScopeColors.Accent,
+                unfocusedBorderColor = RevScopeColors.SurfaceHigh,
+                focusedTextColor = RevScopeColors.TextPrimary,
+                unfocusedTextColor = RevScopeColors.TextPrimary,
+            ),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Sin modelo de referencia") },
+                onClick = {
+                    onSeleccionar(null)
+                    expanded = false
+                },
+            )
+            modelos.forEach { modelo ->
+                DropdownMenuItem(
+                    text = { Text(modelo.nombre) },
+                    onClick = {
+                        onSeleccionar(modelo.clave)
+                        expanded = false
+                    },
+                )
             }
         }
     }

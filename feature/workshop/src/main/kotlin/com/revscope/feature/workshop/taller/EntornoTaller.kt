@@ -5,6 +5,7 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
 import com.revscope.core.obd.taller.sesion.aVehiculoTaller
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -18,6 +19,7 @@ import javax.inject.Inject
 interface EntornoTaller {
     val vehiculo: Flow<VehiculoTaller?>
     val conexion: Flow<ConnectionState>
+    val capacidades: Flow<CapacidadesEcu>
     val zona: ZoneId
 
     fun ahora(): Long
@@ -30,6 +32,7 @@ interface EntornoTaller {
 class EntornoTallerObd @Inject constructor(private val manager: ObdSessionManager) : EntornoTaller {
     override val vehiculo: Flow<VehiculoTaller?> = manager.activeProfile.map { it?.aVehiculoTaller() }
     override val conexion: Flow<ConnectionState> = manager.connectionState
+    override val capacidades: Flow<CapacidadesEcu> = manager.capacidadesEcu
     override val zona: ZoneId get() = ZoneId.systemDefault()
 
     override fun ahora(): Long = System.currentTimeMillis()

@@ -28,8 +28,13 @@ class TallerHubViewModel @Inject constructor(
     private val verTodas = MutableStateFlow(false)
 
     val estado: StateFlow<TallerHubEstado> =
-        combine(entorno.vehiculo.flatMapLatest(::datosDe), entorno.conexion, verTodas) { datos, conexion, todas ->
-            ResumenHub.de(datos, conexion, todas, entorno.zona)
+        combine(
+            entorno.vehiculo.flatMapLatest(::datosDe),
+            entorno.conexion,
+            verTodas,
+            entorno.capacidades,
+        ) { datos, conexion, todas, capacidades ->
+            ResumenHub.de(datos, conexion, todas, entorno.zona, capacidades)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(DETENER_TRAS_MS), TallerHubEstado())
 
     fun alternarVerTodas() {

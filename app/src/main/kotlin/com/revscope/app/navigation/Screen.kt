@@ -23,6 +23,8 @@ sealed class Screen(val route: String) {
 
         fun withSensor(sensor: String): String = "multimetro?sensor=$sensor"
     }
+    object ConocimientoModelo : Screen("conocimiento_modelo")
+    object ReferenciasModelo : Screen("referencias_modelo")
     object AlDia : Screen("al_dia")
     object HealthCheck : Screen("health_check")
     object LiveMixture : Screen("live_mixture")

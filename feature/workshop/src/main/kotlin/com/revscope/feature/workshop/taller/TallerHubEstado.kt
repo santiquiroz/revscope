@@ -6,6 +6,7 @@ import com.revscope.core.obd.taller.sesion.EstadoSesion
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import java.time.ZoneId
 
 sealed interface EstadoAdaptador {
@@ -36,6 +37,7 @@ data class TallerHubEstado(
     val sesionAbierta: TarjetaSesionAbierta? = null,
     val anteriores: List<FilaSesionAnterior> = emptyList(),
     val verTodas: Boolean = false,
+    val capacidades: CapacidadesEcu = CapacidadesEcu.desde(null, emptySet()),
 ) {
     val anterioresVisibles: List<FilaSesionAnterior>
         get() = if (verTodas) anteriores else anteriores.take(ANTERIORES_EN_RESUMEN)
@@ -55,7 +57,13 @@ internal data class DatosHub(
 
 internal object ResumenHub {
 
-    fun de(datos: DatosHub, conexion: ConnectionState, verTodas: Boolean, zona: ZoneId): TallerHubEstado {
+    fun de(
+        datos: DatosHub,
+        conexion: ConnectionState,
+        verTodas: Boolean,
+        zona: ZoneId,
+        capacidades: CapacidadesEcu = CapacidadesEcu.desde(null, emptySet()),
+    ): TallerHubEstado {
         val abierta = datos.sesiones.firstOrNull { it.abierta }
         return TallerHubEstado(
             cargando = false,
@@ -65,6 +73,7 @@ internal object ResumenHub {
             sesionAbierta = abierta?.let { tarjeta(it, datos.eventosAbierta, zona) },
             anteriores = datos.sesiones.filterNot { it.abierta }.sortedByDescending { it.inicio }.map { fila(it, zona) },
             verTodas = verTodas,
+            capacidades = capacidades,
         )
     }
 

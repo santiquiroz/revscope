@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.CapacidadesEcuCard
 
 @Composable
 fun TallerHubContent(
@@ -63,6 +64,19 @@ fun TallerHubContent(
         item(key = "encabezado") { EncabezadoHub(selectorVehiculo) }
         item(key = "adaptador") { LineaAdaptador(estado.adaptador, acciones.onConectarAdaptador) }
         item(key = "principal") { TarjetaPrincipal(estado, acciones) }
+        if (estado.adaptador.conectado) {
+            item(key = "capacidades") {
+                CapacidadesEcuCard(
+                    protocolo = estado.capacidades.protocolo,
+                    pids = estado.capacidades.pidsAnunciados,
+                    pidsPorRango = estado.capacidades.pidsPorRango,
+                    tasaEsperada = estado.capacidades.tasaMedidaHz?.let {
+                        "Medida: %.1f Hz por PID · %s".format(it, estado.capacidades.tasaEsperada)
+                    } ?: estado.capacidades.tasaEsperada,
+                    explicacion = estado.capacidades.explicacion,
+                )
+            }
+        }
         item(key = "rapidas-titulo") { EncabezadoSeccion("Herramientas rápidas") }
         item(key = "rapidas") { RejillaHerramientas(HerramientasTaller.rapidas(acciones), conectado) }
         sesionesAnteriores(estado, acciones)

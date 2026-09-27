@@ -12,6 +12,7 @@ import com.revscope.core.obd.taller.modelo.ResumenModelo
 import com.revscope.core.obd.taller.multimetro.ResolutorPlantilla
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import com.revscope.core.obd.taller.sesion.AdjuntosTaller
 import com.revscope.core.obd.taller.sesion.AnalizadorSesion
 import com.revscope.core.obd.taller.sesion.ChequeoRegistrado
@@ -133,9 +134,11 @@ class EntornoDePrueba(
 ) : EntornoTaller {
     val vehiculoFlujo = MutableStateFlow(vehiculo)
     val conexionFlujo = MutableStateFlow(conexion)
+    val capacidadesFlujo = MutableStateFlow(CapacidadesEcu.desde(null, emptySet()))
 
     override val vehiculo: Flow<VehiculoTaller?> = vehiculoFlujo
     override val conexion: Flow<ConnectionState> = conexionFlujo
+    override val capacidades: Flow<CapacidadesEcu> = capacidadesFlujo
     override val zona: ZoneId = BOGOTA
 
     override fun ahora(): Long = reloj
