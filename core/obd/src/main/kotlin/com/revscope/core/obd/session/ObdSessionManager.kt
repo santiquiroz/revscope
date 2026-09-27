@@ -42,6 +42,7 @@ import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.service.ObdForegroundService
 import com.revscope.core.obd.service.TripSummaryNotifier
 import com.revscope.core.obd.track.TrackModeEngine
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.revscope.core.obd.telemetry.DerivedMetricsEngine
 import com.revscope.core.obd.telemetry.GatedTransport
@@ -125,6 +126,9 @@ class ObdSessionManager @Inject constructor(
 
     private val _readings = MutableStateFlow<Map<String, ObdReading>>(emptyMap())
     val readings: StateFlow<Map<String, ObdReading>> = _readings.asStateFlow()
+
+    private val _capacidadesEcu = MutableStateFlow(CapacidadesEcu.desde(null, emptySet()))
+    val capacidadesEcu: StateFlow<CapacidadesEcu> = _capacidadesEcu.asStateFlow()
 
     private val _lastAdapterAddress = MutableStateFlow<String?>(null)
     val lastAdapterAddress: StateFlow<String?> = _lastAdapterAddress.asStateFlow()
@@ -276,6 +280,14 @@ class ObdSessionManager @Inject constructor(
         scope.launch { observeAutoTripSetting() }
         scope.launch { observeRemoteViewer() }
         scope.launch { observeSamplingPreset() }
+        scope.launch {
+            captura.estadisticas.collect { estadisticas ->
+                val tasa = estadisticas?.hzPorPid?.values?.takeIf { it.isNotEmpty() }?.average()
+                _capacidadesEcu.update { actual ->
+                    CapacidadesEcu.desde(protocoloDpn, actual.pidsAnunciados, tasa)
+                }
+            }
+        }
         scope.launch {
             trackModeEngine.lapEvents.collect { lap ->
                 alertsEngine.announceLap(lap.number, lap.timeMs)
@@ -590,6 +602,8 @@ class ObdSessionManager @Inject constructor(
             stopTelemetry(MotivoFin.USUARIO)
             transport?.disconnect()
             transport = null
+            limpiarLecturasObd()
+            limpiarCapacidadesEcu()
         }
     }
 
@@ -732,6 +746,8 @@ class ObdSessionManager @Inject constructor(
         scope.launch {
             stopTelemetry(MotivoFin.RECONEXION)
             transport?.disconnect()
+            limpiarLecturasObd()
+            limpiarCapacidadesEcu()
             currentDeviceAddress = deviceAddress
             currentAdapterType = type
 
@@ -857,6 +873,7 @@ class ObdSessionManager @Inject constructor(
         _connectionState.value = ConnectionState.Disconnected
         _readings.value = emptyMap()
         _odometerSupported.value = null
+        limpiarCapacidadesEcu()
         summarySessionId?.let { id ->
             runCatching { sessionDao.getById(id) }.getOrNull()?.let { tripSummaryNotifier.post(it) }
         }
@@ -879,6 +896,7 @@ class ObdSessionManager @Inject constructor(
         elmVersion = negotiationResult.elmVersion
         protocoloDpn = probe(bt, "AT DPN\r", DPN_TIMEOUT_MS)?.let(ResponseParser::cleanResponse)
         protocoloEsCan = ProtocolInfo.esCan(protocoloDpn)
+        _capacidadesEcu.value = CapacidadesEcu.desde(protocoloDpn, negotiationResult.supportedPids)
         alertsEngine.reloadThresholds()
         resolveProfileByVin(bt)
         if (_activeProfile.value == null) activateProfileByAdapter()
@@ -927,6 +945,8 @@ class ObdSessionManager @Inject constructor(
                 val cause = classifyLinkLoss(transport)
                 runCatching { transport?.disconnect() }
                 transport = null
+                limpiarLecturasObd()
+                limpiarCapacidadesEcu()
                 when (cause) {
                     EngineOffDetector.LinkLossCause.ENGINE_OFF -> {
                         Timber.i("ObdSessionManager: engine off — clean shutdown")
@@ -952,6 +972,22 @@ class ObdSessionManager @Inject constructor(
         activeScheduler = null
         linkPipeline = null
         tripController.onEnlacePerdido(motivo)
+    }
+
+    private fun limpiarCapacidadesEcu() {
+        registry.limpiarSoporte()
+        protocoloDpn = null
+        protocoloEsCan = null
+        _capacidadesEcu.value = CapacidadesEcu.desde(null, emptySet())
+    }
+
+    private fun limpiarLecturasObd() {
+        val velocidadGps = _readings.value[GPS_SPEED_PID]
+        _readings.value = if (_gpsSessionActive.value && velocidadGps != null) {
+            mapOf(GPS_SPEED_PID to velocidadGps)
+        } else {
+            emptyMap()
+        }
     }
 
     private fun publishReading(reading: ObdReading) {

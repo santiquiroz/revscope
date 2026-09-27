@@ -15,21 +15,36 @@ class DerivedMetricsEngineTest {
     // ── BOOST ──────────────────────────────────────────────────────────────────
 
     @Test
-    fun `calculates positive boost for turbocharged reading`() = runTest {
+    fun `boost not emitted when only MAP is available`() = runTest {
         val derived = engine.observeDerived(flowOf(reading("0B", 120.0, "kPa"))).toList()
 
-        assertEquals(1, derived.size)
-        assertEquals("BOOST", derived[0].pid)
-        assertEquals(19.0, derived[0].value, 0.001)   // 120 - 101 = 19
-        assertEquals("kPa", derived[0].unit)
+        assertTrue(derived.none { it.pid == "BOOST" })
     }
 
     @Test
-    fun `calculates negative boost for naturally aspirated engine`() = runTest {
-        val derived = engine.observeDerived(flowOf(reading("0B", 90.0, "kPa"))).toList()
+    fun `calculates boost from MAP and barometric pressure`() = runTest {
+        val derived = engine.observeDerived(
+            flowOf(reading("33", 98.0, "kPa"), reading("0B", 120.0, "kPa"))
+        ).toList()
 
-        assertEquals(1, derived.size)
-        assertEquals(-11.0, derived[0].value, 0.001)  // 90 - 101 = -11
+        val boost = derived.single { it.pid == "BOOST" }
+        assertEquals(22.0, boost.value, 0.001)
+        assertEquals("kPa", boost.unit)
+    }
+
+    @Test
+    fun `recalculates boost when MAP or barometric pressure changes`() = runTest {
+        val derived = engine.observeDerived(
+            flowOf(
+                reading("33", 98.0, "kPa"),
+                reading("0B", 120.0, "kPa"),
+                reading("0B", 125.0, "kPa"),
+                reading("33", 100.0, "kPa"),
+            )
+        ).toList()
+
+        val boostValues = derived.filter { it.pid == "BOOST" }.map { it.value }
+        assertEquals(listOf(22.0, 27.0, 25.0), boostValues)
     }
 
     // ── GEAR ───────────────────────────────────────────────────────────────────

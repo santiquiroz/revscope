@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlin.math.abs
 
-private const val ATMOSPHERIC_KPA = 101.0
 private const val POWER_DIVISOR = 9549.0
 private const val MIN_RPM_FOR_GEAR = 500.0
 private const val MIN_SPEED_KMH_FOR_GEAR = 3.0
@@ -21,7 +20,7 @@ private val DEFAULT_GEAR_TABLE = GearDefaults.ratios(6, VehicleType.CAR).mapInde
  * affected by each incoming reading.
  *
  * Emits [ObdReading] with synthetic PIDs:
- *   "BOOST"  kPa  — MAP - 101 (negative = intake vacuum on NA engines)
+ *   "BOOST"  kPa  — MAP - presión barométrica del PID 33
  *   "GEAR"   ""   — estimated gear 1..gearCount, or 0 when stopped/neutral
  *   "POWER"  kW   — torque_ref_Nm × torque_pct% × rpm / 9549
  *
@@ -55,7 +54,7 @@ class DerivedMetricsEngine {
         timestamp: Long,
     ): List<ObdReading> = buildList {
         when (updatedPid) {
-            "0B" -> calculateBoost(latest, timestamp)?.let { add(it) }
+            "0B", "33" -> calculateBoost(latest, timestamp)?.let { add(it) }
             "0D" -> calculateGear(latest, timestamp)?.let { add(it) }
             "0C" -> {
                 calculateGear(latest, timestamp)?.let { add(it) }
@@ -67,7 +66,8 @@ class DerivedMetricsEngine {
 
     private fun calculateBoost(latest: Map<String, Double>, timestamp: Long): ObdReading? {
         val map = latest["0B"] ?: return null
-        return ObdReading(pid = "BOOST", value = map - ATMOSPHERIC_KPA, unit = "kPa", timestamp = timestamp)
+        val barometrica = latest["33"] ?: return null
+        return ObdReading(pid = "BOOST", value = map - barometrica, unit = "kPa", timestamp = timestamp)
     }
 
     private fun calculateGear(latest: Map<String, Double>, timestamp: Long): ObdReading? {

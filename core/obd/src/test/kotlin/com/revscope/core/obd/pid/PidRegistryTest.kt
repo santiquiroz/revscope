@@ -355,6 +355,42 @@ class PidRegistryTest {
     }
 
     @Test
+    fun `estadoSoporte is unknown before ECU bitmap is known`() {
+        assertEquals(EstadoSoporte.Desconocido, registry.estadoSoporte("0C"))
+    }
+
+    @Test
+    fun `estadoSoporte distinguishes supported and unsupported after ECU bitmap is known`() {
+        registry.setSupportedPids(setOf("0d"))
+
+        assertEquals(EstadoSoporte.Soportado, registry.estadoSoporte("0D"))
+        assertEquals(EstadoSoporte.NoSoportado, registry.estadoSoporte("0C"))
+    }
+
+    @Test
+    fun `limpiarSoporte returns registry to unknown for a new connection cycle`() {
+        registry.setSupportedPids(setOf("0C"))
+
+        registry.limpiarSoporte()
+
+        assertEquals(EstadoSoporte.Desconocido, registry.estadoSoporte("0C"))
+        assertTrue(registry.isSupported("0C"))
+        assertNull(registry.pidsAnunciados())
+    }
+
+    @Test
+    fun `pidsAnunciados is null before bitmap and returns an independent snapshot afterwards`() {
+        assertNull(registry.pidsAnunciados())
+        registry.setSupportedPids(setOf("0c", "0D"))
+
+        val firstConnection = registry.pidsAnunciados()
+        registry.setSupportedPids(setOf("05"))
+
+        assertEquals(setOf("0C", "0D"), firstConnection)
+        assertEquals(setOf("05"), registry.pidsAnunciados())
+    }
+
+    @Test
     fun `isSupported returns false for PID outside filter`() {
         registry.setSupportedPids(setOf("0D"))
         assertTrue(registry.isSupported("0D"))

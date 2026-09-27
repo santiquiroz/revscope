@@ -37,6 +37,12 @@ class PidRegistry(pidsJson: String) {
         Timber.d("PidRegistry: ECU supports ${supportedPidFilter!!.size} PIDs from our definition set")
     }
 
+    fun limpiarSoporte() {
+        supportedPidFilter = null
+    }
+
+    fun pidsAnunciados(): Set<String>? = supportedPidFilter?.toSet()
+
     /** Returns the [PidDefinition] for [pid], or null if unknown. */
     fun getDefinition(pid: String): PidDefinition? = definitions[pid.uppercase()]
 
@@ -94,13 +100,17 @@ class PidRegistry(pidsJson: String) {
     }
 
     /** Returns true if [pid] passes the ECU support filter (or no filter is set). */
-    fun isSupported(pid: String): Boolean = isAllowedByFilter(pid)
+    fun isSupported(pid: String): Boolean = estadoSoporte(pid) != EstadoSoporte.NoSoportado
+
+    fun estadoSoporte(pid: String): EstadoSoporte {
+        val filter = supportedPidFilter ?: return EstadoSoporte.Desconocido
+        return if (pid.uppercase() in filter) EstadoSoporte.Soportado else EstadoSoporte.NoSoportado
+    }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private fun isAllowedByFilter(pid: String): Boolean {
-        val filter = supportedPidFilter ?: return true
-        return filter.contains(pid.uppercase())
+        return estadoSoporte(pid) != EstadoSoporte.NoSoportado
     }
 
     private fun evalFormula(formula: String, bytes: ByteArray): Double {

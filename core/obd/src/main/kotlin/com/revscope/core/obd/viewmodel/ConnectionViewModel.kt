@@ -15,6 +15,7 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.session.MotivoFin
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +35,7 @@ class ConnectionViewModel @Inject constructor(
 
     val connectionState: StateFlow<ConnectionState> = manager.connectionState
     val readings: StateFlow<Map<String, ObdReading>> = manager.readings
+    val capacidadesEcu: StateFlow<CapacidadesEcu> = manager.capacidadesEcu
     val lastAdapterAddress: StateFlow<String?> = manager.lastAdapterAddress
     val activeProfile: StateFlow<VehicleProfileEntity?> = manager.activeProfile
     val lastReadVin: StateFlow<String?> = manager.lastReadVin
