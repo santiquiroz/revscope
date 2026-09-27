@@ -16,7 +16,9 @@ import java.util.Locale
 private const val EXPORTS_DIR = "exports"
 private const val CSV_MIME_TYPE = "text/csv"
 private const val CHOOSER_TITLE = "Exportar CSV"
+private const val SHARE_TITLE = "Compartir archivo"
 private const val EXPORT_FAILED_MESSAGE = "No se pudo exportar el CSV"
+private const val SHARE_FAILED_MESSAGE = "No se pudo compartir el archivo"
 private const val FILE_NAME_TIMESTAMP_PATTERN = "yyyyMMdd-HHmm"
 private const val ISO_TIMESTAMP_PATTERN = "yyyy-MM-dd'T'HH:mm:ss"
 
@@ -43,19 +45,18 @@ object CsvShare {
             Toast.makeText(context, EXPORT_FAILED_MESSAGE, Toast.LENGTH_SHORT).show()
             return
         }
-        launchShareChooser(context, uri)
+        launchShareChooser(context, uri, CSV_MIME_TYPE, CHOOSER_TITLE)
     }
 
-    /** Comparte un CSV ya escrito (la captura rápida lo escribe mientras corre). */
-    fun shareFile(context: Context, file: File) {
+    fun shareFile(context: Context, file: File, mime: String = CSV_MIME_TYPE) {
         val uri = runCatching {
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         }.onFailure { Timber.e(it, "CsvShare: no se pudo compartir ${file.name}") }.getOrNull()
         if (uri == null) {
-            Toast.makeText(context, EXPORT_FAILED_MESSAGE, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, errorAlCompartir(mime), Toast.LENGTH_SHORT).show()
             return
         }
-        launchShareChooser(context, uri)
+        launchShareChooser(context, uri, mime, SHARE_TITLE)
     }
 
     /** Carpeta de exportaciones (la que publica el FileProvider). */
@@ -91,17 +92,20 @@ object CsvShare {
         }
     }
 
-    private fun launchShareChooser(context: Context, uri: Uri) {
+    private fun launchShareChooser(context: Context, uri: Uri, mime: String, title: String) {
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = CSV_MIME_TYPE
+            type = mime
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, CHOOSER_TITLE))
+        context.startActivity(Intent.createChooser(intent, title))
     }
 
     private fun fileName(tipo: String): String {
         val stamp = SimpleDateFormat(FILE_NAME_TIMESTAMP_PATTERN, Locale.US).format(Date())
         return "revscope-$tipo-$stamp.csv"
     }
+
+    private fun errorAlCompartir(mime: String): String =
+        if (mime == CSV_MIME_TYPE) EXPORT_FAILED_MESSAGE else SHARE_FAILED_MESSAGE
 }

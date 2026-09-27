@@ -13,6 +13,9 @@ sealed class Screen(val route: String) {
     object TallerSesion : Screen("taller_sesion/{sesionId}") {
         fun withId(sesionId: Long) = "taller_sesion/$sesionId"
     }
+    object InformeTaller : Screen("informe_taller/{sesionId}") {
+        fun withId(sesionId: Long) = "informe_taller/$sesionId"
+    }
     object PruebaGuiada : Screen("prueba_guiada?tipo={tipo}") {
         override val navRoute: String = "prueba_guiada"
 

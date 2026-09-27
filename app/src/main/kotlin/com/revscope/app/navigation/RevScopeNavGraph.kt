@@ -69,6 +69,8 @@ import com.revscope.feature.workshop.taller.NuevaSesionScreen
 import com.revscope.feature.workshop.taller.SesionTallerScreen
 import com.revscope.feature.workshop.taller.SesionTallerViewModel
 import com.revscope.feature.workshop.taller.TallerHubScreen
+import com.revscope.feature.workshop.taller.informe.InformeScreen
+import com.revscope.feature.workshop.taller.informe.InformeViewModel
 import com.revscope.feature.workshop.taller.modelo.ConocimientoModeloScreen
 import com.revscope.feature.workshop.taller.modelo.ReferenciasScreen
 
@@ -242,7 +244,8 @@ fun RevScopeNavGraph(
                 composable(
                     route = Screen.TallerSesion.route,
                     arguments = listOf(navArgument(SesionTallerViewModel.ARG_SESION) { type = NavType.LongType }),
-                ) {
+                ) { backStackEntry ->
+                    val sesionId = checkNotNull(backStackEntry.arguments?.getLong(SesionTallerViewModel.ARG_SESION))
                     SesionTallerScreen(
                         destinos = DestinosSesion(
                             onVolver = { navController.popBackStack() },
@@ -251,8 +254,15 @@ fun RevScopeNavGraph(
                             onChequeo = { navController.navigate(Screen.HealthCheck.route) },
                             onPruebaGuiada = { navController.navigate(Screen.PruebaGuiada.navRoute) },
                             onMultimetro = { navController.navigate(Screen.Multimetro.navRoute) },
+                            onGenerarInforme = { navController.navigate(Screen.InformeTaller.withId(sesionId)) },
                         ),
                     )
+                }
+                composable(
+                    route = Screen.InformeTaller.route,
+                    arguments = listOf(navArgument(InformeViewModel.ARG_SESION) { type = NavType.LongType }),
+                ) {
+                    InformeScreen(onVolver = { navController.popBackStack() })
                 }
                 composable(
                     route = Screen.PruebaGuiada.route,
