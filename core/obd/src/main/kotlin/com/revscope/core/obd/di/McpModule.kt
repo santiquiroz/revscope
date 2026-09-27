@@ -27,6 +27,7 @@ import com.revscope.core.obd.mcp.McpActivityTracker
 import com.revscope.core.obd.mcp.McpDispatcher
 import com.revscope.core.obd.mcp.McpPermisosProvider
 import com.revscope.core.obd.mcp.McpTool
+import com.revscope.core.obd.mcp.RegistrarMedicionTool
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,7 +37,7 @@ import javax.inject.Singleton
 /**
  * Las tools de lectura (plan6 Task 4, get_muestreo, get_captura, get_guia_dtc, get_sesion_taller y
  * get_prueba_guiada) más las de control (viaje, preset de muestreo, captura rápida, sesión y pruebas guiadas
- * del Taller) y borrado de DTC, que el dispatcher solo lista y ejecuta si el dueño activó sus permisos en
+ * del Taller, y la medición con multímetro) y borrado de DTC, que el dispatcher solo lista y ejecuta si el dueño activó sus permisos en
  * Ajustes.
  */
 @Module
@@ -65,6 +66,7 @@ object McpModule {
         getSesionTaller: GetSesionTallerTool,
         iniciarSesionTaller: IniciarSesionTallerTool,
         agregarNotaTaller: AgregarNotaTallerTool,
+        registrarMedicion: RegistrarMedicionTool,
         getPruebaGuiada: GetPruebaGuiadaTool,
         iniciarPruebaGuiada: IniciarPruebaGuiadaTool,
         avanzarPruebaGuiada: AvanzarPruebaGuiadaTool,
@@ -73,7 +75,7 @@ object McpModule {
         getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getGuiaDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
         getMuestreo, setMuestreo, iniciarCaptura, getCaptura, detenerCaptura,
-        getSesionTaller, iniciarSesionTaller, agregarNotaTaller,
+        getSesionTaller, iniciarSesionTaller, agregarNotaTaller, registrarMedicion,
         getPruebaGuiada, iniciarPruebaGuiada, avanzarPruebaGuiada, cancelarPruebaGuiada,
     )
 
