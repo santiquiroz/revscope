@@ -33,13 +33,13 @@ private const val FRACCION_ALTO_NUMERO = 0.36f
 
 @Composable
 fun SpeedGauge(
-    speed: Float,
+    speed: Float?,
     maxSpeed: Int = 260,
     unit: String = "km/h",
     modifier: Modifier = Modifier,
     size: Dp = 160.dp,
 ) {
-    val fraction = (speed / maxSpeed).coerceIn(0f, 1f)
+    val fraction = ((speed ?: 0f) / maxSpeed).coerceIn(0f, 1f)
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -84,7 +84,7 @@ fun SpeedGauge(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             TextoAjustable(
-                texto = speed.toInt().toString(),
+                texto = speed?.toInt()?.toString() ?: "—",
                 estilo = RevScopeType.numeros.copy(fontSize = 48.sp),
                 color = RevScopeColors.TextPrimary,
                 modifier = Modifier.fillMaxWidth().height(lado * FRACCION_ALTO_NUMERO),

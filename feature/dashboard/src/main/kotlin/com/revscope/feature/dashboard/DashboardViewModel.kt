@@ -16,6 +16,8 @@ import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +43,7 @@ class DashboardViewModel @Inject constructor(
     private val settings: DataStore<Preferences>,
     private val aiRulesSource: RestrictionRulesSource,
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
+    private val registry: PidRegistry,
 ) : ViewModel() {
 
     /** Nueva versión disponible en GitHub — null si estás al día o sin red. */
@@ -57,6 +60,9 @@ class DashboardViewModel @Inject constructor(
 
     /** Redline used by the shift light — cached in AlertsEngine from DataStore. */
     val redlineRpm: Int get() = alertsEngine.currentRedlineRpm
+
+    fun disponibilidad(pid: String, nombre: String): DisponibilidadPid =
+        DisponibilidadPid.resolver(pid, nombre, registry)
 
     /**
      * Big speedometer source while connected via OBD: true = GPS_SPEED, false = PID 0D.

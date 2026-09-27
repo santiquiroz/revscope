@@ -38,6 +38,7 @@ import com.revscope.core.designsystem.ErrorState
 import com.revscope.core.designsystem.NivelBadge
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.obd.workshop.DiagnosticRules
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -149,6 +150,18 @@ private fun LazyListScope.resultados(done: HealthCheckViewModel.UiState.Done) {
         Text("Último chequeo: $fecha", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
     items(done.items) { item -> DiagnosisRow(item) }
+    items(done.noDisponibles) { parametro -> NoDisponibleRow(parametro) }
+}
+
+@Composable
+private fun NoDisponibleRow(parametro: String) {
+    Surface(shape = RoundedCornerShape(12.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            NivelBadge(NivelEstado.SIN_DATO)
+            Text(parametro, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+            Text("No disponible en esta ECU", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        }
+    }
 }
 
 @Composable

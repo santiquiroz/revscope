@@ -2,6 +2,7 @@ package com.revscope.feature.workshop
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -9,6 +10,8 @@ import com.revscope.core.designsystem.DESCRIPCION_VOLVER
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.obd.legal.DocumentStatusCalculator
+import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.workshop.DiagnosticRules
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -42,6 +45,45 @@ class SemanticaTallerTest {
         }
 
         compose.onNodeWithText("Falla").assertIsDisplayed()
+    }
+
+    @Test
+    fun `el chequeo muestra parametros no disponibles como sin dato`() {
+        compose.setContent {
+            RevScopeTheme {
+                HealthCheckContent(
+                    HealthCheckViewModel.UiState.Done(
+                        items = emptyList(),
+                        dtcCodes = emptyList(),
+                        timestamp = 0L,
+                        noDisponibles = listOf("Sensor O2 B1S1"),
+                    ),
+                    AccionesChequeo(),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Sensor O2 B1S1").assertIsDisplayed()
+        compose.onNodeWithText("Sin dato").assertIsDisplayed()
+        compose.onNodeWithText("No disponible en esta ECU").assertIsDisplayed()
+    }
+
+    @Test
+    fun `mezcla conserva las filas no soportadas y explica el motivo`() {
+        val registry = PidRegistry("[]").apply { setSupportedPids(emptySet()) }
+        compose.setContent {
+            RevScopeTheme {
+                LiveMixtureContent(
+                    readings = emptyMap(),
+                    definition = registry::getDefinition,
+                    disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, registry) },
+                )
+            }
+        }
+
+        compose.onNodeWithText("Fuel trim corto B1").assertIsDisplayed()
+        compose.onAllNodesWithText("No disponible en esta ECU")[0].assertIsDisplayed()
+        compose.onNodeWithText("Esta ECU no reporta fuel trim corto b1 (PID 06).").assertIsDisplayed()
     }
 
     @Test

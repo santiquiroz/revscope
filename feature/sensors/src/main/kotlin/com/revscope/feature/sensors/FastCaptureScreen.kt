@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +40,9 @@ import com.revscope.core.obd.telemetry.captura.EstadisticasCaptura
 import com.revscope.core.obd.telemetry.captura.EstadoCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 import com.revscope.core.obd.telemetry.captura.SeleccionPids
+import com.revscope.core.obd.pid.EstadoSoporte
+import com.revscope.core.obd.pid.PidDefinition
+import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import kotlinx.coroutines.launch
 
 
@@ -50,7 +54,11 @@ fun FastCaptureContent(vm: FastCaptureViewModel = hiltViewModel()) {
     val stats by vm.estadisticas.collectAsState()
     val resumen by vm.ultimoResumen.collectAsState()
     val mensaje by vm.mensaje.collectAsState()
+    val pidNoDisponible by vm.pidNoDisponible.collectAsState()
+    val capacidades by vm.capacidadesEcu.collectAsState()
     val activa = estado as? EstadoCaptura.Activa
+    val candidatos = remember(capacidades) { vm.candidatos() }
+    val disponibilidad = remember(capacidades) { vm::disponibilidad }
 
     Column(
         modifier = Modifier
@@ -65,8 +73,17 @@ fun FastCaptureContent(vm: FastCaptureViewModel = hiltViewModel()) {
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
-        if (activa == null) SelectorPids(vm, seleccion)
+        if (activa == null) {
+            SelectorPids(
+                seleccion = seleccion,
+                candidatos = candidatos,
+                disponibilidad = disponibilidad,
+                onElegirPedalYMariposa = vm::elegirPedalYMariposa,
+                onAlternar = vm::alternar,
+            )
+        }
         BotonCaptura(activa != null, conectado && seleccion.isNotEmpty(), vm::iniciar, vm::detener)
+        pidNoDisponible?.let { AvisoPidNoDisponible(it) }
         mensaje?.let { AvisoDescartable(texto = it, onDescartar = vm::descartarMensaje, color = RevScopeColors.Warning) }
         if (activa != null) {
             activa.limiteHz?.let { AvisoLimite("Limitada a $it Hz para cuidar batería y temperatura del teléfono") }
@@ -78,7 +95,29 @@ fun FastCaptureContent(vm: FastCaptureViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun SelectorPids(vm: FastCaptureViewModel, seleccion: List<String>) {
+internal fun AvisoPidNoDisponible(disponibilidad: DisponibilidadPid) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("No disponible en esta ECU", color = RevScopeColors.Warning, style = RevScopeType.label)
+        disponibilidad.motivo?.let {
+            Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        }
+    }
+}
+
+@Composable
+internal fun SelectorPids(
+    seleccion: List<String>,
+    candidatos: List<PidDefinition>,
+    disponibilidad: (String) -> DisponibilidadPid,
+    onElegirPedalYMariposa: () -> Unit,
+    onAlternar: (String) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             "PIDs (${seleccion.size}/${FastCaptureViewModel.MAX_PIDS})",
@@ -90,9 +129,15 @@ private fun SelectorPids(vm: FastCaptureViewModel, seleccion: List<String>) {
             modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Chip("Pedal y mariposa (49, 4A, 11)", seleccion == SeleccionPids.PEDAL_Y_MARIPOSA, vm::elegirPedalYMariposa)
-            vm.candidatos().forEach { def ->
-                Chip("${def.pid} ${def.nameEs}", def.pid in seleccion) { vm.alternar(def.pid) }
+            Chip("Pedal y mariposa (49, 4A, 11)", seleccion == SeleccionPids.PEDAL_Y_MARIPOSA, onElegirPedalYMariposa)
+            candidatos.forEach { def ->
+                val disponibilidadPid = disponibilidad(def.pid)
+                val noDisponible = disponibilidadPid.estado == EstadoSoporte.NoSoportado
+                Chip(
+                    texto = "${def.pid} ${def.nameEs}" + if (noDisponible) " · no disponible" else "",
+                    seleccionado = def.pid in seleccion,
+                    onClick = { onAlternar(def.pid) },
+                )
             }
         }
         Text(

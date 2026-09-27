@@ -4,6 +4,7 @@ import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.BarraConVolver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.Context
 import com.revscope.core.common.export.CsvShare
 import com.revscope.core.designsystem.ChipSeleccion
+import com.revscope.core.designsystem.CapacidadesEcuCard
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import kotlinx.coroutines.launch
@@ -78,6 +80,7 @@ fun SensorGraphScreen(
 ) {
     val selectedPid by vm.selectedPid.collectAsState()
     val history by vm.history.collectAsState()
+    val capacidades by connectionVm.capacidadesEcu.collectAsState()
     val currentDef = vm.availablePids.find { it.pid == selectedPid }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -88,6 +91,7 @@ fun SensorGraphScreen(
 
     LaunchedEffect(Unit) {
         vm.observeReadings(connectionVm)
+        vm.observeCapabilities(connectionVm)
     }
 
     LaunchedEffect(selectedPid) {
@@ -134,80 +138,104 @@ fun SensorGraphScreen(
         )
 
         if (modoCaptura) {
-            FastCaptureContent()
-            return@Column
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            vm.availablePids.forEach { def ->
-                ChipSeleccion(
-                    texto = def.nameEs,
-                    seleccionado = def.pid == selectedPid,
-                    onClick = { vm.selectPid(def.pid) },
-                )
-            }
-        }
-
-        val latestReading = history.lastOrNull()
-        if (currentDef != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = latestReading?.value?.let { "%.1f".format(it) } ?: "--",
-                    fontSize = 40.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = RevScopeColors.Accent,
-                )
-                Text(
-                    text = currentDef.unit,
-                    fontSize = 16.sp,
-                    color = RevScopeColors.TextSecondary,
-                    modifier = Modifier.padding(bottom = 6.dp),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        if (history.size >= 2) {
-            CartesianChartHost(
-                chart = rememberCartesianChart(
-                    rememberLineCartesianLayer(),
-                    startAxis = VerticalAxis.rememberStart(title = currentDef?.unit),
-                    bottomAxis = HorizontalAxis.rememberBottom(
-                        valueFormatter = ElapsedTimeFormatter,
-                        title = "tiempo (mm:ss)",
-                    ),
-                ),
-                modelProducer = modelProducer,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .padding(horizontal = 8.dp),
-            )
-        } else {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp),
-                contentAlignment = Alignment.Center,
+                    .weight(1f),
             ) {
-                Text(
-                    "Esperando datos del sensor…",
-                    color = RevScopeColors.TextSecondary,
-                    fontSize = 13.sp,
+                FastCaptureContent()
+            }
+            return@Column
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            CapacidadesEcuCard(
+                protocolo = capacidades.protocolo,
+                pids = capacidades.pidsAnunciados,
+                pidsPorRango = capacidades.pidsPorRango,
+                tasaEsperada = capacidades.tasaMedidaHz?.let {
+                    "Medida: %.1f Hz por PID · %s".format(it, capacidades.tasaEsperada)
+                } ?: capacidades.tasaEsperada,
+                explicacion = capacidades.explicacion,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                vm.availablePids.forEach { def ->
+                    ChipSeleccion(
+                        texto = def.nameEs,
+                        seleccionado = def.pid == selectedPid,
+                        onClick = { vm.selectPid(def.pid) },
+                    )
+                }
+            }
+
+            val latestReading = history.lastOrNull()
+            if (currentDef != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = latestReading?.value?.let { "%.1f".format(it) } ?: "--",
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RevScopeColors.Accent,
+                    )
+                    Text(
+                        text = currentDef.unit,
+                        fontSize = 16.sp,
+                        color = RevScopeColors.TextSecondary,
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            if (history.size >= 2) {
+                CartesianChartHost(
+                    chart = rememberCartesianChart(
+                        rememberLineCartesianLayer(),
+                        startAxis = VerticalAxis.rememberStart(title = currentDef?.unit),
+                        bottomAxis = HorizontalAxis.rememberBottom(
+                            valueFormatter = ElapsedTimeFormatter,
+                            title = "tiempo (mm:ss)",
+                        ),
+                    ),
+                    modelProducer = modelProducer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp)
+                        .padding(horizontal = 8.dp),
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "Esperando datos del sensor…",
+                        color = RevScopeColors.TextSecondary,
+                        fontSize = 13.sp,
+                    )
+                }
             }
         }
     }

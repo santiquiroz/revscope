@@ -30,12 +30,12 @@ private const val BOOST_MAX = 30f
 
 @Composable
 fun BoostBar(
-    boostKpa: Float,
+    boostKpa: Float?,
     optimalBoostKpa: Float = 10f,
     modifier: Modifier = Modifier,
     barHeight: Dp = 20.dp,
 ) {
-    val clampedBoost = boostKpa.coerceIn(BOOST_MIN, BOOST_MAX)
+    val clampedBoost = (boostKpa ?: 0f).coerceIn(BOOST_MIN, BOOST_MAX)
     val animatedBoost by animateFloatAsState(
         targetValue = clampedBoost,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -43,6 +43,7 @@ fun BoostBar(
     )
 
     val label = when {
+        boostKpa == null -> "—"
         boostKpa > 0f -> "+%.1f kPa".format(boostKpa)
         boostKpa < 0f -> "%.1f kPa".format(boostKpa)
         else -> "0 kPa"
@@ -112,7 +113,7 @@ fun BoostBar(
             text = label,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            color = if (boostKpa > 0f) RevScopeColors.Warning else RevScopeColors.TextSecondary,
+            color = if (boostKpa != null && boostKpa > 0f) RevScopeColors.Warning else RevScopeColors.TextSecondary,
         )
     }
 }

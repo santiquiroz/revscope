@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -54,11 +55,16 @@ import com.revscope.feature.dashboard.gauges.SpeedGauge
 import com.revscope.feature.dashboard.gauges.TempGauge
 
 internal data class LecturasConducir(
-    val rpm: Float = 0f,
-    val velocidad: Float = 0f,
-    val temperatura: Float = 0f,
-    val boost: Float = 0f,
-    val marcha: Int = 0,
+    val rpm: Float? = null,
+    val velocidad: Float? = null,
+    val temperatura: Float? = null,
+    val boost: Float? = null,
+    val marcha: Int? = null,
+    val motivoRpm: String? = null,
+    val motivoVelocidad: String? = null,
+    val motivoTemperatura: String? = null,
+    val motivoBoost: String? = null,
+    val motivoMarcha: String? = null,
 )
 
 internal data class EscalasConducir(
@@ -120,7 +126,7 @@ internal fun DashboardContent(
         if (estado.modoGpsHero) {
             ConfigureAdapterCta(onClick = acciones.onConfigurarAdaptador)
         }
-        GaugesConducir(estado, acciones.onAlternarFuenteVelocidad)
+        DashboardGaugesContent(estado, acciones.onAlternarFuenteVelocidad)
         TripScoreBar(tripScore = estado.puntaje)
     }
 }
@@ -187,47 +193,99 @@ private fun AccionesDeViaje(estado: EstadoConducirUi, acciones: AccionesConducir
 }
 
 @Composable
-private fun GaugesConducir(estado: EstadoConducirUi, onAlternarFuenteVelocidad: () -> Unit) {
+internal fun DashboardGaugesContent(estado: EstadoConducirUi, onAlternarFuenteVelocidad: () -> Unit = {}) {
     val atenuado = atenuadoSi(estado.gaugesAtenuados)
     val lecturas = estado.lecturas
     val escalas = estado.escalas
-    RpmGauge(
-        rpm = lecturas.rpm,
-        maxRpm = escalas.maxRpm,
-        redlineRpm = escalas.redlineRpm,
-        modifier = Modifier.padding(vertical = 8.dp).then(atenuado),
-    )
-    if (estado.avisarSinAdaptador) {
+    val apilarGauges = LocalDensity.current.fontScale >= 1.8f
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        RpmGauge(
+            rpm = lecturas.rpm,
+            maxRpm = escalas.maxRpm,
+            redlineRpm = escalas.redlineRpm,
+            modifier = Modifier.padding(vertical = 8.dp).then(atenuado),
+        )
+        MotivoGauge(lecturas.motivoRpm)
+        if (estado.avisarSinAdaptador) {
+            Text(
+                "RPM, temperatura, marcha y boost necesitan un adaptador OBD2",
+                color = RevScopeColors.TextSecondary,
+                style = RevScopeType.bodySmall,
+                textAlign = TextAlign.Center,
+            )
+        }
+        if (apilarGauges) {
+            PanelVelocidad(estado, onAlternarFuenteVelocidad, Modifier.fillMaxWidth())
+            PanelMarcha(estado, atenuado, Modifier.fillMaxWidth())
+            PanelTemperatura(estado, atenuado, Modifier.fillMaxWidth())
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PanelVelocidad(estado, onAlternarFuenteVelocidad, Modifier.weight(1f))
+                PanelMarcha(estado, atenuado, Modifier.weight(0.6f))
+                PanelTemperatura(estado, atenuado, Modifier.weight(0.6f))
+            }
+        }
+        BoostBar(
+            boostKpa = lecturas.boost,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).then(atenuado),
+        )
+        MotivoGauge(lecturas.motivoBoost)
+    }
+}
+
+@Composable
+private fun PanelVelocidad(
+    estado: EstadoConducirUi,
+    onAlternarFuenteVelocidad: () -> Unit,
+    modifier: Modifier,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        SpeedGauge(speed = estado.lecturas.velocidad, maxSpeed = estado.escalas.maxVelocidad)
+        MotivoGauge(estado.lecturas.motivoVelocidad)
+        if (estado.conectado) {
+            SpeedSourceChip(useGps = estado.velocidadPorGps, onToggle = onAlternarFuenteVelocidad)
+        }
+    }
+}
+
+@Composable
+private fun PanelMarcha(estado: EstadoConducirUi, atenuado: Modifier, modifier: Modifier) {
+    Column(modifier = modifier.then(atenuado), horizontalAlignment = Alignment.CenterHorizontally) {
+        GearDisplay(
+            gear = estado.lecturas.marcha,
+            isCalibrated = estado.escalas.marchasCalibradas,
+            gearCount = estado.escalas.marchas,
+        )
+        MotivoGauge(estado.lecturas.motivoMarcha)
+    }
+}
+
+@Composable
+private fun PanelTemperatura(estado: EstadoConducirUi, atenuado: Modifier, modifier: Modifier) {
+    Column(modifier = modifier.then(atenuado), horizontalAlignment = Alignment.CenterHorizontally) {
+        TempGauge(tempCelsius = estado.lecturas.temperatura)
+        MotivoGauge(estado.lecturas.motivoTemperatura)
+    }
+}
+
+@Composable
+private fun MotivoGauge(motivo: String?) {
+    motivo?.let {
         Text(
-            "RPM, temperatura, marcha y boost necesitan un adaptador OBD2",
+            text = it,
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
             textAlign = TextAlign.Center,
         )
     }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            SpeedGauge(speed = lecturas.velocidad, maxSpeed = escalas.maxVelocidad)
-            if (estado.conectado) {
-                SpeedSourceChip(useGps = estado.velocidadPorGps, onToggle = onAlternarFuenteVelocidad)
-            }
-        }
-        GearDisplay(
-            gear = lecturas.marcha,
-            isCalibrated = escalas.marchasCalibradas,
-            gearCount = escalas.marchas,
-            modifier = Modifier.weight(0.6f).then(atenuado),
-        )
-        TempGauge(tempCelsius = lecturas.temperatura, modifier = Modifier.weight(0.6f).then(atenuado))
-    }
-    BoostBar(
-        boostKpa = lecturas.boost,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).then(atenuado),
-    )
 }
 
 private const val DIMMED_GAUGE_ALPHA = 0.35f

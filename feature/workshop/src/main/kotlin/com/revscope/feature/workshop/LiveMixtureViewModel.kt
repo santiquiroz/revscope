@@ -6,6 +6,8 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
+import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,8 @@ class LiveMixtureViewModel @Inject constructor(
     private val registry: PidRegistry,
 ) : ViewModel() {
 
+    val capacidadesEcu: StateFlow<CapacidadesEcu> = sessionManager.capacidadesEcu
+
     // The dashboard polls PIDs well outside this screen's rows at up to 10 Hz — without
     // this filter every unrelated reading recomposes the whole mixture list.
     val readings: StateFlow<Map<String, ObdReading>> = sessionManager.readings
@@ -36,4 +40,7 @@ class LiveMixtureViewModel @Inject constructor(
     fun setWorkshopMode(enabled: Boolean) = sessionManager.setWorkshopMode(enabled)
 
     fun definition(pid: String): PidDefinition? = registry.getDefinition(pid)
+
+    fun disponibilidad(pid: String, nombre: String): DisponibilidadPid =
+        DisponibilidadPid.resolver(pid, nombre, registry)
 }

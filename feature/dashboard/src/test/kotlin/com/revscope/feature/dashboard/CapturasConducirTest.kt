@@ -54,6 +54,22 @@ class CapturasConducirTest {
     }
 
     @Test
+    fun dashboardGaugesContentSinDatos() =
+        MatrizCaptura.componente("DashboardGaugesContent_sin_datos", altoMinimoDp = 1400) {
+            DashboardGaugesContent(
+                estado = EstadoConducirUi(
+                    lecturas = LecturasConducir(
+                        motivoRpm = "Sin adaptador",
+                        motivoVelocidad = "Sin adaptador",
+                        motivoTemperatura = "Sin adaptador",
+                        motivoBoost = "Sin adaptador",
+                        motivoMarcha = "Sin adaptador",
+                    ),
+                ),
+            )
+        }
+
+    @Test
     fun encabezadoConducir() = MatrizCaptura.componente("EncabezadoConducir") {
         DashboardTopBar(
             enlace = EnlaceAdaptador.SIN_ADAPTADOR,

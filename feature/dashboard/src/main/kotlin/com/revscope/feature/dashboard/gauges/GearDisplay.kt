@@ -22,13 +22,18 @@ private val ALTO_MARCHA = 104.dp
 
 @Composable
 fun GearDisplay(
-    gear: Int,
+    gear: Int?,
     isCalibrated: Boolean,
     gearCount: Int = 6,
     modifier: Modifier = Modifier,
 ) {
-    val label = if (gear == 0) "N" else gear.toString()
+    val label = when (gear) {
+        null -> "—"
+        0 -> "N"
+        else -> gear.toString()
+    }
     val color = when {
+        gear == null -> RevScopeColors.TextSecondary
         gear <= 0 -> RevScopeColors.TextMuted
         gear <= gearCount / 3 -> RevScopeColors.Success
         gear <= gearCount * 2 / 3 -> RevScopeColors.Accent

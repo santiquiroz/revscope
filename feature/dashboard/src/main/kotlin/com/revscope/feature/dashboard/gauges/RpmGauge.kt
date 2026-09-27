@@ -34,13 +34,13 @@ private const val FRACCION_ALTO_NUMERO = 0.22f
 
 @Composable
 fun RpmGauge(
-    rpm: Float,
+    rpm: Float?,
     maxRpm: Int,
     redlineRpm: Int,
     modifier: Modifier = Modifier,
     size: Dp = 220.dp,
 ) {
-    val fraction = (rpm / maxRpm).coerceIn(0f, 1f)
+    val fraction = ((rpm ?: 0f) / maxRpm).coerceIn(0f, 1f)
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -145,7 +145,7 @@ fun RpmGauge(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             TextoAjustable(
-                texto = rpm.toInt().toString(),
+                texto = rpm?.toInt()?.toString() ?: "—",
                 estilo = RevScopeType.numeros.copy(fontSize = 36.sp),
                 color = RevScopeColors.TextPrimary,
                 modifier = Modifier.fillMaxWidth().height(lado * FRACCION_ALTO_NUMERO),

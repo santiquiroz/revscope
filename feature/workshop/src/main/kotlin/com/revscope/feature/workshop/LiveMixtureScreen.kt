@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,16 +34,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.designsystem.FilaEtiquetaValor
+import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.common.export.CsvShare
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.workshop.DiagnosticRules
+import com.revscope.core.obd.pid.EstadoSoporte
+import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import kotlinx.coroutines.launch
 
 private val AccentColor = Color(0xFFE8FF00)
 private val SurfaceColor = Color(0xFF12121A)
 private val TextColor = Color(0xFFE6E8F0)
-private val TextMutedColor = Color(0xFF6B7089)
 
 private data class MixtureRow(
     val pid: String,
@@ -82,10 +86,34 @@ fun LiveMixtureScreen(
     }
 
     val readings by viewModel.readings.collectAsState()
-    val visibleRows = ROWS.filter { readings[it.pid] != null }
+    val capacidades by viewModel.capacidadesEcu.collectAsState()
+    val disponibilidadActual = remember(capacidades) { viewModel::disponibilidad }
+    val exportables = ROWS.filter { row ->
+        readings[row.pid] != null && disponibilidadActual(row.pid, row.label).estado != EstadoSoporte.NoSoportado
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    LiveMixtureContent(
+        readings = readings,
+        definition = viewModel::definition,
+        disponibilidad = disponibilidadActual,
+        onNavigateBack = onNavigateBack,
+        onExport = { scope.launch { exportMixtureSnapshot(context, exportables, readings) } },
+    )
+}
+
+@Composable
+internal fun LiveMixtureContent(
+    readings: Map<String, ObdReading>,
+    definition: (String) -> PidDefinition?,
+    disponibilidad: (String, String) -> DisponibilidadPid,
+    onNavigateBack: () -> Unit = {},
+    onExport: () -> Unit = {},
+) {
+    val exportables = ROWS.filter { row ->
+        readings[row.pid] != null && disponibilidad(row.pid, row.label).estado != EstadoSoporte.NoSoportado
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNavigateBack) {
@@ -99,29 +127,21 @@ fun LiveMixtureScreen(
                 modifier = Modifier.weight(1f),
             )
             IconButton(
-                onClick = { scope.launch { exportMixtureSnapshot(context, visibleRows, readings) } },
-                enabled = visibleRows.isNotEmpty(),
+                onClick = onExport,
+                enabled = exportables.isNotEmpty(),
             ) {
                 Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
             }
         }
         Text(
             "Los valores se interpretan en tiempo real. Motor encendido para ver la mezcla trabajar.",
-            color = TextMutedColor,
+            color = RevScopeColors.TextSecondary,
             fontSize = 13.sp,
             modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
         )
 
-        if (visibleRows.isEmpty()) {
-            Text(
-                "Esperando datos del vehículo… (requiere conexión y motor encendido)",
-                color = TextMutedColor,
-                fontSize = 13.sp,
-            )
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(visibleRows) { row -> MixtureRowCard(row, readings, viewModel) }
-            }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(ROWS) { row -> MixtureRowCard(row, readings, definition, disponibilidad) }
         }
     }
 }
@@ -130,25 +150,39 @@ fun LiveMixtureScreen(
 private fun MixtureRowCard(
     row: MixtureRow,
     readings: Map<String, ObdReading>,
-    viewModel: LiveMixtureViewModel,
+    definition: (String) -> PidDefinition?,
+    disponibilidad: (String, String) -> DisponibilidadPid,
 ) {
-    val reading = readings[row.pid] ?: return
-    val definition = viewModel.definition(row.pid)
-    val diagnosis = row.diagnose?.invoke(reading.value, readings)
+    val disponibilidadPid = disponibilidad(row.pid, row.label.lowercase())
+    val reading = readings[row.pid].takeUnless { disponibilidadPid.estado == EstadoSoporte.NoSoportado }
+    val definicion = definition(row.pid)
+    val diagnosis = reading?.let { row.diagnose?.invoke(it.value, readings) }
 
     Surface(shape = RoundedCornerShape(12.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            FilaEtiquetaValor(
-                etiqueta = row.label,
-                valor = "%.1f %s".format(reading.value, reading.unit),
-                colorEtiqueta = TextColor,
-                colorValor = AccentColor,
-                estiloEtiqueta = RevScopeType.label,
-            )
-            if (definition != null) {
-                val range = definition.max - definition.min
+            if (reading == null) {
+                Text(row.label, color = TextColor, style = RevScopeType.label)
+                Text(
+                    if (disponibilidadPid.estado == EstadoSoporte.NoSoportado) "No disponible en esta ECU" else "Esperando lectura…",
+                    color = RevScopeColors.TextSecondary,
+                    style = RevScopeType.bodySmall,
+                )
+                disponibilidadPid.motivo?.let {
+                    Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+                }
+            } else {
+                FilaEtiquetaValor(
+                    etiqueta = row.label,
+                    valor = "%.1f %s".format(reading.value, reading.unit),
+                    colorEtiqueta = TextColor,
+                    colorValor = AccentColor,
+                    estiloEtiqueta = RevScopeType.label,
+                )
+            }
+            if (definicion != null && reading != null) {
+                val range = definicion.max - definicion.min
                 val progress = if (range != 0.0) {
-                    ((reading.value - definition.min) / range).toFloat().coerceIn(0f, 1f)
+                    ((reading.value - definicion.min) / range).toFloat().coerceIn(0f, 1f)
                 } else {
                     0f
                 }

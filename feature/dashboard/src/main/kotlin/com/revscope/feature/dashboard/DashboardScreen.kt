@@ -29,6 +29,7 @@ import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
+import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.channelFlow
 
@@ -47,6 +48,8 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val connectionState by connectionVm.connectionState.collectAsState()
+    val capacidades by connectionVm.capacidadesEcu.collectAsState()
+    val resolverDisponibilidad = remember(capacidades) { dashboardVm::disponibilidad }
     val readingsState = connectionVm.readings.collectAsState()
     val tripScore by dashboardVm.tripScore.collectAsState()
     val gearCalibrated by dashboardVm.gearCalibrated.collectAsState()
@@ -90,7 +93,7 @@ fun DashboardScreen(
     }
     val temp by remember { derivedStateOf { valorDe(readingsState.value, "05") } }
     val boost by remember { derivedStateOf { valorDe(readingsState.value, "BOOST") } }
-    val gear by remember { derivedStateOf { readingsState.value["GEAR"]?.value?.toInt() ?: 0 } }
+    val gear by remember { derivedStateOf { readingsState.value["GEAR"]?.value?.toInt() } }
     val vbat by remember { derivedStateOf { readingsState.value["VBAT"]?.value } }
 
     // Riding with the screen off is useless — keep it on while telemetry flows.
@@ -110,9 +113,10 @@ fun DashboardScreen(
     // Shift light: warn at 95% of redline, screaming red past it
     val shiftLightColor by remember {
         derivedStateOf {
+            val rpmActual = rpm
             when {
-                rpm >= redline -> RevScopeColors.Danger
-                rpm >= redline * 0.95f -> RevScopeColors.Accent
+                rpmActual != null && rpmActual >= redline -> RevScopeColors.Danger
+                rpmActual != null && rpmActual >= redline * 0.95f -> RevScopeColors.Accent
                 else -> null
             }
         }
@@ -131,7 +135,16 @@ fun DashboardScreen(
         estadoViaje = estadoViaje,
         avisoViaje = avisoViaje,
         velocidadPorGps = speedSourceGps,
-        lecturas = LecturasConducir(rpm = rpm, velocidad = speed, temperatura = temp, boost = boost, marcha = gear),
+        lecturas = lecturasConMotivos(
+            conectado = connectionState is ConnectionState.Connected,
+            velocidadGps = isGpsTrip || speedSourceGps,
+            rpm = rpm,
+            velocidad = speed,
+            temperatura = temp,
+            boost = boost,
+            marcha = gear,
+            disponibilidad = resolverDisponibilidad,
+        ),
         escalas = EscalasConducir(
             maxRpm = activeProfile?.maxRpm ?: 8000,
             redlineRpm = redline.toInt(),
@@ -182,8 +195,61 @@ fun DashboardScreen(
     }
 }
 
-private fun valorDe(lecturas: Map<String, ObdReading>, pid: String): Float =
-    (lecturas[pid]?.value ?: 0.0).toFloat()
+private fun valorDe(lecturas: Map<String, ObdReading>, pid: String): Float? = lecturas[pid]?.value?.toFloat()
+
+internal fun lecturasConMotivos(
+    conectado: Boolean,
+    velocidadGps: Boolean,
+    rpm: Float?,
+    velocidad: Float?,
+    temperatura: Float?,
+    boost: Float?,
+    marcha: Int?,
+    disponibilidad: (String, String) -> DisponibilidadPid,
+): LecturasConducir {
+    val sinAdaptador = "Sin adaptador"
+    val rpmVisible = rpm.takeIf { conectado }
+    val velocidadVisible = velocidad.takeIf { conectado || velocidadGps }
+    val temperaturaVisible = temperatura.takeIf { conectado }
+    val boostVisible = boost.takeIf { conectado }
+    val marchaVisible = marcha.takeIf { conectado }
+    return LecturasConducir(
+        rpm = rpmVisible,
+        velocidad = velocidadVisible,
+        temperatura = temperaturaVisible,
+        boost = boostVisible,
+        marcha = marchaVisible,
+        motivoRpm = rpmVisible.motivoSiFalta(motivoPid(conectado, "0C", "las RPM", disponibilidad)),
+        motivoVelocidad = velocidadVisible.motivoSiFalta(
+            when {
+                !conectado && !velocidadGps -> sinAdaptador
+                velocidadGps -> "Sin señal de velocidad del GPS"
+                else -> motivoPid(true, "0D", "la velocidad", disponibilidad)
+            },
+        ),
+        motivoTemperatura = temperaturaVisible.motivoSiFalta(
+            motivoPid(conectado, "05", "la temperatura del motor", disponibilidad),
+        ),
+        motivoBoost = boostVisible.motivoSiFalta(
+            if (conectado) "El boost necesita MAP y presión barométrica" else sinAdaptador,
+        ),
+        motivoMarcha = marchaVisible.motivoSiFalta(
+            if (conectado) "La marcha necesita RPM y velocidad" else sinAdaptador,
+        ),
+    )
+}
+
+private fun motivoPid(
+    conectado: Boolean,
+    pid: String,
+    nombre: String,
+    disponibilidad: (String, String) -> DisponibilidadPid,
+): String {
+    if (!conectado) return "Sin adaptador"
+    return disponibilidad(pid, nombre).motivo ?: "Esperando lectura de $nombre (PID $pid)"
+}
+
+private fun Any?.motivoSiFalta(motivo: String): String? = if (this == null) motivo else null
 
 private fun abrirEnNavegador(context: Context, url: String) {
     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }

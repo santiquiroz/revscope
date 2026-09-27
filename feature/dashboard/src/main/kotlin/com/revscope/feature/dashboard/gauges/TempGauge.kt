@@ -31,26 +31,26 @@ private const val TEMP_MAX = 130f
 
 @Composable
 fun TempGauge(
-    tempCelsius: Float,
+    tempCelsius: Float?,
     modifier: Modifier = Modifier,
     barHeight: Dp = 120.dp,
     barWidth: Dp = 16.dp,
 ) {
-    val fraction = ((tempCelsius - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)).coerceIn(0f, 1f)
+    val fraction = (((tempCelsius ?: TEMP_MIN) - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)).coerceIn(0f, 1f)
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "temp_fill"
     )
     val fillColor = when {
-        tempCelsius > 105f -> RevScopeColors.Danger
-        tempCelsius >= 60f -> RevScopeColors.Success
+        tempCelsius != null && tempCelsius > 105f -> RevScopeColors.Danger
+        tempCelsius != null && tempCelsius >= 60f -> RevScopeColors.Success
         else               -> RevScopeColors.TextSecondary
     }
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         TextoAjustable(
-            texto = "${tempCelsius.toInt()} °C",
+            texto = tempCelsius?.let { "${it.toInt()} °C" } ?: "—",
             estilo = RevScopeType.label.conCifrasTabulares(),
             color = fillColor,
             modifier = Modifier.fillMaxWidth(),

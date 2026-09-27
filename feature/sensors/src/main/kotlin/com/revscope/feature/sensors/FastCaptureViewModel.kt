@@ -9,11 +9,14 @@ import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.taller.grafica.EstadoVref
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
+import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.taller.grafica.FuenteVref
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
@@ -64,6 +67,7 @@ class FastCaptureViewModel @Inject constructor(
     val estado: StateFlow<EstadoCaptura> = captura.estado
     val estadisticas: StateFlow<EstadisticasCaptura?> = captura.estadisticas
     val ultimoResumen: StateFlow<ResumenCaptura?> = captura.ultimoResumen
+    val capacidadesEcu: StateFlow<CapacidadesEcu> = manager.capacidadesEcu
     val conectado: StateFlow<Boolean> = manager.connectionState
         .map { it is ConnectionState.Connected }
         .stateIn(viewModelScope, SharingStarted.Eagerly, manager.connectionState.value is ConnectionState.Connected)
@@ -73,6 +77,9 @@ class FastCaptureViewModel @Inject constructor(
 
     private val _mensaje = MutableStateFlow<String?>(null)
     val mensaje: StateFlow<String?> = _mensaje.asStateFlow()
+
+    private val _pidNoDisponible = MutableStateFlow<DisponibilidadPid?>(null)
+    val pidNoDisponible: StateFlow<DisponibilidadPid?> = _pidNoDisponible.asStateFlow()
 
     private val ventana = VentanaCaptura(VENTANA_MAXIMA_MS)
     private val _series = MutableStateFlow<Map<String, SerieCaptura>>(emptyMap())
@@ -103,19 +110,60 @@ class FastCaptureViewModel @Inject constructor(
     init {
         viewModelScope.launch { cargarReferencias() }
         viewModelScope.launch { cargarSeleccion() }
+        viewModelScope.launch { capacidadesEcu.collect { reconciliarSeleccion() } }
         viewModelScope.launch { estado.collect(::alCambiarEstado) }
         viewModelScope.launch { anotarCapturasTerminadas() }
     }
 
-    /** PIDs de modo 01 que el vehículo soporta (todos antes de conectar), por número de PID. */
+    /** PIDs de modo 01, incluidos los que la ECU no anuncia para poder explicarlos. */
     fun candidatos(): List<PidDefinition> =
-        registry.allDefinitions().filter { it.mode == "01" && registry.isSupported(it.pid) }.sortedBy { it.pid }
+        registry.allDefinitions().filter { it.mode == "01" }.sortedBy { it.pid }
+
+    fun disponibilidad(pid: String): DisponibilidadPid {
+        val nombre = registry.getDefinition(pid)?.nameEs?.lowercase() ?: "este parámetro"
+        return DisponibilidadPid.resolver(pid, nombre, registry)
+    }
 
     fun nombreDe(pid: String): String = registry.getDefinition(pid)?.nameEs ?: pid
 
-    fun alternar(pid: String) = guardarSeleccion(SeleccionPids.alternar(_seleccion.value, pid))
+    fun alternar(pid: String) {
+        val disponibilidad = disponibilidad(pid)
+        val nuevaSeleccion = seleccionTrasAlternar(_seleccion.value, pid, disponibilidad)
+        if (nuevaSeleccion == null) {
+            _pidNoDisponible.value = resolverAvisoPidNoDisponible(
+                actual = _pidNoDisponible.value,
+                rechazo = disponibilidad,
+                disponibilidad = ::disponibilidad,
+            )
+            return
+        }
+        _pidNoDisponible.value = resolverAvisoPidNoDisponible(
+            actual = _pidNoDisponible.value,
+            seleccionValida = true,
+            disponibilidad = ::disponibilidad,
+        )
+        guardarSeleccion(nuevaSeleccion)
+    }
 
-    fun elegirPedalYMariposa() = guardarSeleccion(SeleccionPids.PEDAL_Y_MARIPOSA)
+    fun elegirPedalYMariposa() {
+        val estados = SeleccionPids.PEDAL_Y_MARIPOSA.map(::disponibilidad)
+        val disponibles = estados.filter(DisponibilidadPid::puedeConsultarse).map(DisponibilidadPid::pid)
+        if (disponibles.isEmpty()) {
+            val rechazo = estados.first().copy(motivo = "Esta ECU no reporta posición de pedal ni mariposa.")
+            _pidNoDisponible.value = resolverAvisoPidNoDisponible(
+                actual = _pidNoDisponible.value,
+                rechazo = rechazo,
+                disponibilidad = ::disponibilidad,
+            )
+            return
+        }
+        _pidNoDisponible.value = resolverAvisoPidNoDisponible(
+            actual = _pidNoDisponible.value,
+            seleccionValida = true,
+            disponibilidad = ::disponibilidad,
+        )
+        guardarSeleccion(disponibles)
+    }
 
     fun iniciar() {
         viewModelScope.launch {
@@ -193,8 +241,21 @@ class FastCaptureViewModel @Inject constructor(
 
     private suspend fun cargarSeleccion() {
         runCatching { settings.data.first()[PreferencesKeys.FAST_CAPTURE_PIDS] }
-            .onSuccess { _seleccion.value = SeleccionPids.desdeCsv(it) }
+            .onSuccess {
+                _seleccion.value = SeleccionPids.desdeCsv(it)
+                reconciliarSeleccion()
+            }
             .onFailure { Timber.w(it, "FastCapture: no se pudo leer la selección") }
+    }
+
+    private fun reconciliarSeleccion() {
+        val resultado = reconciliarPids(_seleccion.value, ::disponibilidad)
+        _pidNoDisponible.value = resolverAvisoPidNoDisponible(
+            actual = _pidNoDisponible.value,
+            rechazo = resultado.rechazados.firstOrNull(),
+            disponibilidad = ::disponibilidad,
+        )
+        if (resultado.aceptados != _seleccion.value) guardarSeleccion(resultado.aceptados)
     }
 
     private fun guardarSeleccion(pids: List<String>) {
@@ -246,3 +307,40 @@ internal data class OpcionesGrafica(
     val bandas: Map<String, BandaReferencia> = emptyMap(),
     val dialogoVref: Boolean = false,
 )
+
+internal data class ReconciliacionPids(
+    val aceptados: List<String>,
+    val rechazados: List<DisponibilidadPid>,
+)
+
+internal fun reconciliarPids(
+    seleccion: List<String>,
+    disponibilidad: (String) -> DisponibilidadPid,
+): ReconciliacionPids {
+    val estados = seleccion.map(disponibilidad)
+    return ReconciliacionPids(
+        aceptados = estados.filter(DisponibilidadPid::puedeConsultarse).map(DisponibilidadPid::pid),
+        rechazados = estados.filterNot(DisponibilidadPid::puedeConsultarse),
+    )
+}
+
+internal fun seleccionTrasAlternar(
+    seleccion: List<String>,
+    pid: String,
+    disponibilidad: DisponibilidadPid,
+): List<String>? {
+    if (pid in seleccion) return seleccion - pid
+    if (!disponibilidad.puedeConsultarse) return null
+    return SeleccionPids.alternar(seleccion, pid)
+}
+
+internal fun resolverAvisoPidNoDisponible(
+    actual: DisponibilidadPid?,
+    rechazo: DisponibilidadPid? = null,
+    seleccionValida: Boolean = false,
+    disponibilidad: (String) -> DisponibilidadPid,
+): DisponibilidadPid? {
+    if (rechazo != null) return rechazo
+    if (seleccionValida || actual == null) return null
+    return actual.takeIf { disponibilidad(it.pid).estado == EstadoSoporte.NoSoportado }
+}

@@ -40,6 +40,7 @@ class SensorViewModel @Inject constructor(
     }
 
     private var readingsJob: Job? = null
+    private var capabilitiesJob: Job? = null
 
     fun observeReadings(connectionVm: ConnectionViewModel) {
         readingsJob?.cancel()
@@ -52,6 +53,19 @@ class SensorViewModel @Inject constructor(
         }
     }
 
+    fun observeCapabilities(connectionVm: ConnectionViewModel) {
+        capabilitiesJob?.cancel()
+        capabilitiesJob = viewModelScope.launch {
+            connectionVm.capacidadesEcu.collect { validarSeleccion() }
+        }
+    }
+
+    private fun validarSeleccion() {
+        val disponible = pidSeleccionadoValido(_selectedPid.value, availablePids) ?: return
+        if (disponible == _selectedPid.value) return
+        selectPid(disponible)
+    }
+
     private fun appendToWindow(current: List<ObdReading>, reading: ObdReading): List<ObdReading> {
         // El mapa emite con cada PID que cambia: la misma lectura del PID elegido llega repetida.
         if (current.lastOrNull()?.timestamp == reading.timestamp) return current
@@ -59,3 +73,6 @@ class SensorViewModel @Inject constructor(
         return current.dropWhile { it.timestamp < cutoff } + reading
     }
 }
+
+internal fun pidSeleccionadoValido(actual: String, disponibles: List<PidDefinition>): String? =
+    actual.takeIf { pid -> disponibles.any { it.pid == pid } } ?: disponibles.firstOrNull()?.pid
