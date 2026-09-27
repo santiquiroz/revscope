@@ -61,6 +61,8 @@ import com.revscope.feature.workshop.O2WaveScreen
 import com.revscope.feature.workshop.OdometerScreen
 import com.revscope.feature.workshop.SpeedComparisonScreen
 import com.revscope.feature.workshop.taller.DestinosSesion
+import com.revscope.feature.workshop.taller.multimetro.MultimetroScreen
+import com.revscope.feature.workshop.taller.multimetro.MultimetroViewModel
 import com.revscope.feature.workshop.taller.prueba.PruebaGuiadaScreen
 import com.revscope.feature.workshop.taller.prueba.PruebaGuiadaViewModel
 import com.revscope.feature.workshop.taller.NuevaSesionScreen
@@ -246,6 +248,7 @@ fun RevScopeNavGraph(
                             onCaptura = { navController.navigate(Screen.Sensors.route) },
                             onChequeo = { navController.navigate(Screen.HealthCheck.route) },
                             onPruebaGuiada = { navController.navigate(Screen.PruebaGuiada.navRoute) },
+                            onMultimetro = { navController.navigate(Screen.Multimetro.navRoute) },
                         ),
                     )
                 }
@@ -263,6 +266,18 @@ fun RevScopeNavGraph(
                         onVolver = { navController.popBackStack() },
                         onVerGuia = { navController.navigate(Screen.Dtc.route) },
                     )
+                }
+                composable(
+                    route = Screen.Multimetro.route,
+                    arguments = listOf(
+                        navArgument(MultimetroViewModel.ARG_SENSOR) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
+                ) {
+                    MultimetroScreen(onVolver = { navController.popBackStack() })
                 }
                 composable(Screen.MechanicChat.route) {
                     MechanicChatScreen(
@@ -342,7 +357,10 @@ fun RevScopeNavGraph(
                         onNavigateBack = { navController.popBackStack() },
                         connectionVm = connectionVm,
                         onOpenAiValue = { navController.navigate(Screen.AiValue.route) },
-                        destinos = DestinosDtc(onPrueba = { tipo -> navController.navigate(Screen.PruebaGuiada.withTipo(tipo.name)) }),
+                        destinos = DestinosDtc(
+                            onPrueba = { tipo -> navController.navigate(Screen.PruebaGuiada.withTipo(tipo.name)) },
+                            onMultimetro = { sensor -> navController.navigate(Screen.Multimetro.withSensor(sensor.name)) },
+                        ),
                     )
                 }
                 composable(Screen.Sessions.route) {

@@ -18,6 +18,11 @@ sealed class Screen(val route: String) {
 
         fun withTipo(tipo: String): String = "prueba_guiada?tipo=$tipo"
     }
+    object Multimetro : Screen("multimetro?sensor={sensor}") {
+        override val navRoute: String = "multimetro"
+
+        fun withSensor(sensor: String): String = "multimetro?sensor=$sensor"
+    }
     object AlDia : Screen("al_dia")
     object HealthCheck : Screen("health_check")
     object LiveMixture : Screen("live_mixture")
