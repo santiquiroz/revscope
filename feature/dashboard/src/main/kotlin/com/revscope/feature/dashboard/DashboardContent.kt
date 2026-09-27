@@ -30,6 +30,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -295,8 +299,9 @@ private fun atenuadoSi(atenuado: Boolean): Modifier =
 
 @Composable
 private fun GpsTripButton(isActive: Boolean, onStart: () -> Unit, onStop: () -> Unit) {
+    var confirmarFin by remember { mutableStateOf(false) }
     Button(
-        onClick = if (isActive) onStop else onStart,
+        onClick = { if (isActive) confirmarFin = true else onStart() },
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isActive) RevScopeColors.Danger else RevScopeColors.Accent,
@@ -307,6 +312,19 @@ private fun GpsTripButton(isActive: Boolean, onStart: () -> Unit, onStop: () -> 
             color = RevScopeColors.Background,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
+        )
+    }
+    if (confirmarFin) {
+        ConfirmarAccionViajeDialog(
+            titulo = "¿Finalizar el viaje?",
+            texto = "El viaje GPS se guarda en el historial.",
+            confirmar = "Finalizar viaje",
+            descartar = "Seguir grabando",
+            onConfirm = {
+                confirmarFin = false
+                onStop()
+            },
+            onDismiss = { confirmarFin = false },
         )
     }
 }

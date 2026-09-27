@@ -126,23 +126,44 @@ internal fun TripActions(
     onIniciar: () -> Unit,
     onDesconectar: () -> Unit,
 ) {
-    var confirmar by remember { mutableStateOf(false) }
+    var confirmarFinalizacion by remember { mutableStateOf(false) }
+    var confirmarDesconexion by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (estado is EstadoViaje.Grabando) {
-            SecondaryButton("Finalizar viaje (seguir conectado)", RevScopeColors.Accent) { confirmar = true }
+            SecondaryButton("Finalizar viaje (seguir conectado)", RevScopeColors.Accent) { confirmarFinalizacion = true }
         }
         if (estado == EstadoViaje.EnlaceSinViaje) {
             SecondaryButton("Iniciar viaje", RevScopeColors.Accent, onIniciar)
         }
-        SecondaryButton("Desconectar adaptador", RevScopeColors.Danger, onDesconectar)
+        SecondaryButton("Desconectar adaptador", RevScopeColors.Danger) {
+            if (estado is EstadoViaje.Grabando) confirmarDesconexion = true else onDesconectar()
+        }
     }
-    if (confirmar) {
-        ConfirmarFinDeViajeDialog(
+    if (confirmarFinalizacion) {
+        ConfirmarAccionViajeDialog(
+            titulo = "¿Finalizar el viaje?",
+            texto = "Se guarda el viaje y el adaptador sigue conectado: puedes leer códigos de falla " +
+                "o iniciar otro viaje sin reconectar.",
+            confirmar = "Finalizar viaje",
+            descartar = "Cancelar",
             onConfirm = {
-                confirmar = false
+                confirmarFinalizacion = false
                 onFinalizar()
             },
-            onDismiss = { confirmar = false },
+            onDismiss = { confirmarFinalizacion = false },
+        )
+    }
+    if (confirmarDesconexion) {
+        ConfirmarAccionViajeDialog(
+            titulo = "¿Desconectar el adaptador?",
+            texto = "También se cierra el viaje en curso; queda guardado en el historial.",
+            confirmar = "Desconectar",
+            descartar = "Cancelar",
+            onConfirm = {
+                confirmarDesconexion = false
+                onDesconectar()
+            },
+            onDismiss = { confirmarDesconexion = false },
         )
     }
 }
@@ -159,17 +180,19 @@ private fun SecondaryButton(label: String, color: Color, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ConfirmarFinDeViajeDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+internal fun ConfirmarAccionViajeDialog(
+    titulo: String,
+    texto: String,
+    confirmar: String,
+    descartar: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("¿Finalizar el viaje?") },
-        text = {
-            Text(
-                "Se guarda el viaje y el adaptador sigue conectado: puedes leer códigos de falla " +
-                    "o iniciar otro viaje sin reconectar.",
-            )
-        },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Finalizar viaje") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        title = { Text(titulo) },
+        text = { Text(texto) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmar) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(descartar) } },
     )
 }
