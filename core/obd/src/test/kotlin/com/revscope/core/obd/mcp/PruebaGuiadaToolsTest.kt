@@ -1,8 +1,15 @@
 package com.revscope.core.obd.mcp
 
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.taller.grafica.FuenteVref
+import com.revscope.core.obd.taller.grafica.PreferenciasVref
+import com.revscope.core.obd.taller.grafica.PreferenciasVrefEnMemoria
+import com.revscope.core.obd.taller.grafica.VrefSesion
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
 import com.revscope.core.obd.taller.pruebas.MontajePrueba
+import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
+import com.revscope.core.obd.taller.sesion.BENELLI
+import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.OrigenEvento
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import kotlinx.coroutines.flow.first
@@ -22,18 +29,45 @@ class PruebaGuiadaToolsTest {
     @get:Rule
     val carpeta = TemporaryFolder()
 
-    private class Tools(val m: MontajePrueba) {
-        val iniciar = IniciarPruebaGuiadaTool(m.controlador, m.enlace)
+    private class Tools(val m: MontajePrueba, fuenteVref: FuenteVref) {
+        val iniciar = IniciarPruebaGuiadaTool(m.controlador, m.enlace, fuenteVref)
         val avanzar = AvanzarPruebaGuiadaTool(m.controlador, m.enlace)
         val cancelar = CancelarPruebaGuiadaTool(m.controlador, m.enlace)
         val get = GetPruebaGuiadaTool(m.controlador, m.enlace)
     }
 
-    private fun TestScope.tools() = Tools(MontajePrueba(this, carpeta.root))
+    private fun TestScope.tools(preferencias: PreferenciasVref = PreferenciasVrefEnMemoria()): Tools {
+        val m = MontajePrueba(this, carpeta.root)
+        val fuenteVref = FuenteVref(preferencias, m.repositorio) { m.vehiculo }
+        return Tools(m, fuenteVref)
+    }
 
     private suspend fun McpTool.llamar(argumentos: JSONObject = JSONObject()) = JSONObject(call(argumentos))
 
     private fun tps(): JSONObject = JSONObject().put("tipo", "TPS_BARRIDO")
+
+    private suspend fun TestScope.resultadoVref(t: Tools, argumentos: JSONObject = tps().put("voz", false)): JSONObject {
+        val inicio = t.iniciar.llamar(argumentos)
+        assertTrue(inicio.toString(), inicio.getBoolean("iniciada"))
+        t.m.sostenerLosCuatroPasos(this)
+        advanceTimeBy(8_100)
+        t.m.controlador.estado.first { it is EstadoPrueba.Terminada }
+        return t.get.llamar().getJSONObject("resultado").getJSONObject("detalle").getJSONObject("vref")
+    }
+
+    private suspend fun agregarMedicionVref(t: Tools, voltios: Double) {
+        val sesion = t.m.abrirSesion()
+        val payload = """{"lecturas":[{"funcion":"REF_5V","condicion":"KOEO","valor":$voltios,"unidad":"V"}]}"""
+        t.m.repositorio.agregarEvento(
+            EventoTaller(
+                sesionId = sesion.id,
+                instante = t.m.reloj(),
+                tipo = TipoEvento.MEDICION_MULTIMETRO,
+                titulo = "Medición de referencia",
+                payloadJson = payload,
+            ),
+        )
+    }
 
     @Test
     fun `permisos - las tres de control piden control y get es de lectura`() = runTest {
@@ -86,6 +120,54 @@ class PruebaGuiadaToolsTest {
         assertTrue(desconocido.getString("error").contains("MAP_BARO"))
         assertTrue(vrefMala.getString("error").contains("vref_v"))
         assertTrue(t.m.captura.configs.isEmpty())
+    }
+
+    @Test
+    fun `vref ausente usa la referencia editada para el vehiculo`() = runTest {
+        val preferencias = PreferenciasVrefEnMemoria().apply { guardadas[BENELLI.id] = 4.91 }
+        val t = tools(preferencias)
+
+        val vref = resultadoVref(t)
+
+        assertEquals(4.91, vref.getDouble("voltios"), 0.0)
+        assertEquals("Editado por ti", vref.getString("origen"))
+    }
+
+    @Test
+    fun `vref ausente usa la referencia medida en la sesion si no hay una editada`() = runTest {
+        val t = tools()
+        agregarMedicionVref(t, 4.96)
+
+        val vref = resultadoVref(t)
+
+        assertEquals(4.96, vref.getDouble("voltios"), 0.0)
+        assertEquals(VrefSesion.ORIGEN, vref.getString("origen"))
+    }
+
+    @Test
+    fun `vref explicita reemplaza la editada y la medida`() = runTest {
+        val preferencias = PreferenciasVrefEnMemoria().apply { guardadas[BENELLI.id] = 4.91 }
+        val t = tools(preferencias)
+        agregarMedicionVref(t, 4.96)
+
+        val vref = resultadoVref(t, tps().put("voz", false).put("vref_v", 4.82))
+
+        assertEquals(4.82, vref.getDouble("voltios"), 0.0)
+        assertEquals("Editado por ti", vref.getString("origen"))
+    }
+
+    @Test
+    fun `si falla la fuente de vref se usa la referencia tipica`() = runTest {
+        val preferencias = object : PreferenciasVref {
+            override suspend fun leer(vehiculoId: Long?): Double? = error("Preferencias no disponibles")
+            override suspend fun guardar(vehiculoId: Long?, voltios: Double?) = Unit
+        }
+        val t = tools(preferencias)
+
+        val vref = resultadoVref(t)
+
+        assertEquals(ReferenciaVoltaje.TIPICA.voltios, vref.getDouble("voltios"), 0.0)
+        assertEquals(ReferenciaVoltaje.TIPICA.origen, vref.getString("origen"))
     }
 
     @Test

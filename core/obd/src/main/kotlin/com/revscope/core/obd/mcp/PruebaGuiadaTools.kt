@@ -1,5 +1,6 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.obd.taller.grafica.FuenteVref
 import com.revscope.core.obd.taller.pruebas.CatalogoPruebas
 import com.revscope.core.obd.taller.pruebas.ControladorPruebaGuiada
 import com.revscope.core.obd.taller.pruebas.EnlacePrueba
@@ -10,6 +11,7 @@ import com.revscope.core.obd.taller.pruebas.OpcionesPrueba
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.taller.sesion.OrigenEvento
+import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
@@ -61,6 +63,7 @@ private fun terminaConToque(modo: ModoPaso): Boolean = modo is ModoPaso.GrabarHa
 class IniciarPruebaGuiadaTool @Inject constructor(
     private val controlador: ControladorPruebaGuiada,
     private val enlace: EnlacePrueba,
+    private val fuenteVref: FuenteVref,
 ) : McpTool {
 
     override val name = "iniciar_prueba_guiada"
@@ -89,7 +92,8 @@ class IniciarPruebaGuiadaTool @Inject constructor(
         "voz" to McpSchemas.booleano("Guiar cada paso por voz en el teléfono (por defecto true)"),
         "vref_v" to McpSchemas.numero(
             "Referencia de 5 V medida con el multímetro, para convertir el % del TPS a voltios " +
-                "(${ReferenciaVoltaje.MIN_V}-${ReferenciaVoltaje.MAX_V}; por defecto 5,0 V típico)",
+                "(${ReferenciaVoltaje.MIN_V}-${ReferenciaVoltaje.MAX_V}; por defecto usa la referencia " +
+                "editada para el vehículo, la medida en la sesión abierta o 5,0 V típico)",
         ),
         requeridos = listOf("tipo"),
     )
@@ -109,8 +113,16 @@ class IniciarPruebaGuiadaTool @Inject constructor(
         )
     }
 
-    private fun referencia(arguments: JSONObject): ReferenciaVoltaje? {
-        if (!arguments.has("vref_v")) return ReferenciaVoltaje.TIPICA
+    private suspend fun referencia(arguments: JSONObject): ReferenciaVoltaje? {
+        if (!arguments.has("vref_v")) {
+            return try {
+                fuenteVref.actual().usada
+            } catch (cancelado: CancellationException) {
+                throw cancelado
+            } catch (_: Exception) {
+                ReferenciaVoltaje.TIPICA
+            }
+        }
         val voltios = arguments.optDouble("vref_v", Double.NaN)
         if (voltios.isNaN() || voltios !in ReferenciaVoltaje.MIN_V..ReferenciaVoltaje.MAX_V) return null
         return ReferenciaVoltaje.editada(voltios)
