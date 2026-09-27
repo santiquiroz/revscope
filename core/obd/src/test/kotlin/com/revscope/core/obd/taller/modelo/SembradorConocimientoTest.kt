@@ -2,6 +2,7 @@ package com.revscope.core.obd.taller.modelo
 
 import com.revscope.core.data.db.AppDatabase
 import com.revscope.core.obd.taller.baseDeDatosEnMemoria
+import com.revscope.core.obd.taller.multimetro.FuncionCable
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.OrigenBanda
@@ -106,6 +107,26 @@ class SembradorConocimientoTest {
         sembrador.sembrar(CatalogoDePrueba.conVersion(2))
 
         assertEquals(listOf(propia), repositorio.conocimiento("moto-prueba")!!.bandas)
+    }
+
+    @Test
+    fun `guardar los colores del TPS reemplaza ese cableado, marca el modelo editado y la semilla ya no lo pisa`() = runTest {
+        sembrador.sembrar(CatalogoDePrueba.textoReal())
+        val propio = CableadoSensor(
+            sensor = "TPS",
+            titulo = "TPS de 3 cables",
+            cables = listOf(CableModelo(FuncionCable.REF_5V, "Naranja"), CableModelo(FuncionCable.MASA, "Negro"), CableModelo(FuncionCable.SENAL, null)),
+            fuente = "Editado por ti",
+        )
+
+        assertTrue(repositorio.guardarCableado(CatalogoDePrueba.CLAVE_BENELLI, propio))
+        sembrador.sembrar(CatalogoDePrueba.textoReal())
+
+        val benelli = repositorio.conocimiento(CatalogoDePrueba.CLAVE_BENELLI)!!
+        assertEquals(listOf(propio), benelli.cableado)
+        assertTrue(benelli.editadoPorUsuario)
+        assertEquals(7, benelli.repuestos.size)
+        assertFalse(repositorio.guardarCableado("no-existe", propio))
     }
 
     @Test

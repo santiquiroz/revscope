@@ -1,6 +1,7 @@
 package com.revscope.core.obd.taller.sesion
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.taller.modelo.CableadoSensor
 import com.revscope.core.obd.taller.modelo.ConocimientoModelo
 import com.revscope.core.obd.taller.modelo.EstadoSemilla
 import com.revscope.core.obd.taller.modelo.ModeloSemilla
@@ -40,6 +41,9 @@ interface TallerRepository {
     suspend fun estadoSemilla(clave: String): EstadoSemilla?
 
     suspend fun aplicarSemilla(semilla: ModeloSemilla)
+
+    // Reemplaza el cableado de ese sensor en el modelo; false si el modelo no existe.
+    suspend fun guardarCableado(claveModelo: String, cableado: CableadoSensor): Boolean
 
     suspend fun guardarBandaUsuario(claveModelo: String, banda: BandaReferencia)
 

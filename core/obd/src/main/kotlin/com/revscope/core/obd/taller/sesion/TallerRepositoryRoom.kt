@@ -3,6 +3,8 @@ package com.revscope.core.obd.taller.sesion
 import com.revscope.core.data.db.dao.DiagSessionDao
 import com.revscope.core.data.db.dao.VehicleKnowledgeDao
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.taller.modelo.CableadoSensor
+import com.revscope.core.obd.taller.modelo.CodecConocimiento
 import com.revscope.core.obd.taller.modelo.ConocimientoModelo
 import com.revscope.core.obd.taller.modelo.EstadoSemilla
 import com.revscope.core.obd.taller.modelo.ModeloSemilla
@@ -10,6 +12,7 @@ import com.revscope.core.obd.taller.modelo.ResumenModelo
 import com.revscope.core.obd.taller.modelo.aConocimiento
 import com.revscope.core.obd.taller.modelo.aEntidad
 import com.revscope.core.obd.taller.modelo.aResumen
+import com.revscope.core.obd.taller.multimetro.ResolutorPlantilla
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.OrigenBanda
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
@@ -72,6 +75,12 @@ class TallerRepositoryRoom @Inject constructor(
             bands = modelo.bandas.map { it.aEntidad(modelo.clave) },
             seedBandOrigin = OrigenBanda.FUENTE.name,
         )
+    }
+
+    override suspend fun guardarCableado(claveModelo: String, cableado: CableadoSensor): Boolean {
+        val entidad = conocimientos.getKnowledge(claveModelo) ?: return false
+        val nuevo = ResolutorPlantilla.reemplazar(CodecConocimiento.cableadoDesdeJson(entidad.wiringJson), cableado)
+        return conocimientos.updateWiring(claveModelo, CodecConocimiento.cableadoAJson(nuevo)) > 0
     }
 
     override suspend fun guardarBandaUsuario(claveModelo: String, banda: BandaReferencia) =

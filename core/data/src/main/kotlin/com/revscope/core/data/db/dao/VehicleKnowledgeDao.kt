@@ -24,6 +24,10 @@ abstract class VehicleKnowledgeDao {
     @Upsert
     abstract suspend fun upsertKnowledge(knowledge: VehicleKnowledgeEntity)
 
+    // Marca el modelo como editado: la semilla ya no pisa el cableado que anotó el técnico.
+    @Query("UPDATE vehicle_knowledge SET wiringJson = :wiringJson, userEdited = 1 WHERE `key` = :key")
+    abstract suspend fun updateWiring(key: String, wiringJson: String): Int
+
     @Query("SELECT * FROM vehicle_parts WHERE knowledgeKey = :key ORDER BY id")
     abstract suspend fun getParts(key: String): List<VehiclePartEntity>
 

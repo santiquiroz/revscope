@@ -1,10 +1,12 @@
 package com.revscope.core.obd.taller.sesion
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.taller.modelo.CableadoSensor
 import com.revscope.core.obd.taller.modelo.ConocimientoModelo
 import com.revscope.core.obd.taller.modelo.EstadoSemilla
 import com.revscope.core.obd.taller.modelo.ModeloSemilla
 import com.revscope.core.obd.taller.modelo.ResumenModelo
+import com.revscope.core.obd.taller.multimetro.ResolutorPlantilla
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import kotlinx.coroutines.flow.Flow
@@ -68,7 +70,15 @@ class TallerRepositoryEnMemoria : TallerRepository {
     override fun observarEventos(sesionId: Long): Flow<List<EventoTaller>> =
         eventos.map { lista -> lista.filter { it.sesionId == sesionId } }
 
-    override suspend fun conocimiento(clave: String): ConocimientoModelo? = null
+    val modelos = mutableMapOf<String, ConocimientoModelo>()
+
+    override suspend fun conocimiento(clave: String): ConocimientoModelo? = modelos[clave]
+
+    override suspend fun guardarCableado(claveModelo: String, cableado: CableadoSensor): Boolean {
+        val modelo = modelos[claveModelo] ?: return false
+        modelos[claveModelo] = modelo.copy(cableado = ResolutorPlantilla.reemplazar(modelo.cableado, cableado), editadoPorUsuario = true)
+        return true
+    }
 
     override fun observarModelos(): Flow<List<ResumenModelo>> = MutableStateFlow(emptyList())
 
@@ -81,7 +91,7 @@ class TallerRepositoryEnMemoria : TallerRepository {
     override suspend fun restablecerBanda(claveModelo: String, claveBanda: String): Boolean = false
 
     override suspend fun bandasResueltas(claveModelo: String?, tipo: VehicleType): Map<String, BandaReferencia> =
-        ResolutorBandas.resolverTodas(tipo, emptyList())
+        ResolutorBandas.resolverTodas(tipo, claveModelo?.let { modelos[it]?.bandas }.orEmpty())
 }
 
 class HistorialChequeosEnMemoria(private val chequeos: List<ChequeoRegistrado> = emptyList()) : HistorialChequeos {
