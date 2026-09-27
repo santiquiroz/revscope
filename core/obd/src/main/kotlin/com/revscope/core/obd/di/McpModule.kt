@@ -16,6 +16,7 @@ import com.revscope.core.obd.mcp.GetDocumentosTool
 import com.revscope.core.obd.mcp.GetDtcTool
 import com.revscope.core.obd.mcp.GetEstadoTool
 import com.revscope.core.obd.mcp.GetGuiaDtcTool
+import com.revscope.core.obd.mcp.GetInformeTallerTool
 import com.revscope.core.obd.mcp.GetMantenimientoTool
 import com.revscope.core.obd.mcp.GetPruebaGuiadaTool
 import com.revscope.core.obd.mcp.GetSesionTallerTool
@@ -63,6 +64,7 @@ object McpModule {
         getCaptura: GetCapturaTool,
         detenerCaptura: DetenerCapturaTool,
         getGuiaDtc: GetGuiaDtcTool,
+        getInformeTaller: GetInformeTallerTool,
         getSesionTaller: GetSesionTallerTool,
         iniciarSesionTaller: IniciarSesionTallerTool,
         agregarNotaTaller: AgregarNotaTallerTool,
@@ -75,7 +77,7 @@ object McpModule {
         getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getGuiaDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
         getMuestreo, setMuestreo, iniciarCaptura, getCaptura, detenerCaptura,
-        getSesionTaller, iniciarSesionTaller, agregarNotaTaller, registrarMedicion,
+        getSesionTaller, getInformeTaller, iniciarSesionTaller, agregarNotaTaller, registrarMedicion,
         getPruebaGuiada, iniciarPruebaGuiada, avanzarPruebaGuiada, cancelarPruebaGuiada,
     )
 
