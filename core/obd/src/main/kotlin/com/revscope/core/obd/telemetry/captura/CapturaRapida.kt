@@ -54,7 +54,7 @@ class CapturaRapida(
     private val relojEpochMs: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val turno: TurnoCaptura = TurnoCaptura(),
-) : CapturaPrueba {
+) : CapturaPrueba, PaginasCaptura {
     private class Sesion(
         val inicio: InicioCaptura,
         val config: ConfigCaptura,
@@ -109,14 +109,14 @@ class CapturaRapida(
     }
 
     /** Página del anillo de la captura [id] (activa o la última); null si ya no está en memoria. */
-    fun pagina(id: String, desdeSeq: Long, max: Int, pids: Set<String>?): PaginaCaptura? =
+    override fun pagina(id: String, desdeSeq: Long, max: Int, pids: Set<String>?): PaginaCaptura? =
         sesion?.takeIf { it.inicio.id == id }?.buffer?.leerDesde(desdeSeq, max, pids)
 
     fun inicioEpochMs(id: String): Long? = sesion?.takeIf { it.inicio.id == id }?.inicioEpochMs
 
     override fun muestrasActuales(): List<MuestraCaptura> = sesion?.buffer?.todas().orEmpty()
 
-    fun capturaEnMemoria(): InicioCaptura? = sesion?.inicio
+    override fun capturaEnMemoria(): InicioCaptura? = sesion?.inicio
 
     override fun activa(): Boolean = job?.isActive == true
 

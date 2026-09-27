@@ -51,7 +51,7 @@ internal object MapeoPaso {
 
     // RPM y temperaturas: el valor tal cual, en su unidad, y la banda del paso si la tiene (el mínimo).
     private fun deMagnitud(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, bandas: Map<String, BandaReferencia>): PasoUi {
-        val banda = MapeoMagnitud.banda(e.paso.clave, bandas)
+        val banda = MapeoMagnitud.banda(pid, e.paso.clave, bandas)
         return base(e).copy(
             vivo = serie.lastOrNull()?.let { MapeoMagnitud.valorVivo(pid, it.second) },
             grafica = MapeoMagnitud.grafica(pid, serie, VENTANA_MS, banda),

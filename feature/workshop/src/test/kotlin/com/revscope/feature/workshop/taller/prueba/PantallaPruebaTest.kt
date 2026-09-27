@@ -19,14 +19,21 @@ class PantallaPruebaTest {
         (pantalla.fase(EntradaPantalla(BarridoBenelli.enPaso(indice, fase, restanteMs), serieVivo = BarridoBenelli.serieMedio(), bandas = BarridoBenelli.bandas)) as FasePantalla.Paso).paso
 
     @Test
-    fun `sin prueba elegida se listan todas y solo las que tienen analizador se pueden abrir`() {
+    fun `sin prueba elegida se listan todas y con el catálogo completo todas se pueden abrir`() {
         val fase = pantalla.fase(EntradaPantalla(EstadoPrueba.Inactiva)) as FasePantalla.Elegir
 
         assertEquals(TipoPrueba.entries, fase.opciones.map { it.tipo })
-        assertEquals(
-            listOf(TipoPrueba.TPS_BARRIDO, TipoPrueba.MINIMO_RETORNO, TipoPrueba.ARRANQUE_FRIO),
-            fase.opciones.filter { it.disponible }.map { it.tipo },
-        )
+        assertEquals(TipoPrueba.entries, fase.opciones.filter { it.disponible }.map { it.tipo })
+    }
+
+    @Test
+    fun `solo las pruebas del catálogo disponible se pueden abrir`() {
+        val parcial = PantallaPrueba(CatalogoPruebas::definicion, listOf(TipoPrueba.TPS_BARRIDO))
+
+        val fase = parcial.fase(EntradaPantalla(EstadoPrueba.Inactiva)) as FasePantalla.Elegir
+
+        assertEquals(TipoPrueba.entries, fase.opciones.map { it.tipo })
+        assertEquals(listOf(TipoPrueba.TPS_BARRIDO), fase.opciones.filter { it.disponible }.map { it.tipo })
     }
 
     @Test
@@ -36,8 +43,8 @@ class PantallaPruebaTest {
         ) as FasePantalla.Preparacion
 
         assertFalse(fase.listas)
-        assertEquals("Cerrado: sostener 5 s", fase.pasos.first())
-        assertEquals("Barrido lento: se graba solo 8 s", fase.pasos.last())
+        assertEquals("Cerrado: sostener 5 s", fase.pasos.first().plano())
+        assertEquals("Barrido lento: se graba solo 8 s", fase.pasos.last().plano())
         val falla = fase.precondiciones.single { !it.cumple }
         assertEquals("Motor encendido (1454 rpm)", falla.texto)
         assertTrue(falla.queHacer!!.startsWith("Apaga el motor"))

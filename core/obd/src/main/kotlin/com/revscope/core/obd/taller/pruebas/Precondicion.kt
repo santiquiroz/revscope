@@ -41,7 +41,7 @@ sealed interface Precondicion {
         override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
             val rpm = ctx.reciente(ContextoPrueba.PID_RPM)?.value
                 ?: return ResultadoPrecondicion("Motor apagado (sin lectura de RPM)", cumple = true)
-            if (rpm < 1.0) return ResultadoPrecondicion("Motor apagado (RPM = 0)", cumple = true)
+            if (rpm < 1.0) return ResultadoPrecondicion("Motor apagado (RPM = 0)", cumple = true)
             return ResultadoPrecondicion("Motor encendido (${FormatoTaller.numero(rpm, 0)} rpm)", cumple = false, queHacer)
         }
     }

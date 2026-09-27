@@ -11,6 +11,8 @@ import com.revscope.core.obd.taller.grafica.FormatoPosicion
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
 import com.revscope.core.obd.taller.pruebas.AnalisisArranqueFrio
 import com.revscope.core.obd.taller.pruebas.AnalisisBarridoTps
+import com.revscope.core.obd.taller.pruebas.AnalisisBateria
+import com.revscope.core.obd.taller.pruebas.AnalisisMapBaro
 import com.revscope.core.obd.taller.pruebas.AnalisisMinimo
 import com.revscope.core.obd.taller.pruebas.AnalizadorBarridoTps
 import com.revscope.core.obd.taller.pruebas.AnalizadorBarridoTps.Pasos
@@ -39,6 +41,8 @@ internal object MapeoResultado {
             is AnalisisBarridoTps -> conBarrido(base, detalle, t.datos)
             is AnalisisMinimo -> MapeoResultadoMotor.minimo(base, detalle, t.datos)
             is AnalisisArranqueFrio -> MapeoResultadoMotor.arranque(base, detalle, t.datos)
+            is AnalisisBateria -> MapeoResultadoElectrico.bateria(base, detalle, t.datos)
+            is AnalisisMapBaro -> MapeoResultadoElectrico.mapBaro(base, detalle, t.datos)
             else -> base
         }
     }

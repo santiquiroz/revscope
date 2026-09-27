@@ -63,6 +63,8 @@ private fun accionesDe(vm: PruebaGuiadaViewModel, onVerGuia: ((String) -> Unit)?
     onCerrarDialogo = vm::cerrarDialogo,
     onPedirVref = vm::pedirVref,
     onGuardarVref = vm::guardarVref,
+    onPedirDesfase = vm::pedirDesfase,
+    onGuardarDesfase = vm::guardarDesfase,
     onReintentar = vm::reintentar,
     onTerminar = vm::terminar,
     onGuardarEnSesion = vm::guardarEnSesion,

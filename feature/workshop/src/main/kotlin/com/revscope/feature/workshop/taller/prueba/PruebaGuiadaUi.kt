@@ -2,6 +2,7 @@ package com.revscope.feature.workshop.taller.prueba
 
 import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.obd.taller.grafica.EstadoVref
+import com.revscope.core.obd.taller.pruebas.DesfaseVoltaje
 import com.revscope.core.obd.taller.pruebas.FasePaso
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
@@ -15,13 +16,15 @@ data class PruebaGuiadaUi(
     val dialogo: DialogoPrueba? = null,
     val ocupado: Boolean = false,
     val mensaje: String? = null,
+    val desfase: DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR,
+    val voltajeAdaptador: Double? = null,
 ) {
     val titulo: String get() = fase.tipo?.titulo ?: "Pruebas guiadas"
     val vref: ReferenciaVoltaje get() = referencia.usada
     val enCurso: Boolean get() = fase is FasePantalla.Paso || fase is FasePantalla.Analizando
 }
 
-enum class DialogoPrueba { CANCELAR, VREF }
+enum class DialogoPrueba { CANCELAR, VREF, DESFASE }
 
 data class OpcionPrueba(val tipo: TipoPrueba, val descripcion: String, val disponible: Boolean)
 
@@ -100,6 +103,7 @@ sealed interface FasePantalla {
         val pasos: List<String>,
         val precondiciones: List<ItemPrecondicion>,
         val usaVref: Boolean = true,
+        val usaDesfase: Boolean = false,
     ) : FasePantalla {
         val listas: Boolean get() = precondiciones.isNotEmpty() && precondiciones.all { it.cumple }
     }

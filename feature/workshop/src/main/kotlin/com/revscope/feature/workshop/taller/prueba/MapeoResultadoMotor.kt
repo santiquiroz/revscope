@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.prueba
 
+import com.revscope.core.designsystem.BandaGrafica
 import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
 import com.revscope.core.designsystem.SerieGrafica
@@ -53,7 +54,7 @@ internal object MapeoResultadoMotor {
 
     private fun decimales(unidad: String): Int = when (unidad) {
         "V" -> 2
-        "rpm/s" -> 1
+        "rpm/s", "kPa" -> 1
         else -> 0
     }
 
@@ -61,21 +62,33 @@ internal object MapeoResultadoMotor {
 
     // ── Serie de toda la prueba ─────────────────────────────────────────────
 
-    private fun grafica(datos: DatosPrueba, pid: String, titulos: Map<String, String>, banda: BandaReferencia?): GraficaResultadoUi? {
+    fun grafica(datos: DatosPrueba, pid: String, titulos: Map<String, String>, banda: BandaReferencia?): GraficaResultadoUi? =
+        graficaCon(datos, pid, titulos, banda?.let(MapeoMagnitud::bandaGrafica), banda?.let(MapeoMagnitud::leyenda))
+
+    // [leyendaBanda] describe la banda sombreada (o la de un solo lado, que no se sombrea) con su origen.
+    fun graficaCon(
+        datos: DatosPrueba,
+        pid: String,
+        titulos: Map<String, String>,
+        bandaGrafica: BandaGrafica?,
+        leyendaBanda: String?,
+    ): GraficaResultadoUi? {
         val m = MapeoMagnitud.de(pid)
         val puntos = datos.muestras.filter { it.pid == pid }.sortedBy { it.tMicros }.map { PuntoGrafica(it.tMicros / 1_000_000.0, it.valor) }
         if (puntos.size < 2) return null
         val modelo = ModeloGrafica(
             series = listOf(SerieGrafica(m.nombre, puntos)),
             descripcion = "${m.nombre} en toda la prueba: de ${m.texto(puntos.minOf { it.y })} a ${m.texto(puntos.maxOf { it.y })}, " +
-                "${datos.segmentos.size} pasos sombreados." + banda?.let { " Banda ${MapeoMagnitud.leyenda(it)}" }.orEmpty(),
-            bandas = listOfNotNull(banda?.let(MapeoMagnitud::bandaGrafica)),
+                "${pasosSombreados(datos.segmentos.size)}." + leyendaBanda?.let { " Banda $it" }.orEmpty(),
+            bandas = listOfNotNull(bandaGrafica),
             tramos = datos.segmentos.mapIndexed { i, s -> TramoGrafica("${i + 1}", s.inicioMs / 1_000.0, s.finMs / 1_000.0) },
         )
         val leyenda = listOf(datos.segmentos.mapIndexed { i, s -> "${i + 1} ${titulos[s.clave] ?: s.clave}" }.joinToString(" · ")) +
-            listOfNotNull(banda?.let(MapeoMagnitud::leyenda))
+            listOfNotNull(leyendaBanda)
         return GraficaResultadoUi(tituloSerie(m), modelo, leyenda)
     }
+
+    private fun pasosSombreados(n: Int) = if (n == 1) "1 paso sombreado" else "$n pasos sombreados"
 
     // «RPM en toda la prueba, en rpm» repite la unidad: solo se agrega cuando dice algo más que el nombre.
     private fun tituloSerie(m: Magnitud): String {

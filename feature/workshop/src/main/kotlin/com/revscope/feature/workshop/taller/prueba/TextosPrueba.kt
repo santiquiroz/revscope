@@ -24,15 +24,20 @@ internal object TextosPrueba {
         TipoPrueba.ARRANQUE_FRIO ->
             "Tras el reposo de la noche: compara la temperatura del motor con la del aire en contacto, cuenta los " +
                 "intentos de arranque y sigue el calentamiento hasta 60 °C o hasta que toques «Terminar»."
-        TipoPrueba.BATERIA_CARGA -> "Voltaje con el contacto puesto, la caída al arrancar y la carga con el motor encendido."
-        TipoPrueba.MAP_BARO -> "Con el motor apagado, el MAP debe marcar lo mismo que la presión barométrica."
+        TipoPrueba.BATERIA_CARGA ->
+            "Lee el voltaje del adaptador (AT RV) tan rápido como responde: la batería en reposo con el contacto, la " +
+                "caída al arrancar y la carga en mínimo y a rpm altas. Si el adaptador se reinicia al arrancar, queda " +
+                "como hallazgo."
+        TipoPrueba.MAP_BARO ->
+            "Con el motor apagado no hay vacío: el MAP debe marcar la presión barométrica. Se compara con la de la " +
+                "ECU (PID 33), la del barómetro del teléfono o una estimada por la altitud GPS, cada una con su margen."
     }
 
     fun paso(p: PasoPrueba): String = "${p.titulo}: ${modo(p.modo, conMeta = p.terminarCuando != null)}"
 
     private fun modo(m: ModoPaso, conMeta: Boolean): String = when (m) {
-        is ModoPaso.Sostener -> "sostener ${segundos(m.ms)} s"
-        is ModoPaso.Grabar -> "se graba solo ${segundos(m.ms)} s"
+        is ModoPaso.Sostener -> "sostener ${segundos(m.ms)} s"
+        is ModoPaso.Grabar -> "se graba solo ${segundos(m.ms)} s"
         is ModoPaso.GrabarHasta -> "graba hasta ${if (conMeta) "cumplir la meta o hasta " else ""}que toques «Terminar» (máx. ${duracion(m.maxMs)})"
         is ModoPaso.Accion -> "graba hasta detectar el evento o hasta que toques «Terminar» (máx. ${duracion(m.maxMs)})"
     }

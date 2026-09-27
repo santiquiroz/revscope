@@ -97,6 +97,7 @@ internal fun ColumnScope.PreparacionPrueba(fase: FasePantalla.Preparacion, estad
         }
         Seccion("Ajustes")
         if (fase.usaVref) FilaVref(estado.vref, acciones.onPedirVref)
+        if (fase.usaDesfase) FilaDesfase(estado.desfase, acciones.onPedirDesfase)
         FilaVoz(estado.voz, acciones.onVoz)
     }
     PieConAccion(

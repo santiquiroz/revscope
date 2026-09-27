@@ -52,6 +52,8 @@ data class AccionesPrueba(
     val onCerrarDialogo: () -> Unit = {},
     val onPedirVref: () -> Unit = {},
     val onGuardarVref: (Double?) -> Unit = {},
+    val onPedirDesfase: () -> Unit = {},
+    val onGuardarDesfase: (Double?) -> Unit = {},
     val onReintentar: () -> Unit = {},
     val onTerminar: () -> Unit = {},
     val onGuardarEnSesion: () -> Unit = {},
@@ -181,6 +183,7 @@ private fun DialogosPrueba(estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
     when (estado.dialogo) {
         DialogoPrueba.CANCELAR -> ConfirmarCancelar(estado, acciones)
         DialogoPrueba.VREF -> DialogoVref(estado, acciones.onGuardarVref, acciones.onCerrarDialogo)
+        DialogoPrueba.DESFASE -> DialogoDesfase(estado, acciones.onGuardarDesfase, acciones.onCerrarDialogo)
         null -> Unit
     }
 }

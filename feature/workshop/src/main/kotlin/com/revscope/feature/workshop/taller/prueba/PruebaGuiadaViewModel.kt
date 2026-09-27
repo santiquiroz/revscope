@@ -6,11 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.grafica.FuenteVref
+import com.revscope.core.obd.taller.pruebas.AnalizadorBateria
+import com.revscope.core.obd.taller.pruebas.CalibracionVoltaje
 import com.revscope.core.obd.taller.pruebas.CatalogoPruebas
 import com.revscope.core.obd.taller.pruebas.ContextoPrueba
 import com.revscope.core.obd.taller.pruebas.ControladorPruebaGuiada
+import com.revscope.core.obd.taller.pruebas.DesfaseVoltaje
 import com.revscope.core.obd.taller.pruebas.EnlacePrueba
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
+import com.revscope.core.obd.taller.pruebas.FuenteDesfase
 import com.revscope.core.obd.taller.pruebas.OpcionesPrueba
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.ResultadoPrecondicion
@@ -48,6 +52,8 @@ internal data class LocalPrueba(
     val precondiciones: List<ResultadoPrecondicion>? = null,
     val serie: SerieVivo = emptyList(),
     val bandas: Map<String, BandaReferencia> = emptyMap(),
+    val desfase: DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR,
+    val voltajeAdaptador: Double? = null,
 )
 
 // La pantalla de la prueba guiada sobre el controlador compartido con el MCP: una prueba a la vez.
@@ -62,6 +68,7 @@ class PruebaGuiadaViewModel @Inject constructor(
     private val repositorio: TallerRepository,
     private val vehiculo: VehiculoActivo,
     private val registro: RegistroTaller,
+    private val fuenteDesfase: FuenteDesfase,
 ) : ViewModel() {
 
     private val tipoDeArgumento = guardado.get<String>(ARG_TIPO)?.let { nombre -> TipoPrueba.entries.firstOrNull { it.name == nombre } }
@@ -79,6 +86,8 @@ class PruebaGuiadaViewModel @Inject constructor(
             dialogo = l.dialogo,
             ocupado = l.ocupado,
             mensaje = l.mensaje,
+            desfase = l.desfase,
+            voltajeAdaptador = l.voltajeAdaptador,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(DETENER_TRAS_MS), PruebaGuiadaUi(FasePantalla.Elegir(emptyList())))
 
@@ -128,6 +137,19 @@ class PruebaGuiadaViewModel @Inject constructor(
         }
     }
 
+    // Lo que marca el adaptador al abrir el diálogo es contra lo que se calibra lo medido en los bornes.
+    fun pedirDesfase() = local.update { it.copy(dialogo = DialogoPrueba.DESFASE, voltajeAdaptador = voltajeDelAdaptador()) }
+
+    // null quita la calibración; con lo del multímetro se guarda la diferencia contra el adaptador.
+    fun guardarDesfase(multimetroV: Double?) {
+        val nuevo = multimetroV?.let { CalibracionVoltaje.desde(it, local.value.voltajeAdaptador) ?: return avisar(NO_CALIBRA) }
+        cerrarDialogo()
+        viewModelScope.launch {
+            runCatching { fuenteDesfase.guardar(nuevo) }.onFailure { Timber.w(it, "Prueba guiada: no se pudo guardar el desfase") }
+            cargarDesfase()
+        }
+    }
+
     fun reintentar() = accion { controlador.reintentar().onFailure { avisar(it.message) } }
 
     // Salir sin cancelar nada: la flecha o «Listo» solo cierran lo que ya terminó.
@@ -163,6 +185,7 @@ class PruebaGuiadaViewModel @Inject constructor(
 
     private suspend fun cargarReferencias() {
         cargarVref()
+        cargarDesfase()
         val actual = vehiculo.actual()
         val bandas = runCatching { repositorio.bandasResueltas(actual?.claveModelo, actual?.tipo ?: VehicleType.MOTORCYCLE) }
             .onFailure { Timber.w(it, "Prueba guiada: sin bandas del vehículo") }
@@ -175,6 +198,14 @@ class PruebaGuiadaViewModel @Inject constructor(
             .onSuccess { vref -> local.update { it.copy(vref = vref) } }
             .onFailure { Timber.w(it, "Prueba guiada: no se pudo leer la referencia") }
     }
+
+    private suspend fun cargarDesfase() {
+        runCatching { fuenteDesfase.actual() }
+            .onSuccess { d -> local.update { it.copy(desfase = d) } }
+            .onFailure { Timber.w(it, "Prueba guiada: no se pudo leer el desfase del voltaje") }
+    }
+
+    private fun voltajeDelAdaptador(): Double? = enlace.lecturas()[AnalizadorBateria.PID_VOLTAJE]?.value
 
     private suspend fun refrescarSerieDuranteLaPrueba() {
         controlador.estado.collectLatest { e ->
@@ -219,6 +250,7 @@ class PruebaGuiadaViewModel @Inject constructor(
 
     companion object {
         const val ARG_TIPO = "tipo"
+        private const val NO_CALIBRA = "Sin lectura del adaptador o con más de 1 V de diferencia: no se calibró"
         private const val DETENER_TRAS_MS = 5_000L
         private const val REFRESCO_SERIE_MS = 150L
         private const val REFRESCO_PRECONDICIONES_MS = 1_000L

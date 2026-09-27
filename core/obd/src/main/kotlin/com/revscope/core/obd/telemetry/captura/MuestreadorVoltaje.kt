@@ -40,7 +40,7 @@ class MuestreadorVoltaje(
     private val relojNanos: () -> Long = System::nanoTime,
     private val relojEpochMs: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
-) : CapturaPrueba {
+) : CapturaPrueba, PaginasCaptura {
 
     private class Sesion(
         val inicio: InicioCaptura,
@@ -98,9 +98,9 @@ class MuestreadorVoltaje(
 
     override fun muestrasActuales(): List<MuestraCaptura> = sesion?.buffer?.todas().orEmpty()
 
-    fun capturaEnMemoria(): InicioCaptura? = sesion?.inicio
+    override fun capturaEnMemoria(): InicioCaptura? = sesion?.inicio
 
-    fun pagina(id: String, desdeSeq: Long, max: Int, pids: Set<String>?): PaginaCaptura? =
+    override fun pagina(id: String, desdeSeq: Long, max: Int, pids: Set<String>?): PaginaCaptura? =
         sesion?.takeIf { it.inicio.id == id }?.buffer?.leerDesde(desdeSeq, max, pids)
 
     // ── Arranque ────────────────────────────────────────────────────────────

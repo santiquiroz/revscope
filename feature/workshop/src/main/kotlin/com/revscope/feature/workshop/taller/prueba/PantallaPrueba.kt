@@ -3,6 +3,7 @@ package com.revscope.feature.workshop.taller.prueba
 import com.revscope.core.obd.taller.grafica.PidsPosicion
 import com.revscope.core.obd.taller.pruebas.DefinicionPrueba
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
+import com.revscope.core.obd.taller.pruebas.FuenteMuestras
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.ResultadoPrecondicion
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
@@ -48,6 +49,7 @@ internal class PantallaPrueba(
             pasos = d.pasos.map(TextosPrueba::paso),
             precondiciones = precondiciones.map { ItemPrecondicion(it.texto, it.cumple, it.queHacer, it.aviso) },
             usaVref = d.pids.any(PidsPosicion::es),
+            usaDesfase = d.fuente == FuenteMuestras.VOLTAJE_ADAPTADOR,
         )
     }
 

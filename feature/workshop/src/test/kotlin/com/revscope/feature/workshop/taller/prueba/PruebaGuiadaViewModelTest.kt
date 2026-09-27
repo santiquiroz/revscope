@@ -7,8 +7,11 @@ import com.revscope.core.obd.taller.grafica.PreferenciasVref
 import com.revscope.core.obd.taller.pruebas.AnunciadorTaller
 import com.revscope.core.obd.taller.pruebas.CapturaPrueba
 import com.revscope.core.obd.taller.pruebas.ControladorPruebaGuiada
+import com.revscope.core.obd.taller.pruebas.DesfaseVoltaje
 import com.revscope.core.obd.taller.pruebas.EnlacePrueba
 import com.revscope.core.obd.taller.pruebas.FasePaso
+import com.revscope.core.obd.taller.pruebas.FuenteDesfase
+import com.revscope.core.obd.taller.pruebas.PreferenciasDesfase
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.telemetry.captura.ConfigCaptura
 import com.revscope.core.obd.telemetry.captura.InicioCaptura
@@ -43,6 +46,7 @@ class PruebaGuiadaViewModelTest {
     private val captura = CapturaQuieta { relojMs }
     private val enlace = EnlaceQuieto()
     private val preferencias = PreferenciasEnMemoria()
+    private val desfases = DesfasesEnMemoria()
     private lateinit var taller: TallerDePrueba
     private lateinit var controlador: ControladorPruebaGuiada
 
@@ -61,7 +65,7 @@ class PruebaGuiadaViewModelTest {
     private fun vm(tipo: TipoPrueba? = TipoPrueba.TPS_BARRIDO) = PruebaGuiadaViewModel(
         SavedStateHandle(tipo?.let { mapOf(PruebaGuiadaViewModel.ARG_TIPO to it.name) } ?: emptyMap()),
         controlador, enlace, taller.entorno, FuenteVref(preferencias, taller.repositorio) { BENELLI }, { emptyList() },
-        taller.repositorio, { BENELLI }, taller.registro,
+        taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI },
     ).also { v -> CoroutineScope(despachador).launch { v.estado.collect { } } }
 
     @Test
@@ -132,6 +136,50 @@ class PruebaGuiadaViewModelTest {
     }
 
     @Test
+    fun `calibrar con el multímetro guarda la diferencia contra el adaptador y quitarla vuelve a sin calibrar`() {
+        enlace.lecturas = mapOf("VBAT" to ObdReading("VBAT", 12.4, "V"))
+        val vm = vm(tipo = TipoPrueba.BATERIA_CARGA)
+
+        vm.pedirDesfase()
+        val dialogo = vm.estado.value.dialogo
+        val adaptador = vm.estado.value.voltajeAdaptador
+        vm.guardarDesfase(12.62)
+        val calibrado = vm.estado.value.desfase
+        vm.pedirDesfase()
+        vm.guardarDesfase(null)
+
+        assertEquals(DialogoPrueba.DESFASE, dialogo)
+        assertEquals(12.4, adaptador!!, 1e-9)
+        assertEquals(0.22, calibrado.voltios, 1e-9)
+        assertEquals(DesfaseVoltaje.ORIGEN_MULTIMETRO, calibrado.origen)
+        assertEquals(DesfaseVoltaje.SIN_CALIBRAR, vm.estado.value.desfase)
+        assertTrue(desfases.guardados.isEmpty())
+        assertNull(vm.estado.value.dialogo)
+    }
+
+    @Test
+    fun `sin lectura del adaptador no calibra y lo dice`() {
+        val vm = vm(tipo = TipoPrueba.BATERIA_CARGA)
+
+        vm.pedirDesfase()
+        vm.guardarDesfase(12.6)
+
+        assertEquals(DesfaseVoltaje.SIN_CALIBRAR, vm.estado.value.desfase)
+        assertTrue(vm.estado.value.mensaje!!, vm.estado.value.mensaje!!.contains("no se calibró"))
+        assertEquals(DialogoPrueba.DESFASE, vm.estado.value.dialogo)
+    }
+
+    @Test
+    fun `la preparación de la batería muestra el desfase y no la referencia de 5 V`() {
+        val vm = vm(tipo = TipoPrueba.BATERIA_CARGA)
+
+        val fase = vm.estado.value.fase as FasePantalla.Preparacion
+
+        assertTrue(fase.usaDesfase)
+        assertTrue(!fase.usaVref)
+    }
+
+    @Test
     fun `apagar la voz se refleja en la pantalla`() {
         val vm = vm()
 
@@ -165,8 +213,9 @@ private class CapturaQuieta(private val reloj: () -> Long) : CapturaPrueba {
 }
 
 private class EnlaceQuieto : EnlacePrueba {
+    var lecturas: Map<String, ObdReading> = emptyMap()
     override fun conectado() = true
-    override fun lecturas(): Map<String, ObdReading> = emptyMap()
+    override fun lecturas(): Map<String, ObdReading> = lecturas
     override fun soportado(pid: String) = pid == "11"
 }
 
@@ -177,5 +226,15 @@ private class PreferenciasEnMemoria : PreferenciasVref {
 
     override suspend fun guardar(vehiculoId: Long?, voltios: Double?) {
         if (voltios == null) guardadas.remove(vehiculoId) else guardadas[vehiculoId] = voltios
+    }
+}
+
+private class DesfasesEnMemoria : PreferenciasDesfase {
+    val guardados = mutableMapOf<Long?, DesfaseVoltaje>()
+
+    override suspend fun leer(vehiculoId: Long?): DesfaseVoltaje? = guardados[vehiculoId]
+
+    override suspend fun guardar(vehiculoId: Long?, desfase: DesfaseVoltaje?) {
+        if (desfase == null) guardados.remove(vehiculoId) else guardados[vehiculoId] = desfase
     }
 }

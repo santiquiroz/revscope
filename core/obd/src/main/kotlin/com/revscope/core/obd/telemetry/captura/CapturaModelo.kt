@@ -64,6 +64,12 @@ sealed interface EstadoCaptura {
     data class Activa(val inicio: InicioCaptura, val inicioEpochMs: Long, val limiteHz: Int?) : EstadoCaptura
 }
 
+// Lo que la UI lee de una captura en memoria (la rápida o la ráfaga de voltaje) para dibujarla en vivo.
+interface PaginasCaptura {
+    fun capturaEnMemoria(): InicioCaptura?
+    fun pagina(id: String, desdeSeq: Long, max: Int, pids: Set<String>?): PaginaCaptura?
+}
+
 object LimitesCaptura {
     const val MAX_PIDS = 6
     const val MIN_DURACION_MS = 1_000L

@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.PosicionEnBanda
@@ -54,9 +55,10 @@ object AnalizadorMapBaro {
         val delta = a.deltaKpa ?: return null
         val tolerancia = a.toleranciaKpa ?: return null
         val enTolerancia = abs(delta) <= tolerancia
+        val fuente = FormatoTaller.compacto(a.referencia?.incertidumbreKpa ?: 0.0)
         return Comprobacion(
             clave = ClavesBanda.MAP_KOEO_VS_BARO_KPA,
-            etiqueta = "Diferencia entre el MAP y la barométrica",
+            etiqueta = "Diferencia entre el MAP y la barométrica (más ±$fuente kPa de la fuente)",
             valor = abs(delta),
             unidad = "kPa",
             banda = a.banda,
