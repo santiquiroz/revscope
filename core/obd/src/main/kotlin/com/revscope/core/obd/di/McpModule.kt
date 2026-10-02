@@ -24,11 +24,27 @@ import com.revscope.core.obd.mcp.GetViajeDetalleTool
 import com.revscope.core.obd.mcp.GetViajesTool
 import com.revscope.core.obd.mcp.IniciarSesionTallerTool
 import com.revscope.core.obd.mcp.IniciarViajeTool
+import com.revscope.core.obd.mcp.GetInfoEcuTool
+import com.revscope.core.obd.mcp.GetMode06Tool
+import com.revscope.core.obd.mcp.DescubrirModulosTool
+import com.revscope.core.obd.mcp.LeerDidTool
+import com.revscope.core.obd.mcp.ComandoLecturaTool
+import com.revscope.core.obd.mcp.GetRegistroEscriturasTool
+import com.revscope.core.obd.mcp.GetCatalogoTool
+import com.revscope.core.obd.mcp.LeerCatalogoTool
+import com.revscope.core.obd.mcp.GuardarEnCatalogoTool
+import com.revscope.core.obd.mcp.BorrarDtcModuloTool
+import com.revscope.core.obd.mcp.ReiniciarEcuTool
+import com.revscope.core.obd.mcp.PruebaABordoTool
+import com.revscope.core.obd.mcp.ComandoEscrituraTool
+import com.revscope.core.obd.mcp.EjecutarCatalogoTool
 import com.revscope.core.obd.mcp.McpActivityTracker
 import com.revscope.core.obd.mcp.McpDispatcher
 import com.revscope.core.obd.mcp.McpPermisosProvider
 import com.revscope.core.obd.mcp.McpTool
 import com.revscope.core.obd.mcp.RegistrarMedicionTool
+import com.revscope.core.obd.mcp.escritura.ConfirmacionEscrituraNotifier
+import com.revscope.core.obd.mcp.escritura.PedidorConfirmacion
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -38,8 +54,9 @@ import javax.inject.Singleton
 /**
  * Las tools de lectura (plan6 Task 4, get_muestreo, get_captura, get_guia_dtc, get_sesion_taller y
  * get_prueba_guiada) más las de control (viaje, preset de muestreo, captura rápida, sesión y pruebas guiadas
- * del Taller, y la medición con multímetro) y borrado de DTC, que el dispatcher solo lista y ejecuta si el dueño activó sus permisos en
- * Ajustes.
+ * del Taller, y la medición con multímetro), borrado de DTC y escrituras de taller (UDS, modo 08, catálogo de fabricante,
+ * comandos crudos), que el dispatcher solo lista y ejecuta si el dueño activó sus permisos en Ajustes; toda escritura
+ * pasa además por EjecutorEscritura (guardas físicas + toque del dueño o bypass + auditoría).
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -73,13 +90,34 @@ object McpModule {
         iniciarPruebaGuiada: IniciarPruebaGuiadaTool,
         avanzarPruebaGuiada: AvanzarPruebaGuiadaTool,
         cancelarPruebaGuiada: CancelarPruebaGuiadaTool,
+        getInfoEcu: GetInfoEcuTool,
+        getMode06: GetMode06Tool,
+        descubrirModulos: DescubrirModulosTool,
+        leerDid: LeerDidTool,
+        comandoLectura: ComandoLecturaTool,
+        getRegistroEscrituras: GetRegistroEscriturasTool,
+        getCatalogo: GetCatalogoTool,
+        leerCatalogo: LeerCatalogoTool,
+        guardarEnCatalogo: GuardarEnCatalogoTool,
+        borrarDtcModulo: BorrarDtcModuloTool,
+        reiniciarEcu: ReiniciarEcuTool,
+        pruebaABordo: PruebaABordoTool,
+        comandoEscritura: ComandoEscrituraTool,
+        ejecutarCatalogo: EjecutarCatalogoTool,
     ): List<McpTool> = listOf(
         getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getGuiaDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
         getMuestreo, setMuestreo, iniciarCaptura, getCaptura, detenerCaptura,
         getSesionTaller, getInformeTaller, iniciarSesionTaller, agregarNotaTaller, registrarMedicion,
         getPruebaGuiada, iniciarPruebaGuiada, avanzarPruebaGuiada, cancelarPruebaGuiada,
+        getInfoEcu, getMode06, descubrirModulos, leerDid, comandoLectura, getRegistroEscrituras,
+        getCatalogo, leerCatalogo, guardarEnCatalogo,
+        borrarDtcModulo, reiniciarEcu, pruebaABordo, comandoEscritura, ejecutarCatalogo,
     )
+
+    @Provides
+    @Singleton
+    fun providePedidorConfirmacion(notifier: ConfirmacionEscrituraNotifier): PedidorConfirmacion = notifier
 
     @Provides
     @Singleton

@@ -139,12 +139,14 @@ class PreferencesBackupCodecTest {
                 preferencesOf(
                     PreferencesKeys.MCP_CONTROL_ENABLED to true,
                     PreferencesKeys.MCP_CLEAR_DTC_ENABLED to true,
+                    PreferencesKeys.MCP_WRITE_ENABLED to true,
                     riderName to "Santi",
                 ),
             ),
         )
         assertFalse(exported.has(PreferencesKeys.MCP_CONTROL_ENABLED.name))
         assertFalse(exported.has(PreferencesKeys.MCP_CLEAR_DTC_ENABLED.name))
+        assertFalse(exported.has(PreferencesKeys.MCP_WRITE_ENABLED.name))
 
         val settings = newDataStore()
         settings.edit { it[PreferencesKeys.MCP_CONTROL_ENABLED] = false }

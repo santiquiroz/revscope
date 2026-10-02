@@ -2,6 +2,7 @@ package com.revscope.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.obd.diagnostics.ModuleDiscovery
 import com.revscope.core.obd.protocol.ResponseParser
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel

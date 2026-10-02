@@ -1,11 +1,7 @@
-package com.revscope.feature.settings
+package com.revscope.core.obd.diagnostics
 
 import com.revscope.core.obd.protocol.ResponseParser
 
-/**
- * Lógica pura para descubrir módulos por header CAN de 11 bits y para dirigir
- * el escaneo Modo 22 a un módulo distinto de la ECU de motor.
- */
 object ModuleDiscovery {
 
     data class Candidate(val header: String, val label: String)
@@ -48,7 +44,6 @@ object ModuleDiscovery {
         if (clean.isEmpty() || ResponseParser.isErrorResponse(raw)) {
             return ProbeResult(requestHeader, replyHeader = null, present = false)
         }
-        // Con H1, un frame CAN 11-bit empieza por el header de respuesta (3 hex).
         val replyHeader = clean.take(3).takeIf { HEADER_11BIT.matches(it) }
         return ProbeResult(requestHeader, replyHeader, present = true)
     }

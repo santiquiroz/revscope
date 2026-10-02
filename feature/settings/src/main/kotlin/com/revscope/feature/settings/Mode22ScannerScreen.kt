@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.diagnostics.ModuleDiscovery
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 
 private val BgColor = Color(0xFF0A0A0F)

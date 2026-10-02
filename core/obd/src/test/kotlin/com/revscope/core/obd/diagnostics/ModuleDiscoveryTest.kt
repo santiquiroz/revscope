@@ -1,4 +1,4 @@
-package com.revscope.feature.settings
+package com.revscope.core.obd.diagnostics
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,7 +27,7 @@ class ModuleDiscoveryTest {
     fun `solo protocolos CAN 11-bit soportados`() {
         assertTrue(ModuleDiscovery.isCan11Bit("6"))
         assertTrue(ModuleDiscovery.isCan11Bit("8"))
-        assertTrue(ModuleDiscovery.isCan11Bit("A6")) // auto encontró 6
+        assertTrue(ModuleDiscovery.isCan11Bit("A6"))
         assertTrue(ModuleDiscovery.isCan11Bit("A8"))
     }
 
@@ -43,7 +43,6 @@ class ModuleDiscoveryTest {
 
     @Test
     fun `respuesta positiva marca modulo presente y extrae reply header`() {
-        // H1 activo: cleanResponse no quita el header CAN, solo espacios y CR/LF/prompt.
         val r = ModuleDiscovery.interpretProbe("7E0", "7E8 06 62 F1 90 12 34 56 \r>")
         assertTrue(r.present)
         assertEquals("7E8", r.replyHeader)
@@ -51,8 +50,6 @@ class ModuleDiscoveryTest {
 
     @Test
     fun `respuesta negativa 7F prueba que el modulo existe`() {
-        // El módulo contestó rechazando el DID (7F 22 31 = requestOutOfRange) → PRESENTE.
-        // "7F" no está en ERROR_TOKENS de ResponseParser, así que no cuenta como error.
         val r = ModuleDiscovery.interpretProbe("720", "728 03 7F 22 31 \r>")
         assertTrue(r.present)
         assertEquals("728", r.replyHeader)
@@ -70,5 +67,10 @@ class ModuleDiscoveryTest {
         val r = ModuleDiscovery.interpretProbe("7C0", "\r>")
         assertFalse(r.present)
         assertNull(r.replyHeader)
+    }
+
+    @Test
+    fun `candidatos excluyen direccion funcional en el sondeo fisico`() {
+        assertEquals("7DF", ModuleDiscovery.candidateHeaders().first().header)
     }
 }

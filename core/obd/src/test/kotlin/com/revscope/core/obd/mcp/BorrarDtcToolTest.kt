@@ -9,6 +9,9 @@ import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
 import com.revscope.core.obd.protocol.DtcServicio
+import com.revscope.core.obd.mcp.escritura.EjecutorEscritura
+import com.revscope.core.obd.mcp.escritura.OrigenAutorizacion
+import com.revscope.core.obd.mcp.escritura.PermisoEscritura
 import com.revscope.core.obd.session.ObdSessionManager
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -28,6 +31,9 @@ class BorrarDtcToolTest {
     private val ahora = 100_000L
     private val registry = PidRegistry(TestPids.load())
     private val notifier = mockk<McpActionNotifier>(relaxed = true)
+    private val ejecutor = mockk<EjecutorEscritura>(relaxed = true).also {
+        coEvery { it.autorizar(any()) } returns PermisoEscritura.Concedido(OrigenAutorizacion.TOQUE)
+    }
 
     private fun scan(vararg codes: String) = DtcScan(
         activos = codes.map { DtcCode(it, DtcMode.Active) },
@@ -54,7 +60,7 @@ class BorrarDtcToolTest {
             )
         }
 
-    private fun tool(m: ObdSessionManager) = BorrarDtcTool(m, registry, notifier) { ahora }
+    private fun tool(m: ObdSessionManager) = BorrarDtcTool(m, registry, notifier, ejecutor) { ahora }
 
     private fun detenido() = ObdReading("0D", 0.0, "km/h", timestamp = ahora - 500)
 
@@ -141,5 +147,25 @@ class BorrarDtcToolTest {
         val json = JSONObject(tool(m).call(JSONObject().put("confirmar", "BORRAR")))
 
         assertTrue(json.getString("mensaje").contains("sigue reportando P0300"))
+    }
+
+    @Test
+    fun `si el dueno rechaza en el telefono no borra nada`() = runTest {
+        val m = manager(detenido())
+        coEvery { ejecutor.autorizar(any()) } returns PermisoEscritura.Denegado("el dueño rechazó la escritura en el teléfono")
+
+        val json = JSONObject(tool(m).call(JSONObject().put("confirmar", "BORRAR")))
+
+        assertTrue(json.getString("error").contains("rechazó"))
+        coVerify(exactly = 0) { m.borrarDtcConRelectura(any()) }
+    }
+
+    @Test
+    fun `el borrado autorizado queda en la auditoria con la respuesta del ECU`() = runTest {
+        val m = manager(detenido())
+
+        tool(m).call(JSONObject().put("confirmar", "BORRAR"))
+
+        verify { ejecutor.registrarResultado(match { it.tool == "borrar_dtc" }, OrigenAutorizacion.TOQUE, listOf("44"), null) }
     }
 }
