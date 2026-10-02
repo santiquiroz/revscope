@@ -34,6 +34,7 @@ object PreferencesBackupCodec {
         PreferencesKeys.SERVER_AUTH_TOKEN,
         PreferencesKeys.MCP_CONTROL_ENABLED,
         PreferencesKeys.MCP_CLEAR_DTC_ENABLED,
+        PreferencesKeys.MCP_WRITE_ENABLED,
     )
     private val DEVICE_SECRET_NAMES = DEVICE_SECRET_KEYS.map { it.name }.toSet()
 

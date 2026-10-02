@@ -21,6 +21,11 @@
             android:name="com.revscope.core.obd.safety.CrashCancelReceiver"
             android:exported="false" />
 
+        <!-- Permitir/Rechazar de las escrituras que pide un cliente MCP. -->
+        <receiver
+            android:name="com.revscope.core.obd.mcp.escritura.ConfirmacionEscrituraReceiver"
+            android:exported="false" />
+
         <!-- Alarma diaria del aviso "Vehículo al día". Las alarmas se pierden al reiniciar
              y al actualizar la app, por eso también escucha esos dos eventos. -->
         <receiver

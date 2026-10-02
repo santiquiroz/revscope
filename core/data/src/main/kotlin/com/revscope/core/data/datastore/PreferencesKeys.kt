@@ -310,6 +310,9 @@ object PreferencesKeys {
     /** Permite al MCP borrar los DTC (modo 04); exige también [MCP_CONTROL_ENABLED] (default false). */
     val MCP_CLEAR_DTC_ENABLED = booleanPreferencesKey("mcp_clear_dtc_enabled")
 
+    /** Permite al MCP escrituras de taller (UDS $14/$11, modo 08, catálogo, comandos crudos); exige [MCP_CONTROL_ENABLED] (default false). */
+    val MCP_WRITE_ENABLED = booleanPreferencesKey("mcp_write_enabled")
+
     // ── Mapa ─────────────────────────────────────────────────────────────────
 
     /** Modo nocturno del mapa: "auto" (por sol), "on", "off". */

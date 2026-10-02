@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.obd.mcp.escritura.BypassEscrituras
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ViajeObdSettingsViewModel @Inject constructor(
     private val settings: DataStore<Preferences>,
+    private val bypass: BypassEscrituras,
 ) : ViewModel() {
 
     val autoTripOnMove: StateFlow<Boolean> = flag(PreferencesKeys.AUTO_TRIP_ON_MOVE, default = true)
@@ -33,12 +35,25 @@ class ViajeObdSettingsViewModel @Inject constructor(
 
     val mcpClearDtcEnabled: StateFlow<Boolean> = flag(PreferencesKeys.MCP_CLEAR_DTC_ENABLED, default = false)
 
+    val mcpWriteEnabled: StateFlow<Boolean> = flag(PreferencesKeys.MCP_WRITE_ENABLED, default = false)
+
+    val bypassEscrituras: StateFlow<Boolean> = bypass.activo
+
     fun updateMcpControlEnabled(value: Boolean) {
         write(PreferencesKeys.MCP_CONTROL_ENABLED, value)
-        if (!value) write(PreferencesKeys.MCP_CLEAR_DTC_ENABLED, false)
+        if (value) return
+        write(PreferencesKeys.MCP_CLEAR_DTC_ENABLED, false)
+        updateMcpWriteEnabled(false)
     }
 
     fun updateMcpClearDtcEnabled(value: Boolean) = write(PreferencesKeys.MCP_CLEAR_DTC_ENABLED, value)
+
+    fun updateMcpWriteEnabled(value: Boolean) {
+        write(PreferencesKeys.MCP_WRITE_ENABLED, value)
+        if (!value) bypass.apagar()
+    }
+
+    fun updateBypassEscrituras(value: Boolean) = if (value) bypass.encender() else bypass.apagar()
 
     private fun flag(key: Preferences.Key<Boolean>, default: Boolean): StateFlow<Boolean> =
         settings.data

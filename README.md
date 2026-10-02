@@ -63,7 +63,7 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 ### 🤖 Inteligencia artificial (opcional, con tu propia llave)
 - **4 proveedores**: Claude, OpenAI, Gemini o **cualquier servidor compatible** (LM Studio local, DeepSeek, Groq…)
 - **Información local en ruta** — "Estás en Guarne: hoy hay festival" (con búsqueda web real)
-- **Servidor MCP en red local** — las IAs de tu PC (Claude Desktop…) le preguntan a tu vehículo por WiFi · [guía](docs/configuracion.md)
+- **Servidor MCP en red local** — las IAs de tu PC (Claude Desktop…) le preguntan a tu vehículo por WiFi y, si lo permites, hacen trabajo de taller: VIN y calibraciones, modo 06, descubrimiento de módulos, DIDs de fabricante, borrado por módulo, reinicio de ECU y secuencias UDS, cada escritura confirmada con un toque en el teléfono · [guía](docs/configuracion.md#servidor-mcp-red-local)
 
 ### 💾 Tus datos son tuyos
 - **Todo exportable a CSV** — cada gráfica, cada métrica, cada viaje
@@ -83,6 +83,8 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 ## 🛠 Para desarrolladores (resumen)
 
 Kotlin · Jetpack Compose · Hilt · Room (migraciones reales) · pipeline ELM327 propio (batching CAN, circuit breaker, prioridades de sondeo) · Vico · MapLibre + PMTiles · Ferrostar · NanoHTTPD (MCP). Multi-módulo, 1 000+ tests unitarios. Build y guías de extensión en [docs/desarrollo.md](docs/desarrollo.md).
+
+Datos de terceros: el catálogo de DIDs de fabricante (`core/obd/src/main/assets/catalogo_propietario.json`) deriva de [OBDb](https://github.com/OBDb) y se distribuye bajo CC-BY-SA-4.0; el resto del código sigue en Apache-2.0.
 
 ---
 

@@ -4,6 +4,10 @@ import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
 import com.revscope.core.obd.diagnostics.ReglasBorradoDtc
+import com.revscope.core.obd.mcp.escritura.EjecutorEscritura
+import com.revscope.core.obd.mcp.escritura.OrigenAutorizacion
+import com.revscope.core.obd.mcp.escritura.PermisoEscritura
+import com.revscope.core.obd.mcp.escritura.SolicitudEscritura
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
@@ -11,21 +15,23 @@ import org.json.JSONObject
 import javax.inject.Inject
 
 /**
- * Modo 04 desde el MCP: exige el permiso BORRADO, `confirmar = "BORRAR"` y el vehículo detenido
- * según [ReglasBorradoDtc]; relee los activos antes y después.
+ * Modo 04 desde el MCP: exige el permiso BORRADO, `confirmar = "BORRAR"`, el vehículo detenido
+ * según [ReglasBorradoDtc] y el toque del dueño (o el bypass); relee los activos antes y después.
  */
 class BorrarDtcTool @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val registry: PidRegistry,
     private val notifier: McpActionNotifier,
+    private val ejecutor: EjecutorEscritura,
 ) : McpTool {
 
     internal constructor(
         sessionManager: ObdSessionManager,
         registry: PidRegistry,
         notifier: McpActionNotifier,
+        ejecutor: EjecutorEscritura,
         nowMs: () -> Long,
-    ) : this(sessionManager, registry, notifier) {
+    ) : this(sessionManager, registry, notifier, ejecutor) {
         this.nowMs = nowMs
     }
 
@@ -46,11 +52,24 @@ class BorrarDtcTool @Inject constructor(
         if (sessionManager.connectionState.value !is ConnectionState.Connected) return sinEnlaceJson()
         motivoRechazo(arguments.optString("confirmar"), sessionManager.readings.value[ReglasBorradoDtc.PID_VELOCIDAD])
             ?.let { return JSONObject().put("error", it).toString() }
-        return sessionManager.borrarDtcConRelectura(LEASE_OWNER).fold(
-            onSuccess = { borrado -> exito(borrado) },
-            onFailure = { e -> JSONObject().put("error", e.message ?: "no se pudieron borrar los DTC").toString() },
-        )
+        return when (val permiso = ejecutor.autorizar(SOLICITUD)) {
+            is PermisoEscritura.Denegado -> JSONObject().put("error", permiso.motivo).toString()
+            is PermisoEscritura.Concedido -> borrar(permiso.origen)
+        }
     }
+
+    private suspend fun borrar(origen: OrigenAutorizacion): String =
+        sessionManager.borrarDtcConRelectura(LEASE_OWNER).fold(
+            onSuccess = { borrado ->
+                ejecutor.registrarResultado(SOLICITUD, origen, listOfNotNull(borrado.respuestaCruda), null)
+                exito(borrado)
+            },
+            onFailure = { e ->
+                val error = e.message ?: "no se pudieron borrar los DTC"
+                ejecutor.registrarResultado(SOLICITUD, origen, emptyList(), error)
+                JSONObject().put("error", error).toString()
+            },
+        )
 
     internal fun motivoRechazo(confirmar: String, velocidad: ObdReading?): String? =
         ReglasBorradoDtc.evaluar(confirmar == CONFIRMACION, velocidad, nowMs())?.let(::textoRechazo)
@@ -93,5 +112,11 @@ class BorrarDtcTool @Inject constructor(
     private companion object {
         const val LEASE_OWNER = "mcp:borrar_dtc"
         const val CONFIRMACION = "BORRAR"
+        val SOLICITUD = SolicitudEscritura(
+            tool = "borrar_dtc",
+            resumen = "Borrar los códigos de falla del motor y sus adaptaciones (modo 04)",
+            header = null,
+            pasos = listOf("04"),
+        )
     }
 }

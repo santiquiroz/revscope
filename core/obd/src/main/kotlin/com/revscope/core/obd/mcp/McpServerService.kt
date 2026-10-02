@@ -10,11 +10,13 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.revscope.core.obd.R
+import com.revscope.core.obd.mcp.escritura.BypassEscrituras
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -35,6 +37,7 @@ class McpServerService : Service() {
 
     @Inject lateinit var controller: McpServerController
     @Inject lateinit var tokenStore: McpTokenStore
+    @Inject lateinit var bypass: BypassEscrituras
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -56,6 +59,7 @@ class McpServerService : Service() {
 
     override fun onDestroy() {
         controller.stop()
+        bypass.apagar()
         scope.cancel()
         Timber.i("McpServerService: destroyed")
         super.onDestroy()
@@ -74,12 +78,17 @@ class McpServerService : Service() {
      * since [startServer] already renders it explicitly right after [McpServerController.start].
      */
     private suspend fun observeState() {
-        controller.state.drop(1).collect { updateNotification(it) }
+        controller.state.combine(bypass.activo) { state, bypassActivo -> state to bypassActivo }
+            .drop(1)
+            .collect { (state, bypassActivo) ->
+                if (state !is McpServerState.Running) bypass.apagar()
+                updateNotification(state, bypassActivo)
+            }
     }
 
-    private fun updateNotification(state: McpServerState) {
+    private fun updateNotification(state: McpServerState, bypassActivo: Boolean = bypass.activo.value) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification(notificationTextFor(state)))
+        manager.notify(NOTIFICATION_ID, buildNotification(notificationTextFor(state, bypassActivo)))
     }
 
     private fun buildNotification(text: String): Notification =
@@ -109,8 +118,9 @@ class McpServerService : Service() {
     companion object {
         private const val ACTION_STOP = "com.revscope.core.obd.action.MCP_STOP"
 
-        fun notificationTextFor(state: McpServerState): String = when (state) {
-            is McpServerState.Running -> "Servidor MCP activo en ${state.url}"
+        fun notificationTextFor(state: McpServerState, bypassActivo: Boolean = false): String = when (state) {
+            is McpServerState.Running ->
+                "Servidor MCP activo en ${state.url}" + if (bypassActivo) " · BYPASS: escrituras sin confirmación" else ""
             McpServerState.NoWifi -> "Sin WiFi — conecta a una red para activar el servidor MCP"
             McpServerState.Stopped -> "No se pudo iniciar el servidor MCP"
         }
