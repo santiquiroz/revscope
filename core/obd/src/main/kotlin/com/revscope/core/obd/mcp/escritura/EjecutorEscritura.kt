@@ -49,12 +49,16 @@ class EjecutorEscritura @Inject constructor(
         val denegacion = motivoGuarda(solicitud) ?: motivoBloqueo(solicitud.pasos)
         if (denegacion != null) return denegar(solicitud, "GUARDA", denegacion)
         return when (val a = autorizador.autorizar(solicitud)) {
-            is Autorizacion.Concedida -> PermisoEscritura.Concedido(a.origen)
+            is Autorizacion.Concedida -> revalidar(solicitud, a.origen)
             Autorizacion.Rechazada -> denegar(solicitud, "RECHAZADA", "el dueño rechazó la escritura en el teléfono")
             Autorizacion.SinRespuesta -> denegar(solicitud, "SIN_RESPUESTA", "sin respuesta del dueño en ${AutorizadorEscritura.ESPERA_MS / 1000} s: escritura cancelada")
             Autorizacion.NotificacionesBloqueadas -> denegar(solicitud, "NOTIFICACIONES_BLOQUEADAS", TEXTO_NOTIFICACIONES)
         }
     }
+
+    // La espera del toque dura hasta 45 s: el vehículo pudo arrancar mientras tanto.
+    private fun revalidar(solicitud: SolicitudEscritura, origen: OrigenAutorizacion): PermisoEscritura =
+        motivoGuarda(solicitud)?.let { denegar(solicitud, "GUARDA", it) } ?: PermisoEscritura.Concedido(origen)
 
     fun registrarResultado(solicitud: SolicitudEscritura, origen: OrigenAutorizacion, respuestas: List<String>, error: String?) {
         registro.registrar(entrada(solicitud, origen.name, respuestas, error))
@@ -80,9 +84,13 @@ class EjecutorEscritura @Inject constructor(
     private fun motivoGuarda(solicitud: SolicitudEscritura): String? = GuardasEscritura.evaluar(
         conectado = sessionManager.connectionState.value is ConnectionState.Connected,
         lecturas = sessionManager.readings.value,
-        requiereMotorApagado = solicitud.requiereMotorApagado,
+        requiereMotorApagado = solicitud.requiereMotorApagado || incluyeReinicio(solicitud.pasos),
         ahoraMs = nowMs(),
     )?.let(GuardasEscritura::texto)
+
+    // Un reinicio de ECU con el motor en marcha lo apaga: se exige motor apagado lo diga o no la tool.
+    private fun incluyeReinicio(pasos: List<String>): Boolean =
+        pasos.any { ComandoHex.validar(it).getOrNull()?.bytes?.firstOrNull() == SERVICIO_REINICIO }
 
     private fun motivoBloqueo(pasos: List<String>): String? {
         val bloqueado = pasos.firstOrNull { paso ->
@@ -109,6 +117,7 @@ class EjecutorEscritura @Inject constructor(
         )
 
     companion object {
+        private const val SERVICIO_REINICIO = 0x11
         const val TEXTO_NOTIFICACIONES =
             "las notificaciones de RevScope están desactivadas: no se puede pedir confirmación " +
                 "(actívalas o usa el bypass en Ajustes → Servidor MCP)"

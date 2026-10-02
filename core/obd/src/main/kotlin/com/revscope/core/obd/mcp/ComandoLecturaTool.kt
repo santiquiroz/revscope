@@ -21,7 +21,8 @@ class ComandoLecturaTool @Inject constructor(
 
     override val name = "comando_lectura"
     override val description =
-        "Envía un comando diagnóstico de solo lectura (servicios 01 02 03 06 07 09 0A 19 1A 21 22 23 24 3E, 10 01/10 03 y AT RV/DPN/I); los demás se rechazan"
+        "Envía un comando diagnóstico de solo lectura (servicios 01 02 03 06 07 09 0A 19 1A 21 22 23 24 y AT RV/DPN/I); " +
+            "los demás se rechazan, incluido el control de sesión 10 y el tester present 3E (van por comando_escritura)"
     override val inputSchema = McpSchemas.objeto(
         "comando" to McpSchemas.texto("Comando hexadecimal de lectura o AT RV, AT DPN, AT I"),
         "header" to McpSchemas.texto("Header CAN 11-bit opcional, por ejemplo 7E0")

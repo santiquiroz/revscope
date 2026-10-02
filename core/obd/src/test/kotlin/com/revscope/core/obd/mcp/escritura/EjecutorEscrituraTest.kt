@@ -120,6 +120,33 @@ class EjecutorEscrituraTest {
     }
 
     @Test
+    fun `si el vehiculo arranca mientras espera el toque no ejecuta`() = runTest {
+        val fixture = fixture(Autorizacion.Concedida(OrigenAutorizacion.TOQUE))
+        coEvery { fixture.autorizador.autorizar(any()) } coAnswers {
+            fixture.lecturas.value = lecturas(velocidad = 20.0)
+            Autorizacion.Concedida(OrigenAutorizacion.TOQUE)
+        }
+
+        val resultado = fixture.ejecutor.ejecutar(solicitud) { error("No debe ejecutar") }
+
+        assertTrue((resultado as ResultadoEscritura.NoAutorizada).motivo.contains("movimiento"))
+        assertEquals("GUARDA", fixture.registro.ultimas(1).single().autorizacion)
+    }
+
+    @Test
+    fun `un reinicio 11 exige motor apagado aunque la solicitud no lo pida`() = runTest {
+        val fixture = fixture(Autorizacion.Concedida(OrigenAutorizacion.TOQUE))
+        fixture.lecturas.value = lecturas(rpm = 900.0)
+
+        val resultado = fixture.ejecutor.ejecutar(solicitud.copy(pasos = listOf("11 01"), requiereMotorApagado = false)) {
+            error("No debe ejecutar")
+        }
+
+        assertTrue((resultado as ResultadoEscritura.NoAutorizada).motivo.contains("motor"))
+        coVerify(exactly = 0) { fixture.autorizador.autorizar(any()) }
+    }
+
+    @Test
     fun `json representa ejecucion fallo y denegacion`() {
         val ejecutada = EscrituraJson.de(ResultadoEscritura.Ejecutada(OrigenAutorizacion.TOQUE, listOf("54")))
         val fallida = EscrituraJson.de(ResultadoEscritura.Fallida(OrigenAutorizacion.BYPASS, "timeout"))

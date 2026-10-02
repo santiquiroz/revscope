@@ -40,7 +40,7 @@ class ComandoHexTest {
 
     @Test
     fun clasificaServiciosDeLecturaYEscritura() {
-        val lecturas = listOf(0x01, 0x02, 0x03, 0x06, 0x07, 0x09, 0x0A, 0x19, 0x1A, 0x21, 0x22, 0x23, 0x24, 0x3E)
+        val lecturas = listOf(0x01, 0x02, 0x03, 0x06, 0x07, 0x09, 0x0A, 0x19, 0x1A, 0x21, 0x22, 0x23, 0x24)
         lecturas.forEach { assertEquals(ClaseComando.LECTURA, ComandoHex.clasificar(listOf(it))) }
 
         val escrituras = listOf(0x04, 0x08, 0x11, 0x14, 0x27, 0x28, 0x2E, 0x2F, 0x31, 0x85)
@@ -50,9 +50,10 @@ class ComandoHexTest {
 
     @Test
     fun clasificaSubfuncionesDeSesionYOperacionesBloqueadas() {
-        assertEquals(ClaseComando.LECTURA, ComandoHex.clasificar(listOf(0x10, 0x01)))
+        assertEquals(ClaseComando.ESCRITURA, ComandoHex.clasificar(listOf(0x10, 0x01)))
         assertEquals(ClaseComando.BLOQUEADO, ComandoHex.clasificar(listOf(0x10, 0x02)))
-        assertEquals(ClaseComando.LECTURA, ComandoHex.clasificar(listOf(0x10, 0x03)))
+        assertEquals(ClaseComando.ESCRITURA, ComandoHex.clasificar(listOf(0x10, 0x03)))
+        assertEquals(ClaseComando.ESCRITURA, ComandoHex.clasificar(listOf(0x3E, 0x00)))
         assertEquals(ClaseComando.ESCRITURA, ComandoHex.clasificar(listOf(0x10)))
         assertEquals(ClaseComando.ESCRITURA, ComandoHex.clasificar(listOf(0x10, 0x04)))
         listOf(0x34, 0x35, 0x36, 0x37, 0x38, 0x3D).forEach {

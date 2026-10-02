@@ -49,7 +49,7 @@ Toda tool que escribe pasa por `EjecutorEscritura.ejecutar(solicitud, accion)`:
 
 1. Guardas físicas (`GuardasEscritura`, pura): conectado, detenido, motor apagado si se pide.
 2. Validación del comando (`ComandoHex`, pura): hex válido, sin servicios de flasheo.
-3. Autorización (`AutorizadorEscritura`): bypass activo → permitido; si no, notificación de alta
+3. Autorización (`AutorizadorEscritura`); tras el toque se vuelven a evaluar las guardas, y cualquier paso `11` exige motor apagado aunque la tool no lo pida: bypass activo → permitido; si no, notificación de alta
    prioridad con Permitir/Rechazar (`ConfirmacionEscrituraReceiver`), espera 45 s; sin respuesta =
    rechazado. 45 s queda por debajo del timeout típico de clientes MCP (60 s).
 4. Ejecución dentro de `withDiagnosticLease`.
@@ -65,7 +65,7 @@ notificación del servidor MCP lo dice.
   header de respuesta, distingue positiva (servicio+0x40), negativa (`7F SS NRC` con nombre del NRC),
   `NO DATA`/error, y toma la respuesta final cuando hay `78` (response pending).
 - `ComandoHex` (pura): normaliza (`"22f190"` → `"22 F1 90"`), valida y clasifica por servicio:
-  - Lectura permitida: `01 02 03 06 07 09 0A 19 21 22 1A`, `10 01`, `10 03`, `3E`, y `AT RV`/`AT DPN`/`AT I`.
+  - Lectura permitida: `01 02 03 06 07 09 0A 19 1A 21 22 23 24` y `AT RV`/`AT DPN`/`AT I`. Control de sesión (`10`) y tester present (`3E`) cuentan como escritura (revisión de seguridad: cambian el estado del ECU).
   - Bloqueado siempre: `10 02`, `34 35 36 37 38 3D`, y cualquier `AT` fuera de la lista anterior.
   - El resto es escritura (pasa por la puerta).
 

@@ -11,7 +11,7 @@ object ComandoHex {
     private val hexDigits = Regex("^[0-9A-F]+$")
     private val serviciosLectura = setOf(
         0x01, 0x02, 0x03, 0x06, 0x07, 0x09, 0x0A, 0x19,
-        0x1A, 0x21, 0x22, 0x23, 0x24, 0x3E,
+        0x1A, 0x21, 0x22, 0x23, 0x24,
     )
     private val serviciosBloqueados = setOf(0x34, 0x35, 0x36, 0x37, 0x38, 0x3D)
 
@@ -32,13 +32,8 @@ object ComandoHex {
 
     fun clasificar(bytes: List<Int>): ClaseComando {
         val servicio = bytes.firstOrNull() ?: return ClaseComando.ESCRITURA
-        if (servicio == 0x10) {
-            return when (bytes.getOrNull(1)) {
-                0x01, 0x03 -> ClaseComando.LECTURA
-                0x02 -> ClaseComando.BLOQUEADO
-                else -> ClaseComando.ESCRITURA
-            }
-        }
+        // Cambiar o sostener la sesión de diagnóstico (10 xx, 3E) altera el estado del ECU: va por la puerta de escritura.
+        if (servicio == 0x10) return if (bytes.getOrNull(1) == 0x02) ClaseComando.BLOQUEADO else ClaseComando.ESCRITURA
         return when (servicio) {
             in serviciosLectura -> ClaseComando.LECTURA
             in serviciosBloqueados -> ClaseComando.BLOQUEADO
