@@ -70,6 +70,10 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 - **Copia de seguridad** manual y automática semanal — cámbiate de celular sin perder nada
 - **Sin cuentas, sin nube propia, sin telemetría de terceros**: tus viajes y datos del vehículo se quedan en el celular. El mapa, los radares, el aviso de lluvia y las rutas sí consultan servicios públicos por internet · [qué se conecta y qué puedes evitar](docs/faq.md#mis-datos-salen-de-mi-celular)
 
+## 🧭 En camino
+
+- **Modo escucha para el Taller** — conectas RevScope en paralelo con un escáner profesional y la app aprende las pruebas de actuadores y funciones de servicio que ese escáner manda, para repetirlas después sin él (cada una confirmada con un toque) · [detalle y límites](docs/catalogo-propietario-fuentes.md#pendiente-modo-escucha-capturar-lo-que-manda-un-escáner-profesional)
+
 ## 📚 Documentación
 
 | Guía | Qué encuentras |
