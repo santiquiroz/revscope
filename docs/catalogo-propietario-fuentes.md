@@ -58,3 +58,13 @@ OBDb publica su texto bajo **CC-BY-SA-4.0** (verificado en la API de GitHub: `sp
 4. Para rutinas: enumerar `$31 03` (resultado de rutina) y solo con `10 03` activa; no enviar `$31 01` ni `$2E` a ciegas.
 5. Moto TVS: comprobar el protocolo con ATDP (CAN o K-Line) y leer `09 02`/`09 04` (VIN/Cal ID) para identificar el modelo exacto de ECU Bosch antes de cualquier barrido.
 6. Contribuir los hallazgos a OBDb (CC-BY-SA) en lugar de guardarlos solo en la app.
+
+## Pendiente: modo escucha (capturar lo que manda un escáner profesional)
+
+Idea tomada de https://www.youtube.com/watch?v=tvJHuqfaUSc (2026-10-26). Es la única vía realista para llenar las columnas de escrituras y rutinas, que hoy están en 0 para todas las marcas.
+
+- Montaje: splitter OBD; el escáner profesional (taller de Diego, o la herramienta de TVS en el concesionario) y el Vgate en paralelo. El Vgate solo escucha: `AT H1`, `AT CSM1` (sin ACK; verificar que el Vgate lo respete), `AT CRA 7XX` (solo IDs de diagnóstico, así no se llena el búfer) y `AT MA`.
+- Dos capturas de la misma duración con el contacto puesto: A sin hacer nada y B con el escáner corriendo una función (prueba de actuador, reset de servicio, lectura del modo de manejo). Las solicitudes que salen en B y no en A son el comando; sale de una resta de conjuntos, sin IA. Claude solo pone nombre a los servicios UDS (`10`, `2F`, `31`, `2E`, `22`).
+- Encaje con el código actual: una tool MCP `capturar_trafico_diagnostico(segundos)` que devuelva las tramas; lo hallado entra por `guardar_en_catalogo` y se ejecuta solo por `EjecutorEscritura`, que ya pide confirmación con un toque y tiene las guardas.
+- Límites: las funciones protegidas con `27` (SecurityAccess) no se pueden repetir porque la semilla cambia en cada intento. Solo sirve en CAN: con K-line no (pin 7), así que primero hay que confirmar el protocolo de la Apache con `ATDP`. Hace falta acceso al escáner profesional una vez por modelo.
+- Paquetes de otras personas: no son confiables. Atarlos al VIN y al Cal ID (`09 04`) y nunca ejecutarlos sin pasar por la confirmación.
