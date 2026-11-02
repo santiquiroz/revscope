@@ -64,6 +64,7 @@ import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.legal.CityRegistry
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import com.revscope.core.obd.taller.modelo.ResumenModelo
+import com.revscope.feature.vehicle.perfilcan.DatosBusCanSection
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -73,6 +74,7 @@ import java.util.TimeZone
 @Composable
 fun VehicleProfileScreen(
     onNavigateBack: () -> Unit,
+    onProbarSenal: (vehiculoId: Long, clave: String) -> Unit = { _, _ -> },
     connectionVm: ConnectionViewModel = hiltViewModel(),
     vm: VehicleViewModel = hiltViewModel(),
 ) {
@@ -218,6 +220,7 @@ fun VehicleProfileScreen(
                     onLink = { vm.linkConnectedAdapter() },
                     onUnlink = { vm.unlinkAdapter() },
                 )
+                DatosBusCanSection(vehiculoId = profile.id, onProbar = { onProbarSenal(profile.id, it) })
             }
 
             ModeloReferenciaDropdown(

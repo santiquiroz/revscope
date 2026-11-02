@@ -22,21 +22,28 @@ class LectorBusCan(
     perfil: PerfilCan,
     private val modo: ModoFuente,
     private val resolutor: ResolutorFuentes,
+    soloVerificadas: Boolean = true,
     private val ahora: () -> Long,
 ) {
 
     private val _sinMonitor = MutableStateFlow(false)
     val sinMonitor: StateFlow<Boolean> = _sinMonitor.asStateFlow()
 
-    private val verificadas = perfil.senales.filter { it.estado == EstadoSenal.VERIFICADA }
-    private val porId: Map<Int, List<SenalCan>> = verificadas.groupBy { it.id.toLong(16).toInt() }
-    private val bits29 = verificadas.any { it.id.length > 3 }
+    private val senales = perfil.senales.filter { !soloVerificadas || it.estado == EstadoSenal.VERIFICADA }
+    private val porId: Map<Int, List<SenalCan>> = senales.groupBy { it.id.toLong(16).toInt() }
+    private val bits29 = senales.any { it.id.length > 3 }
 
-    fun lecturas(): Flow<ObdReading> = channelFlow {
-        if (verificadas.isEmpty() || modo == ModoFuente.ESTANDAR) return@channelFlow
+    fun lecturas(): Flow<ObdReading> = decodificadas { senal, datos ->
+        DecodificadorSenal.valor(senal, datos)?.let { ObdReading(senal.clave, it, senal.unidad, ahora()) }
+    }
+
+    fun textos(): Flow<String> = decodificadas(DecodificadorSenal::texto)
+
+    private fun <T : Any> decodificadas(decodificar: (SenalCan, ByteArray) -> T?): Flow<T> = channelFlow {
+        if (senales.isEmpty() || modo == ModoFuente.ESTANDAR) return@channelFlow
         while (true) {
             val inicio = ahora()
-            val soportado = gate.conceder(DUENO) { ventana { trySend(it) } }
+            val soportado = gate.conceder(DUENO) { ventana(decodificar) { trySend(it) } }
             if (!soportado) {
                 _sinMonitor.value = true
                 return@channelFlow
@@ -45,20 +52,20 @@ class LectorBusCan(
         }
     }.buffer(CAPACIDAD_LECTURAS)
 
-    private suspend fun ventana(emitir: (ObdReading) -> Unit): Boolean =
+    private suspend fun <T : Any> ventana(decodificar: (SenalCan, ByteArray) -> T?, emitir: (T) -> Unit): Boolean =
         try {
             ComandosMonitor.preparar(transporte)
             transporte.exchange(ComandosMonitor.SILENCIOSO)
-            escuchar(emitir)
+            escuchar(decodificar, emitir)
         } finally {
             withContext(NonCancellable) { ComandosMonitor.restaurar(transporte) }
         }
 
-    private suspend fun escuchar(emitir: (ObdReading) -> Unit): Boolean {
+    private suspend fun <T : Any> escuchar(decodificar: (SenalCan, ByteArray) -> T?, emitir: (T) -> Unit): Boolean {
         var rechazado = false
         val final = try {
             transporte.monitorear(ComandosMonitor.MONITOR, duracionVentanaMs()) { linea ->
-                if (esRechazo(linea)) rechazado = true else procesar(linea, emitir)
+                if (esRechazo(linea)) rechazado = true else procesar(linea, decodificar, emitir)
             }
         } catch (e: UnsupportedOperationException) {
             return false
@@ -66,14 +73,14 @@ class LectorBusCan(
         return !rechazado && !esRechazo(final)
     }
 
-    private fun procesar(linea: String, emitir: (ObdReading) -> Unit) {
+    private fun <T : Any> procesar(linea: String, decodificar: (SenalCan, ByteArray) -> T?, emitir: (T) -> Unit) {
         val trama = LineaMonitor.parsear(linea, 0L, bits29) ?: return
-        val senales = porId[trama.id] ?: return
+        val delId = porId[trama.id] ?: return
         val datos = ByteArray(trama.datos.size) { trama.datos[it].toByte() }
-        for (senal in senales) {
-            val valor = DecodificadorSenal.valor(senal, datos) ?: continue
+        for (senal in delId) {
+            val valor = decodificar(senal, datos) ?: continue
             resolutor.registrarTrama(senal.clave)
-            emitir(ObdReading(senal.clave, valor, senal.unidad, ahora()))
+            emitir(valor)
         }
     }
 
@@ -83,7 +90,7 @@ class LectorBusCan(
     }
 
     private fun duracionVentanaMs(): Long =
-        if (modo == ModoFuente.SOLO_BUS) VENTANA_SOLO_BUS_MS else ventanaCombinadoMs(verificadas)
+        if (modo == ModoFuente.SOLO_BUS) VENTANA_SOLO_BUS_MS else ventanaCombinadoMs(senales)
 
     private fun esRechazo(texto: String): Boolean = ResponseParser.cleanResponse(texto) == "?"
 

@@ -11,6 +11,8 @@ import com.revscope.core.obd.perfilcan.ModoFuente
 import com.revscope.core.obd.perfilcan.PerfilCan
 import com.revscope.core.obd.perfilcan.PerfilesCanRepositorio
 import com.revscope.core.obd.perfilcan.ResolutorFuentes
+import com.revscope.core.obd.perfilcan.SenalCan
+import com.revscope.core.obd.perfilcan.VehiculoPerfil
 import com.revscope.core.obd.perfilcan.efectivo
 import com.revscope.core.obd.perfilcan.fuentesPorSenalDe
 import com.revscope.core.obd.perfilcan.modoFuenteDe
@@ -23,6 +25,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -42,6 +46,33 @@ internal data class ConfigBus(
                 fuentesPorSenalDe(profile?.fuentesPorSenal),
             )
         }
+    }
+}
+
+// La prueba en vivo existe para verificar la señal: no exige estado verificada.
+internal fun pruebaDeSenal(
+    bt: Transport,
+    gate: PollingGate,
+    senal: SenalCan,
+    ahora: () -> Long = System::currentTimeMillis,
+): Flow<String?> {
+    val perfil = PerfilCan(
+        version = 1,
+        id = "prueba_en_vivo",
+        vehiculo = VehiculoPerfil("", "", "", ""),
+        calibracionesEcu = emptyList(),
+        protocolo = "",
+        licencia = "",
+        autor = "",
+        atribucion = "",
+        senales = listOf(senal),
+    )
+    val modo = ModoFuente.COMBINADO
+    val res = ResolutorFuentes(perfil, modo, emptyMap(), esCan = true, LectorBusCan.intervaloVentanaMs(modo), ahora)
+    val lector = LectorBusCan(bt, gate, perfil, modo, res, soloVerificadas = false, ahora = ahora)
+    return flow {
+        emit(null)
+        emitAll(lector.textos())
     }
 }
 
@@ -74,7 +105,7 @@ internal class BusSesion(
         val res = ResolutorFuentes(
             perfil, config.modo, config.preferencias, esCan = true, LectorBusCan.intervaloVentanaMs(config.modo), ahora,
         )
-        val lector = LectorBusCan(bt, gate, perfil, config.modo, res, ahora)
+        val lector = LectorBusCan(bt, gate, perfil, config.modo, res, ahora = ahora)
         resolutor.value = res
         val vigilancia = launch { vigilarCaducidad(res, perfil) }
         if (config.modo == ModoFuente.SOLO_BUS) scheduler.setPaused(true)

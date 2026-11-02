@@ -40,6 +40,12 @@ sealed class Screen(val route: String) {
     object Dtc : Screen("dtc")
     object Sessions : Screen("sessions")
     object VehicleProfile : Screen("vehicle")
+    object PruebaEnVivo : Screen("prueba_en_vivo/{vehiculoId}/{clave}") {
+        const val ARG_VEHICULO = "vehiculoId"
+        const val ARG_CLAVE = "clave"
+
+        fun withArgs(vehiculoId: Long, clave: String) = "prueba_en_vivo/$vehiculoId/$clave"
+    }
     object Maintenance : Screen("maintenance")
     object Odometer : Screen("odometer")
     object SpeedComparison : Screen("speed_comparison")

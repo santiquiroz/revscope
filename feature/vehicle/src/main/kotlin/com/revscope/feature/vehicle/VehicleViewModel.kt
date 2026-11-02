@@ -175,7 +175,7 @@ class VehicleViewModel @Inject constructor(
         val address = sessionManager.lastAdapterAddress.value ?: return
         viewModelScope.launch {
             profileDao.clearAdapterLinkExcept(address, profile.id)
-            val updated = profile.copy(adapterAddress = address)
+            val updated = actual(profile).copy(adapterAddress = address)
             profileDao.update(updated)
             sessionManager.notifyProfileUpdated(updated)
             _editingProfile.value = updated
@@ -188,7 +188,7 @@ class VehicleViewModel @Inject constructor(
         val profile = _editingProfile.value ?: return
         if (profile.adapterAddress == null) return
         viewModelScope.launch {
-            val updated = profile.copy(adapterAddress = null)
+            val updated = actual(profile).copy(adapterAddress = null)
             profileDao.update(updated)
             sessionManager.notifyProfileUpdated(updated)
             _editingProfile.value = updated
@@ -253,7 +253,7 @@ class VehicleViewModel @Inject constructor(
             val editing = _editingProfile.value
             val plate = _formPlate.value.trim().ifEmpty { null }
             if (editing != null) {
-                val updated = editing.copy(
+                val updated = actual(editing).copy(
                     name = name,
                     type = _formType.value,
                     fuelType = _formFuelType.value,
@@ -296,6 +296,10 @@ class VehicleViewModel @Inject constructor(
             resetForm()
         }
     }
+
+    // La sección del bus CAN guarda por su cuenta: partir de la fila guardada para no pisar sus columnas.
+    private suspend fun actual(profile: VehicleProfileEntity): VehicleProfileEntity =
+        profileDao.getById(profile.id) ?: profile
 
     fun deleteProfile(id: Long) {
         viewModelScope.launch {

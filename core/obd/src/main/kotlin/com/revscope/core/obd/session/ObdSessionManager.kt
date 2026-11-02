@@ -33,6 +33,7 @@ import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.perfilcan.PerfilesCanRepositorio
+import com.revscope.core.obd.perfilcan.SenalCan
 import com.revscope.core.obd.mcp.McpActivityTracker
 import com.revscope.core.obd.protocol.DtcResponseParser
 import com.revscope.core.obd.protocol.DtcServicio
@@ -86,6 +87,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -205,6 +207,15 @@ class ObdSessionManager @Inject constructor(
     }
 
     fun infoAdaptador(): InfoAdaptador = enlaceCaptura.info()
+
+    fun puedeProbarBus(): Boolean = transport != null && hasActiveConnection() && protocoloEsCan == true
+
+    /** Valor en vivo de una señal del bus (null hasta la primera trama); convive con el sondeo vía la compuerta. */
+    fun probarSenal(senal: SenalCan): Flow<String?> {
+        val bt = transport
+        if (bt == null || !puedeProbarBus()) return flowOf(null)
+        return pruebaDeSenal(bt, pollingGate, senal)
+    }
 
     private val lectorDispositivo = AndroidLectorDispositivo(appContext)
 

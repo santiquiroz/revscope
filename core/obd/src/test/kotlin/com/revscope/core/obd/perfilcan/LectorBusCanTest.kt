@@ -116,6 +116,17 @@ class LectorBusCanTest {
     }
 
     @Test
+    fun `sin filtro de estado emite el texto de una señal sin verificar`() = runTest {
+        val bt = TransporteFalso(lineas = listOf("500 00 00 44 00 03 00 4B 04"))
+        val perfil = perfilDePrueba(senales = listOf(senalDePrueba(estado = EstadoSenal.SIN_VERIFICAR)))
+        val lector = LectorBusCan(
+            bt, PollingGate(), perfil, ModoFuente.COMBINADO, resolutor(perfil), soloVerificadas = false,
+        ) { testScheduler.currentTime }
+
+        assertEquals("3", lector.textos().first())
+    }
+
+    @Test
     fun `marcha 07 no emite ni registra frescura`() = runTest {
         val bt = TransporteFalso(lineas = listOf("500 00 00 45 00 07 00 46 04"))
         val perfil = perfilDePrueba()

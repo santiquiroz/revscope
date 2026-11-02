@@ -51,6 +51,7 @@ import com.revscope.feature.session.SessionHistoryScreen
 import com.revscope.feature.settings.Mode22ScannerScreen
 import com.revscope.feature.settings.SettingsScreen
 import com.revscope.feature.vehicle.VehicleProfileScreen
+import com.revscope.feature.vehicle.perfilcan.PruebaEnVivoScreen
 import com.revscope.feature.workshop.AlDiaScreen
 import com.revscope.feature.workshop.HealthCheckScreen
 import com.revscope.feature.workshop.LiveMixtureScreen
@@ -428,7 +429,24 @@ fun RevScopeNavGraph(
                 composable(Screen.VehicleProfile.route) {
                     VehicleProfileScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onProbarSenal = { vehiculoId, clave ->
+                            navController.navigate(Screen.PruebaEnVivo.withArgs(vehiculoId, clave))
+                        },
                         connectionVm = connectionVm,
+                    )
+                }
+                composable(
+                    route = Screen.PruebaEnVivo.route,
+                    arguments = listOf(
+                        navArgument(Screen.PruebaEnVivo.ARG_VEHICULO) { type = NavType.LongType },
+                        navArgument(Screen.PruebaEnVivo.ARG_CLAVE) { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val argumentos = checkNotNull(backStackEntry.arguments)
+                    PruebaEnVivoScreen(
+                        vehiculoId = argumentos.getLong(Screen.PruebaEnVivo.ARG_VEHICULO),
+                        clave = checkNotNull(argumentos.getString(Screen.PruebaEnVivo.ARG_CLAVE)),
+                        onVolver = { navController.popBackStack() },
                     )
                 }
                 composable(
