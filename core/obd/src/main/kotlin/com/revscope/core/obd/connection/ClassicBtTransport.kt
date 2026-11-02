@@ -186,21 +186,30 @@ class ClassicBtTransport(
         receive(timeoutMs)
     }
 
-    override suspend fun monitorear(comando: String, duracionMs: Long, alLinea: (String) -> Unit): String =
+    override suspend fun monitorear(
+        comando: String,
+        duracionMs: Long,
+        detener: () -> Boolean,
+        alLinea: (String) -> Unit,
+    ): String =
         ioMutex.withLock {
             withContext(Dispatchers.IO) { drainStaleInput() }
             val cmd = if (comando.endsWith("\r")) comando else "$comando\r"
             send(cmd)
-            withContext(Dispatchers.IO) { leerMonitorHastaPlazo(duracionMs, alLinea) }
+            withContext(Dispatchers.IO) { leerMonitorHastaPlazo(duracionMs, detener, alLinea) }
         }
 
-    private suspend fun leerMonitorHastaPlazo(duracionMs: Long, alLinea: (String) -> Unit): String {
+    private suspend fun leerMonitorHastaPlazo(
+        duracionMs: Long,
+        detener: () -> Boolean,
+        alLinea: (String) -> Unit,
+    ): String {
         val input = inputStream ?: throw IOException("Not connected — cannot monitor")
         val total = StringBuilder()
         val pendiente = StringBuilder()
         val plazo = System.currentTimeMillis() + duracionMs
         var pollDelayMs = READ_POLL_MIN_MS
-        while (System.currentTimeMillis() < plazo) {
+        while (System.currentTimeMillis() < plazo && !detener()) {
             val available = input.available()
             if (available > 0) {
                 val trozo = leerDisponible(input, available) ?: throw IOException("Stream closed by remote device")

@@ -32,7 +32,7 @@ class LeerCapturaCanTool @Inject constructor(
         val inicio = desde.coerceAtMost(captura.tramas.size.toLong()).toInt()
         val lineas = captura.tramas.drop(inicio).take(limite.toInt())
             .map { Candump.linea(it, captura.inicioEpochMs) }
-        return CapturasCanRepositorio.aJson(captura)
+        return CapturasCanRepositorio.aJsonConOrigen(captura)
             .put("total", captura.totalTramas)
             .put("desde", desde)
             .put("lineas", JSONArray(lineas))

@@ -45,9 +45,15 @@ interface Transport {
 
     /**
      * Monitor continuo (AT MA): envía [comando], entrega cada línea completa a
-     * [alLinea] durante [duracionMs] y devuelve el texto final tras detenerlo.
+     * [alLinea] durante [duracionMs] (o hasta que [detener] devuelva true) y devuelve el
+     * texto final tras detenerlo.
      */
-    suspend fun monitorear(comando: String, duracionMs: Long, alLinea: (String) -> Unit): String =
+    suspend fun monitorear(
+        comando: String,
+        duracionMs: Long,
+        detener: () -> Boolean = { false },
+        alLinea: (String) -> Unit,
+    ): String =
         throw UnsupportedOperationException("este transporte no soporta modo monitor")
 
     fun observeConnectionState(): Flow<ConnectionState>

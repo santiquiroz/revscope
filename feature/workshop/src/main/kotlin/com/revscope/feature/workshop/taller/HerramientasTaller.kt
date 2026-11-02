@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.ElectricalServices
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -35,6 +36,7 @@ data class AccionesHub(
     val onEscaner: () -> Unit = {},
     val onOndaO2: () -> Unit = {},
     val onMode06: () -> Unit = {},
+    val onCapturaCanRuta: () -> Unit = {},
     val onMecanicoIa: () -> Unit = {},
     val onMarchas: () -> Unit = {},
     val onPerfiles: () -> Unit = {},
@@ -147,6 +149,13 @@ internal object HerramientasTaller {
                     "Pruebas de monitoreo internas del fabricante",
                     true,
                     a.onMode06,
+                ),
+                HerramientaTaller(
+                    Icons.Filled.Route,
+                    "Captura CAN de ruta",
+                    "Graba el bus CAN rodando, con la velocidad GPS al lado",
+                    true,
+                    a.onCapturaCanRuta,
                 ),
                 HerramientaTaller(
                     Icons.AutoMirrored.Filled.Chat,

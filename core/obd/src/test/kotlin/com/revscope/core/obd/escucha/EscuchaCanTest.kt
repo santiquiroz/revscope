@@ -136,6 +136,56 @@ class EscuchaCanTest {
         assertTrue(bt.comandos.contains("ATH0"))
     }
 
+    @Test
+    fun `detener a mitad corta la captura con lo recibido y la duracion real`() = runTest {
+        var reloj = 5_000L
+        var parar = false
+        val bt = TransporteFalso(
+            dpn = "6",
+            lineas = listOf("7E8 03 41 0D 00", "7E8 03 41 0D 01", "7E8 03 41 0D 02"),
+            alEntregar = {
+                reloj += 100
+                if (reloj >= 5_200L) parar = true
+            },
+        )
+
+        val captura = EscuchaCan { reloj }.capturar(bt, OpcionesEscucha("base", 10_000L, null, detener = { parar }))
+
+        assertEquals(2, captura.tramas.size)
+        assertEquals(200L, captura.duracionMs)
+        assertEquals(1, bt.llamadasMonitor)
+        assertTrue(bt.comandos.contains("ATH0"))
+    }
+
+    @Test
+    fun `detener tras un desborde no relanza el monitor`() = runTest {
+        var parar = false
+        val bt = TransporteFalso(
+            dpn = "6",
+            lineasPorVuelta = listOf(listOf("BUFFER FULL")),
+            alEntregar = { parar = true },
+        )
+
+        val captura = escucha().capturar(bt, OpcionesEscucha("base", 1_000L, null, detener = { parar }))
+
+        assertEquals(1, bt.llamadasMonitor)
+        assertEquals(1, captura.desbordes)
+    }
+
+    @Test
+    fun `sin detener guarda la duracion pedida y reporta progreso`() = runTest {
+        val progreso = mutableListOf<Pair<Int, Int>>()
+        val bt = TransporteFalso(dpn = "6", lineas = listOf("7E8 03 41 0D 00", "BUFFER FULL"))
+
+        val captura = escucha().capturar(
+            bt,
+            OpcionesEscucha("base", 1_000L, null, alProgreso = { t, d -> progreso += t to d }),
+        )
+
+        assertEquals(1_000L, captura.duracionMs)
+        assertEquals(listOf(1 to 0, 1 to 1), progreso.take(2))
+    }
+
     private class TransporteFalso(
         private val dpn: String = "6",
         private val csm: String = "OK",
@@ -143,6 +193,7 @@ class EscuchaCanTest {
         private val errorMonitor: Throwable? = null,
         private val lineasPorVuelta: List<List<String>> = listOf(lineas),
         private val avanzarReloj: () -> Unit = {},
+        private val alEntregar: () -> Unit = {},
     ) : Transport {
 
         val comandos = mutableListOf<String>()
@@ -171,10 +222,19 @@ class EscuchaCanTest {
         override suspend fun targetedExchange(requestHeader: String, request: String, timeoutMs: Long): String =
             exchange(request, timeoutMs)
 
-        override suspend fun monitorear(comando: String, duracionMs: Long, alLinea: (String) -> Unit): String {
+        override suspend fun monitorear(
+            comando: String,
+            duracionMs: Long,
+            detener: () -> Boolean,
+            alLinea: (String) -> Unit,
+        ): String {
             comandos += comando.filterNot { it.isWhitespace() }.uppercase()
             errorMonitor?.let { throw it }
-            lineasPorVuelta.getOrElse(llamadasMonitor) { lineasPorVuelta.lastOrNull().orEmpty() }.forEach(alLinea)
+            for (linea in lineasPorVuelta.getOrElse(llamadasMonitor) { lineasPorVuelta.lastOrNull().orEmpty() }) {
+                if (detener()) break
+                alLinea(linea)
+                alEntregar()
+            }
             llamadasMonitor++
             avanzarReloj()
             return "STOPPED\r>"

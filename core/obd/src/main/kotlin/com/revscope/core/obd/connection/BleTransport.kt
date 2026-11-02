@@ -184,19 +184,28 @@ class BleTransport(
         receive(timeoutMs)
     }
 
-    override suspend fun monitorear(comando: String, duracionMs: Long, alLinea: (String) -> Unit): String =
+    override suspend fun monitorear(
+        comando: String,
+        duracionMs: Long,
+        detener: () -> Boolean,
+        alLinea: (String) -> Unit,
+    ): String =
         ioMutex.withLock {
             drainStaleInput()
             val cmd = if (comando.endsWith("\r")) comando else "$comando\r"
             send(cmd)
-            leerMonitorHastaPlazo(duracionMs, alLinea)
+            leerMonitorHastaPlazo(duracionMs, detener, alLinea)
         }
 
-    private suspend fun leerMonitorHastaPlazo(duracionMs: Long, alLinea: (String) -> Unit): String {
+    private suspend fun leerMonitorHastaPlazo(
+        duracionMs: Long,
+        detener: () -> Boolean,
+        alLinea: (String) -> Unit,
+    ): String {
         val total = StringBuilder()
         val pendiente = StringBuilder()
         val plazo = System.currentTimeMillis() + duracionMs
-        while (System.currentTimeMillis() < plazo) {
+        while (System.currentTimeMillis() < plazo && !detener()) {
             val restante = plazo - System.currentTimeMillis()
             if (restante <= 0) break
             val trozo = withTimeoutOrNull(minOf(restante, RX_POLL_SLICE_MS * 10)) { incoming.receive() }

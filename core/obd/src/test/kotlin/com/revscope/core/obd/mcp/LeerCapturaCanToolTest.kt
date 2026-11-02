@@ -29,6 +29,8 @@ class LeerCapturaCanToolTest {
 
         assertEquals(captura.id, respuesta.getString("id"))
         assertTrue(respuesta.has("huecos"))
+        assertEquals("mcp", respuesta.getString("origen"))
+        assertEquals(0, respuesta.getInt("muestrasGps"))
         assertEquals(3, respuesta.getInt("total"))
         assertEquals(1, respuesta.getInt("desde"))
         assertEquals(

@@ -61,6 +61,7 @@ import com.revscope.feature.workshop.O2WaveScreen
 import com.revscope.feature.workshop.OdometerScreen
 import com.revscope.feature.workshop.SpeedComparisonScreen
 import com.revscope.feature.workshop.taller.DestinosSesion
+import com.revscope.feature.workshop.taller.capturacan.CapturaRutaCanScreen
 import com.revscope.feature.workshop.taller.multimetro.MultimetroScreen
 import com.revscope.feature.workshop.taller.multimetro.MultimetroViewModel
 import com.revscope.feature.workshop.taller.prueba.PruebaGuiadaScreen
@@ -338,6 +339,9 @@ fun RevScopeNavGraph(
                 }
                 composable(Screen.Mode06.route) {
                     Mode06Screen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(Screen.CapturaCanRuta.route) {
+                    CapturaRutaCanScreen(onVolver = { navController.popBackStack() })
                 }
                 composable(Screen.LiveMap.route) {
                     LiveMapScreen(

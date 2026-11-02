@@ -19,10 +19,11 @@ class CapturasCanRepositorio internal constructor(
     constructor(@ApplicationContext context: Context) : this(File(context.filesDir, CARPETA))
 
     @Synchronized
-    fun guardar(c: CapturaCan) {
+    fun guardar(c: CapturaCan, gps: List<MuestraGps> = emptyList()) {
         carpeta.mkdirs()
         File(carpeta, "${c.id}.log").writeText(textoLog(c))
-        File(carpeta, "${c.id}.json").writeText(aJson(c).toString())
+        if (gps.isNotEmpty()) archivoGps(c.id).writeText(GpsCsv.texto(gps))
+        File(carpeta, "${c.id}.json").writeText(aJsonConOrigen(c.copy(muestrasGps = gps.size)).toString())
         podar()
     }
 
@@ -40,6 +41,21 @@ class CapturasCanRepositorio internal constructor(
             meta.copy(tramas = leerTramas(id, meta.inicioEpochMs))
         }.onFailure { Timber.w(it, "CapturasCanRepositorio: no se pudo leer $id") }.getOrNull()
     }
+
+    @Synchronized
+    fun existe(id: String): Boolean = ID_VALIDO.matches(id) && File(carpeta, "$id.json").exists()
+
+    @Synchronized
+    fun leerGps(id: String): List<MuestraGps> {
+        if (!ID_VALIDO.matches(id)) return emptyList()
+        val archivo = archivoGps(id)
+        if (!archivo.exists()) return emptyList()
+        return runCatching { archivo.readLines().drop(1).filter { it.isNotBlank() }.mapNotNull { GpsCsv.parsear(it) } }
+            .onFailure { Timber.w(it, "CapturasCanRepositorio: no se pudo leer el GPS de $id") }
+            .getOrDefault(emptyList())
+    }
+
+    private fun archivoGps(id: String) = File(carpeta, "$id.gps.csv")
 
     private fun textoLog(c: CapturaCan): String =
         c.tramas.joinToString("\n") { Candump.linea(it, c.inicioEpochMs) }.let { if (it.isEmpty()) "" else "$it\n" }
@@ -68,6 +84,7 @@ class CapturasCanRepositorio internal constructor(
         listarInterno().drop(tope).forEach { vieja ->
             File(carpeta, "${vieja.id}.log").delete()
             File(carpeta, "${vieja.id}.json").delete()
+            archivoGps(vieja.id).delete()
         }
     }
 
@@ -92,6 +109,10 @@ class CapturasCanRepositorio internal constructor(
                 c.huecos.forEach { hueco -> put(JSONArray().put(hueco.desdeMs).put(hueco.hastaMs)) }
             })
 
+        fun aJsonConOrigen(c: CapturaCan): JSONObject = aJson(c)
+            .put("origen", c.origen)
+            .put("muestrasGps", c.muestrasGps)
+
         fun desdeJson(texto: String): CapturaCan? = runCatching {
             val o = JSONObject(texto)
             CapturaCan(
@@ -108,6 +129,8 @@ class CapturasCanRepositorio internal constructor(
                 tramas = emptyList(),
                 totalTramas = o.optInt("tramas", 0),
                 huecos = leerHuecos(o.optJSONArray("huecos")),
+                origen = o.optString("origen", CapturaCan.ORIGEN_MCP),
+                muestrasGps = o.optInt("muestrasGps", 0),
             )
         }.getOrNull()
 
