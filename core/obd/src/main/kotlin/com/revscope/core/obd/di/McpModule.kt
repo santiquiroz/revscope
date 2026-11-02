@@ -37,6 +37,10 @@ import com.revscope.core.obd.mcp.BorrarDtcModuloTool
 import com.revscope.core.obd.mcp.ReiniciarEcuTool
 import com.revscope.core.obd.mcp.PruebaABordoTool
 import com.revscope.core.obd.mcp.ComandoEscrituraTool
+import com.revscope.core.obd.mcp.EscucharCanTool
+import com.revscope.core.obd.mcp.ListarCapturasCanTool
+import com.revscope.core.obd.mcp.LeerCapturaCanTool
+import com.revscope.core.obd.mcp.DiferenciaCapturasCanTool
 import com.revscope.core.obd.mcp.EjecutarCatalogoTool
 import com.revscope.core.obd.mcp.McpActivityTracker
 import com.revscope.core.obd.mcp.McpDispatcher
@@ -104,6 +108,10 @@ object McpModule {
         pruebaABordo: PruebaABordoTool,
         comandoEscritura: ComandoEscrituraTool,
         ejecutarCatalogo: EjecutarCatalogoTool,
+        escucharCan: EscucharCanTool,
+        listarCapturasCan: ListarCapturasCanTool,
+        leerCapturaCan: LeerCapturaCanTool,
+        diferenciaCapturasCan: DiferenciaCapturasCanTool,
     ): List<McpTool> = listOf(
         getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getGuiaDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
@@ -113,6 +121,7 @@ object McpModule {
         getInfoEcu, getMode06, descubrirModulos, leerDid, comandoLectura, getRegistroEscrituras,
         getCatalogo, leerCatalogo, guardarEnCatalogo,
         borrarDtcModulo, reiniciarEcu, pruebaABordo, comandoEscritura, ejecutarCatalogo,
+        escucharCan, listarCapturasCan, leerCapturaCan, diferenciaCapturasCan,
     )
 
     @Provides

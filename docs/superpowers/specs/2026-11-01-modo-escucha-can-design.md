@@ -127,3 +127,35 @@ Errores con el mismo estilo de `ComandoLecturaTool` (`{"error": …}`, `{"conect
 ## Pruebas
 
 JVM, en `core/obd/src/test/kotlin/com/revscope/core/obd/escucha/` y `…/mcp/`. Casos mínimos: parseo 11/29 bits con y sin espacios, basura y líneas de estado; candump ida y vuelta y con microsegundos; resumen con Hz y bytes que cambian; diferencia con contador en la base (ignorado), byte fijo que cambia, bit de indicador junto a un contador, ID nuevo y ausente; `capturar` con un transporte falso (protocolo no CAN, CSM `?`, restauración en `finally` aunque el monitor lance); tools con argumentos inválidos, viaje grabando y caso feliz.
+
+## Ampliación 1 (2026-11-02): ritmo del monitor y análisis de bits
+
+Origen: `revdash/docs/investigacion/herramientas-can.md` (§3 y §6).
+
+### Ritmo del monitor
+
+- `EscuchaCan` usa `AT S0` (sin espacios) en vez de `AT S1`: con `H1 S0 L0` el ELM327 manda ~30 % más tramas por segundo antes de llenar su búfer de 512 bytes. `LineaMonitor` ya lee el formato compacto.
+- Si el monitor se detiene solo antes del plazo (el ELM imprime `BUFFER FULL` y vuelve al prompt), `EscuchaCan` lo relanza con `AT MA` por el tiempo que falte. Cada relanzamiento suma un desborde y guarda el hueco: `CapturaCan.huecos: List<Hueco>` con `data class Hueco(val desdeMs: Long, val hastaMs: Long)` relativos al inicio (desde = momento del `BUFFER FULL`, hasta = primera línea tras relanzar, o el fin). Máximo 50 relanzamientos por captura; al pasarlo, se termina con lo que haya.
+- Los huecos se guardan en el JSON de metadatos (`"huecos": [[desde, hasta], ...]`) y salen en `escuchar_can` y `leer_captura_can`.
+
+### Análisis de bits (lógica pura en `escucha/`)
+
+```kotlin
+enum class ClaseByte { CONSTANTE, CONTADOR, CHECKSUM, SENAL }
+data class AnalisisByte(val id: String, val byte: Int, val clase: ClaseByte, val distintos: Int,
+                        val minimo: Int, val maximo: Int, val bitsQueCambian: List<Int>, val detalle: String?)
+object AnalisisBitsCan { fun analizar(tramas: List<TramaCan>): List<AnalisisByte> }
+```
+
+Por cada (id, byte), sobre las tramas de ese id en orden de llegada:
+- `CONSTANTE`: un solo valor.
+- `CONTADOR`: con al menos 8 tramas, cada valor es el anterior + k (k = 1 o 2) módulo 2^n para n = 4 (nibble bajo, con el nibble alto constante) u 8, en al menos el 90 % de los pasos consecutivos. `detalle` = `"contador de n bits, paso k"`.
+- `CHECKSUM`: con al menos 8 tramas, el byte es igual en el 100 % de las tramas a una de estas funciones de los demás bytes de la misma trama: XOR, suma módulo 256, complemento a uno de la suma, CRC-8 polinomio 0x1D (SAE J1850) o 0x07, con init 0x00 o 0xFF y xorout 0x00 o 0xFF. `detalle` = el nombre del algoritmo (`"xor"`, `"suma"`, `"~suma"`, `"crc8 0x1D init FF xorout FF"`…). Se prueba primero lo barato (xor, suma).
+- `SENAL`: el resto.
+- `bitsQueCambian`: índices 0-7 (7 = MSB) de los bits que toman ambos valores.
+
+### Herramientas MCP nuevas (permiso LECTURA)
+
+| Tool | Entrada | Salida |
+|---|---|---|
+| `mapa_bits_can` | `id` de captura; `can_id` opcional (3 u 8 hex) | `{"captura","bytes": [AnalisisByte…]}` con tope de 400 entradas y `truncado` |

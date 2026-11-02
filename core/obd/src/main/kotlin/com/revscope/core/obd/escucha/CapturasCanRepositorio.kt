@@ -86,7 +86,7 @@ class CapturasCanRepositorio internal constructor(
             .put("silencioso", c.silencioso)
             .put("desbordes", c.desbordes)
             .put("errores", c.errores)
-            .put("tramas", c.tramas.size)
+            .put("tramas", c.totalTramas)
 
         fun desdeJson(texto: String): CapturaCan? = runCatching {
             val o = JSONObject(texto)

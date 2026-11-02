@@ -206,40 +206,18 @@ class BleTransport(
                 pendiente.append(texto)
                 val prompt = pendiente.indexOf(PROMPT_CHAR)
                 if (prompt >= 0) {
-                    entregarRestos(pendiente.substring(0, prompt), alLinea)
+                    CortadorLineasMonitor.entregarRestos(pendiente.substring(0, prompt), alLinea)
                     return total.toString()
                 }
-                drenarLineas(pendiente, alLinea)
+                CortadorLineasMonitor.drenarLineas(pendiente, alLinea)
             } else if (!connected) {
                 throw IOException("BLE link lost while monitoring")
             }
         }
         send("\r")
         val final = receive(AT_RESTORE_TIMEOUT_MS)
-        entregarRestos(pendiente.toString() + final.substringBefore(PROMPT_CHAR), alLinea)
+        CortadorLineasMonitor.entregarRestos(pendiente.toString() + final.substringBefore(PROMPT_CHAR), alLinea)
         return final
-    }
-
-    private fun drenarLineas(pendiente: StringBuilder, alLinea: (String) -> Unit) {
-        var corte = indiceCorte(pendiente)
-        while (corte >= 0) {
-            val linea = pendiente.substring(0, corte)
-            if (linea.isNotEmpty()) alLinea(linea)
-            pendiente.delete(0, corte + 1)
-            corte = indiceCorte(pendiente)
-        }
-    }
-
-    private fun indiceCorte(texto: StringBuilder): Int {
-        val retorno = texto.indexOf("\r")
-        val salto = texto.indexOf("\n")
-        if (retorno < 0) return salto
-        if (salto < 0) return retorno
-        return minOf(retorno, salto)
-    }
-
-    private fun entregarRestos(texto: String, alLinea: (String) -> Unit) {
-        texto.split('\r', '\n').forEach { if (it.isNotEmpty()) alLinea(it) }
     }
 
     override suspend fun targetedExchange(
