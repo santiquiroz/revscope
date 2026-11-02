@@ -93,6 +93,7 @@ internal data class EstadoConducirUi(
     val lecturas: LecturasConducir = LecturasConducir(),
     val escalas: EscalasConducir = EscalasConducir(),
     val puntaje: TripScore = TripScore.empty(),
+    val indicadoresBus: IndicadoresBus = IndicadoresBus(),
 ) {
     val gaugesAtenuados: Boolean get() = viajeGpsActivo || modoGpsHero
     val avisarSinAdaptador: Boolean get() = viajeGpsActivo && !modoGpsHero
@@ -237,6 +238,7 @@ internal fun DashboardGaugesContent(estado: EstadoConducirUi, onAlternarFuenteVe
                 PanelTemperatura(estado, atenuado, Modifier.weight(0.6f))
             }
         }
+        if (estado.indicadoresBus.visible) FilaIndicadoresBus(estado.indicadoresBus)
         BoostBar(
             boostKpa = lecturas.boost,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).then(atenuado),

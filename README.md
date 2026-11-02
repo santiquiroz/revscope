@@ -50,6 +50,7 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 - **Códigos de falla explicados con IA**, **mezcla y combustión en vivo**, **onda del sensor O2**, **resultados Mode 06** y **escáner Mode 22** para PIDs del fabricante
 - **Verificación de kilometraje** — lee el odómetro del computador y avisa si fue alterado
 - **Mecánico IA** — chatea con un mecánico que conoce TUS datos reales · [manual](docs/manual-usuario.md)
+- **Perfiles CAN** — marcha real, pata lateral, embrague y kill switch leídos del bus, con prueba en vivo antes de usar cada señal (incluye la TVS Apache RTR 160 4V) · [manual](docs/manual-usuario.md#datos-del-bus-can)
 
 ### 🏁 Para el competitivo
 - **0-100 automático por voz**, modo pista con vueltas, inclinación, fuerzas G, círculo de fricción y zonas de frenado

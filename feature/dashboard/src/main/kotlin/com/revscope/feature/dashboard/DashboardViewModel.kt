@@ -78,6 +78,16 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    val avisoBus: StateFlow<String?> = sessionManager.avisoBus
+    private var ultimoAvisoBus: String? = null
+
+    /** true solo la primera vez que llega cada aviso del bus: volver al tablero no lo repite. */
+    fun esAvisoBusNuevo(aviso: String): Boolean {
+        if (aviso == ultimoAvisoBus) return false
+        ultimoAvisoBus = aviso
+        return true
+    }
+
     /** True mientras el usuario nunca configuró un adaptador — el dashboard prioriza viaje GPS y mapa. */
     val gpsOnlyMode: StateFlow<Boolean> = settings.data
         .map { it[PreferencesKeys.GPS_ONLY_MODE] ?: false }

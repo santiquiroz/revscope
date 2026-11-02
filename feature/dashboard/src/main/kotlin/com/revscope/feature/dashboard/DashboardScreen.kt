@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -95,6 +97,12 @@ fun DashboardScreen(
     val boost by remember { derivedStateOf { valorDe(readingsState.value, "BOOST") } }
     val gear by remember { derivedStateOf { readingsState.value["GEAR"]?.value?.toInt() } }
     val vbat by remember { derivedStateOf { readingsState.value["VBAT"]?.value } }
+    val indicadores by remember { derivedStateOf { indicadoresBus(readingsState.value) } }
+    val avisoBus by dashboardVm.avisoBus.collectAsState()
+    val avisos = remember { SnackbarHostState() }
+    LaunchedEffect(avisoBus) {
+        avisoBus?.takeIf(dashboardVm::esAvisoBusNuevo)?.let { avisos.showSnackbar(it) }
+    }
 
     // Riding with the screen off is useless — keep it on while telemetry flows.
     // Gateado por ajuste: en carro montado en soporte, horas de pantalla forzada
@@ -153,6 +161,7 @@ fun DashboardScreen(
             marchasCalibradas = gearCalibrated,
         ),
         puntaje = tripScore,
+        indicadoresBus = indicadores,
     )
     val acciones = remember(connectionVm, dashboardVm) {
         AccionesConducir(
@@ -185,6 +194,7 @@ fun DashboardScreen(
                 onAjustes = onNavigateToSettings,
             )
         },
+        snackbarHost = { SnackbarHost(avisos) },
         containerColor = RevScopeColors.Background,
     ) { innerPadding ->
         DashboardContent(

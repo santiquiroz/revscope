@@ -14,6 +14,8 @@ Esta página describe cada sección de la pestaña **Ajustes**, en el mismo orde
 | Preguntar vehículo al inicio | Si está activo, la app pregunta qué vehículo usar cada vez que abre desde cero | Activado |
 | Iniciar viaje automáticamente al moverse (Herramientas) | Con el adaptador conectado y sin viaje (tras **Finalizar viaje (seguir conectado)**), abre un viaje al sostener 10 km/h durante 5 s | Activado |
 
+El perfil CAN, el modo de lectura (Estándar, Combinado o Solo bus) y la fuente de cada señal no están en Ajustes: son de cada vehículo y se eligen en su perfil, en la tarjeta **Datos del bus CAN** (ver [Manual → Datos del bus CAN](manual-usuario.md#datos-del-bus-can)). Un vehículo sin perfil CAN usa el modo Estándar. La fuente **GPS** de la velocidad es la misma preferencia que el chip OBD/GPS del velocímetro de Conducir.
+
 ## Alertas de audio y vibración
 
 Dos interruptores generales antes de las categorías:
