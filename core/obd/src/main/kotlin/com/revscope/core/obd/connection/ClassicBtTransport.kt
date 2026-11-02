@@ -186,6 +186,74 @@ class ClassicBtTransport(
         receive(timeoutMs)
     }
 
+    override suspend fun monitorear(comando: String, duracionMs: Long, alLinea: (String) -> Unit): String =
+        ioMutex.withLock {
+            withContext(Dispatchers.IO) { drainStaleInput() }
+            val cmd = if (comando.endsWith("\r")) comando else "$comando\r"
+            send(cmd)
+            withContext(Dispatchers.IO) { leerMonitorHastaPlazo(duracionMs, alLinea) }
+        }
+
+    private suspend fun leerMonitorHastaPlazo(duracionMs: Long, alLinea: (String) -> Unit): String {
+        val input = inputStream ?: throw IOException("Not connected — cannot monitor")
+        val total = StringBuilder()
+        val pendiente = StringBuilder()
+        val plazo = System.currentTimeMillis() + duracionMs
+        var pollDelayMs = READ_POLL_MIN_MS
+        while (System.currentTimeMillis() < plazo) {
+            val available = input.available()
+            if (available > 0) {
+                val trozo = leerDisponible(input, available) ?: throw IOException("Stream closed by remote device")
+                total.append(trozo)
+                pendiente.append(trozo)
+                val prompt = pendiente.indexOf(PROMPT_CHAR.toString())
+                if (prompt >= 0) {
+                    entregarRestos(pendiente.substring(0, prompt), alLinea)
+                    return total.toString()
+                }
+                drenarLineas(pendiente, alLinea)
+                pollDelayMs = READ_POLL_MIN_MS
+            } else {
+                delay(pollDelayMs)
+                pollDelayMs = minOf(pollDelayMs * 2, readPollMaxMs)
+            }
+        }
+        send("\r")
+        val final = receive(AT_RESTORE_TIMEOUT_MS)
+        entregarRestos(pendiente.toString() + final.substringBefore(PROMPT_CHAR), alLinea)
+        return final
+    }
+
+    private fun leerDisponible(input: InputStream, available: Int): String? {
+        val chunk = ByteArray(CHUNK_SIZE)
+        val read = input.read(chunk, 0, minOf(available, CHUNK_SIZE))
+        if (read == -1) return null
+        if (read == 0) return ""
+        return String(chunk, 0, read, Charsets.US_ASCII)
+    }
+
+    private fun drenarLineas(pendiente: StringBuilder, alLinea: (String) -> Unit) {
+        var corte = indiceCorte(pendiente)
+        while (corte >= 0) {
+            val linea = pendiente.substring(0, corte)
+            if (linea.isNotEmpty()) alLinea(linea)
+            pendiente.delete(0, corte + 1)
+            corte = indiceCorte(pendiente)
+        }
+    }
+
+    private fun indiceCorte(texto: StringBuilder): Int {
+        val retorno = texto.indexOf("\r")
+        val salto = texto.indexOf("\n")
+        if (retorno < 0) return salto
+        if (salto < 0) return retorno
+        return minOf(retorno, salto)
+    }
+
+    private fun entregarRestos(texto: String, alLinea: (String) -> Unit) {
+        texto.split('\r', '\n').forEach { if (it.isNotEmpty()) alLinea(it) }
+    }
+
     override suspend fun targetedExchange(
         requestHeader: String,
         request: String,

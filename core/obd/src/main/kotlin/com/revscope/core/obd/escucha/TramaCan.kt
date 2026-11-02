@@ -19,6 +19,7 @@ data class CapturaCan(
     val desbordes: Int,
     val errores: Int,
     val tramas: List<TramaCan>,
+    val totalTramas: Int = tramas.size,
 )
 
 object IdCan {
