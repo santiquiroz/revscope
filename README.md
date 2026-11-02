@@ -72,7 +72,7 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 
 ## 🧭 En camino
 
-- **Modo escucha para el Taller** — conectas RevScope en paralelo con un escáner profesional y la app aprende las pruebas de actuadores y funciones de servicio que ese escáner manda, para repetirlas después sin él (cada una confirmada con un toque) · [detalle y límites](docs/catalogo-propietario-fuentes.md#pendiente-modo-escucha-capturar-lo-que-manda-un-escáner-profesional)
+- **Aprender del escáner profesional** — conectas RevScope en paralelo con un escáner de taller y la app aprende las pruebas de actuadores y funciones de servicio que ese escáner manda, para repetirlas después sin él (cada una confirmada con un toque). La captura del bus ya existe desde v1.23.0 (`escuchar_can` con filtro `7XX`); falta convertir lo capturado en entradas del catálogo · [detalle y límites](docs/catalogo-propietario-fuentes.md#pendiente-modo-escucha-capturar-lo-que-manda-un-escáner-profesional)
 
 ## 📚 Documentación
 
