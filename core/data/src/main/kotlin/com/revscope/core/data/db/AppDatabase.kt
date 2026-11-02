@@ -54,7 +54,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         VehiclePartEntity::class,
         ReferenceBandEntity::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -56,4 +56,12 @@ data class VehicleProfileEntity(
     val gearCount: Int = 6,
     /** Clave de `vehicle_knowledge` del modelo de referencia; null = sin modelo asociado. */
     val knowledgeKey: String? = null,
+    /** Id del perfil CAN elegido; null = sin perfil (modo Estándar). */
+    val perfilCanId: String? = null,
+    /** "ESTANDAR" | "COMBINADO" | "SOLO_BUS". `defaultValue` debe coincidir con MIGRATION_19_20. */
+    @ColumnInfo(defaultValue = "ESTANDAR")
+    val fuenteDatos: String = "ESTANDAR",
+    /** JSON clave → "AUTO" | "PID" | "BUS" | "GPS" | "CALCULADA". `defaultValue` debe coincidir con MIGRATION_19_20. */
+    @ColumnInfo(defaultValue = "{}")
+    val fuentesPorSenal: String = "{}",
 )
