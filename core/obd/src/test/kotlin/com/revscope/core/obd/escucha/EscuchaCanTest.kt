@@ -14,7 +14,7 @@ import java.io.IOException
 
 class EscuchaCanTest {
 
-    private fun escucha(ahora: Long = 5_000L) = EscuchaCan { ahora }
+    private fun escucha(ahora: () -> Long = { 5_000L }) = EscuchaCan(ahora)
 
     private fun opciones(
         etiqueta: String = "base",
@@ -36,10 +36,10 @@ class EscuchaCanTest {
     }
 
     @Test
-    fun `protocolo 6 cuenta tramas desbordes y errores`() = runTest {
+    fun `protocolo 6 cuenta tramas y errores`() = runTest {
         val bt = TransporteFalso(
             dpn = "6",
-            lineas = listOf("7E8 03 41 0D 00", "BUFFER FULL", "CAN ERROR", "7E9 02 10 00"),
+            lineas = listOf("7E8 03 41 0D 00", "CAN ERROR", "7E9 02 10 00"),
         )
 
         val captura = escucha().capturar(bt, opciones(etiqueta = "Base 1!"))
@@ -49,10 +49,45 @@ class EscuchaCanTest {
         assertFalse(captura.bits29)
         assertTrue(captura.silencioso)
         assertEquals(2, captura.tramas.size)
-        assertEquals(1, captura.desbordes)
+        assertEquals(0, captura.desbordes)
         assertEquals(1, captura.errores)
         assertEquals(TramaCan(0L, 0x7E8, false, listOf(0x03, 0x41, 0x0D, 0x00)), captura.tramas[0])
         assertTrue(bt.comandos.contains("ATMA"))
+        assertTrue(bt.comandos.contains("ATS0"))
+    }
+
+    @Test
+    fun `buffer full relanza monitor y registra hueco`() = runTest {
+        val bt = TransporteFalso(
+            dpn = "6",
+            lineasPorVuelta = listOf(
+                listOf("BUFFER FULL"),
+                listOf("7E803410D00"),
+            ),
+        )
+
+        val captura = escucha().capturar(bt, opciones())
+
+        assertEquals(2, bt.llamadasMonitor)
+        assertEquals(1, captura.desbordes)
+        assertEquals(1, captura.huecos.size)
+        assertTrue(captura.huecos.single().desdeMs <= captura.huecos.single().hastaMs)
+    }
+
+    @Test
+    fun `monitor limita los relanzamientos a cincuenta`() = runTest {
+        var reloj = 5_000L
+        val bt = TransporteFalso(
+            dpn = "6",
+            lineasPorVuelta = listOf(listOf("BUFFER FULL")),
+            avanzarReloj = { reloj++ },
+        )
+
+        val captura = EscuchaCan { reloj }.capturar(bt, opciones(duracionMs = 1_000L))
+
+        assertEquals(51, bt.llamadasMonitor)
+        assertEquals(51, captura.desbordes)
+        assertTrue(captura.huecos.all { it.desdeMs <= it.hastaMs })
     }
 
     @Test
@@ -106,9 +141,12 @@ class EscuchaCanTest {
         private val csm: String = "OK",
         private val lineas: List<String> = emptyList(),
         private val errorMonitor: Throwable? = null,
+        private val lineasPorVuelta: List<List<String>> = listOf(lineas),
+        private val avanzarReloj: () -> Unit = {},
     ) : Transport {
 
         val comandos = mutableListOf<String>()
+        var llamadasMonitor = 0
 
         override val isConnected: Boolean = true
 
@@ -136,7 +174,9 @@ class EscuchaCanTest {
         override suspend fun monitorear(comando: String, duracionMs: Long, alLinea: (String) -> Unit): String {
             comandos += comando.filterNot { it.isWhitespace() }.uppercase()
             errorMonitor?.let { throw it }
-            lineas.forEach(alLinea)
+            lineasPorVuelta.getOrElse(llamadasMonitor) { lineasPorVuelta.lastOrNull().orEmpty() }.forEach(alLinea)
+            llamadasMonitor++
+            avanzarReloj()
             return "STOPPED\r>"
         }
 

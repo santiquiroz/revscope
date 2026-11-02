@@ -2,6 +2,7 @@ package com.revscope.core.obd.escucha
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.File
@@ -87,6 +88,9 @@ class CapturasCanRepositorio internal constructor(
             .put("desbordes", c.desbordes)
             .put("errores", c.errores)
             .put("tramas", c.totalTramas)
+            .put("huecos", JSONArray().apply {
+                c.huecos.forEach { hueco -> put(JSONArray().put(hueco.desdeMs).put(hueco.hastaMs)) }
+            })
 
         fun desdeJson(texto: String): CapturaCan? = runCatching {
             val o = JSONObject(texto)
@@ -103,7 +107,15 @@ class CapturasCanRepositorio internal constructor(
                 errores = o.getInt("errores"),
                 tramas = emptyList(),
                 totalTramas = o.optInt("tramas", 0),
+                huecos = leerHuecos(o.optJSONArray("huecos")),
             )
         }.getOrNull()
+
+        private fun leerHuecos(json: JSONArray?): List<Hueco> =
+            (0 until (json?.length() ?: 0)).mapNotNull { indice ->
+                val par = json?.optJSONArray(indice) ?: return@mapNotNull null
+                if (par.length() != 2) return@mapNotNull null
+                Hueco(par.optLong(0), par.optLong(1))
+            }
     }
 }

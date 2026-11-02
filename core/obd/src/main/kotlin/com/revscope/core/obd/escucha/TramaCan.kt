@@ -7,6 +7,8 @@ data class TramaCan(
     val datos: List<Int>,
 )
 
+data class Hueco(val desdeMs: Long, val hastaMs: Long)
+
 data class CapturaCan(
     val id: String,
     val etiqueta: String,
@@ -20,6 +22,7 @@ data class CapturaCan(
     val errores: Int,
     val tramas: List<TramaCan>,
     val totalTramas: Int = tramas.size,
+    val huecos: List<Hueco> = emptyList(),
 )
 
 object IdCan {

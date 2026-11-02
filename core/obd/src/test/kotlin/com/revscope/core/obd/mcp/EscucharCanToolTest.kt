@@ -65,6 +65,7 @@ class EscucharCanToolTest {
         assertEquals(OpcionesEscucha("base", 5_000L, "7E8"), slot.captured)
         assertEquals(captura.id, respuesta.getString("id"))
         assertEquals(2, respuesta.getInt("tramas"))
+        assertTrue(respuesta.has("huecos"))
         assertFalse(respuesta.has("aviso"))
         val resumen = respuesta.getJSONArray("resumen").getJSONObject(0)
         assertEquals("7E8", resumen.getString("id"))

@@ -27,6 +27,7 @@ class CapturasCanRepositorioTest {
         silencioso = true,
         desbordes = 1,
         errores = 2,
+        huecos = listOf(Hueco(100L, 200L)),
         tramas = listOf(
             TramaCan(0L, 0x7E8, false, listOf(0x03, 0x41, 0x0D, 0x00)),
             TramaCan(120L, 0x7E9, false, emptyList()),
@@ -39,6 +40,14 @@ class CapturasCanRepositorioTest {
         repo().guardar(original)
 
         assertEquals(original, repo().leer("5000-base"))
+    }
+
+    @Test
+    fun `json anterior sin huecos se lee como lista vacia`() {
+        val json = CapturasCanRepositorio.aJson(captura("5000-base", 5_000L))
+            .apply { remove("huecos") }.toString()
+
+        assertTrue(CapturasCanRepositorio.desdeJson(json)!!.huecos.isEmpty())
     }
 
     @Test

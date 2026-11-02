@@ -20,21 +20,26 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
         val bits29 = protocolo == "7" || protocolo == "9"
         val inicio = ahora()
         val tramas = mutableListOf<TramaCan>()
+        val huecos = mutableListOf<Hueco>()
         var desbordes = 0
         var errores = 0
         var silencioso = true
+        var huecoAbiertoDesde: Long? = null
         try {
             bt.exchange("AT H1\r")
-            bt.exchange("AT S1\r")
+            bt.exchange("AT S0\r")
             bt.exchange("AT CAF0\r")
             silencioso = configurarSilencioso(bt)
             if (opciones.filtro != null) bt.exchange("AT CRA ${opciones.filtro}\r")
-            bt.monitorear("AT MA", opciones.duracionMs) { linea ->
-                clasificar(linea, bits29, inicio, tramas, { desbordes++ }, { errores++ })
-            }
+            monitorear(
+                bt, opciones.duracionMs, bits29, inicio, tramas, huecos,
+                { desbordes++ }, { errores++ },
+                { huecoAbiertoDesde }, { huecoAbiertoDesde = it },
+            )
         } finally {
             restaurar(bt)
         }
+        huecoAbiertoDesde?.let { cerrarHueco(huecos, it, tiempoRelativo(inicio, opciones.duracionMs)) }
         return CapturaCan(
             id = "$inicio-${normalizarEtiqueta(opciones.etiqueta)}",
             etiqueta = opciones.etiqueta,
@@ -47,8 +52,77 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
             desbordes = desbordes,
             errores = errores,
             tramas = tramas.toList(),
+            huecos = huecos.toList(),
         )
     }
+
+    private suspend fun monitorear(
+        bt: Transport,
+        duracionMs: Long,
+        bits29: Boolean,
+        inicio: Long,
+        tramas: MutableList<TramaCan>,
+        huecos: MutableList<Hueco>,
+        contarDesborde: () -> Unit,
+        contarError: () -> Unit,
+        huecoAbierto: () -> Long?,
+        actualizarHueco: (Long?) -> Unit,
+    ) {
+        var relanzamientos = 0
+        do {
+            val restante = (duracionMs - tiempoRelativo(inicio, duracionMs)).coerceAtLeast(0)
+            if (restante == 0L) break
+            val huboDesborde = monitorearUnaVuelta(
+                bt, restante, duracionMs, bits29, inicio, tramas, huecos,
+                contarDesborde, contarError, huecoAbierto, actualizarHueco,
+            )
+            if (!huboDesborde || tiempoRelativo(inicio, duracionMs) >= duracionMs ||
+                relanzamientos >= MAX_RELANZAMIENTOS
+            ) break
+            relanzamientos++
+        } while (true)
+    }
+
+    private suspend fun monitorearUnaVuelta(
+        bt: Transport,
+        restante: Long,
+        duracionMs: Long,
+        bits29: Boolean,
+        inicio: Long,
+        tramas: MutableList<TramaCan>,
+        huecos: MutableList<Hueco>,
+        contarDesborde: () -> Unit,
+        contarError: () -> Unit,
+        huecoAbierto: () -> Long?,
+        actualizarHueco: (Long?) -> Unit,
+    ): Boolean {
+        var primeraLinea = true
+        var huboDesborde = false
+        bt.monitorear("AT MA", restante) { linea ->
+            if (primeraLinea) {
+                huecoAbierto()?.let { desde ->
+                    cerrarHueco(huecos, desde, tiempoRelativo(inicio, duracionMs))
+                    actualizarHueco(null)
+                }
+                primeraLinea = false
+            }
+            if (LineaMonitor.esDesborde(linea)) {
+                contarDesborde()
+                huboDesborde = true
+                if (huecoAbierto() == null) actualizarHueco(tiempoRelativo(inicio, duracionMs))
+            } else {
+                clasificar(linea, bits29, inicio, tramas, {}, contarError)
+            }
+        }
+        return huboDesborde
+    }
+
+    private fun cerrarHueco(huecos: MutableList<Hueco>, desde: Long, hasta: Long) {
+        huecos += Hueco(desde, maxOf(desde, hasta))
+    }
+
+    private fun tiempoRelativo(inicio: Long, limiteMs: Long): Long =
+        (ahora() - inicio).coerceIn(0L, limiteMs)
 
     private suspend fun leerProtocolo(bt: Transport): String {
         val numero = ResponseParser.cleanResponse(bt.exchange("AT DPN\r")).removePrefix("A")
@@ -81,6 +155,7 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
     }
 
     companion object {
+        private const val MAX_RELANZAMIENTOS = 50
         private val PROTOCOLOS_CAN = setOf("6", "7", "8", "9")
         private val RESTAURACION = listOf("AT CAF1\r", "AT AR\r", "AT S0\r", "AT H0\r")
 
