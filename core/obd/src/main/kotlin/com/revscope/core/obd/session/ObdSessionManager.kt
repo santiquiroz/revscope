@@ -32,6 +32,7 @@ import com.revscope.core.obd.model.DtcCode
 import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.obd.perfilcan.PerfilesCanRepositorio
 import com.revscope.core.obd.mcp.McpActivityTracker
 import com.revscope.core.obd.protocol.DtcResponseParser
 import com.revscope.core.obd.protocol.DtcServicio
@@ -73,6 +74,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -80,7 +82,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -117,6 +121,7 @@ class ObdSessionManager @Inject constructor(
     private val trackModeEngine: TrackModeEngine,
     private val tripSummaryNotifier: TripSummaryNotifier,
     private val mcpActivity: McpActivityTracker,
+    private val perfilesCan: PerfilesCanRepositorio,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -135,6 +140,10 @@ class ObdSessionManager @Inject constructor(
 
     private val _activeProfile = MutableStateFlow<VehicleProfileEntity?>(null)
     val activeProfile: StateFlow<VehicleProfileEntity?> = _activeProfile.asStateFlow()
+
+    /** Último aviso único del bus CAN de la sesión (caducidad o adaptador sin modo monitor). */
+    private val _avisoBus = MutableStateFlow<String?>(null)
+    val avisoBus: StateFlow<String?> = _avisoBus.asStateFlow()
 
     private val _lastReadVin = MutableStateFlow<String?>(null)
     val lastReadVin: StateFlow<String?> = _lastReadVin.asStateFlow()
@@ -911,6 +920,10 @@ class ObdSessionManager @Inject constructor(
         }
         milWatcher.start(scope, polled) { reading -> publishReading(reading) }
 
+        // Sin CAN no hay bus; con CAN la sesión existe siempre para que elegir perfil no exija reconectar.
+        val conBus = protocoloEsCan == true
+        _avisoBus.value = null
+
         telemetryJob = scope.launch {
             try {
                 coroutineScope {
@@ -919,10 +932,12 @@ class ObdSessionManager @Inject constructor(
                     scheduler.setIdleMode(idleModeEnabled)
                     scheduler.setRemoteViewerActive(remoteViewerActive)
                     scheduler.setPreset(_muestreoPreset.value)
-                    val rawFlow = merge(scheduler.observeReadings(), capturaLecturas)
+                    val bus = if (conBus) BusSesion(bt, pollingGate, scheduler, avisar = { _avisoBus.value = it }) else null
+                    val rawFlow = lecturasCrudas(scheduler, bus)
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
 
                     val derivedFlow = derivedEngine.observeDerived(rawFlow)
+                        .let { derivadas -> if (bus == null) derivadas else derivadas.filter(bus::aceptaDerivada) }
 
                     val allFlow = merge(rawFlow, derivedFlow)
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
@@ -960,6 +975,18 @@ class ObdSessionManager @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun lecturasCrudas(scheduler: PidScheduler, bus: BusSesion?): Flow<ObdReading> {
+        if (bus == null) return merge(scheduler.observeReadings(), capturaLecturas)
+        val configuraciones = combine(_activeProfile, perfilesCan.cambios) { profile, _ ->
+            ConfigBus.de(profile, perfilesCan)
+        }
+        return merge(
+            scheduler.observeReadings().filter(bus::aceptaPid),
+            capturaLecturas,
+            bus.lecturas(configuraciones).filter(bus::aceptaBus),
+        )
     }
 
     private suspend fun stopTelemetry(motivo: MotivoFin) {
