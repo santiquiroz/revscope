@@ -15,6 +15,6 @@ class ListarCapturasCanTool @Inject constructor(
 
     override suspend fun call(arguments: JSONObject): String =
         JSONObject()
-            .put("capturas", JSONArray(repositorio.listar().map { CapturasCanRepositorio.aJson(it) }))
+            .put("capturas", JSONArray(repositorio.listar().map { CapturasCanRepositorio.aJsonConOrigen(it) }))
             .toString()
 }

@@ -23,6 +23,20 @@ data class CapturaCan(
     val tramas: List<TramaCan>,
     val totalTramas: Int = tramas.size,
     val huecos: List<Hueco> = emptyList(),
+    val origen: String = ORIGEN_MCP,
+    val muestrasGps: Int = 0,
+) {
+    companion object {
+        const val ORIGEN_MCP = "mcp"
+        const val ORIGEN_APP = "app"
+    }
+}
+
+data class MuestraGps(
+    val tMs: Long,
+    val velocidadKmh: Float?,
+    val precisionM: Float?,
+    val rumboGrados: Float?,
 )
 
 object IdCan {

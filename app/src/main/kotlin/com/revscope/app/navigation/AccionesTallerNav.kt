@@ -20,6 +20,7 @@ internal fun accionesHub(nav: NavHostController): AccionesHub {
         onEscaner = ir(Screen.Mode22Scanner),
         onOndaO2 = ir(Screen.O2Wave),
         onMode06 = ir(Screen.Mode06),
+        onCapturaCanRuta = ir(Screen.CapturaCanRuta),
         onMecanicoIa = ir(Screen.MechanicChat),
         onMarchas = ir(Screen.GearAnalyzer),
         onPerfiles = ir(Screen.VehicleProfile),

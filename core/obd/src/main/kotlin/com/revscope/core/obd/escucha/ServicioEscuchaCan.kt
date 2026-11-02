@@ -12,12 +12,20 @@ class ServicioEscuchaCan @Inject constructor(
     private val repositorio: CapturasCanRepositorio,
 ) {
 
-    suspend fun escuchar(opciones: OpcionesEscucha): Result<CapturaCan> {
-        if (sessionManager.estadoViaje.value is EstadoViaje.Grabando) {
-            return Result.failure(IllegalStateException("hay un viaje grabando; el modo escucha detiene el sondeo"))
-        }
+    suspend fun escuchar(opciones: OpcionesEscucha): Result<CapturaCan> =
+        capturar(opciones).onSuccess { repositorio.guardar(it) }
+
+    suspend fun capturar(opciones: OpcionesEscucha): Result<CapturaCan> {
+        motivoRechazo()?.let { return Result.failure(IllegalStateException(it)) }
         return sessionManager.withDiagnosticLease("escucha_can", opciones.duracionMs + 15_000) { bt ->
             escucha.capturar(bt, opciones)
-        }.onSuccess { repositorio.guardar(it) }
+        }
+    }
+
+    fun motivoRechazo(): String? =
+        if (sessionManager.estadoViaje.value is EstadoViaje.Grabando) VIAJE_GRABANDO else null
+
+    companion object {
+        const val VIAJE_GRABANDO = "hay un viaje grabando; el modo escucha detiene el sondeo"
     }
 }

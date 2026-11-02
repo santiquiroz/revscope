@@ -73,6 +73,67 @@ class CapturasCanRepositorioTest {
     }
 
     @Test
+    fun `gps ida y vuelta con campos nulos y metadatos de origen`() {
+        val gps = listOf(
+            MuestraGps(0L, 12.5f, 3.0f, 90.0f),
+            MuestraGps(1_000L, null, 4.5f, null),
+            MuestraGps(2_000L, 0.0f, null, 359.5f),
+        )
+        val repositorio = repo()
+        repositorio.guardar(captura("5000-ruta", 5_000L).copy(origen = CapturaCan.ORIGEN_APP), gps)
+
+        assertEquals(gps, repositorio.leerGps("5000-ruta"))
+        val meta = repositorio.listar().single()
+        assertEquals(CapturaCan.ORIGEN_APP, meta.origen)
+        assertEquals(3, meta.muestrasGps)
+        assertTrue(File(temporal.root, "5000-ruta.gps.csv").readLines().first() == GpsCsv.CABECERA)
+    }
+
+    @Test
+    fun `sin gps no escribe csv y leerGps devuelve vacio`() {
+        val repositorio = repo()
+        repositorio.guardar(captura("5000-base", 5_000L))
+
+        assertFalse(File(temporal.root, "5000-base.gps.csv").exists())
+        assertTrue(repositorio.leerGps("5000-base").isEmpty())
+        assertTrue(repositorio.leerGps("../secreto").isEmpty())
+    }
+
+    @Test
+    fun `json viejo sin origen ni muestrasGps se lee como mcp y cero`() {
+        val json = CapturasCanRepositorio.aJson(captura("5000-base", 5_000L))
+            .apply {
+                remove("origen")
+                remove("muestrasGps")
+            }.toString()
+
+        val leida = CapturasCanRepositorio.desdeJson(json)!!
+
+        assertEquals(CapturaCan.ORIGEN_MCP, leida.origen)
+        assertEquals(0, leida.muestrasGps)
+    }
+
+    @Test
+    fun `existe solo con metadatos guardados`() {
+        val repositorio = repo()
+        repositorio.guardar(captura("5000-base", 5_000L))
+
+        assertTrue(repositorio.existe("5000-base"))
+        assertFalse(repositorio.existe("9999-otra"))
+        assertFalse(repositorio.existe("../secreto"))
+    }
+
+    @Test
+    fun `la poda borra tambien el csv de gps`() {
+        val repositorio = repo(tope = 1)
+        repositorio.guardar(captura("1-a", 1_000L), listOf(MuestraGps(0L, 1f, 1f, 1f)))
+        repositorio.guardar(captura("2-a", 2_000L))
+
+        assertFalse(File(temporal.root, "1-a.gps.csv").exists())
+        assertFalse(File(temporal.root, "1-a.json").exists())
+    }
+
+    @Test
     fun `al pasar el tope borra las mas viejas`() {
         val repositorio = repo(tope = 3)
         repositorio.guardar(captura("1-a", 1_000L))

@@ -40,6 +40,7 @@ import com.revscope.core.obd.mcp.ComandoEscrituraTool
 import com.revscope.core.obd.mcp.EscucharCanTool
 import com.revscope.core.obd.mcp.ListarCapturasCanTool
 import com.revscope.core.obd.mcp.LeerCapturaCanTool
+import com.revscope.core.obd.mcp.LeerGpsCapturaCanTool
 import com.revscope.core.obd.mcp.DiferenciaCapturasCanTool
 import com.revscope.core.obd.mcp.MapaBitsCanTool
 import com.revscope.core.obd.mcp.EjecutarCatalogoTool
@@ -114,6 +115,7 @@ object McpModule {
         leerCapturaCan: LeerCapturaCanTool,
         diferenciaCapturasCan: DiferenciaCapturasCanTool,
         mapaBitsCan: MapaBitsCanTool,
+        leerGpsCapturaCan: LeerGpsCapturaCanTool,
     ): List<McpTool> = listOf(
         getEstado, getViajes, getViajeDetalle, getChequeoSalud, getDtc, getGuiaDtc, getMantenimiento, getDocumentos,
         finalizarViaje, iniciarViaje, borrarDtc,
@@ -123,7 +125,7 @@ object McpModule {
         getInfoEcu, getMode06, descubrirModulos, leerDid, comandoLectura, getRegistroEscrituras,
         getCatalogo, leerCatalogo, guardarEnCatalogo,
         borrarDtcModulo, reiniciarEcu, pruebaABordo, comandoEscritura, ejecutarCatalogo,
-        escucharCan, listarCapturasCan, leerCapturaCan, diferenciaCapturasCan, mapaBitsCan,
+        escucharCan, listarCapturasCan, leerCapturaCan, diferenciaCapturasCan, mapaBitsCan, leerGpsCapturaCan,
     )
 
     @Provides
