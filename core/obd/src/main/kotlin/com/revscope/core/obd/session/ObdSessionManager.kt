@@ -258,7 +258,7 @@ class ObdSessionManager @Inject constructor(
     )
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private val odometerHistoryStore = OdometerHistoryStore(settings)
-    private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao)
+    private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao, resolver)
     val odometerCheck: StateFlow<OdometerChecker.Result?> = odometerChecker.lastResult
     private var activeScheduler: PidScheduler? = null
     @Volatile private var linkPipeline: LinkPipeline? = null

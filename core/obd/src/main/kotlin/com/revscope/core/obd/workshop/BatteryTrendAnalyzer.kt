@@ -1,5 +1,9 @@
 package com.revscope.core.obd.workshop
 
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
+
 private const val MIN_SESSIONS = 6
 private const val DECLINE_THRESHOLD_V = 0.3
 private const val WEAK_CHARGING_V = 13.2
@@ -19,10 +23,12 @@ object BatteryTrendAnalyzer {
 
     data class Result(val verdict: Verdict, val recentAvgV: Double?, val deltaV: Double?, val detalle: String)
 
-    fun analyze(voltagesNewestFirst: List<Double>): Result {
+    fun analyze(voltagesNewestFirst: List<Double>, resolver: StringResolver): Result {
         if (voltagesNewestFirst.size < MIN_SESSIONS) {
-            return Result(Verdict.SIN_DATOS, null, null, "Se necesitan al menos $MIN_SESSIONS viajes con voltaje")
+            val detalle = resolver.plural(R.plurals.obd_battery_trend_no_data, MIN_SESSIONS, MIN_SESSIONS)
+            return Result(Verdict.SIN_DATOS, null, null, detalle)
         }
+        val decimal = { v: Double -> LocaleNumbers.decimal(v, 1, resolver.locale) }
         val half = voltagesNewestFirst.size / 2
         val recent = voltagesNewestFirst.take(half)
         val older = voltagesNewestFirst.drop(half)
@@ -33,16 +39,15 @@ object BatteryTrendAnalyzer {
         return when {
             delta <= -DECLINE_THRESHOLD_V -> Result(
                 Verdict.DEGRADANDO, recentAvg, delta,
-                "Voltaje de carga cayó %.1f V vs tus viajes anteriores — revisa batería/alternador antes de quedar varado"
-                    .format(-delta),
+                resolver.get(R.string.obd_battery_trend_declining, decimal(-delta)),
             )
             recentAvg < WEAK_CHARGING_V -> Result(
                 Verdict.CARGA_DEBIL, recentAvg, delta,
-                "Carga promedio %.1f V (esperado >13.2 V con motor encendido)".format(recentAvg),
+                resolver.get(R.string.obd_battery_trend_weak, decimal(recentAvg)),
             )
             else -> Result(
                 Verdict.OK, recentAvg, delta,
-                "Carga estable en %.1f V".format(recentAvg),
+                resolver.get(R.string.obd_battery_trend_stable, decimal(recentAvg)),
             )
         }
     }

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Vehicle status: DocumentStatusCalculator -->
+    <string name="obd_doc_title_soat">Mandatory insurance (SOAT)</string>
+    <string name="obd_doc_title_rtm">Roadworthiness inspection (RTM)</string>
+    <string name="obd_doc_title_comprehensive">Comprehensive insurance</string>
+    <string name="obd_doc_title_license">Driver\'s license</string>
+    <string name="obd_doc_title_pico_placa">Pico y placa</string>
+    <string name="obd_doc_not_configured">Not set up</string>
+    <string name="obd_doc_expires_today">Expires today</string>
+    <plurals name="obd_doc_expires_in_days">
+        <item quantity="one">Expires in %1$d day</item>
+        <item quantity="other">Expires in %1$d days</item>
+    </plurals>
+    <plurals name="obd_doc_expired_days_ago">
+        <item quantity="one">Expired 1 day ago</item>
+        <item quantity="other">Expired %1$d days ago</item>
+    </plurals>
+    <string name="obd_doc_banner_expired">%1$s expired</string>
+    <string name="obd_doc_banner_pico_placa_until">Pico y placa until %1$d:00</string>
+    <string name="obd_doc_banner_pico_placa_today">Pico y placa restriction today</string>
+    <string name="obd_doc_pico_placa_wait_until">Don\'t drive until %1$s:00</string>
+    <string name="obd_doc_pico_placa_restricted_until">You\'re restricted today until %1$s:00</string>
+    <string name="obd_doc_pico_placa_update_rules">Update this term\'s rules</string>
+    <string name="obd_doc_pico_placa_motorcycles_exempt">Motorcycles exempt in %1$s</string>
+    <string name="obd_doc_pico_placa_free">You\'re free to drive</string>
+    <string name="obd_doc_pico_placa_rules_pending">Set up the current rotation for %1$s in Settings (JSON)</string>
+
+    <!-- Pico y placa rules summary: CityRulesFormatter -->
+    <string name="obd_city_rules_weekday_mon">Mon</string>
+    <string name="obd_city_rules_weekday_tue">Tue</string>
+    <string name="obd_city_rules_weekday_wed">Wed</string>
+    <string name="obd_city_rules_weekday_thu">Thu</string>
+    <string name="obd_city_rules_weekday_fri">Fri</string>
+    <string name="obd_city_rules_parity">Odd:%1$s Even:%2$s</string>
+    <string name="obd_city_rules_motorcycles_exempt">" · motorcycles exempt"</string>
+
+    <!-- Daily notice: DailyStatusNotifier -->
+    <string name="obd_daily_status_title">Vehicle status</string>
+    <string name="obd_daily_status_channel">Vehicle documents</string>
+
+    <!-- Health check: DiagnosticRules -->
+    <string name="obd_diag_area_mixture">Fuel mixture</string>
+    <string name="obd_diag_area_o2">O2 sensor</string>
+    <string name="obd_diag_area_electrical">Electrical</string>
+    <string name="obd_diag_area_cooling">Cooling</string>
+    <string name="obd_diag_area_readiness">Readiness monitors</string>
+    <string name="obd_diag_ltft_ok">Long-term fuel trim %1$s%%</string>
+    <string name="obd_diag_ltft_ok_cause">The ECU is compensating within the normal range</string>
+    <string name="obd_diag_ltft_fail">Long-term fuel trim %1$s%% out of control</string>
+    <string name="obd_diag_ltft_fail_cause">The ECU can\'t correct the mixture — check the whole fuel system</string>
+    <string name="obd_diag_ltft_lean">Lean mixture (LTFT +%1$s%%)</string>
+    <string name="obd_diag_ltft_lean_cause">Lean mixture: vacuum leaks, dirty injectors or a dirty MAF sensor</string>
+    <string name="obd_diag_ltft_rich">Rich mixture (LTFT %1$s%%)</string>
+    <string name="obd_diag_ltft_rich_cause">Rich mixture: leaking injector, high fuel pressure or miscalibrated MAF</string>
+    <string name="obd_diag_total_trim_high">Total correction %1$s%% too high</string>
+    <string name="obd_diag_total_trim_high_cause">Short- plus long-term trim exceeds ±%1$s%% — active mixture condition</string>
+    <string name="obd_diag_total_trim_ok">Total correction %1$s%%</string>
+    <string name="obd_diag_total_trim_ok_cause">Combined trims within range</string>
+    <string name="obd_diag_o2_few_samples">Not enough samples</string>
+    <string name="obd_diag_o2_few_samples_cause">More readings are needed to diagnose the sensor</string>
+    <string name="obd_diag_o2_stuck_low">O2 sensor stuck low (&lt;%1$sV)</string>
+    <string name="obd_diag_o2_stuck_low_cause">Lazy or worn-out sensor, or an extremely lean mixture</string>
+    <string name="obd_diag_o2_stuck_high">O2 sensor stuck high (&gt;%1$sV)</string>
+    <string name="obd_diag_o2_stuck_high_cause">Contaminated sensor or an extremely rich mixture</string>
+    <string name="obd_diag_o2_switching">O2 sensor switching</string>
+    <string name="obd_diag_o2_switching_cause">The sensor is switching — healthy behavior</string>
+    <string name="obd_diag_voltage_low_running">Voltage %1$sV low with engine running</string>
+    <string name="obd_diag_voltage_low_running_cause">The alternator/stator isn\'t charging properly</string>
+    <string name="obd_diag_battery_low">Low battery (%1$sV)</string>
+    <string name="obd_diag_battery_low_cause">Battery discharged or near the end of its life</string>
+    <string name="obd_diag_voltage_ok">Voltage %1$sV</string>
+    <string name="obd_diag_voltage_ok_cause">Charging system within range</string>
+    <string name="obd_diag_overheating">Overheating (%1$s°C)</string>
+    <string name="obd_diag_overheating_cause">Stop the engine — check coolant, water pump, fan and thermostat</string>
+    <string name="obd_diag_temperature_ok">Temperature %1$s°C</string>
+    <string name="obd_diag_temperature_ok_cause">Within operating range</string>
+    <plurals name="obd_diag_mil_on">
+        <item quantity="one">Check engine light (MIL) on — %1$d code</item>
+        <item quantity="other">Check engine light (MIL) on — %1$d codes</item>
+    </plurals>
+    <string name="obd_diag_mil_on_cause">There are active faults — check the trouble codes (DTC) before the roadworthiness inspection</string>
+    <string name="obd_diag_mil_off">Check engine light off</string>
+    <string name="obd_diag_mil_off_cause">No active faults reported</string>
+    <string name="obd_diag_monitor_ready">%1$s: ready</string>
+    <string name="obd_diag_monitor_ready_cause">Monitor complete</string>
+    <string name="obd_diag_monitor_not_ready">%1$s: NOT ready</string>
+    <string name="obd_diag_monitor_not_ready_cause">Monitor incomplete — drive 20-30 min in mixed conditions before the roadworthiness inspection</string>
+
+    <!-- Battery trend: BatteryTrendAnalyzer -->
+    <plurals name="obd_battery_trend_no_data">
+        <item quantity="one">At least %1$d trip with voltage data is needed</item>
+        <item quantity="other">At least %1$d trips with voltage data are needed</item>
+    </plurals>
+    <string name="obd_battery_trend_declining">Charging voltage dropped %1$s V vs your previous trips — check the battery/alternator before you get stranded</string>
+    <string name="obd_battery_trend_weak">Average charge %1$s V (expected &gt;13.2 V with engine running)</string>
+    <string name="obd_battery_trend_stable">Charging steady at %1$s V</string>
+
+    <!-- Mode 06: Mode06MidNames -->
+    <string name="obd_mode06_catalyst_b1">Catalyst B1</string>
+    <string name="obd_mode06_catalyst_b2">Catalyst B2</string>
+    <string name="obd_mode06_misfire_general">General misfire</string>
+    <string name="obd_mode06_misfire_cylinder">Misfire cylinder %1$d</string>
+    <string name="obd_mode06_mid">MID %1$s</string>
+
+    <!-- Odometer: OdometerVerifier -->
+    <string name="obd_odometer_area">Odometer</string>
+    <string name="obd_odometer_baseline">Baseline recorded (%1$s km)</string>
+    <string name="obd_odometer_baseline_cause">First ECU odometer reading — future readings are compared against this one</string>
+    <string name="obd_odometer_rolled_back">The odometer went backward (%1$s km → %2$s km)</string>
+    <string name="obd_odometer_rolled_back_cause">Possible odometer tampering — mileage can\'t go down</string>
+    <string name="obd_odometer_behind_app">The odometer advanced %1$s km but the app logged %2$s km driven</string>
+    <string name="obd_odometer_behind_app_cause">The odometer advances less than the distance logged by the app — possible tampering or an unreliable reading</string>
+    <string name="obd_odometer_reading">Odometer %1$s km</string>
+    <string name="obd_odometer_window_too_short">window too short to compare</string>
+    <string name="obd_odometer_consistent">Reading consistent with the distance logged by the app</string>
+</resources>

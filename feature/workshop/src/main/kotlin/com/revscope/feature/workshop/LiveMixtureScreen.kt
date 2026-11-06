@@ -57,14 +57,14 @@ private val TextColor = Color(0xFFE6E8F0)
 private data class MixtureRow(
     val pid: String,
     @StringRes val labelRes: Int,
-    val diagnose: ((Double, Map<String, ObdReading>) -> DiagnosticRules.Diagnosis?)? = null,
+    val diagnose: ((Double, Map<String, ObdReading>, StringResolver) -> DiagnosticRules.Diagnosis?)? = null,
 )
 
 private val ROWS = listOf(
     MixtureRow("06", R.string.workshop_mixture_fuel_trim_short_b1),
-    MixtureRow("07", R.string.workshop_mixture_fuel_trim_long_b1) { v, _ -> DiagnosticRules.evaluarFuelTrimLargo(v) },
+    MixtureRow("07", R.string.workshop_mixture_fuel_trim_long_b1) { v, _, r -> DiagnosticRules.evaluarFuelTrimLargo(v, r) },
     MixtureRow("08", R.string.workshop_mixture_fuel_trim_short_b2),
-    MixtureRow("09", R.string.workshop_mixture_fuel_trim_long_b2) { v, _ -> DiagnosticRules.evaluarFuelTrimLargo(v) },
+    MixtureRow("09", R.string.workshop_mixture_fuel_trim_long_b2) { v, _, r -> DiagnosticRules.evaluarFuelTrimLargo(v, r) },
     MixtureRow("14", R.string.workshop_mixture_o2_b1s1),
     MixtureRow("15", R.string.workshop_mixture_o2_b1s2),
     MixtureRow("18", R.string.workshop_mixture_o2_b2s1),
@@ -171,7 +171,9 @@ private fun MixtureRowCard(
     val disponibilidadPid = disponibilidad(row.pid, label.lowercase())
     val reading = readings[row.pid].takeUnless { disponibilidadPid.estado == EstadoSoporte.NoSoportado }
     val definicion = definition(row.pid)
-    val diagnosis = reading?.let { row.diagnose?.invoke(it.value, readings) }
+    val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
+    val diagnosis = reading?.let { row.diagnose?.invoke(it.value, readings, resolver) }
     val locale = LocalConfiguration.current.locales[0]
 
     Surface(shape = RoundedCornerShape(12.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
@@ -280,6 +282,6 @@ private fun mixtureSnapshotRow(
     resolver: StringResolver,
 ): List<Any?>? {
     val reading = readings[row.pid] ?: return null
-    val diagnosis = row.diagnose?.invoke(reading.value, readings)
+    val diagnosis = row.diagnose?.invoke(reading.value, readings, resolver)
     return listOf(row.pid, resolver.get(row.labelRes), reading.value, reading.unit, diagnosis?.titulo ?: "")
 }

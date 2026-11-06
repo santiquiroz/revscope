@@ -10,6 +10,16 @@ import org.junit.Test
 
 class DiagnosticosChequeoTest {
     private val resolver = XmlStringResolver.es(R::class.java)
+    private val todos = XmlStringResolver.es(
+        R::class.java,
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
+
+    private val strings = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("../../core/obd/src/main/res"),
+    )
 
     @Test
     fun `readiness no soportado no produce un diagnostico contradictorio`() {
@@ -20,7 +30,7 @@ class DiagnosticosChequeoTest {
             monitors = emptyList(),
         )
 
-        val diagnosticos = DiagnosticosChequeo.readiness(EstadoSoporte.NoSoportado, estado, resolver)
+        val diagnosticos = DiagnosticosChequeo.readiness(EstadoSoporte.NoSoportado, estado, todos)
 
         assertTrue(diagnosticos.isEmpty())
     }
@@ -33,6 +43,7 @@ class DiagnosticosChequeoTest {
             lecturas = lecturas,
             muestrasO2 = List(40) { 0.1 },
             estadoSoporte = { pid -> if (pid == "14") EstadoSoporte.NoSoportado else EstadoSoporte.Soportado },
+            resolver = strings,
         )
 
         assertFalse(diagnosticos.any { it.area == "Sensor O2" })
@@ -44,6 +55,7 @@ class DiagnosticosChequeoTest {
             lecturas = mapOf("VBAT" to lectura("VBAT", 11.2, "V")),
             muestrasO2 = emptyList(),
             estadoSoporte = { EstadoSoporte.Soportado },
+            resolver = strings,
         )
 
         assertFalse(diagnosticos.any { it.area == "Eléctrico" })
@@ -59,8 +71,8 @@ class DiagnosticosChequeoTest {
             "VBAT" to lectura("VBAT", 11.2, "V"),
         )
 
-        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), estadoSoporte)
-        val noDisponibles = DiagnosticosChequeo.parametrosNoDisponibles(estadoSoporte, resolver)
+        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), estadoSoporte, todos)
+        val noDisponibles = DiagnosticosChequeo.parametrosNoDisponibles(estadoSoporte, todos)
 
         assertFalse(diagnosticos.any { it.area == "Eléctrico" })
         assertTrue(noDisponibles.contains("RPM del motor"))

@@ -1,16 +1,20 @@
 package com.revscope.core.obd.workshop
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OdometerVerifierTest {
 
+    private val es = XmlStringResolver.es(R::class.java)
+
     @Test
     fun `primera lectura es linea base ok`() {
         val nueva = OdometerVerifier.Reading(epochMs = 1_000L, km = 12_345.0)
 
-        val d = OdometerVerifier.evaluar(historial = emptyList(), nueva = nueva, distanciaAppKm = 0.0)
+        val d = OdometerVerifier.evaluar(historial = emptyList(), nueva = nueva, distanciaAppKm = 0.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.OK, d.nivel)
         assertTrue(d.titulo.contains("Línea base"))
@@ -21,7 +25,7 @@ class OdometerVerifierTest {
         val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 50_000.0)
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 49_800.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 0.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 0.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.FALLA, d.nivel)
         assertTrue(d.causaProbable.contains("manipulación", ignoreCase = true))
@@ -33,7 +37,7 @@ class OdometerVerifierTest {
         // ECU avanzó 70 km, la app registró 100 km recorridos → 70% < 80%
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_070.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 100.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 100.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.ATENCION, d.nivel)
         assertTrue(d.causaProbable.contains("avanza menos", ignoreCase = true))
@@ -44,7 +48,7 @@ class OdometerVerifierTest {
         val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 10_000.0)
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_080.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 100.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 100.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.OK, d.nivel)
     }
@@ -54,7 +58,7 @@ class OdometerVerifierTest {
         val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 10_000.0)
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_150.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 100.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 100.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.OK, d.nivel)
     }
@@ -64,7 +68,7 @@ class OdometerVerifierTest {
         val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 10_000.0)
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_050.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 0.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 0.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.OK, d.nivel)
     }
@@ -75,7 +79,7 @@ class OdometerVerifierTest {
         // Delta ECU 1 km vs 4 km de app → 25% < 80%, dispararía ATENCION si la ventana fuera válida
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_001.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 4.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 4.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.OK, d.nivel)
         assertTrue(d.causaProbable.contains("ventana insuficiente", ignoreCase = true))
@@ -87,7 +91,7 @@ class OdometerVerifierTest {
         // Delta ECU 1 km vs 5 km de app → 20% < 80% → ATENCION
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_001.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 5.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 5.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.ATENCION, d.nivel)
     }
@@ -97,7 +101,7 @@ class OdometerVerifierTest {
         val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 50_000.0)
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 49_800.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 2.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 2.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.FALLA, d.nivel)
     }
@@ -107,7 +111,7 @@ class OdometerVerifierTest {
         val anterior = OdometerVerifier.Reading(epochMs = 1_000L, km = 10_000.0)
         val nueva = OdometerVerifier.Reading(epochMs = 2_000L, km = 10_000.0)
 
-        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 50.0)
+        val d = OdometerVerifier.evaluar(historial = listOf(anterior), nueva = nueva, distanciaAppKm = 50.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.ATENCION, d.nivel)
     }
@@ -120,7 +124,7 @@ class OdometerVerifierTest {
         )
         val nueva = OdometerVerifier.Reading(epochMs = 3_000L, km = 9_500.0)
 
-        val d = OdometerVerifier.evaluar(historial = historial, nueva = nueva, distanciaAppKm = 0.0)
+        val d = OdometerVerifier.evaluar(historial = historial, nueva = nueva, distanciaAppKm = 0.0, resolver = es)
 
         assertEquals(DiagnosticRules.Nivel.FALLA, d.nivel)
     }

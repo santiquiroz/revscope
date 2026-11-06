@@ -26,7 +26,7 @@ object CityRegistry {
     val CITIES: List<City> = listOf(
         City(
             id = "medellin",
-            nombre = "Medellín",
+            nombre = "Medellín", // i18n-ignore
             lat = 6.2442,
             lon = -75.5812,
             radiusKm = 18.0,
@@ -34,7 +34,7 @@ object CityRegistry {
         ),
         City(
             id = "bogota",
-            nombre = "Bogotá",
+            nombre = "Bogotá", // i18n-ignore
             lat = 4.7110,
             lon = -74.0721,
             radiusKm = 22.0,

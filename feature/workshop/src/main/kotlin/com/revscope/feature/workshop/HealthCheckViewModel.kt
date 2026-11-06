@@ -153,7 +153,7 @@ class HealthCheckViewModel @Inject constructor(
     /** Tendencia de voltaje entre sesiones — null cuando no hay historial suficiente. */
     private suspend fun batteryTrendDiagnosis(): DiagnosticRules.Diagnosis? {
         val voltages = runCatching { telemetryDao.recentSessionVoltages() }.getOrNull() ?: return null
-        val result = com.revscope.core.obd.workshop.BatteryTrendAnalyzer.analyze(voltages.map { it.avgVolts })
+        val result = com.revscope.core.obd.workshop.BatteryTrendAnalyzer.analyze(voltages.map { it.avgVolts }, resolver)
         return when (result.verdict) {
             com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.SIN_DATOS -> null
             com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.OK -> DiagnosticRules.Diagnosis(
@@ -229,7 +229,7 @@ class HealthCheckViewModel @Inject constructor(
             val o2Samples = collectO2Samples()
             val readings = sessionManager.readings.value
             return MuestreoMezcla(
-                DiagnosticosChequeo.mezcla(readings, o2Samples, registry::estadoSoporte),
+                DiagnosticosChequeo.mezcla(readings, o2Samples, registry::estadoSoporte, resolver),
                 readings,
             )
         } finally {
@@ -327,7 +327,7 @@ internal object DiagnosticosChequeo {
         resolver: StringResolver,
     ): List<DiagnosticRules.Diagnosis> = when {
         soporte == EstadoSoporte.NoSoportado -> emptyList()
-        status != null -> DiagnosticRules.evaluarReadiness(status)
+        status != null -> DiagnosticRules.evaluarReadiness(status, resolver)
         else -> listOf(readinessNoDisponible(resolver))
     }
 
@@ -335,21 +335,22 @@ internal object DiagnosticosChequeo {
         lecturas: Map<String, ObdReading>,
         muestrasO2: List<Double>,
         estadoSoporte: (String) -> EstadoSoporte,
+        resolver: StringResolver,
     ): List<DiagnosticRules.Diagnosis> = buildList {
         val largoB1 = lecturaSoportada(lecturas, LONG_TRIM_B1_PID, estadoSoporte)
         val largoB2 = lecturaSoportada(lecturas, LONG_TRIM_B2_PID, estadoSoporte)
-        largoB1?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
-        largoB2?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value)) }
+        largoB1?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value, resolver)) }
+        largoB2?.let { add(DiagnosticRules.evaluarFuelTrimLargo(it.value, resolver)) }
         val cortoB1 = lecturaSoportada(lecturas, SHORT_TRIM_B1_PID, estadoSoporte)
         if (cortoB1 != null && largoB1 != null) {
-            add(DiagnosticRules.evaluarTrimCombinado(cortoB1.value, largoB1.value))
+            add(DiagnosticRules.evaluarTrimCombinado(cortoB1.value, largoB1.value, resolver))
         }
         if (estadoSoporte(O2_SENSOR_B1S1_PID) != EstadoSoporte.NoSoportado) {
-            add(DiagnosticRules.evaluarO2(muestrasO2))
+            add(DiagnosticRules.evaluarO2(muestrasO2, resolver))
         }
-        agregarVoltajeSiHayRpm(lecturas, estadoSoporte)
+        agregarVoltajeSiHayRpm(lecturas, estadoSoporte, resolver)
         lecturaSoportada(lecturas, COOLANT_TEMP_PID, estadoSoporte)
-            ?.let { add(DiagnosticRules.evaluarTemperatura(it.value)) }
+            ?.let { add(DiagnosticRules.evaluarTemperatura(it.value, resolver)) }
     }
 
     fun parametrosNoDisponibles(estadoSoporte: (String) -> EstadoSoporte, resolver: StringResolver): List<String> =
@@ -360,11 +361,12 @@ internal object DiagnosticosChequeo {
     private fun MutableList<DiagnosticRules.Diagnosis>.agregarVoltajeSiHayRpm(
         lecturas: Map<String, ObdReading>,
         estadoSoporte: (String) -> EstadoSoporte,
+        resolver: StringResolver,
     ) {
         if (estadoSoporte(RPM_PID) == EstadoSoporte.NoSoportado) return
         val rpm = lecturas[RPM_PID]?.value ?: return
         val voltaje = lecturas[ObdSessionManager.VBAT_PID]?.value ?: return
-        add(DiagnosticRules.evaluarVoltaje(voltaje, rpm > ENGINE_RUNNING_RPM))
+        add(DiagnosticRules.evaluarVoltaje(voltaje, rpm > ENGINE_RUNNING_RPM, resolver))
     }
 
     private fun lecturaSoportada(

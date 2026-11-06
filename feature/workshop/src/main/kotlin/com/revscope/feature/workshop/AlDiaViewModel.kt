@@ -104,7 +104,9 @@ class AlDiaViewModel @Inject constructor(
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
         val now = System.currentTimeMillis()
         val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, now)
-        return DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
+        return DocumentStatusCalculator.calculate(
+            documents, overrideRules, now, aiFallbackRules = aiFallback, resolver = stringResolver,
+        )
     }
 
     private suspend fun aiFallbackFor(
