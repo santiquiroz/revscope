@@ -3,6 +3,8 @@ package com.revscope.feature.workshop.taller.prueba
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.BandaGrafica
 import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.AnalisisBateria
 import com.revscope.core.obd.taller.pruebas.AnalisisMapBaro
 import com.revscope.core.obd.taller.pruebas.AnalizadorBateria
@@ -22,8 +24,10 @@ internal object MapeoResultadoElectrico {
         val carga = a.comprobacion(ClavesBanda.CARGA_V)?.banda
         return base.copy(
             comprobaciones = a.comprobaciones.map { MapeoResultadoMotor.comprobacion(it, resolver) },
-            medidas = TextosBateria.medidas(a),
-            graficas = listOfNotNull(datos?.let { MapeoResultadoMotor.grafica(it, AnalizadorBateria.PID_VOLTAJE, TextosBateria.TITULOS_PASO, carga, resolver) }),
+            medidas = TextosBateria.medidas(a, resolver),
+            graficas = listOfNotNull(
+                datos?.let { MapeoResultadoMotor.grafica(it, AnalizadorBateria.PID_VOLTAJE, TextosBateria.titulosPaso(resolver), carga, resolver) },
+            ),
             codigoGuia = codigoBateria(a.patron),
         )
     }

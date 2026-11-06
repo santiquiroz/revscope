@@ -60,7 +60,7 @@ class PruebaGuiadaViewModelTest {
         Dispatchers.setMain(despachador)
         taller = TallerDePrueba(carpeta.root)
         controlador = ControladorPruebaGuiada(
-            captura, enlace, taller.registro, taller.repositorio, { BENELLI }, AnunciadorTaller { }, CoroutineScope(despachador), { relojMs },
+            captura, enlace, taller.registro, taller.repositorio, { BENELLI }, AnunciadorTaller { }, CoroutineScope(despachador), { relojMs }, resolver = resolverPrueba(),
         )
     }
 
@@ -69,9 +69,8 @@ class PruebaGuiadaViewModelTest {
 
     private fun vm(tipo: TipoPrueba? = TipoPrueba.TPS_BARRIDO) = PruebaGuiadaViewModel(
         SavedStateHandle(tipo?.let { mapOf(PruebaGuiadaViewModel.ARG_TIPO to it.name) } ?: emptyMap()),
-        controlador, enlace, taller.entorno, FuenteVref(preferencias, taller.repositorio, resolver) { BENELLI }, { emptyList() },
-        taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI },
-        resolver,
+        controlador, enlace, taller.entorno, FuenteVref(preferencias, taller.repositorio, resolverPrueba()) { BENELLI }, { emptyList() },
+        taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI }, resolverPrueba(),
     ).also { v -> CoroutineScope(despachador).launch { v.estado.collect { } } }
 
     @Test

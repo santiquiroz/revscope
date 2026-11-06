@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.PosicionEnBanda
@@ -28,7 +30,7 @@ object AnalizadorMinimo {
         val RETORNOS = listOf(RETORNO_1, RETORNO_2, RETORNO_3)
     }
 
-    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>): ResultadoPrueba {
+    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>, resolver: StringResolver): ResultadoPrueba {
         val minimo = estadistica(datos.serie(PID_RPM, Pasos.MINIMO), bandas)
         val referencia = minimo?.finRpm
         val base = AnalisisMinimo(
@@ -40,8 +42,8 @@ object AnalizadorMinimo {
             comprobaciones = emptyList(),
             patron = PatronMinimo.NORMAL,
         )
-        val comprobado = base.copy(comprobaciones = comprobaciones(base, bandas))
-        return TextosMinimo.resultado(comprobado.copy(patron = patron(comprobado)))
+        val comprobado = base.copy(comprobaciones = comprobaciones(base, bandas, resolver))
+        return TextosMinimo.resultado(comprobado.copy(patron = patron(comprobado)), resolver)
     }
 
     // ── Mínimo ──────────────────────────────────────────────────────────────
@@ -134,16 +136,34 @@ object AnalizadorMinimo {
 
     // ── Comprobaciones y patrón ─────────────────────────────────────────────
 
-    private fun comprobaciones(a: AnalisisMinimo, bandas: Map<String, BandaReferencia>): List<Comprobacion> {
+    private fun comprobaciones(a: AnalisisMinimo, bandas: Map<String, BandaReferencia>, res: StringResolver): List<Comprobacion> {
         val m = a.minimo ?: return emptyList()
+        val sinOscilacion = res.get(R.string.obd_minimo_comprobacion_sin_oscilacion, OSCILACION_AMPLITUD_RPM.toInt())
+        val delMinimo = "% " + res.get(R.string.obd_minimo_unidad_del_minimo)
         return listOfNotNull(
-            Comprobacion.contra(ClavesBanda.MINIMO_RPM, "Mínimo (media)", m.mediaRpm, "rpm", bandas),
-            Comprobacion.contra(ClavesBanda.MINIMO_DERIVA_MAX, "Deriva del mínimo (sin signo)", abs(m.derivaRpmS), "rpm/s", bandas),
-            Comprobacion.contra(ClavesBanda.MINIMO_DESVIACION_MAX, "Desviación del mínimo", m.desviacionRpm, "rpm", bandas),
-            Comprobacion.siNo(CLAVE_SIN_OSCILACION, "Sin oscilación de más de ${OSCILACION_AMPLITUD_RPM.toInt()} rpm", m.oscilacion == null),
-            Comprobacion.siNo(CLAVE_SIN_APAGONES, "No se apagó", m.apagones + a.apagonesAlSoltar == 0),
-            valleMasBajo(a)?.let { Comprobacion.contra(ClavesBanda.RETORNO_VALLE_MIN, "Valle más bajo al soltar", it, "% del mínimo", bandas) },
-            a.tpsRalenti?.let { Comprobacion.contra(ClavesBanda.TPS_CERRADO_V, "TPS en ralentí", it.mediaV, "V", bandas) },
+            Comprobacion.contra(ClavesBanda.MINIMO_RPM, res.get(R.string.obd_minimo_comprobacion_media), m.mediaRpm, "rpm", bandas),
+            Comprobacion.contra(
+                ClavesBanda.MINIMO_DERIVA_MAX,
+                res.get(R.string.obd_minimo_comprobacion_deriva),
+                abs(m.derivaRpmS),
+                "rpm/s",
+                bandas,
+            ),
+            Comprobacion.contra(
+                ClavesBanda.MINIMO_DESVIACION_MAX,
+                res.get(R.string.obd_minimo_comprobacion_desviacion),
+                m.desviacionRpm,
+                "rpm",
+                bandas,
+            ),
+            Comprobacion.siNo(CLAVE_SIN_OSCILACION, sinOscilacion, m.oscilacion == null),
+            Comprobacion.siNo(CLAVE_SIN_APAGONES, res.get(R.string.obd_minimo_comprobacion_sin_apagones), m.apagones + a.apagonesAlSoltar == 0),
+            valleMasBajo(a)?.let {
+                Comprobacion.contra(ClavesBanda.RETORNO_VALLE_MIN, res.get(R.string.obd_minimo_comprobacion_valle), it, delMinimo, bandas)
+            },
+            a.tpsRalenti?.let {
+                Comprobacion.contra(ClavesBanda.TPS_CERRADO_V, res.get(R.string.obd_minimo_comprobacion_tps), it.mediaV, "V", bandas)
+            },
         )
     }
 

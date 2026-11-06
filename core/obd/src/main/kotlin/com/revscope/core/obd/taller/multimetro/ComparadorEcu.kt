@@ -118,7 +118,7 @@ object LecturasEcuSesion {
             CondicionesMultimetro.FONDO to detalle.numero("fondoV"),
         ).filterValues { it != null }.mapValues { it.value!! }
         return voltios.takeIf { it.isNotEmpty() }?.let {
-            LecturasEcu(resolver.get(R.string.obd_multimeter_ecu_source, TipoPrueba.TPS_BARRIDO.titulo), it)
+            LecturasEcu(resolver.get(R.string.obd_multimeter_ecu_source, evento.titulo), it)
         }
     }
 

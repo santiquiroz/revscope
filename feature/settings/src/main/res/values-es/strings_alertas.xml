@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Alertas de audio y vibración -->
+    <string name="settings_alertas_title">Alertas de audio y vibración</string>
+    <string name="settings_alertas_active">Alertas activas (suenan por el intercom/parlante)</string>
+    <string name="settings_alertas_tts">Voz (TTS): alertas y tiempos 0-100 hablados</string>
+    <string name="settings_alertas_voice_categories">Alertas de voz por categoría</string>
+    <string name="settings_alertas_voice_temperature">Temperatura</string>
+    <string name="settings_alertas_voice_voltage">Batería y carga</string>
+    <string name="settings_alertas_voice_speed_cameras">Radares de velocidad</string>
+    <string name="settings_alertas_voice_anomalies">Anomalías inteligentes</string>
+    <string name="settings_alertas_voice_mil">Testigo del motor (MIL)</string>
+    <string name="settings_alertas_voice_redline">Zona roja</string>
+    <string name="settings_alertas_voice_custom_thresholds">Umbrales personalizados</string>
+    <string name="settings_alertas_voice_sport">Tiempos 0-100 y vueltas</string>
+    <string name="settings_alertas_voice_pico_placa">Pico y placa al entrar a otra ciudad</string>
+    <string name="settings_alertas_voice_sunset">Aviso de atardecer</string>
+    <string name="settings_alertas_voice_sunset_subtitle">Un aviso diario ~25 min antes del ocaso: enciende luces y hazte visible</string>
+    <string name="settings_alertas_voice_potholes">Huecos y resaltos</string>
+    <string name="settings_alertas_voice_potholes_subtitle">Avisa al acercarte a un hueco que tu propio IMU ya detectó antes</string>
+    <string name="settings_alertas_voice_rain">Lluvia e inclinación en mojado</string>
+    <string name="settings_alertas_voice_rain_subtitle">Lluvia inminente en tu zona + guardián de lean con piso mojado</string>
+    <string name="settings_alertas_voice_fatigue">Fatiga e hidratación</string>
+    <string name="settings_alertas_voice_fatigue_subtitle">Pausa sugerida cada 2 h; hidratación cuando hace calor</string>
+    <string name="settings_alertas_voice_local_info">Información local al cambiar de ciudad</string>
+    <string name="settings_alertas_voice_local_info_supported">Usa tu proveedor de IA con búsqueda web (~$0.02 por ciudad)</string>
+    <string name="settings_alertas_voice_local_info_unsupported">Requiere Claude, OpenAI o Gemini (no disponible con Nodo ni Compatible OpenAI)</string>
+    <string name="settings_alertas_ai_pico_placa">Pico y placa por IA en cualquier ciudad</string>
+    <string name="settings_alertas_ai_pico_placa_supported">Investiga la restricción de la ciudad donde estés (pico y placa, hoy no circula, rodízio…) y la guarda hasta que venza</string>
+    <string name="settings_alertas_ai_pico_placa_unsupported">Configura primero un proveedor de IA con búsqueda web — recomendamos Gemini por su capa gratuita</string>
+    <string name="settings_alertas_temp_max">Temp máx °C</string>
+    <string name="settings_alertas_voltage_min">Volt mín</string>
+    <string name="settings_alertas_redline_rpm">Zona roja RPM</string>
+    <string name="settings_alertas_redline_hint">La zona roja también controla el shift light del dashboard.</string>
+    <string name="settings_alertas_save">Guardar alertas</string>
+
+    <!-- Sonido de motor -->
+    <string name="settings_alertas_engine_sound_title">Sonido de motor</string>
+    <string name="settings_alertas_engine_sound_description">Sintetiza el sonido de un motor deportivo (o uno gracioso) siguiendo las RPM reales del OBD2 — suena por los parlantes o el intercomunicador Bluetooth. Estilo SoundRacer, sin comprar el adaptador.</string>
+    <string name="settings_alertas_engine_sound_toggle">Sonido de motor al conducir</string>
+    <string name="settings_alertas_engine_sound_toggle_subtitle">Se activa solo con telemetría OBD conectada</string>
+    <string name="settings_alertas_engine_sound_volume">Volumen (0-100)</string>
+    <string name="settings_alertas_engine_sound_save_volume">Guardar volumen</string>
+    <string name="settings_alertas_engine_sound_pack">Pack de sonido</string>
+
+    <!-- Radares de velocidad -->
+    <string name="settings_alertas_cameras_title">Radares de velocidad</string>
+    <string name="settings_alertas_cameras_description">Descarga los radares en 50 km a tu alrededor. Fuentes: OpenStreetMap + registro oficial ANSV · se actualiza cada semana automáticamente. Al conducir, la app avisa por voz al acercarte (funciona offline tras descargar).</string>
+    <string name="settings_alertas_cameras_download">Descargar radares de mi zona</string>
+    <string name="settings_alertas_cameras_radius">Radio de aviso (m)</string>
+    <string name="settings_alertas_cameras_radius_hint">Distancia a la que suena el aviso por voz (100-1000 m). Menos metros = menos avisos anticipados.</string>
+    <string name="settings_alertas_cameras_save_radius">Guardar radio</string>
+
+    <!-- Pico y placa personalizado -->
+    <string name="settings_alertas_pico_placa_title">Pico y placa personalizado</string>
+    <string name="settings_alertas_pico_placa_description">Reglas propias para tu ciudad o rotaciones nuevas — sobreescriben las integradas cuando el cityId coincide.</string>
+    <string name="settings_alertas_pico_placa_json">JSON de reglas de pico y placa</string>
+    <string name="settings_alertas_pico_placa_example">Ejemplo (Medellín, rotación por día de semana):\n{\"cityId\":\"medellin\",\"displayName\":\"Medellín\",\"rotation\":{\"2\":[1,7],\"3\":[0,3]},\"startHour\":5,\"endHour\":20,\"carDigit\":\"LAST\",\"motoDigit\":\"FIRST\",\"validFromMs\":1770008400000,\"validUntilMs\":1785560399000}</string>
+    <string name="settings_alertas_pico_placa_apply">Validar y aplicar</string>
+</resources>

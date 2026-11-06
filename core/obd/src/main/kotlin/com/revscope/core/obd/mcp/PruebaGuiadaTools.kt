@@ -23,7 +23,7 @@ private fun disponibles(): List<String> = CatalogoPruebas.disponibles.map { it.n
 // Estado de la prueba con el valor en vivo del PID principal mientras corre (la captura lo publica al flujo del enlace).
 private fun estadoJson(controlador: ControladorPruebaGuiada, enlace: EnlacePrueba, estado: EstadoPrueba): JSONObject {
     val principal = (estado as? EstadoPrueba.EnPaso)?.let { e -> CatalogoPruebas.definicion(e.tipo)?.pidPrincipal(e.paso) }
-    return PruebaGuiadaJson.estado(estado, controlador.idPrueba, principal?.let { enlace.lecturas()[it] })
+    return PruebaGuiadaJson.estado(estado, controlador.idPrueba, principal?.let { enlace.lecturas()[it] }, controlador.resolver)
         .put("mensaje", mensaje(estado))
 }
 

@@ -42,7 +42,7 @@ internal object PruebasElectricasBenelli {
 
     fun bateriaTerminada(eventoId: Long? = 24): EstadoPrueba.Terminada {
         val datos = bateria()
-        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     // El adaptador deja de responder al empezar a girar el motor de arranque y el enlace se pierde.
@@ -57,7 +57,7 @@ internal object PruebasElectricasBenelli {
             listOf(contacto, arranque),
             contexto = ContextoAnalisis(enlacePerdidoEn = PasosBateria.ARRANQUE),
         )
-        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     // Paso 2 de 4 grabando, a 4,5 s de terminar: el voltaje cayó al girar el motor de arranque y ya carga.

@@ -19,8 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.taller.FormatoTaller
@@ -31,11 +33,13 @@ import com.revscope.core.obd.taller.pruebas.DesfaseVoltaje
 
 @Composable
 internal fun FilaDesfase(desfase: DesfaseVoltaje, onCalibrar: () -> Unit) {
+    val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f)) {
             Text("Desfase del voltaje del adaptador", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
             Text(
-                CalibracionVoltaje.texto(desfase),
+                CalibracionVoltaje.texto(desfase, resolver),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.body.copy(fontFeatureSettings = "tnum"),
             )

@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.revscope.core.obd.legal.DailyStatusScheduler
@@ -29,7 +30,7 @@ private val TextMutedColor = Color(0xFF6B7089)
 @Composable
 internal fun AvisosSegundoPlanoCard() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Avisos en segundo plano")
+        SectionTitle(stringResource(R.string.settings_background_section_title))
         BackgroundDeliverySettingsBody()
     }
 }
@@ -45,20 +46,26 @@ private fun BackgroundDeliverySettingsBody() {
     val context = LocalContext.current
     val exactAllowed = remember { DailyStatusScheduler.canScheduleExact(context) }
     val batteryUnrestricted = remember { isIgnoringBatteryOptimizations(context) }
+    val testToast = stringResource(R.string.settings_background_test_toast)
 
     Text(
-        "El aviso de las 5:30am (pico y placa, documentos por vencer) necesita que el sistema " +
-            "deje despertar la app. Si te llega tarde o solo al abrirla, revisa estos dos permisos.",
+        stringResource(R.string.settings_background_description),
         color = TextMutedColor,
         fontSize = 12.sp,
     )
     Text(
-        if (exactAllowed) "✓ Alarmas exactas permitidas" else "✗ Alarmas exactas bloqueadas — el aviso puede correrse",
+        stringResource(
+            if (exactAllowed) R.string.settings_background_exact_allowed
+            else R.string.settings_background_exact_blocked,
+        ),
         color = if (exactAllowed) AccentColor else TextMutedColor,
         fontSize = 12.sp,
     )
     Text(
-        if (batteryUnrestricted) "✓ Sin restricción de batería" else "✗ Con optimización de batería — Samsung puede dormir la app",
+        stringResource(
+            if (batteryUnrestricted) R.string.settings_background_battery_unrestricted
+            else R.string.settings_background_battery_optimized,
+        ),
         color = if (batteryUnrestricted) AccentColor else TextMutedColor,
         fontSize = 12.sp,
     )
@@ -70,19 +77,19 @@ private fun BackgroundDeliverySettingsBody() {
             Button(
                 onClick = { openSystemSettings(context, Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM) },
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            ) { Text("Permitir alarmas exactas", color = BgColor) }
+            ) { Text(stringResource(R.string.settings_background_allow_exact_alarms), color = BgColor) }
         }
         Button(
             onClick = { openSystemSettings(context, Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) },
             colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-        ) { Text("Optimización de batería", color = TextPrimaryColor) }
+        ) { Text(stringResource(R.string.settings_background_battery_optimization), color = TextPrimaryColor) }
         Button(
             onClick = {
                 DailyStatusScheduler.scheduleTest(context)
-                Toast.makeText(context, "Aviso de prueba en 15 segundos", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, testToast, Toast.LENGTH_LONG).show()
             },
             colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-        ) { Text("Probar aviso (15 s)", color = TextPrimaryColor) }
+        ) { Text(stringResource(R.string.settings_background_test_button), color = TextPrimaryColor) }
     }
 }
 

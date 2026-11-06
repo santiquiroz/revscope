@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -134,7 +135,7 @@ internal fun Seccion(titulo: String) {
 
 @Composable
 private fun ColumnScope.Analizando(estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
-    BarraPrueba(estado.titulo, estado.vehiculo, acciones.onPedirCancelar)
+    BarraPrueba(estado.titulo(), estado.vehiculo, acciones.onPedirCancelar)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
@@ -153,7 +154,7 @@ private fun ColumnScope.Analizando(estado: PruebaGuiadaUi, acciones: AccionesPru
 
 @Composable
 private fun ColumnScope.Interrumpida(estado: PruebaGuiadaUi, titulo: String, motivo: String, acciones: AccionesPrueba) {
-    BarraConVolver(titulo = estado.titulo, subtitulo = estado.vehiculo, onVolver = acciones.onTerminar)
+    BarraConVolver(titulo = estado.titulo(), subtitulo = estado.vehiculo, onVolver = acciones.onTerminar)
     CuerpoDesplazable {
         Text(titulo, color = RevScopeColors.TextPrimary, style = RevScopeType.title)
         Text(motivo, color = RevScopeColors.TextSecondary, style = RevScopeType.body)
@@ -164,7 +165,7 @@ private fun ColumnScope.Interrumpida(estado: PruebaGuiadaUi, titulo: String, mot
 
 @Composable
 private fun ColumnScope.Fallida(fase: FasePantalla.Fallida, estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
-    BarraConVolver(titulo = estado.titulo, subtitulo = estado.vehiculo, onVolver = acciones.onTerminar)
+    BarraConVolver(titulo = estado.titulo(), subtitulo = estado.vehiculo, onVolver = acciones.onTerminar)
     val mensaje = "La prueba no terminó: ${fase.motivo}. Lo grabado quedó en la sesión, si había una abierta."
     Box(Modifier.weight(1f).fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
         if (fase.reintentable) {
@@ -207,3 +208,6 @@ private fun loQueSePierde(paso: PasoUi): String =
     } else {
         "Lo grabado del paso en curso no se guarda en la sesión."
     }
+
+@Composable
+internal fun PruebaGuiadaUi.titulo(): String = fase.tipo?.let { stringResource(it.tituloRes) } ?: "Pruebas guiadas"

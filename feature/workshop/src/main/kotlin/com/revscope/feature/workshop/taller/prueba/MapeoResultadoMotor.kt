@@ -7,6 +7,7 @@ import com.revscope.core.designsystem.SerieGrafica
 import com.revscope.core.designsystem.TramoGrafica
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.AnalisisArranqueFrio
 import com.revscope.core.obd.taller.pruebas.AnalisisMinimo
 import com.revscope.core.obd.taller.pruebas.AnalizadorArranqueFrio
@@ -30,8 +31,8 @@ internal object MapeoResultadoMotor {
         val banda = a.comprobacion(ClavesBanda.MINIMO_RPM)?.banda
         return base.copy(
             comprobaciones = a.comprobaciones.map { comprobacion(it, resolver) },
-            medidas = TextosMinimo.medidas(a),
-            graficas = listOfNotNull(datos?.let { grafica(it, AnalizadorMinimo.PID_RPM, TextosMinimo.TITULOS_PASO, banda, resolver) }),
+            medidas = TextosMinimo.medidas(a, resolver),
+            graficas = listOfNotNull(datos?.let { grafica(it, AnalizadorMinimo.PID_RPM, TextosMinimo.titulosPaso(resolver), banda, resolver) }),
         )
     }
 

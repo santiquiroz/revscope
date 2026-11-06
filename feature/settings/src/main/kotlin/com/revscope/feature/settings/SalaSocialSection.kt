@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 
 private val BgColor = Color(0xFF0A0A0F)
 private val AccentColor = Color(0xFFE8FF00)
@@ -26,18 +27,16 @@ internal fun ServidorColaborativoCard(vm: SettingsViewModel) {
     val serverToken by vm.serverToken.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Servidor colaborativo")
+        SectionTitle(stringResource(R.string.settings_social_server_title))
         Text(
-            "Opcional. Conecta la app a un servidor RevScope para compartir huecos, hacer rodadas " +
-                "en grupo y fantasmas. La app funciona igual sin esto. Puedes usar el público, el de " +
-                "tu parche, o montar el tuyo (github.com/santiquiroz/revscope-server). Déjalo vacío para no usar ninguno.",
+            stringResource(R.string.settings_social_server_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         OutlinedTextField(
             value = serverUrl,
             onValueChange = vm::updateServerUrl,
-            label = { Text("URL del servidor (ej. https://mi-server:8080)", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_social_server_url), fontSize = 12.sp) },
             singleLine = true,
             colors = settingsFieldColors(),
             modifier = Modifier.fillMaxWidth(),
@@ -45,7 +44,7 @@ internal fun ServidorColaborativoCard(vm: SettingsViewModel) {
         OutlinedTextField(
             value = riderName,
             onValueChange = vm::updateRiderName,
-            label = { Text("Tu apodo (rodadas y fantasmas)", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_social_rider_name), fontSize = 12.sp) },
             singleLine = true,
             colors = settingsFieldColors(),
             modifier = Modifier.fillMaxWidth(),
@@ -53,7 +52,7 @@ internal fun ServidorColaborativoCard(vm: SettingsViewModel) {
         OutlinedTextField(
             value = serverToken,
             onValueChange = vm::updateServerToken,
-            label = { Text("Token (solo si el server lo pide — déjalo vacío si no)", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_social_server_token), fontSize = 12.sp) },
             singleLine = true,
             colors = settingsFieldColors(),
             modifier = Modifier.fillMaxWidth(),
@@ -61,7 +60,7 @@ internal fun ServidorColaborativoCard(vm: SettingsViewModel) {
         Button(
             onClick = vm::saveServerSettings,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Guardar servidor", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_social_save_server), color = BgColor) }
     }
 }
 
@@ -71,22 +70,22 @@ internal fun CompaneroViajeCard(vm: SettingsViewModel) {
     val voiceZoneBrief by vm.voiceZoneBrief.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Compañero de viaje")
+        SectionTitle(stringResource(R.string.settings_social_companion_title))
         Text(
-            "Al llegar a un lugar nuevo — en el país o en el extranjero — te da un brief de " +
-                "conducción: precio del combustible, peajes, restricciones y, si estás fuera, qué " +
-                "necesitas para manejar allí. Pregunta PRIMERO al servidor colaborativo (gratis); si " +
-                "nadie ha reportado esa zona y tienes IA con búsqueda web, la genera y la comparte de " +
-                "vuelta para el próximo viajero. Apagado por defecto (el respaldo con IA cuesta).",
+            stringResource(R.string.settings_social_companion_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
-        ToggleRow("Activar compañero de viaje", zoneBriefEnabled, vm::updateZoneBriefEnabled)
         ToggleRow(
-            "Anunciar por voz al llegar",
+            stringResource(R.string.settings_social_companion_enabled),
+            zoneBriefEnabled,
+            vm::updateZoneBriefEnabled,
+        )
+        ToggleRow(
+            stringResource(R.string.settings_social_voice_brief),
             voiceZoneBrief,
             vm::updateVoiceZoneBrief,
-            subtitle = "Avisa que el brief está listo; el detalle queda en la notificación",
+            subtitle = stringResource(R.string.settings_social_voice_brief_description),
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.taller.FormatoTaller
@@ -50,6 +51,7 @@ class ControladorPruebaGuiada(
     private val definiciones: (TipoPrueba) -> DefinicionPrueba? = CatalogoPruebas::definicion,
     private val rafagaVoltaje: CapturaPrueba? = null,
     private val fuentes: FuentesAnalisis = FuentesAnalisis.NINGUNA,
+    internal val resolver: StringResolver,
 ) {
 
     @Inject
@@ -62,10 +64,11 @@ class ControladorPruebaGuiada(
         anunciador: AnunciadorTaller,
         @RafagaVoltaje rafagaVoltaje: CapturaPrueba,
         fuentes: FuentesAnalisis,
+        resolver: StringResolver,
     ) : this(
         captura, enlace, registro, repositorio, vehiculo, anunciador,
         CoroutineScope(SupervisorJob() + Dispatchers.Default), System::currentTimeMillis,
-        CatalogoPruebas::definicion, rafagaVoltaje, fuentes,
+        CatalogoPruebas::definicion, rafagaVoltaje, fuentes, resolver,
     )
 
     private class Ejecucion(
@@ -105,7 +108,7 @@ class ControladorPruebaGuiada(
     suspend fun iniciar(tipo: TipoPrueba, opciones: OpcionesPrueba = OpcionesPrueba()): Result<EstadoPrueba> =
         candado.withLock {
             rechazoAlIniciar(tipo)?.let { return@withLock Result.failure(IllegalStateException(it)) }
-            val definicion = checkNotNull(definiciones(tipo))
+            val definicion = checkNotNull(definiciones(tipo)).resuelta(resolver)
             ultimaSolicitud = tipo to opciones
             val verificacion = EstadoPrueba.Verificando(tipo, definicion.precondiciones.map { it.evaluar(contexto()) })
             if (!verificacion.listas) return@withLock Result.success(publicar(verificacion))
@@ -166,7 +169,7 @@ class ControladorPruebaGuiada(
         return when {
             ejecucion != null -> "Ya hay una prueba guiada en curso: termínala o cancélala"
             captura.activa() || rafagaVoltaje?.activa() == true -> "Detén la captura rápida primero"
-            definicion == null || capturaPara(definicion) == null -> "La prueba «${tipo.titulo}» todavía no está disponible"
+            definicion == null || capturaPara(definicion) == null -> "La prueba «${tipo.titulo(resolver)}» todavía no está disponible"
             else -> null
         }
     }
@@ -312,7 +315,7 @@ class ControladorPruebaGuiada(
         val datos = DatosPrueba(e.tipo, e.captura.muestrasActuales(), segmentos, e.opciones.vref, contextoAnalisis(e, actual, enlacePerdidoEn))
         val resultado = analizar(e.definicion, datos, bandas(actual))
             ?: return anotarFallida(e, EstadoPrueba.Fallida(e.tipo, "No se pudo analizar la prueba", true), segmentos, resumen?.rutaCsv)
-        val evento = EventoPrueba.terminada(resultado, datos, resumen?.rutaCsv, e.opciones.origen)
+        val evento = EventoPrueba.terminada(resultado, datos, resumen?.rutaCsv, e.opciones.origen, resolver)
         ultimoEvento = evento
         val eventoId = registro.anotar(evento)
         anunciar(e, "Prueba terminada. ${resultado.titulo}")
@@ -332,13 +335,13 @@ class ControladorPruebaGuiada(
 
     private suspend fun anotarFallida(e: Ejecucion, fallida: EstadoPrueba.Fallida, segmentos: List<SegmentoPaso>, rutaCsv: String?) {
         val datos = DatosPrueba(e.tipo, e.captura.muestrasActuales(), segmentos, e.opciones.vref)
-        registro.anotar(EventoPrueba.sinTerminar(fallida, datos, e.definicion.pasos.size, rutaCsv, e.opciones.origen))
+        registro.anotar(EventoPrueba.sinTerminar(fallida, datos, e.definicion.pasos.size, rutaCsv, e.opciones.origen, resolver))
         anunciar(e, "La prueba no terminó. ${fallida.motivo}")
         publicar(fallida)
     }
 
     private fun analizar(definicion: DefinicionPrueba, datos: DatosPrueba, bandas: Map<String, BandaReferencia>): ResultadoPrueba? =
-        runCatching { definicion.analizar(datos, bandas) }
+        runCatching { definicion.analizar(datos, bandas, resolver) }
             .onFailure { Timber.w(it, "Prueba guiada: el analizador de ${definicion.tipo} falló") }
             .getOrNull()
 

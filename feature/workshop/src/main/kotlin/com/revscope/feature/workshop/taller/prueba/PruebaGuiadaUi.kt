@@ -21,7 +21,6 @@ data class PruebaGuiadaUi(
     val voltajeAdaptador: Double? = null,
     val locale: Locale = Locale.getDefault(),
 ) {
-    val titulo: String get() = fase.tipo?.titulo ?: "Pruebas guiadas"
     val vref: ReferenciaVoltaje get() = referencia.usada
     val enCurso: Boolean get() = fase is FasePantalla.Paso || fase is FasePantalla.Analizando
 }

@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 
 data class SegmentoPaso(val clave: String, val inicioMs: Long, val finMs: Long, val descartarInicioMs: Long = 0) {
@@ -11,20 +13,29 @@ data class SegmentoPaso(val clave: String, val inicioMs: Long, val finMs: Long, 
 data class Punto(val tMs: Long, val valor: Double)
 
 // La referencia con la que el % del PID se convierte a voltios (5,0 V típico, o la medida con el multímetro).
+// [origen] es una clave estable (va en el JSON del evento); se muestra con [origenTexto].
 data class ReferenciaVoltaje(val voltios: Double, val origen: String) {
     init {
-        require(voltios in MIN_V..MAX_V) { "La referencia debe estar entre $MIN_V y $MAX_V V" }
+        require(voltios in MIN_V..MAX_V) { "La referencia debe estar entre $MIN_V y $MAX_V V" } // i18n-ignore
     }
 
     fun aVoltios(porcentaje: Double): Double = porcentaje * voltios / 100.0
 
     fun aPorcentaje(voltiosMedidos: Double): Double = voltiosMedidos * 100.0 / voltios
 
+    fun origenTexto(resolver: StringResolver): String = when (origen) {
+        ORIGEN_TIPICO -> resolver.get(R.string.obd_origen_tipico_editable)
+        ORIGEN_EDITADO -> resolver.get(R.string.obd_origen_editado)
+        else -> origen
+    }
+
     companion object {
         const val MIN_V = 3.0
         const val MAX_V = 5.5
-        val TIPICA = ReferenciaVoltaje(5.0, "Típico (editable)")
-        fun editada(voltios: Double) = ReferenciaVoltaje(voltios, "Editado por ti")
+        const val ORIGEN_TIPICO = "Típico (editable)" // i18n-ignore
+        const val ORIGEN_EDITADO = DesfaseVoltaje.ORIGEN_EDITADO
+        val TIPICA = ReferenciaVoltaje(5.0, ORIGEN_TIPICO)
+        fun editada(voltios: Double) = ReferenciaVoltaje(voltios, ORIGEN_EDITADO)
     }
 }
 
