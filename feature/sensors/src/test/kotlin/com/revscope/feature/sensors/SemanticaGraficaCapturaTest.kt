@@ -15,6 +15,7 @@ import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -23,11 +24,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaGraficaCapturaTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private fun ui(unidad: UnidadPosicion, pausada: Boolean) = MapeoGraficaCaptura.de(
         EntradaGraficaCaptura(
@@ -41,6 +44,7 @@ class SemanticaGraficaCapturaTest {
             pausada = pausada,
             bandas = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList()),
         ),
+        resolver,
     )
 
     @Test
@@ -53,12 +57,12 @@ class SemanticaGraficaCapturaTest {
             }
         }
 
-        compose.onNodeWithText("En %").assertIsSelected()
-        compose.onNodeWithText("En voltios").performClick().assertIsSelected()
-        compose.onNodeWithText("En %").assertIsNotSelected()
-        compose.onNodeWithText(TEXTO_PAUSAR).performClick()
-        compose.onNodeWithText(TEXTO_REANUDAR).assertExists()
-        compose.onNodeWithText("Gráfica en pausa: la captura sigue grabando").assertExists()
+        compose.onNodeWithText(resolver.get(R.string.sensors_graph_percent)).assertIsSelected()
+        compose.onNodeWithText(resolver.get(R.string.sensors_graph_volts)).performClick().assertIsSelected()
+        compose.onNodeWithText(resolver.get(R.string.sensors_graph_percent)).assertIsNotSelected()
+        compose.onNodeWithText(resolver.get(R.string.sensors_graph_pause)).performClick()
+        compose.onNodeWithText(resolver.get(R.string.sensors_graph_resume)).assertExists()
+        compose.onNodeWithText(resolver.get(R.string.sensors_graph_paused_recording)).assertExists()
 
         assertEquals(UnidadPosicion.VOLTIOS to true, unidad to pausada)
     }
@@ -67,7 +71,14 @@ class SemanticaGraficaCapturaTest {
     fun `la grafica tiene un resumen accesible con el valor en las dos unidades`() {
         compose.setContent { RevScopeTheme { GraficaCapturaContent(ui(UnidadPosicion.VOLTIOS, false), AccionesGrafica()) } }
 
-        compose.onNodeWithContentDescription("11 Posición de la mariposa: 0,47 V (9,4 %), estable", substring = true)
+        val contentDescription = resolver.get(
+            R.string.sensors_graph_pid_summary,
+            "11",
+            "Posición de la mariposa",
+            "0,47 V (9,4 %)",
+            resolver.get(R.string.sensors_graph_trend_stable),
+        )
+        compose.onNodeWithContentDescription(contentDescription, substring = true)
             .assertExists()
     }
 }

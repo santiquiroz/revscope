@@ -104,8 +104,9 @@ class FastCaptureViewModel @Inject constructor(
                 pausada = o.congeladas != null,
                 bandas = o.bandas,
             ),
+            resolver,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapeoGraficaCaptura.de(entradaVacia()))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapeoGraficaCaptura.de(entradaVacia(), resolver))
 
     private var refresco: Job? = null
 
@@ -122,7 +123,8 @@ class FastCaptureViewModel @Inject constructor(
         registry.allDefinitions().filter { it.mode == "01" }.sortedBy { it.pid }
 
     fun disponibilidad(pid: String): DisponibilidadPid {
-        val nombre = registry.getDefinition(pid)?.nameEs?.lowercase() ?: "este parámetro"
+        val nombre = registry.getDefinition(pid)?.nameEs?.lowercase()
+            ?: resolver.get(R.string.sensors_this_parameter)
         return DisponibilidadPid.resolver(pid, nombre, registry)
     }
 
@@ -151,7 +153,7 @@ class FastCaptureViewModel @Inject constructor(
         val estados = SeleccionPids.PEDAL_Y_MARIPOSA.map(::disponibilidad)
         val disponibles = estados.filter(DisponibilidadPid::puedeConsultarse).map(DisponibilidadPid::pid)
         if (disponibles.isEmpty()) {
-            val rechazo = estados.first().copy(motivo = "Esta ECU no reporta posición de pedal ni mariposa.")
+            val rechazo = estados.first().copy(motivo = resolver.get(R.string.sensors_pedal_throttle_not_reported))
             _pidNoDisponible.value = resolverAvisoPidNoDisponible(
                 actual = _pidNoDisponible.value,
                 rechazo = rechazo,
@@ -174,7 +176,7 @@ class FastCaptureViewModel @Inject constructor(
             captura.iniciar(config)
                 .onSuccess { inicio ->
                     _mensaje.value = inicio.pidsNoSoportados.takeIf { it.isNotEmpty() }
-                        ?.let { "No soportados por este vehículo: ${it.joinToString()}" }
+                        ?.let { resolver.get(R.string.sensors_capture_pid_unsupported, it.joinToString()) }
                 }
                 .onFailure { _mensaje.value = it.message }
         }
@@ -187,6 +189,8 @@ class FastCaptureViewModel @Inject constructor(
     fun descartarMensaje() {
         _mensaje.value = null
     }
+
+    fun motivoVisible(motivo: String): String = motivoVisible(motivo, resolver)
 
     fun elegirUnidad(unidad: UnidadPosicion) = opciones.update { it.copy(unidad = unidad) }
 
@@ -222,7 +226,7 @@ class FastCaptureViewModel @Inject constructor(
             tipo = "ancho-captura",
             header = CapturaCsv.cabeceraAncha(inicio.pidsAceptados),
             rows = CapturaCsv.filasAnchas(muestras, inicio.pidsAceptados, inicioEpochMs).asSequence(),
-            comment = "revscope-captura v1 (ancho); pids=${inicio.pidsAceptados.joinToString(",")}",
+            comment = "revscope-captura v1 (ancho); pids=${inicio.pidsAceptados.joinToString(",")}", // i18n-ignore
             resolver = resolver,
         )
     }
