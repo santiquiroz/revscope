@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.revscope.feature.workshop.R
 
 data class AccionesHub(
     val onIniciarDiagnostico: () -> Unit = {},
@@ -48,13 +50,13 @@ data class AccionesHub(
 
 data class HerramientaTaller(
     val icono: ImageVector,
-    val titulo: String,
-    val descripcion: String,
+    @StringRes val titulo: Int,
+    @StringRes val descripcion: Int,
     val requiereAdaptador: Boolean,
     val onAbrir: () -> Unit,
 )
 
-data class GrupoHerramientas(val titulo: String, val herramientas: List<HerramientaTaller>)
+data class GrupoHerramientas(@StringRes val titulo: Int, val herramientas: List<HerramientaTaller>)
 
 internal object HerramientasTaller {
 
@@ -67,16 +69,16 @@ internal object HerramientasTaller {
     fun rapidas(a: AccionesHub): List<HerramientaTaller> = listOfNotNull(
         HerramientaTaller(
             Icons.Filled.BugReport,
-            "Códigos",
-            "Leer, entender y borrar códigos de falla",
+            R.string.workshop_hub_tool_codes,
+            R.string.workshop_hub_tool_codes_description,
             true,
             a.onCodigos,
         ),
         a.onPruebasGuiadas?.let {
             HerramientaTaller(
                 Icons.Filled.Science,
-                "Pruebas guiadas",
-                "Barrido del TPS, mínimo, batería y más",
+                R.string.workshop_hub_tool_guided_tests,
+                R.string.workshop_hub_tool_guided_tests_description,
                 true,
                 it,
             )
@@ -84,23 +86,23 @@ internal object HerramientasTaller {
         a.onMultimetro?.let {
             HerramientaTaller(
                 Icons.Filled.ElectricalServices,
-                "Multímetro",
-                "Anota lo que mides en cada cable",
+                R.string.workshop_hub_tool_multimeter,
+                R.string.workshop_hub_tool_multimeter_description,
                 false,
                 it,
             )
         },
         HerramientaTaller(
             Icons.Filled.Timeline,
-            "Sensores y captura",
-            "Curvas en vivo y captura rápida",
+            R.string.workshop_hub_tool_sensors_capture,
+            R.string.workshop_hub_tool_sensors_capture_description,
             true,
             a.onSensores,
         ),
         HerramientaTaller(
             Icons.Filled.MonitorHeart,
-            "Chequeo de salud",
-            "Códigos, monitores, mezcla y batería",
+            R.string.workshop_hub_tool_health_check,
+            R.string.workshop_hub_tool_health_check_description,
             false,
             a.onChequeo,
         ),
@@ -108,106 +110,106 @@ internal object HerramientasTaller {
 
     fun mas(a: AccionesHub): List<GrupoHerramientas> = listOf(
         GrupoHerramientas(
-            "Estado",
+            R.string.workshop_hub_group_status,
             listOf(
                 HerramientaTaller(
                     Icons.Filled.Verified,
-                    "Vehículo al día",
-                    "SOAT, tecnomecánica, pico y placa, multas y todo riesgo",
+                    R.string.workshop_hub_tool_vehicle_status,
+                    R.string.workshop_hub_tool_vehicle_status_description,
                     false,
                     a.onAlDia,
                 ),
             ),
         ),
         GrupoHerramientas(
-            "Diagnóstico",
+            R.string.workshop_hub_group_diagnostics,
             listOf(
                 HerramientaTaller(
                     Icons.Filled.Science,
-                    "Mezcla y combustión",
-                    "Ajustes, sonda O2, lambda y MAF interpretados en vivo",
+                    R.string.workshop_hub_tool_fuel_mixture,
+                    R.string.workshop_hub_tool_fuel_mixture_description,
                     true,
                     a.onMezcla,
                 ),
                 HerramientaTaller(
                     Icons.Filled.Search,
-                    "Escáner avanzado (Mode 22)",
-                    "Descubrir PIDs propios del fabricante",
+                    R.string.workshop_hub_tool_advanced_scanner,
+                    R.string.workshop_hub_tool_advanced_scanner_description,
                     true,
                     a.onEscaner,
                 ),
                 HerramientaTaller(
                     Icons.AutoMirrored.Filled.ShowChart,
-                    "Onda de la sonda O2",
-                    "Gráfica en vivo del voltaje del sensor de oxígeno",
+                    R.string.workshop_hub_tool_o2_waveform,
+                    R.string.workshop_hub_tool_o2_waveform_description,
                     true,
                     a.onOndaO2,
                 ),
                 HerramientaTaller(
                     Icons.AutoMirrored.Filled.FactCheck,
-                    "Resultados a bordo (Mode 06)",
-                    "Pruebas de monitoreo internas del fabricante",
+                    R.string.workshop_hub_tool_onboard_test_results,
+                    R.string.workshop_hub_tool_onboard_test_results_description,
                     true,
                     a.onMode06,
                 ),
                 HerramientaTaller(
                     Icons.Filled.Route,
-                    "Captura CAN de ruta",
-                    "Graba el bus CAN rodando, con la velocidad GPS al lado",
+                    R.string.workshop_hub_tool_route_can_capture,
+                    R.string.workshop_hub_tool_route_can_capture_description,
                     true,
                     a.onCapturaCanRuta,
                 ),
                 HerramientaTaller(
                     Icons.AutoMirrored.Filled.Chat,
-                    "Mecánico IA",
-                    "Pregúntale al mecánico: ya conoce el estado real de tu vehículo",
+                    R.string.workshop_hub_tool_ai_mechanic,
+                    R.string.workshop_hub_tool_ai_mechanic_description,
                     false,
                     a.onMecanicoIa,
                 ),
             ),
         ),
         GrupoHerramientas(
-            "Vehículo",
+            R.string.workshop_hub_group_vehicle,
             listOf(
                 HerramientaTaller(
                     Icons.Filled.MenuBook,
-                    "Conocimiento del modelo",
-                    "ECU, repuestos, cableado y referencias con su fuente",
+                    R.string.workshop_hub_tool_model_information,
+                    R.string.workshop_hub_tool_model_information_description,
                     false,
                     a.onConocimientoModelo,
                 ),
                 HerramientaTaller(
                     Icons.Filled.Settings,
-                    "Analizador de marchas",
-                    "Calibrar la relación RPM/velocidad por marcha",
+                    R.string.workshop_hub_tool_gear_analyzer,
+                    R.string.workshop_hub_tool_gear_analyzer_description,
                     true,
                     a.onMarchas,
                 ),
                 HerramientaTaller(
                     Icons.Filled.DirectionsCar,
-                    "Perfiles de vehículo",
-                    "Vehículos guardados, línea roja y VIN",
+                    R.string.workshop_hub_tool_vehicle_profiles,
+                    R.string.workshop_hub_tool_vehicle_profiles_description,
                     false,
                     a.onPerfiles,
                 ),
                 HerramientaTaller(
                     Icons.Filled.Build,
-                    "Mantenimiento",
-                    "Aceite, llantas, batería y otros ítems por kilometraje",
+                    R.string.workshop_hub_tool_maintenance,
+                    R.string.workshop_hub_tool_maintenance_description,
                     false,
                     a.onMantenimiento,
                 ),
                 HerramientaTaller(
                     Icons.Filled.Speed,
-                    "Verificación de kilometraje",
-                    "Odómetro real de la ECU e histórico contra manipulación",
+                    R.string.workshop_hub_tool_odometer_check,
+                    R.string.workshop_hub_tool_odometer_check_description,
                     false,
                     a.onOdometro,
                 ),
                 HerramientaTaller(
                     Icons.AutoMirrored.Filled.CompareArrows,
-                    "Comparar velocímetros",
-                    "Velocidad OBD contra GPS en vivo",
+                    R.string.workshop_hub_tool_compare_speed,
+                    R.string.workshop_hub_tool_compare_speed_description,
                     true,
                     a.onVelocimetros,
                 ),

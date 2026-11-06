@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.color
 import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.feature.workshop.R
 
 @Composable
 internal fun EventoLinea(evento: EventoUi, ultimo: Boolean, abierto: Boolean, onAlternar: () -> Unit) {
@@ -74,7 +76,11 @@ private fun BotonDetalle(abierto: Boolean, onAlternar: () -> Unit) {
         contentPadding = PaddingValues(end = 12.dp),
         modifier = Modifier.heightIn(min = 48.dp),
     ) {
-        Text(if (abierto) "Ocultar detalle" else "Ver detalle", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+        Text(
+            stringResource(if (abierto) R.string.workshop_timeline_hide_details else R.string.workshop_timeline_view_details),
+            color = RevScopeColors.TextPrimary,
+            style = RevScopeType.label,
+        )
         Icon(
             if (abierto) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
             contentDescription = null,
