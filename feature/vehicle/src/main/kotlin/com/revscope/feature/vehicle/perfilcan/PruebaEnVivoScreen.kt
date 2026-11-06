@@ -25,9 +25,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.designsystem.BarraConVolver
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.feature.vehicle.R
 
 @Composable
 fun PruebaEnVivoScreen(
@@ -40,7 +42,7 @@ fun PruebaEnVivoScreen(
     val prueba by vm.prueba.collectAsState()
     LaunchedEffect(prueba?.coincide) { if (prueba?.coincide != null) onVolver() }
     Column(modifier = Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = prueba?.nombre ?: "Probar en vivo", onVolver = onVolver)
+        BarraConVolver(titulo = prueba?.nombre ?: stringResource(R.string.vehicle_can_live_test_title), onVolver = onVolver)
         prueba?.let { PruebaEnVivoContenido(it, onResponder = vm::responderPrueba) }
     }
 }
@@ -54,7 +56,7 @@ fun PruebaEnVivoContenido(prueba: PruebaEnVivoUi, onResponder: (Boolean) -> Unit
         TarjetaEnVivo(prueba)
         prueba.motivoSinPrueba?.let { Text(it, color = RevScopeColors.Warning, fontSize = 14.sp) }
         Text(
-            TextosBusCan.PREGUNTA,
+            stringResource(R.string.vehicle_can_test_question),
             color = RevScopeColors.TextPrimary,
             fontSize = 15.sp,
             textAlign = TextAlign.Center,
@@ -82,7 +84,7 @@ private fun TarjetaEnVivo(prueba: PruebaEnVivoUi) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            "EN VIVO · ${prueba.instruccion.uppercase()}",
+            stringResource(R.string.vehicle_can_live_label, prueba.instruccion.uppercase()),
             color = RevScopeColors.TextSecondary,
             fontSize = 11.sp,
             letterSpacing = 1.sp,
@@ -105,7 +107,7 @@ private fun ValorGrande(valor: String?, disponible: Boolean) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = valor ?: if (disponible) TextosBusCan.ESPERANDO else "—",
+            text = valor ?: if (disponible) stringResource(R.string.vehicle_can_waiting) else "—",
             color = if (conValor) RevScopeColors.Background else RevScopeColors.TextMuted,
             fontSize = if (conValor) 56.sp else 16.sp,
             fontWeight = FontWeight.Bold,
@@ -121,7 +123,7 @@ private fun BotonesRespuesta(prueba: PruebaEnVivoUi, onResponder: (Boolean) -> U
             enabled = prueba.disponible,
             modifier = Modifier.weight(1f).heightIn(min = 56.dp),
         ) {
-            Text("No, no coincide", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.vehicle_can_test_no), color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold)
         }
         Button(
             onClick = { onResponder(true) },
@@ -129,7 +131,7 @@ private fun BotonesRespuesta(prueba: PruebaEnVivoUi, onResponder: (Boolean) -> U
             modifier = Modifier.weight(1f).heightIn(min = 56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
         ) {
-            Text("Sí, coincide", color = RevScopeColors.Background, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.vehicle_can_test_yes), color = RevScopeColors.Background, fontWeight = FontWeight.Bold)
         }
     }
 }
