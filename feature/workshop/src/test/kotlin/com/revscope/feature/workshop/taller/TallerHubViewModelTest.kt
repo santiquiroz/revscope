@@ -4,6 +4,8 @@ import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.taller.sesion.TipoEvento
+import com.revscope.core.uitesting.XmlStringResolver
+import com.revscope.feature.workshop.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -121,10 +123,21 @@ class TallerHubViewModelTest {
 
     @Test
     fun `las herramientas que aún no existen no aparecen en la rejilla`() {
-        val sinPruebas = HerramientasTaller.rapidas(AccionesHub()).map { it.titulo }
-        val conPruebas = HerramientasTaller.rapidas(AccionesHub(onPruebasGuiadas = {}, onMultimetro = {})).map { it.titulo }
+        val resolver = XmlStringResolver.es(R::class.java)
+        val sinPruebas = HerramientasTaller.rapidas(AccionesHub()).map { resolver.get(it.titulo) }
+        val conPruebas = HerramientasTaller.rapidas(AccionesHub(onPruebasGuiadas = {}, onMultimetro = {})).map { resolver.get(it.titulo) }
 
         assertEquals(listOf("Códigos", "Sensores y captura", "Chequeo de salud"), sinPruebas)
         assertEquals(listOf("Códigos", "Pruebas guiadas", "Multímetro", "Sensores y captura", "Chequeo de salud"), conPruebas)
+    }
+
+    @Test
+    fun `la descripción de inicio de diagnóstico está en inglés`() {
+        val resolver = XmlStringResolver.en(R::class.java)
+
+        assertEquals(
+            "Note the symptoms and start a session: every code reading, snapshot and check is added to a timestamped timeline, ready to compare and include in the report.",
+            resolver.get(R.string.workshop_hub_start_diagnosis_description),
+        )
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,6 +36,7 @@ import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.feature.workshop.R
 
 internal fun Veredicto.nivel(): NivelEstado = when (this) {
     Veredicto.OK -> NivelEstado.OK
@@ -43,12 +45,15 @@ internal fun Veredicto.nivel(): NivelEstado = when (this) {
     Veredicto.INFO -> NivelEstado.SIN_DATO
 }
 
-internal fun Veredicto.texto(): String = when (this) {
-    Veredicto.OK -> "OK"
-    Veredicto.ATENCION -> "Atención"
-    Veredicto.FALLA -> "Falla"
-    Veredicto.INFO -> "Registro"
-}
+@Composable
+internal fun Veredicto.texto(): String = stringResource(
+    when (this) {
+        Veredicto.OK -> R.string.workshop_event_verdict_ok
+        Veredicto.ATENCION -> R.string.workshop_event_verdict_attention
+        Veredicto.FALLA -> R.string.workshop_event_verdict_fault
+        Veredicto.INFO -> R.string.workshop_event_verdict_record
+    },
+)
 
 internal fun TipoEvento.icono(): ImageVector = when (this) {
     TipoEvento.NOTA -> Icons.AutoMirrored.Filled.Notes
