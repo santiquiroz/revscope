@@ -18,7 +18,6 @@ import androidx.core.content.ContextCompat
 import com.revscope.core.data.backup.BackupManager
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
-import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.intelligence.provider.AI_PROVIDER_ANTHROPIC
 import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
 import com.revscope.core.intelligence.provider.AI_PROVIDER_NODO
@@ -218,11 +217,11 @@ class SettingsViewModel @Inject constructor(
 
     fun checkForUpdates() {
         viewModelScope.launch {
-            _lastSaveResult.value = SaveResult(true, "Buscando actualizaciones…")
+            _lastSaveResult.value = SaveResult(true, stringResolver.get(R.string.settings_updates_checking))
             updateChecker.check(force = true)
             _lastSaveResult.value = updateChecker.available.value?.let {
-                SaveResult(true, "Nueva versión ${it.version} — revisa el aviso en Conducir")
-            } ?: SaveResult(true, "Estás en la última versión")
+                SaveResult(true, stringResolver.get(R.string.settings_updates_available, it.version))
+            } ?: SaveResult(true, stringResolver.get(R.string.settings_updates_latest))
         }
     }
 
@@ -235,7 +234,7 @@ class SettingsViewModel @Inject constructor(
                     it[PreferencesKeys.SERVER_RIDER_NAME] = _riderName.value.trim()
                 }
             }
-            _lastSaveResult.value = SaveResult(true, "Servidor guardado")
+            _lastSaveResult.value = SaveResult(true, stringResolver.get(R.string.settings_server_saved))
         }
     }
 
@@ -490,7 +489,7 @@ class SettingsViewModel @Inject constructor(
             val extra = _fuelPriceExtra.value.toDoubleOrNull()
             val diesel = _fuelPriceDiesel.value.toDoubleOrNull()
             if (!isValidFuelPrice(corriente) || !isValidFuelPrice(extra) || !isValidFuelPrice(diesel)) {
-                _lastSaveResult.value = SaveResult(false, "Precio fuera de rango (1.000-50.000 COP)")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_fuel_price_out_of_range))
                 return@launch
             }
             val result = runCatching {
@@ -501,9 +500,9 @@ class SettingsViewModel @Inject constructor(
                 }
             }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Precios de combustible actualizados")
+                SaveResult(true, stringResolver.get(R.string.settings_fuel_prices_updated))
             } else {
-                SaveResult(false, "Error guardando precios de combustible")
+                SaveResult(false, stringResolver.get(R.string.settings_fuel_prices_save_error))
             }
         }
     }
@@ -520,7 +519,7 @@ class SettingsViewModel @Inject constructor(
                 redline == null || redline !in 3_000..20_000
             ) {
                 _lastSaveResult.value =
-                    SaveResult(false, "Umbrales fuera de rango (temp 60-150, volt 8-15, RPM 3000-20000)")
+                    SaveResult(false, stringResolver.get(R.string.settings_alert_thresholds_out_of_range))
                 return@launch
             }
             val result = runCatching {
@@ -534,9 +533,9 @@ class SettingsViewModel @Inject constructor(
             }
             if (result.isSuccess) alertsEngine.reloadThresholds()
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Alertas actualizadas")
+                SaveResult(true, stringResolver.get(R.string.settings_alerts_updated))
             } else {
-                SaveResult(false, "Error guardando alertas")
+                SaveResult(false, stringResolver.get(R.string.settings_alerts_save_error))
             }
         }
     }
@@ -550,7 +549,8 @@ class SettingsViewModel @Inject constructor(
                 if (keyStored) persistAiSelection(provider)
                 keyStored
             }
-            _lastSaveResult.value = aiSaveResult(result, keyEntered = _aiApiKey.value.isNotBlank())
+            _lastSaveResult.value =
+                aiSaveResult(result, keyEntered = _aiApiKey.value.isNotBlank(), resolver = stringResolver)
         }
     }
 
@@ -592,15 +592,26 @@ class SettingsViewModel @Inject constructor(
                 model = _aiModel.value.trim(),
                 customBaseUrl = _aiCustomBaseUrl.value.trim(),
             )
-            val provider = AiProviderFactory(AndroidStringResolver(appContext)) { selection }.current()
+            val provider = AiProviderFactory(stringResolver) { selection }.current()
             _lastSaveResult.value = if (provider == null) {
-                SaveResult(false, "Falta la API key" + if (selection.provider == AI_PROVIDER_CUSTOM) " o la base URL" else "")
+                SaveResult(
+                    false,
+                    stringResolver.get(
+                        if (selection.provider == AI_PROVIDER_CUSTOM) {
+                            R.string.settings_ai_api_key_or_base_url_missing
+                        } else {
+                            R.string.settings_ai_api_key_missing
+                        },
+                    ),
+                )
             } else {
                 val result = withContext(Dispatchers.IO) {
-                    provider.complete(AiRequest(user = "di OK", maxTokens = 10))
+                    provider.complete(AiRequest(user = "di OK", maxTokens = 10)) // i18n-ignore
                 }
                 result.fold(
-                    onSuccess = { SaveResult(true, "Conexión OK — ${provider.displayName}") },
+                    onSuccess = {
+                        SaveResult(true, stringResolver.get(R.string.settings_ai_connection_success, provider.displayName))
+                    },
                     onFailure = { error -> aiConnectionFailure(error, stringResolver) },
                 )
             }
@@ -643,7 +654,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val json = _customPidsJson.value.trim()
             if (json.isNotEmpty() && !isValidPidJson(json)) {
-                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_json_invalid))
                 return@launch
             }
             val result = runCatching {
@@ -655,9 +666,13 @@ class SettingsViewModel @Inject constructor(
             }
             _lastSaveResult.value = if (result.isSuccess) {
                 val count = if (json.isEmpty()) 0 else JSONArray(json).length()
-                SaveResult(true, if (count > 0) "$count PIDs custom aplicados" else "PIDs custom limpiados")
+                SaveResult(
+                    true,
+                    if (count > 0) stringResolver.get(R.string.settings_custom_pids_applied, count)
+                    else stringResolver.get(R.string.settings_custom_pids_cleared),
+                )
             } else {
-                SaveResult(false, "Error guardando PIDs custom")
+                SaveResult(false, stringResolver.get(R.string.settings_custom_pids_save_error))
             }
         }
     }
@@ -666,7 +681,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val json = _customAlertsJson.value.trim()
             if (json.isNotEmpty() && !isValidCustomAlertJson(json)) {
-                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_json_invalid))
                 return@launch
             }
             val result = runCatching {
@@ -675,9 +690,13 @@ class SettingsViewModel @Inject constructor(
             if (result.isSuccess) alertsEngine.reloadThresholds()
             _lastSaveResult.value = if (result.isSuccess) {
                 val count = if (json.isEmpty()) 0 else JSONArray(json).length()
-                SaveResult(true, if (count > 0) "$count alertas personalizadas aplicadas" else "Alertas personalizadas limpiadas")
+                SaveResult(
+                    true,
+                    if (count > 0) stringResolver.get(R.string.settings_custom_alerts_applied, count)
+                    else stringResolver.get(R.string.settings_custom_alerts_cleared),
+                )
             } else {
-                SaveResult(false, "Error guardando alertas personalizadas")
+                SaveResult(false, stringResolver.get(R.string.settings_custom_alerts_save_error))
             }
         }
     }
@@ -687,7 +706,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val json = _picoPlacaRulesJson.value.trim()
             if (json.isNotEmpty() && !isValidPicoPlacaRulesJson(json)) {
-                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_json_invalid))
                 return@launch
             }
             val result = runCatching {
@@ -696,10 +715,14 @@ class SettingsViewModel @Inject constructor(
             _lastSaveResult.value = if (result.isSuccess) {
                 SaveResult(
                     true,
-                    if (json.isEmpty()) "Reglas de pico y placa personalizadas limpiadas" else "Reglas de pico y placa personalizadas aplicadas",
+                    if (json.isEmpty()) {
+                        stringResolver.get(R.string.settings_custom_driving_restrictions_cleared)
+                    } else {
+                        stringResolver.get(R.string.settings_custom_driving_restrictions_applied)
+                    },
                 )
             } else {
-                SaveResult(false, "Error guardando reglas de pico y placa")
+                SaveResult(false, stringResolver.get(R.string.settings_custom_driving_restrictions_save_error))
             }
         }
     }
@@ -795,9 +818,9 @@ class SettingsViewModel @Inject constructor(
             val phone = _emergencyPhone.value.trim()
             val result = runCatching { settings.edit { it[PreferencesKeys.EMERGENCY_PHONE] = phone } }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Teléfono de emergencia guardado")
+                SaveResult(true, stringResolver.get(R.string.settings_emergency_phone_saved))
             } else {
-                SaveResult(false, "Error guardando teléfono de emergencia")
+                SaveResult(false, stringResolver.get(R.string.settings_emergency_phone_save_error))
             }
         }
     }
@@ -806,7 +829,7 @@ class SettingsViewModel @Inject constructor(
     fun updateCrashDetectionEnabled(value: Boolean) {
         if (value && !canEnableCrashDetection()) {
             _lastSaveResult.value =
-                SaveResult(false, "Agrega el teléfono de emergencia y concede el permiso de SMS antes de activar")
+                SaveResult(false, stringResolver.get(R.string.settings_emergency_phone_required))
             return
         }
         _crashDetectionEnabled.value = value
@@ -823,7 +846,9 @@ class SettingsViewModel @Inject constructor(
      * navigating away from Settings mid-countdown cancels it and leaves a frozen alarm dialog.
      */
     fun testCrashAlert() {
-        crashResponder.simulateTrigger(activeVehicleProfile.value?.name ?: "tu vehículo")
+        crashResponder.simulateTrigger(
+            activeVehicleProfile.value?.name ?: stringResolver.get(R.string.settings_crash_alert_vehicle_fallback),
+        )
     }
 
     private fun canEnableCrashDetection(): Boolean =
@@ -839,13 +864,19 @@ class SettingsViewModel @Inject constructor(
             val error = runBackupOperation {
                 appContext.contentResolver.openOutputStream(uri)?.use { out ->
                     backupManager.export(out).getOrThrow()
-                } ?: error("No se pudo abrir el destino elegido")
+                } ?: error(stringResolver.get(R.string.settings_backup_destination_unavailable))
             }
             _backupState.value = BackupState.IDLE
             _lastSaveResult.value = if (error == null) {
-                SaveResult(true, "Copia de seguridad exportada")
+                SaveResult(true, stringResolver.get(R.string.settings_backup_exported))
             } else {
-                SaveResult(false, "Error exportando copia: ${error.message ?: "desconocido"}")
+                SaveResult(
+                    false,
+                    stringResolver.get(
+                        R.string.settings_backup_export_error,
+                        error.message ?: stringResolver.get(R.string.settings_unknown_error),
+                    ),
+                )
             }
         }
     }
@@ -856,13 +887,19 @@ class SettingsViewModel @Inject constructor(
             val error = runBackupOperation {
                 appContext.contentResolver.openInputStream(uri)?.use { input ->
                     backupManager.import(input).getOrThrow()
-                } ?: error("No se pudo abrir el archivo seleccionado")
+                } ?: error(stringResolver.get(R.string.settings_backup_file_unavailable))
             }
             if (error == null) {
                 _backupState.value = BackupState.RESTARTING_AFTER_IMPORT
             } else {
                 _backupState.value = BackupState.IDLE
-                _lastSaveResult.value = SaveResult(false, "Error importando copia: ${error.message ?: "desconocido"}")
+                _lastSaveResult.value = SaveResult(
+                    false,
+                    stringResolver.get(
+                        R.string.settings_backup_import_error,
+                        error.message ?: stringResolver.get(R.string.settings_unknown_error),
+                    ),
+                )
             }
         }
     }
@@ -885,7 +922,13 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             runCatching { cameraUpdater.storedCounts() }.getOrNull()?.let { stored ->
-                if (stored.total > 0) _cameraStatus.value = "${stored.total} radares guardados (${sourceBreakdown(stored)})"
+                if (stored.total > 0) {
+                    _cameraStatus.value = stringResolver.get(
+                        R.string.settings_speed_cameras_stored,
+                        stored.total,
+                        sourceBreakdown(stored),
+                    )
+                }
             }
         }
     }
@@ -893,31 +936,34 @@ class SettingsViewModel @Inject constructor(
     @SuppressLint("MissingPermission")
     fun downloadSpeedCameras() {
         viewModelScope.launch {
-            _cameraStatus.value = "Buscando tu ubicación…"
+            _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_location_search)
             val location = runCatching {
                 val lm = appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
                 lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                     ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
             }.getOrNull()
             if (location == null) {
-                _cameraStatus.value = "Sin ubicación — conecta el GPS o abre Maps un momento"
+                _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_no_location)
                 return@launch
             }
-            _cameraStatus.value = "Descargando radares (OpenStreetMap + ANSV)…"
+            _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_downloading)
             runCatching { cameraUpdater.downloadAround(location.latitude, location.longitude) }
                 .onSuccess { result ->
-                    _cameraStatus.value =
-                        "${result.total} radares en 50 km (${sourceBreakdown(result)}) — avisos por voz activos al conducir"
+                    _cameraStatus.value = stringResolver.get(
+                        R.string.settings_speed_cameras_downloaded,
+                        result.total,
+                        sourceBreakdown(result),
+                    )
                     persistLastCameraCenter(location.latitude, location.longitude)
                 }
                 .onFailure {
-                    _cameraStatus.value = "Error descargando (¿internet?) — intenta de nuevo"
+                    _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_download_error)
                 }
         }
     }
 
     private fun sourceBreakdown(result: CameraDownloadResult): String =
-        "OSM: ${result.osmCount} · ANSV: ${result.ansvCount}"
+        stringResolver.get(R.string.settings_speed_cameras_sources, result.osmCount, result.ansvCount)
 
     fun updateCameraAlertRadius(value: String) {
         _cameraAlertRadius.value = value
@@ -948,7 +994,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val parsed = _engineSoundVolume.value.toIntOrNull()
             if (parsed == null) {
-                _lastSaveResult.value = SaveResult(false, "Volumen inválido — usa un número 0-100")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_engine_volume_invalid))
                 return@launch
             }
             val volume = parsed.coerceIn(0, 100)
@@ -956,8 +1002,10 @@ class SettingsViewModel @Inject constructor(
             _lastSaveResult.value = runCatching {
                 settings.edit { it[PreferencesKeys.ENGINE_SOUND_VOLUME] = volume }
             }.fold(
-                onSuccess = { SaveResult(true, "Volumen del motor: $volume%") },
-                onFailure = { SaveResult(false, "Error guardando el volumen") },
+                onSuccess = {
+                    SaveResult(true, stringResolver.get(R.string.settings_engine_volume_saved, volume))
+                },
+                onFailure = { SaveResult(false, stringResolver.get(R.string.settings_engine_volume_save_error)) },
             )
         }
     }
@@ -966,7 +1014,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val parsed = _cameraAlertRadius.value.toIntOrNull()
             if (parsed == null) {
-                _lastSaveResult.value = SaveResult(false, "Radio inválido — usa un número en metros")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_camera_alert_radius_invalid))
                 return@launch
             }
             val radius = CameraAlertRadius.sanitize(parsed)
@@ -974,8 +1022,10 @@ class SettingsViewModel @Inject constructor(
             _lastSaveResult.value = runCatching {
                 settings.edit { it[PreferencesKeys.CAMERA_ALERT_RADIUS_M] = radius }
             }.fold(
-                onSuccess = { SaveResult(true, "Radio de aviso: $radius m") },
-                onFailure = { SaveResult(false, "Error guardando el radio de aviso") },
+                onSuccess = {
+                    SaveResult(true, stringResolver.get(R.string.settings_camera_alert_radius_saved, radius))
+                },
+                onFailure = { SaveResult(false, stringResolver.get(R.string.settings_camera_alert_radius_save_error)) },
             )
         }
     }
