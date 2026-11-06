@@ -39,6 +39,11 @@ class HardcodedTests(unittest.TestCase):
         result = self.run_hardcoded(self.root / "mod")
         self.assertEqual(result, 1)
 
+    def test_comment_lines_skipped(self) -> None:
+        self.write_kt("mod/src/main/kotlin/A.kt", '// dice "hola mundo"\n * el botón "Probar conexión"')
+        result = self.run_hardcoded(self.root / "mod")
+        self.assertEqual(result, 0)
+
     def test_log_line_skipped(self) -> None:
         self.write_kt("mod/src/main/kotlin/A.kt", 'Log.d(TAG, "conectado ok")')
         result = self.run_hardcoded(self.root / "mod")

@@ -37,7 +37,13 @@ def should_skip_line(line: str) -> bool:
     return any(pattern in line for pattern in SKIP_LINE_PATTERNS)
 
 
+def is_comment_line(line: str) -> bool:
+    return line.lstrip().startswith(("//", "/*", "*"))
+
+
 def extract_string_literals(line: str) -> list[str]:
+    if is_comment_line(line):
+        return []
     return [match.group(0)[1:-1] for match in STRING_LITERAL_REGEX.finditer(line)]
 
 
