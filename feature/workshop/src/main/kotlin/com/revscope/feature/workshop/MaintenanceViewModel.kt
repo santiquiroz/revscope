@@ -157,14 +157,14 @@ class MaintenanceViewModel @Inject constructor(
 
     private fun defaultItemDefinitions(type: String): List<Pair<String, Double>> {
         val base = listOf(
-            "Aceite" to DEFAULT_ACEITE_KM,
-            "Llantas (revisión)" to DEFAULT_LLANTAS_KM,
-            "Batería (revisión)" to DEFAULT_BATERIA_KM,
+            resolver.get(R.string.workshop_maintenance_default_oil) to DEFAULT_ACEITE_KM,
+            resolver.get(R.string.workshop_maintenance_default_tires_inspection) to DEFAULT_LLANTAS_KM,
+            resolver.get(R.string.workshop_maintenance_default_battery_inspection) to DEFAULT_BATERIA_KM,
         )
         if (type != TYPE_MOTORCYCLE) return base
         return base + listOf(
-            "Kit de arrastre" to DEFAULT_KIT_ARRASTRE_KM,
-            "Refrigerante" to DEFAULT_REFRIGERANTE_KM,
+            resolver.get(R.string.workshop_maintenance_default_chain_sprockets) to DEFAULT_KIT_ARRASTRE_KM,
+            resolver.get(R.string.workshop_maintenance_default_coolant) to DEFAULT_REFRIGERANTE_KM,
         )
     }
 
@@ -224,7 +224,7 @@ class MaintenanceViewModel @Inject constructor(
                 if (kilometrajeIngresado < suma) {
                     _saveResult.value = SaveResult(
                         false,
-                        "El kilometraje no puede ser menor que la distancia ya registrada (${suma.roundToLong()} km)",
+                        resolver.get(R.string.workshop_maintenance_odometer_below_recorded, suma.roundToLong()),
                     )
                     return@launch
                 }
