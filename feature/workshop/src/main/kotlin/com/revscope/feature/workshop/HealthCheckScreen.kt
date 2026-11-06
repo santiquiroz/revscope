@@ -26,7 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -42,7 +44,6 @@ import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.obd.workshop.DiagnosticRules
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 internal data class AccionesChequeo(
     val onVolver: () -> Unit = {},
@@ -72,7 +73,7 @@ fun HealthCheckScreen(
 @Composable
 internal fun HealthCheckContent(state: HealthCheckViewModel.UiState, acciones: AccionesChequeo) {
     Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = "Chequeo de salud", onVolver = acciones.onVolver) {
+        BarraConVolver(titulo = stringResource(R.string.workshop_health_check_title), onVolver = acciones.onVolver) {
             if (state is HealthCheckViewModel.UiState.Done) AccionesInforme(acciones)
         }
         LazyColumn(
@@ -89,10 +90,10 @@ internal fun HealthCheckContent(state: HealthCheckViewModel.UiState, acciones: A
 @Composable
 private fun AccionesInforme(acciones: AccionesChequeo) {
     IconButton(onClick = acciones.onExportarCsv) {
-        Icon(Icons.Default.Download, "Exportar CSV", tint = RevScopeColors.Accent)
+        Icon(Icons.Default.Download, stringResource(R.string.workshop_health_check_export), tint = RevScopeColors.Accent)
     }
     IconButton(onClick = acciones.onCompartir) {
-        Icon(Icons.Default.Share, "Compartir informe", tint = RevScopeColors.Accent)
+        Icon(Icons.Default.Share, stringResource(R.string.workshop_health_check_share), tint = RevScopeColors.Accent)
     }
 }
 
@@ -108,7 +109,11 @@ private fun BotonEscanear(state: HealthCheckViewModel.UiState, onEscanear: () ->
         ),
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
     ) {
-        Text(if (corriendo) "Escaneando…" else "Escanear ahora", style = RevScopeType.label, textAlign = TextAlign.Center)
+        Text(
+            stringResource(if (corriendo) R.string.workshop_health_check_scanning else R.string.workshop_health_check_scan_now),
+            style = RevScopeType.label,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -124,8 +129,7 @@ private fun LazyListScope.contenidoChequeo(state: HealthCheckViewModel.UiState, 
 @Composable
 private fun Introduccion() {
     Text(
-        "Un toque y RevScope revisa códigos de falla, readiness para la tecnomecánica, " +
-            "mezcla, sensor O2, batería y temperatura.",
+        stringResource(R.string.workshop_health_check_intro),
         color = RevScopeColors.TextSecondary,
         style = RevScopeType.body,
     )
@@ -146,8 +150,9 @@ private fun RunningIndicator(paso: String) {
 
 private fun LazyListScope.resultados(done: HealthCheckViewModel.UiState.Done) {
     item(key = "fecha") {
-        val fecha = SimpleDateFormat("d MMM yyyy, HH:mm", Locale("es")).format(Date(done.timestamp))
-        Text("Último chequeo: $fecha", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        val locale = LocalConfiguration.current.locales[0]
+        val fecha = SimpleDateFormat("d MMM yyyy, HH:mm", locale).format(Date(done.timestamp)) // i18n-ignore
+        Text(stringResource(R.string.workshop_health_check_last, fecha), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
     items(done.items) { item -> DiagnosisRow(item) }
     items(done.noDisponibles) { parametro -> NoDisponibleRow(parametro) }
@@ -159,7 +164,7 @@ private fun NoDisponibleRow(parametro: String) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             NivelBadge(NivelEstado.SIN_DATO)
             Text(parametro, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
-            Text("No disponible en esta ECU", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+            Text(stringResource(R.string.workshop_health_check_unavailable_ecu), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
@@ -11,9 +12,9 @@ import org.json.JSONObject
 
 object PruebaGuiadaJson {
 
-    fun resultado(r: ResultadoPrueba): JSONObject = JSONObject()
+    fun resultado(r: ResultadoPrueba, resolver: StringResolver): JSONObject = JSONObject()
         .put("prueba", r.tipo.name)
-        .put("tituloPrueba", r.tipo.titulo)
+        .put("tituloPrueba", r.tipo.titulo(resolver))
         .put("veredicto", r.veredicto.name)
         .put("titulo", r.titulo)
         .put("interpretacion", r.interpretacion)
@@ -22,12 +23,12 @@ object PruebaGuiadaJson {
         .put("bajaConfianza", r.bajaConfianza)
         .put("detalle", r.detalle.json())
 
-    fun estado(estado: EstadoPrueba, idPrueba: String?, valorActual: ObdReading?): JSONObject = when (estado) {
+    fun estado(estado: EstadoPrueba, idPrueba: String?, valorActual: ObdReading?, resolver: StringResolver): JSONObject = when (estado) {
         EstadoPrueba.Inactiva -> JSONObject().put("estado", "INACTIVA")
         is EstadoPrueba.Verificando -> verificando(estado)
         is EstadoPrueba.EnPaso -> enPaso(estado, valorActual)
         is EstadoPrueba.Analizando -> base("ANALIZANDO", estado.tipo.name)
-        is EstadoPrueba.Terminada -> terminada(estado)
+        is EstadoPrueba.Terminada -> terminada(estado, resolver)
         is EstadoPrueba.Cancelada -> base("CANCELADA", estado.tipo.name).put("motivo", estado.motivo)
         is EstadoPrueba.Fallida ->
             base("FALLIDA", estado.tipo.name).put("motivo", estado.motivo).put("reintentable", estado.reintentable)
@@ -64,8 +65,8 @@ object PruebaGuiadaJson {
         .put("valor", FormatoTaller.redondear(r.value, 2))
         .put("unidad", r.unit)
 
-    private fun terminada(e: EstadoPrueba.Terminada): JSONObject = base("TERMINADA", e.resultado.tipo.name)
+    private fun terminada(e: EstadoPrueba.Terminada, resolver: StringResolver): JSONObject = base("TERMINADA", e.resultado.tipo.name)
         .put("eventoId", e.eventoId ?: JSONObject.NULL)
         .put("guardadaEnSesion", e.eventoId != null)
-        .put("resultado", resultado(e.resultado))
+        .put("resultado", resultado(e.resultado, resolver))
 }

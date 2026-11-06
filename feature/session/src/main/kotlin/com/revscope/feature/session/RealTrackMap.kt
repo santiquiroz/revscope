@@ -78,7 +78,7 @@ fun RealTrackMap(
     // Misma cascada que LiveMapScreen (T5 + fix W1): local (.pmtiles ya descargado) → remoto
     // (release tiles-v1 de GitHub, streamed por HTTP range) → ráster. Esta pantalla es puntual
     // (un viaje ya terminado) — a diferencia de LiveMapScreen no observa MapDownloadService en
-    // vivo ni muestra el banner de promo ni el de "mapa dañado" acá (sin ViewModel propio para
+    // vivo ni muestra el banner de promo ni el de "mapa dañado" acá (sin ViewModel propio para // i18n-ignore
     // persistir nada de eso), solo lee el disco una vez al componer (aceptado: T5 plan).
     //
     // remoteTilesFailed SÍ hace falta pese a lo anterior: a diferencia del tier ráster (cada
@@ -190,7 +190,7 @@ fun RealTrackMap(
             }
         }
         Text(
-            "© OpenStreetMap contributors",
+            "© OpenStreetMap contributors", // i18n-ignore
             color = AttributionColor,
             fontSize = 10.sp,
         )

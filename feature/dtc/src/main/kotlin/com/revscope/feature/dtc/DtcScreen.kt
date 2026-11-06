@@ -28,9 +28,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.designsystem.BarraConVolver
 import com.revscope.core.designsystem.EmptyState
 import com.revscope.core.designsystem.ErrorState
@@ -40,6 +43,7 @@ import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.taller.multimetro.SensorMultimetro
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
+import com.revscope.feature.dtc.R
 
 data class DtcPantallaUi(
     val estado: DtcUiState,
@@ -126,15 +130,21 @@ private fun accionesDe(
 
 @Composable
 internal fun DtcCenterContent(pantalla: DtcPantallaUi, acciones: AccionesDtc) {
+    val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = "Códigos de falla", subtitulo = pantalla.vehiculo, onVolver = acciones.onVolver)
+        BarraConVolver(
+            titulo = stringResource(R.string.dtc_title),
+            subtitulo = pantalla.vehiculo,
+            onVolver = acciones.onVolver,
+        )
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "acciones") { AccionesLectura(pantalla, acciones) }
-            contenidoSegunEstado(pantalla, acciones)
+            contenidoSegunEstado(pantalla, acciones, resolver)
         }
     }
 }
@@ -151,32 +161,41 @@ private fun AccionesLectura(pantalla: DtcPantallaUi, acciones: AccionesDtc) {
                     contentColor = RevScopeColors.Background,
                 ),
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-            ) { Text("Leer códigos", style = RevScopeType.label, textAlign = TextAlign.Center) }
+            ) { Text(stringResource(R.string.dtc_read_codes), style = RevScopeType.label, textAlign = TextAlign.Center) }
             OutlinedButton(
                 onClick = acciones.onBorrar,
                 enabled = pantalla.puedeBorrar && !pantalla.ocupado,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             ) {
                 val color = if (pantalla.puedeBorrar) RevScopeColors.Danger else RevScopeColors.TextMuted
-                Text("Borrar códigos", color = color, style = RevScopeType.label, textAlign = TextAlign.Center)
+                Text(stringResource(R.string.dtc_clear_codes), color = color, style = RevScopeType.label, textAlign = TextAlign.Center)
             }
         }
         if (pantalla.hayCodigos) pantalla.detalle.bloqueoBorrado?.let { MotivoBorradoDeshabilitado(it) }
     }
 }
 
-private fun LazyListScope.contenidoSegunEstado(pantalla: DtcPantallaUi, acciones: AccionesDtc) {
+private fun LazyListScope.contenidoSegunEstado(
+    pantalla: DtcPantallaUi,
+    acciones: AccionesDtc,
+    resolver: AndroidStringResolver,
+) {
     when (val s = pantalla.estado) {
         DtcUiState.Idle -> item(key = "vacio") { SinLectura() }
-        DtcUiState.Reading -> item(key = "cargando") { LoadingContent("Leyendo códigos de falla…") }
-        DtcUiState.Clearing -> item(key = "cargando") { LoadingContent("Borrando códigos y releyendo la ECU…") }
-        is DtcUiState.Borrado -> item(key = "borrado") { ResultadoBorrado(s.resultado) }
+        DtcUiState.Reading -> item(key = "cargando") { LoadingContent(stringResource(R.string.dtc_reading_codes)) }
+        DtcUiState.Clearing -> item(key = "cargando") { LoadingContent(stringResource(R.string.dtc_clearing_and_rereading)) }
+        is DtcUiState.Borrado -> item(key = "borrado") { ResultadoBorrado(s.resultado, resolver) }
         is DtcUiState.Error -> item(key = "error") { ErrorState(s.message, onReintentar = acciones.onLeer) }
-        is DtcUiState.HasCodes -> lecturaConCodigos(s.codes, pantalla, acciones)
+        is DtcUiState.HasCodes -> lecturaConCodigos(s.codes, pantalla, acciones, resolver)
     }
 }
 
-private fun LazyListScope.lecturaConCodigos(codes: List<DtcCodeUi>, pantalla: DtcPantallaUi, acciones: AccionesDtc) {
+private fun LazyListScope.lecturaConCodigos(
+    codes: List<DtcCodeUi>,
+    pantalla: DtcPantallaUi,
+    acciones: AccionesDtc,
+    resolver: AndroidStringResolver,
+) {
     val detalle = pantalla.detalle
     detalle.mil?.let { mil -> item(key = "mil") { TarjetaMil(mil) } }
     detalle.avisoLectura?.let { aviso -> item(key = "aviso_lectura") { StatusContent(aviso, NivelEstado.ATENCION) } }
@@ -192,6 +211,7 @@ private fun LazyListScope.lecturaConCodigos(codes: List<DtcCodeUi>, pantalla: Dt
                 borradoHabilitado = pantalla.puedeBorrar,
             ),
             acciones,
+            resolver,
         )
     }
     detalle.freezeFrame?.let { ff ->
@@ -203,18 +223,17 @@ private fun LazyListScope.lecturaConCodigos(codes: List<DtcCodeUi>, pantalla: Dt
 @Composable
 private fun SinLectura() {
     EmptyState(
-        mensaje = "Todavía no se han leído los códigos. Con el contacto puesto y el adaptador conectado, " +
-            "toca «Leer códigos».",
+        mensaje = stringResource(R.string.dtc_not_read_yet),
         icono = Icons.AutoMirrored.Filled.ManageSearch,
     )
 }
 
 @Composable
-private fun ResultadoBorrado(resultado: ResultadoBorradoUi) {
+private fun ResultadoBorrado(resultado: ResultadoBorradoUi, resolver: AndroidStringResolver) {
     val nivel = when {
         resultado.rechazadoPorEcu -> NivelEstado.ATENCION
         resultado.despues.isNotEmpty() -> NivelEstado.FALLA
         else -> NivelEstado.OK
     }
-    StatusContent(textoResultadoBorrado(resultado), nivel)
+    StatusContent(textoResultadoBorrado(resultado, resolver), nivel)
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -33,9 +34,12 @@ internal fun VehiculoActivoCard(vm: SettingsViewModel, onNavigateToVehicleProfil
     val askVehicleOnStart by vm.askVehicleOnStart.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Vehículo")
+        SectionTitle(stringResource(R.string.settings_vehicle_section_title))
         NavRow(
-            "Vehículo activo: ${activeVehicleProfile?.name ?: "Ninguno"}",
+            stringResource(
+                R.string.settings_vehicle_active,
+                activeVehicleProfile?.name ?: stringResource(R.string.settings_vehicle_none),
+            ),
             onNavigateToVehicleProfiles,
         )
         Row(
@@ -43,7 +47,7 @@ internal fun VehiculoActivoCard(vm: SettingsViewModel, onNavigateToVehicleProfil
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Preguntar vehículo al inicio",
+                stringResource(R.string.settings_vehicle_ask_on_start),
                 color = TextPrimaryColor,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
@@ -70,20 +74,19 @@ internal fun HerramientasCard(
     val autoTripOnMove by viajeVm.autoTripOnMove.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Herramientas")
-        NavRow("Perfiles de vehículo", onNavigateToVehicleProfiles)
+        SectionTitle(stringResource(R.string.settings_tools_section_title))
+        NavRow(stringResource(R.string.settings_vehicle_profiles), onNavigateToVehicleProfiles)
         ToggleRow(
-            "Mantener pantalla encendida",
+            stringResource(R.string.settings_keep_screen_on),
             keepScreenOn,
             vm::updateKeepScreenOn,
-            subtitle = "Durante la conducción con el dashboard abierto. Apagarlo ahorra batería en soporte de carro.",
+            subtitle = stringResource(R.string.settings_keep_screen_on_description),
         )
         ToggleRow(
-            "Iniciar viaje automáticamente al moverse",
+            stringResource(R.string.settings_auto_trip_on_move),
             autoTripOnMove,
             viajeVm::updateAutoTripOnMove,
-            subtitle = "Con el adaptador conectado y sin viaje (tras «Finalizar viaje (seguir conectado)»), " +
-                "abre uno al sostener 10 km/h durante 5 s.",
+            subtitle = stringResource(R.string.settings_auto_trip_on_move_description),
         )
     }
 }
@@ -95,11 +98,11 @@ internal fun CombustibleCard(vm: SettingsViewModel) {
     val fuelPriceDiesel by vm.fuelPriceDiesel.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Combustible")
+        SectionTitle(stringResource(R.string.settings_fuel_section_title))
         OutlinedTextField(
             value = fuelPriceCorriente,
             onValueChange = vm::updateFuelPriceCorriente,
-            label = { Text("Precio galón corriente (COP)", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_fuel_regular_price), fontSize = 12.sp) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = settingsFieldColors(),
@@ -108,7 +111,7 @@ internal fun CombustibleCard(vm: SettingsViewModel) {
         OutlinedTextField(
             value = fuelPriceExtra,
             onValueChange = vm::updateFuelPriceExtra,
-            label = { Text("Precio galón extra (COP)", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_fuel_premium_price), fontSize = 12.sp) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = settingsFieldColors(),
@@ -117,22 +120,20 @@ internal fun CombustibleCard(vm: SettingsViewModel) {
         OutlinedTextField(
             value = fuelPriceDiesel,
             onValueChange = vm::updateFuelPriceDiesel,
-            label = { Text("Precio galón diésel / ACPM (COP)", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_fuel_diesel_price), fontSize = 12.sp) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = settingsFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            "Se usa el precio del tipo de combustible del vehículo activo para estimar el costo de " +
-                "cada viaje. No hay fuente oficial en línea vigente en datos.gov.co para precios de " +
-                "gasolina/ACPM por municipio (ver detalle en el código) — ajusta manualmente según tu estación.",
+            stringResource(R.string.settings_fuel_price_description),
             color = TextMutedColor,
             fontSize = 11.sp,
         )
         Button(
             onClick = vm::saveFuelPrices,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Guardar precios", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_fuel_save_prices), color = BgColor) }
     }
 }

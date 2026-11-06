@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.prueba
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.grafica.PidsPosicion
 import com.revscope.core.obd.taller.pruebas.DefinicionPrueba
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
@@ -8,7 +9,6 @@ import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.ResultadoPrecondicion
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.taller.referencia.BandaReferencia
-import com.revscope.core.common.i18n.StringResolver
 
 data class EntradaPantalla(
     val estado: EstadoPrueba,
@@ -30,13 +30,15 @@ internal class PantallaPrueba(
         EstadoPrueba.Inactiva -> inactiva(entrada)
         is EstadoPrueba.Verificando -> preparacion(e.tipo, entrada.precondicionesVivas ?: e.precondiciones) ?: elegir()
         is EstadoPrueba.EnPaso -> FasePantalla.Paso(
-            MapeoPaso.de(e, pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas, resolver),
+            MapeoPaso.de(conTituloResuelto(e), pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas, resolver),
         )
         is EstadoPrueba.Analizando -> FasePantalla.Analizando(e.tipo)
-        is EstadoPrueba.Terminada -> FasePantalla.Resultado(MapeoResultado.de(e))
+        is EstadoPrueba.Terminada -> FasePantalla.Resultado(MapeoResultado.de(e, resolver))
         is EstadoPrueba.Cancelada -> FasePantalla.Cancelada(e.tipo, e.motivo)
         is EstadoPrueba.Fallida -> FasePantalla.Fallida(e.tipo, e.motivo, e.reintentable)
     }
+
+    private fun conTituloResuelto(e: EstadoPrueba.EnPaso) = e.copy(paso = e.paso.copy(titulo = e.paso.titulo(resolver)))
 
     fun pidVivo(e: EstadoPrueba.EnPaso): String = definicion(e.tipo)?.pidPrincipal(e.paso).orEmpty()
 
@@ -50,7 +52,7 @@ internal class PantallaPrueba(
         return FasePantalla.Preparacion(
             tipo = tipo,
             descripcion = TextosPrueba.descripcion(tipo),
-            pasos = d.pasos.map(TextosPrueba::paso),
+            pasos = d.resuelta(resolver).pasos.map(TextosPrueba::paso),
             precondiciones = precondiciones.map { ItemPrecondicion(it.texto, it.cumple, it.queHacer, it.aviso) },
             usaVref = d.pids.any(PidsPosicion::es),
             usaDesfase = d.fuente == FuenteMuestras.VOLTAJE_ADAPTADOR,

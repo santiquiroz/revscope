@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tipos de prueba guiada -->
+    <string name="obd_prueba_tps_barrido">TPS sweep</string>
+    <string name="obd_prueba_minimo_retorno">Idle and return</string>
+    <string name="obd_prueba_arranque_frio">Cold start</string>
+    <string name="obd_prueba_bateria_carga">Battery and charging</string>
+    <string name="obd_prueba_map_baro">MAP vs barometric pressure</string>
+
+    <!-- Evento de la prueba en la sesión -->
+    <string name="obd_prueba_baja_confianza">%1$s (low confidence due to the sample rate)</string>
+    <string name="obd_prueba_sin_terminar">%1$s not finished</string>
+    <plurals name="obd_prueba_pasos_completos">
+        <item quantity="one">%1$s · %2$d of %3$d step completed</item>
+        <item quantity="other">%1$s · %2$d of %3$d steps completed</item>
+    </plurals>
+
+    <!-- Origen del desfase de AT RV y de la referencia de 5 V -->
+    <string name="obd_origen_multimetro">Calibrated with the multimeter</string>
+    <string name="obd_origen_editado">Edited by you</string>
+    <string name="obd_origen_sin_calibrar">Not calibrated</string>
+    <string name="obd_origen_tipico_editable">Typical (editable)</string>
+    <string name="obd_calibracion_sin_calibrar">Not calibrated: AT RV measures to within ±0.1-0.2&#160;V (typical)</string>
+
+    <!-- Bandas -->
+    <string name="obd_banda_por_debajo">below</string>
+    <string name="obd_banda_por_encima">above</string>
+
+    <!-- Batería y carga: pasos -->
+    <string name="obd_bateria_titulo_paso_contacto">Ignition on</string>
+    <string name="obd_bateria_titulo_paso_arranque">Starting</string>
+    <string name="obd_bateria_titulo_paso_minimo">Idle</string>
+    <string name="obd_bateria_titulo_paso_rpm_altas">High rpm</string>
+
+    <!-- Batería y carga: comprobaciones -->
+    <string name="obd_bateria_comprobacion_contacto_farola">Battery, ignition on (headlight on)</string>
+    <string name="obd_bateria_comprobacion_contacto_sin_cargas">Battery, ignition on (no electrical loads)</string>
+    <string name="obd_bateria_comprobacion_valle_arranque">Low point while starting</string>
+    <string name="obd_bateria_comprobacion_adaptador_aguanto">The adapter kept responding while starting</string>
+    <string name="obd_bateria_comprobacion_carga_minimo">Charging at idle (rises above rest)</string>
+    <string name="obd_bateria_comprobacion_carga_altas">Charging at high rpm</string>
+    <string name="obd_bateria_comprobacion_maximo">Maximum with the engine running</string>
+
+    <!-- Batería y carga: títulos -->
+    <string name="obd_bateria_titulo_sin_datos">No voltage readings from the adapter</string>
+    <string name="obd_bateria_titulo_sobrecarga">Overcharging: %1$s with the engine running</string>
+    <string name="obd_bateria_titulo_arranque_bajo">Voltage drops to %1$s while starting</string>
+    <string name="obd_bateria_titulo_adaptador_reiniciado">The adapter reset while starting</string>
+    <string name="obd_bateria_titulo_no_carga">Not charging: %1$s at high rpm</string>
+    <string name="obd_bateria_titulo_carga_alta">High charging voltage: %1$s at high rpm</string>
+    <string name="obd_bateria_titulo_sin_carga_en_minimo">Charges at high rpm, but not at idle</string>
+    <string name="obd_bateria_titulo_bateria_baja">Charging looks normal, but the battery is low at rest</string>
+    <string name="obd_bateria_titulo_normal">Battery and charging within the ranges</string>
+
+    <!-- Batería y carga: interpretación -->
+    <string name="obd_bateria_aviso_farola">On many motorcycles the headlight stays on with the ignition (AHO), and that lowers the voltage.</string>
+    <string name="obd_bateria_nota_at_rv">AT RV measures at the OBD connector to within ±0.1-0.2&#160;V (typical): calibrate the vehicle offset with the multimeter across the battery terminals to fine-tune it.</string>
+    <string name="obd_bateria_interp_sin_datos">The adapter returned no voltage readings (AT RV): there is nothing to measure.</string>
+    <string name="obd_bateria_condicion_farola">with the headlight on</string>
+    <string name="obd_bateria_condicion_sin_cargas">with no electrical loads</string>
+    <string name="obd_bateria_frase_contacto">With the ignition on and the engine off it read %1$s; %3$s is expected %2$s.</string>
+    <string name="obd_bateria_arranque_no_visto">No starting voltage drop was seen.</string>
+    <string name="obd_bateria_frase_arranque">While starting it fell to %1$s (%2$s below rest); %3$s is expected.</string>
+    <string name="obd_bateria_reinicio_ultimo">The lowest reading it managed to record was %1$s.</string>
+    <string name="obd_bateria_reinicio_enlace_perdido">the link to the adapter was lost</string>
+    <string name="obd_bateria_reinicio_sin_respuesta">the adapter did not respond for %1$s&#160;s</string>
+    <string name="obd_bateria_frase_reinicio">While starting, %1$s: it reset, which usually happens when the voltage drops a lot (typically below ~%2$s, depending on the adapter).</string>
+    <string name="obd_bateria_carga_minimo">it read %1$s at idle</string>
+    <string name="obd_bateria_carga_altas">%1$s at high rpm</string>
+    <string name="obd_bateria_partes_y">%1$s and %2$s</string>
+    <string name="obd_bateria_frase_carga">With the engine running, %1$s; charging is expected at %2$s.</string>
+    <string name="obd_bateria_veredicto_sobrecarga">Above the maximum (%1$s): consistent with a regulator/rectifier that is not limiting the charge; it can damage the battery and the lights.</string>
+    <string name="obd_bateria_veredicto_arranque_bajo">Consistent with a weak or sulfated battery, loose or corroded terminals or grounds, or a starter motor drawing too much current.</string>
+    <string name="obd_bateria_veredicto_no_carga">Consistent with a failing regulator/rectifier, stator or stator connector, or an open charging fuse.</string>
+    <string name="obd_bateria_veredicto_carga_alta">Somewhat above the range without reaching overcharging: consistent with a regulator that is starting to fail.</string>
+    <string name="obd_bateria_veredicto_sin_carga_en_minimo">At idle it does not rise above rest: on small motorcycles this can be normal, but with the lights on the battery discharges.</string>
+    <string name="obd_bateria_veredicto_bateria_baja">Consistent with a discharged battery or with a drain that runs it down with the ignition off.</string>
+    <string name="obd_bateria_desfase_corregido">Voltages corrected with the vehicle offset (%1$s, %2$s).</string>
+
+    <!-- Batería y carga: hallazgos y siguiente paso -->
+    <string name="obd_bateria_hallazgo_reinicio">The adapter reset while starting: severe voltage drop (typically below ~8&#160;V)</string>
+    <string name="obd_bateria_hallazgo_no_visto">No starting voltage drop was seen: the engine may not have been started in that step</string>
+    <string name="obd_bateria_hallazgo_baja_confianza">At %1$s readings per second, the actual low point may be deeper than the one measured</string>
+    <string name="obd_bateria_hallazgo_arranque_bajo">Voltage fell to %1$s while starting</string>
+    <string name="obd_bateria_hallazgo_no_carga">At high rpm it read %1$s: it is not charging</string>
+    <string name="obd_bateria_siguiente_sin_datos">Check that the adapter responds to AT RV and repeat the test</string>
+    <string name="obd_bateria_siguiente_arranque">Measure the battery across its terminals while starting with the multimeter (battery template) and check the terminals and grounds</string>
+    <string name="obd_bateria_siguiente_carga">Measure the charging voltage across the battery terminals with the multimeter (battery template) and check the regulator/rectifier, the stator and its connector</string>
+    <string name="obd_bateria_siguiente_bateria_baja">Charge the battery and repeat; if it drops again at rest, look for drains with the ignition off</string>
+
+    <!-- Batería y carga: medidas -->
+    <string name="obd_bateria_medida_contacto">Ignition on: %1$s</string>
+    <string name="obd_bateria_medida_minimo">Idle: %1$s</string>
+    <string name="obd_bateria_medida_rpm_altas">High rpm: %1$s</string>
+    <string name="obd_bateria_medida_desfase">Offset: %1$s</string>
+    <string name="obd_bateria_desfase_sin_calibrar">not calibrated (AT RV ±0.1-0.2&#160;V, typical)</string>
+    <string name="obd_bateria_medida_arranque_reinicio">Starting: the adapter reset</string>
+    <string name="obd_bateria_medida_arranque_ultimo">(last reading, %1$s)</string>
+    <string name="obd_bateria_medida_arranque_no_visto">Starting: no visible drop (%1$s readings/s)</string>
+    <string name="obd_bateria_medida_arranque">Starting: low point %1$s, drop of %2$s (%3$s readings/s)</string>
+    <string name="obd_bateria_tramo">%1$s (from %2$s to %3$s)</string>
+    <string name="obd_bateria_banda_tipica">the typical range</string>
+
+    <!-- Mínimo y retorno: pasos -->
+    <string name="obd_minimo_titulo_paso_minimo">Idle</string>
+    <string name="obd_minimo_titulo_paso_retorno_1">Return 1</string>
+    <string name="obd_minimo_titulo_paso_retorno_2">Return 2</string>
+    <string name="obd_minimo_titulo_paso_retorno_3">Return 3</string>
+
+    <!-- Mínimo y retorno: comprobaciones -->
+    <string name="obd_minimo_comprobacion_media">Idle (average)</string>
+    <string name="obd_minimo_comprobacion_deriva">Idle drift (unsigned)</string>
+    <string name="obd_minimo_comprobacion_desviacion">Idle deviation</string>
+    <string name="obd_minimo_comprobacion_sin_oscilacion">No oscillation of more than %1$d rpm</string>
+    <string name="obd_minimo_comprobacion_sin_apagones">Did not stall</string>
+    <string name="obd_minimo_comprobacion_valle">Lowest dip on release</string>
+    <string name="obd_minimo_comprobacion_tps">Idle TPS</string>
+    <string name="obd_minimo_unidad_del_minimo">of idle</string>
+
+    <!-- Mínimo y retorno: títulos -->
+    <string name="obd_minimo_titulo_inestable">Unstable idle</string>
+    <string name="obd_minimo_titulo_retorno_bajo">On release, the RPM drop too far</string>
+    <string name="obd_minimo_titulo_fuera_de_banda">Stable idle, but outside the range</string>
+    <string name="obd_minimo_titulo_tps_ralenti_fuera">Stable idle, with the idle TPS outside the closed-throttle range</string>
+    <string name="obd_minimo_titulo_sin_retornos">Stable idle; the throttle blips were not detected</string>
+    <string name="obd_minimo_titulo_sin_datos">Not enough RPM data</string>
+    <string name="obd_minimo_titulo_normal">Stable idle and good return</string>
+    <plurals name="obd_minimo_apagones_al_soltar">
+        <item quantity="one">%1$d of %2$d time when releasing the throttle</item>
+        <item quantity="other">%1$d of %2$d times when releasing the throttle</item>
+    </plurals>
+    <string name="obd_minimo_titulo_se_apago_al_soltar">It stalled %1$s</string>
+    <string name="obd_minimo_titulo_se_apago_en_minimo">It stalled at idle without touching the throttle</string>
+    <string name="obd_minimo_titulo_se_apago_ambos">It stalled at idle and %1$s</string>
+
+    <!-- Mínimo y retorno: interpretación -->
+    <string name="obd_minimo_interp_sin_datos">No RPM readings arrived during idle: without them there is nothing to measure.</string>
+    <string name="obd_minimo_ect">Engine at %1$s&#160;°C during idle.</string>
+    <string name="obd_minimo_deriva_cayo">Idle fell from %1$s to %2$s&#160;rpm in %3$s&#160;s (%4$s&#160;%5$s)</string>
+    <string name="obd_minimo_deriva_subio">Idle rose from %1$s to %2$s&#160;rpm in %3$s&#160;s (%4$s&#160;%5$s)</string>
+    <string name="obd_minimo_media">Idle averaged %1$s&#160;rpm, with a deviation of %2$s&#160;rpm</string>
+    <string name="obd_minimo_con_oscilacion">%1$s, and it oscillates ±%2$s&#160;rpm%3$s</string>
+    <string name="obd_minimo_cada">every %1$s&#160;s</string>
+    <string name="obd_minimo_inestable_sufijo">%1$s: unstable%2$s.</string>
+    <string name="obd_minimo_frase_banda">The average, %1$s&#160;rpm, is %2$s the range (%3$s).</string>
+    <plurals name="obd_minimo_apagones_retorno">
+        <item quantity="one">When releasing the throttle it stalled %1$d of %2$d time.</item>
+        <item quantity="other">When releasing the throttle it stalled %1$d of %2$d times.</item>
+    </plurals>
+    <string name="obd_minimo_vuelta">and it returned to idle within %1$s&#160;s at most</string>
+    <string name="obd_minimo_frase_valle">On release, the lowest dip was %1$s&#160;rpm (%2$s of idle)%3$s.</string>
+    <string name="obd_minimo_compatibilidad">Consistent with poorly controlled idle: idle air valve or stepper motor, a dirty throttle body, a vacuum leak, or a TPS signal the ECU does not recognize as idle.</string>
+
+    <!-- Mínimo y retorno: hallazgos -->
+    <plurals name="obd_minimo_hallazgo_apagones">
+        <item quantity="one">It stalled %1$d time at idle without touching the throttle</item>
+        <item quantity="other">It stalled %1$d times at idle without touching the throttle</item>
+    </plurals>
+    <string name="obd_minimo_hallazgo_se_apago_al_soltar">It stalled on release in %1$s</string>
+    <string name="obd_minimo_nombre_articulo">%1$s</string>
+    <string name="obd_minimo_nombres_varios">%1$s and %2$s</string>
+    <string name="obd_minimo_hallazgo_inestable">Unstable idle: drift of %1$s&#160;%2$s and deviation of %3$s&#160;rpm%4$s</string>
+    <string name="obd_minimo_hallazgo_oscila">, oscillates ±%1$s&#160;rpm</string>
+    <string name="obd_minimo_hallazgo_sin_acelerada">%1$s: the throttle blip was not detected (it reached %2$s&#160;rpm); it does not count</string>
+    <string name="obd_minimo_hallazgo_no_volvio">%1$s: it did not return to within ±%2$d&#160;%% of idle before the step ended</string>
+    <string name="obd_minimo_hallazgo_valle">Dip on release of %1$s&#160;%% of idle, below the range%2$s</string>
+    <string name="obd_minimo_hallazgo_banda">Idle of %1$s&#160;rpm, %2$s the range%3$s</string>
+    <string name="obd_minimo_hallazgo_tps">Idle TPS %1$s-%2$s&#160;V, %3$s the closed-throttle range%4$s: %5$s</string>
+    <string name="obd_minimo_tps_bajo">the ECU may not recognize the idle position</string>
+    <string name="obd_minimo_tps_alto">the throttle may not be closing fully or the stop may be out of adjustment</string>
+
+    <!-- Mínimo y retorno: siguiente paso -->
+    <string name="obd_minimo_siguiente_tps">Run the TPS sweep with the engine off and measure its signal with the multimeter (TPS template)</string>
+    <string name="obd_minimo_siguiente_inestable">Check the throttle body and the idle control, look for vacuum leaks, and repeat the test cold and hot to compare</string>
+    <string name="obd_minimo_siguiente_fuera_de_banda">Confirm the idle speed the manufacturer specifies for this model; if it differs from the typical range, edit it</string>
+    <string name="obd_minimo_siguiente_sin_retornos">Repeat the test revving to about 3,000 rpm on each return</string>
+    <string name="obd_minimo_siguiente_sin_datos">Check that the adapter is still connected and repeat the test</string>
+
+    <!-- Mínimo y retorno: medidas -->
+    <plurals name="obd_minimo_muestras">
+        <item quantity="one">%1$d sample in %2$s&#160;s</item>
+        <item quantity="other">%1$d samples in %2$s&#160;s</item>
+    </plurals>
+    <string name="obd_minimo_medida_minimo">Idle: average %1$s&#160;rpm, deviation %2$s&#160;rpm, from %3$s to %4$s&#160;rpm (%5$s)</string>
+    <string name="obd_minimo_medida_deriva">Drift: %1$s&#160;%2$s (from %3$s to %4$s&#160;rpm)</string>
+    <string name="obd_minimo_medida_oscilacion">Oscillation: %1$s</string>
+    <string name="obd_minimo_oscilacion_valor">±%1$s&#160;rpm</string>
+    <string name="obd_minimo_oscilacion_no">none</string>
+    <string name="obd_minimo_medida_tps">Idle TPS: %1$s-%2$s&#160;V (average %3$s&#160;V)</string>
+    <string name="obd_minimo_medida_ect">Engine at %1$s&#160;°C during idle</string>
+    <string name="obd_minimo_retorno_sin_acelerada">%1$s: no throttle blip (peak %2$s&#160;rpm)</string>
+    <string name="obd_minimo_retorno_se_apago">%1$s: peak %2$s&#160;rpm and it stalled on release</string>
+    <string name="obd_minimo_retorno">%1$s: peak %2$s&#160;rpm, dip %3$s&#160;rpm (%4$s of idle), %5$s</string>
+    <string name="obd_minimo_retorno_volvio">returned in %1$s&#160;s</string>
+    <string name="obd_minimo_retorno_no_volvio">did not return to within ±%1$d&#160;%% of idle</string>
+</resources>

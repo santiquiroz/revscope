@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,6 +36,12 @@ internal fun SettingsSectionHeader(
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {
+    val clickLabel = stringResource(
+        if (expanded) R.string.settings_section_collapse else R.string.settings_section_expand,
+    )
+    val expandedDescription = stringResource(
+        if (expanded) R.string.settings_section_expanded else R.string.settings_section_collapsed,
+    )
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         label = "settingsSectionChevron",
@@ -43,8 +50,12 @@ internal fun SettingsSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(RevScopeColors.Surface, RoundedCornerShape(8.dp))
-            .clickable(onClickLabel = if (expanded) "Plegar" else "Desplegar", role = Role.Button, onClick = onToggle)
-            .semantics { stateDescription = if (expanded) "Desplegada" else "Plegada" }
+            .clickable(
+                onClickLabel = clickLabel,
+                role = Role.Button,
+                onClick = onToggle,
+            )
+            .semantics { stateDescription = expandedDescription }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

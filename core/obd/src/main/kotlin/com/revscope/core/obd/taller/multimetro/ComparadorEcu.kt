@@ -110,7 +110,7 @@ object LecturasEcuSesion {
             CondicionesMultimetro.MEDIO to detalle.numero("medioV"),
             CondicionesMultimetro.FONDO to detalle.numero("fondoV"),
         ).filterValues { it != null }.mapValues { it.value!! }
-        return voltios.takeIf { it.isNotEmpty() }?.let { LecturasEcu("Prueba guiada «${TipoPrueba.TPS_BARRIDO.titulo}» de esta sesión", it) }
+        return voltios.takeIf { it.isNotEmpty() }?.let { LecturasEcu("Prueba guiada «${evento.titulo}» de esta sesión", it) }
     }
 
     private fun JSONObject.numero(nombre: String): Double? = optDouble(nombre).takeUnless(Double::isNaN)

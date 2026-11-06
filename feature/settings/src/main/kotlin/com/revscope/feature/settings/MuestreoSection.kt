@@ -19,11 +19,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.obd.telemetry.SamplingPreset
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
 
@@ -35,23 +37,26 @@ internal fun MuestreoObdCard(vm: SamplingSettingsViewModel = hiltViewModel()) {
     val ultima by vm.ultimaCaptura.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle("Muestreo OBD")
+        SectionTitle(stringResource(R.string.settings_sampling_section_title))
         Text(
-            "Cada cuánto se leen los sensores en el uso normal. Para ver uno o pocos sensores lo más " +
-                "rápido posible (pedal, mariposa) usa Taller → Sensores → Captura rápida.",
+            stringResource(R.string.settings_sampling_description),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
         SamplingPreset.entries.forEach { opcion ->
             PresetRow(opcion, selected = opcion == preset) { vm.updatePreset(opcion) }
         }
-        Text("Captura rápida: duración máxima", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+        Text(
+            stringResource(R.string.settings_sampling_capture_duration),
+            color = RevScopeColors.TextPrimary,
+            fontSize = 13.sp,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SamplingSettingsViewModel.OPCIONES_MAX_CAPTURA_MIN.forEach { minutos ->
                 FilterChip(
                     selected = minutos == maxMin,
                     onClick = { vm.updateMaxCapturaMin(minutos) },
-                    label = { Text("$minutos min", fontSize = 12.sp) },
+                    label = { Text(stringResource(R.string.settings_sampling_minutes, minutos), fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = RevScopeColors.Accent,
                         selectedLabelColor = Color(0xFF0A0A0F),
@@ -60,18 +65,31 @@ internal fun MuestreoObdCard(vm: SamplingSettingsViewModel = hiltViewModel()) {
                 )
             }
         }
+        val lastRate = when (val capture = ultima) {
+            null -> stringResource(R.string.settings_sampling_no_capture)
+            else -> resumenTasa(capture)
+        }
         Text(
-            ultima?.let(::resumenTasa) ?: "Última tasa medida: todavía no hay capturas en esta sesión.",
+            lastRate,
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
     }
 }
 
+@Composable
 private fun resumenTasa(r: ResumenCaptura): String {
-    val porPid = r.porPid.joinToString(" · ") { "${it.pid} ${"%.1f".format(it.hz)} Hz" }
-    val latencia = r.latenciaP50Ms?.let { " · latencia p50 ${"%.0f".format(it)} ms" }.orEmpty()
-    return "Última tasa medida: $porPid$latencia"
+    val locale = LocalConfiguration.current.locales[0]
+    val porPidItems = mutableListOf<String>()
+    r.porPid.forEach {
+        porPidItems += stringResource(R.string.settings_sampling_rate_item, it.pid, LocaleNumbers.decimal(it.hz, 1, locale))
+    }
+    val porPid = porPidItems.joinToString(" · ")
+    val latencyMs = r.latenciaP50Ms
+    val latencia = if (latencyMs == null) "" else {
+        stringResource(R.string.settings_sampling_latency, LocaleNumbers.decimal(latencyMs, 0, locale))
+    }
+    return stringResource(R.string.settings_sampling_last_rate, porPid, latencia)
 }
 
 @Composable
@@ -95,9 +113,10 @@ private fun PresetRow(preset: SamplingPreset, selected: Boolean, onSelect: () ->
     }
 }
 
+@Composable
 private fun notaDe(preset: SamplingPreset): String? = when (preset) {
-    SamplingPreset.ESTANDAR_2S -> "Por defecto: RPM y velocidad cada 100 ms, temperaturas y trims cada 2 s"
-    SamplingPreset.CUARTO_SEGUNDO -> "Más batería y calor"
-    SamplingPreset.MAXIMO -> "El adaptador fija la tasa real: más batería y calor"
+    SamplingPreset.ESTANDAR_2S -> stringResource(R.string.settings_sampling_note_standard)
+    SamplingPreset.CUARTO_SEGUNDO -> stringResource(R.string.settings_sampling_note_battery)
+    SamplingPreset.MAXIMO -> stringResource(R.string.settings_sampling_note_maximum)
     else -> null
 }

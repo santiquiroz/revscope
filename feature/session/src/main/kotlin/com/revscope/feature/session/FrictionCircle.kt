@@ -12,6 +12,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.min
@@ -37,6 +38,8 @@ fun FrictionCircle(
     points: List<Pair<Float, Float>>, // (gLat, gLong)
     modifier: Modifier = Modifier,
 ) {
+    val longitudinalLabel = stringResource(R.string.trips_g_longitudinal)
+    val lateralLabel = stringResource(R.string.trips_g_lateral)
     val axisTextPx = with(LocalDensity.current) { 9.sp.toPx() }
     val leftPaint = remember(axisTextPx) { axisLabelPaint(axisTextPx, Paint.Align.LEFT) }
     val rightPaint = remember(axisTextPx) { axisLabelPaint(axisTextPx, Paint.Align.RIGHT) }
@@ -102,7 +105,7 @@ fun FrictionCircle(
 
         // Axis names in the corners.
         val margin = 4.dp.toPx()
-        drawAxisText("G longitudinal", margin, 10.dp.toPx(), leftPaint)
-        drawAxisText("G lateral", size.width - margin, size.height - 2.dp.toPx(), rightPaint)
+        drawAxisText(longitudinalLabel, margin, 10.dp.toPx(), leftPaint)
+        drawAxisText(lateralLabel, size.width - margin, size.height - 2.dp.toPx(), rightPaint)
     }
 }

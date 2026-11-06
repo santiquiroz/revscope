@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_common_cancel">Cancelar</string>
+    <string name="settings_mcp_allow_control">Permitir control desde MCP (viaje, muestreo, captura)</string>
+    <string name="settings_mcp_control_description">El PC puede finalizar e iniciar viajes, cambiar el muestreo y hacer capturas rápidas (finalizar_viaje, iniciar_viaje, set_muestreo, iniciar_captura, detener_captura). Solo en redes de confianza: el token viaja sin cifrar por la WiFi.</string>
+    <string name="settings_mcp_allow_clear_codes">Permitir borrar códigos desde MCP</string>
+    <string name="settings_mcp_clear_codes_description">borrar_dtc exige el vehículo detenido y tu toque en la notificación, y reinicia los monitores de readiness: la revisión técnico-mecánica puede rechazar el vehículo hasta completar ciclos de manejo.</string>
+    <string name="settings_mcp_allow_workshop_writes">Permitir escrituras de taller desde MCP</string>
+    <string name="settings_mcp_workshop_writes_description">Borrar códigos por módulo (UDS 14), reiniciar la ECU (UDS 11), pruebas a bordo (modo 08), operaciones del catálogo de fabricante y secuencias crudas. Cada escritura pide tu toque en una notificación; con el vehículo en movimiento nunca se ejecuta y el flasheo está bloqueado.</string>
+    <string name="settings_mcp_permissions_not_backed_up">Estos permisos no viajan en el respaldo: restaurar nunca los activa.</string>
+    <string name="settings_mcp_bypass_label">Saltar confirmaciones (bypass)</string>
+    <string name="settings_mcp_bypass_description">Las escrituras del MCP se ejecutan sin preguntarte. Se apaga solo al detener el servidor MCP.</string>
+    <string name="settings_mcp_bypass_confirm_title">¿Escrituras sin confirmación?</string>
+    <string name="settings_mcp_bypass_warning">Cualquier cliente con el token del MCP podrá borrar códigos, reiniciar módulos y mandar comandos de fabricante a la ECU sin que lo apruebes. Un comando equivocado puede dejar un módulo inservible hasta llevarlo al concesionario. Las guardas de vehículo detenido y el bloqueo de flasheo siguen activos.</string>
+    <string name="settings_mcp_enable_bypass">Activar bypass</string>
+
+    <string name="settings_ai_section_title">Inteligencia artificial</string>
+    <string name="settings_ai_provider_description">Proveedor usado para explicar códigos DTC e información local. Sin API key, esas funciones se muestran sin explicación de IA.</string>
+    <string name="settings_ai_api_key_label">API key de %1$s</string>
+    <string name="settings_ai_model_label">Modelo (vacío = %1$s)</string>
+    <string name="settings_ai_model_hint_nodo">el que tengas cargado en Nodo</string>
+    <string name="settings_ai_model_hint_server">según tu servidor</string>
+    <string name="settings_ai_base_url_nodo">Base URL (vacío = %1$s)</string>
+    <string name="settings_ai_base_url_custom">Base URL (LM Studio, DeepSeek, Groq, OpenRouter…)</string>
+    <string name="settings_ai_provider_label">Proveedor de IA</string>
+    <string name="settings_ai_save">Guardar configuración de IA</string>
+    <string name="settings_ai_testing">Probando…</string>
+    <string name="settings_ai_test_connection">Probar conexión</string>
+    <string name="settings_ai_show_benefits">Ver qué ganás con una key</string>
+    <string name="settings_ai_provider_anthropic">Claude (Anthropic)</string>
+    <string name="settings_ai_provider_openai">OpenAI</string>
+    <string name="settings_ai_provider_gemini">Gemini (Google)</string>
+    <string name="settings_ai_provider_nodo">Nodo (este teléfono)</string>
+    <string name="settings_ai_provider_custom">Compatible OpenAI (LM Studio, DeepSeek, Groq, OpenRouter…)</string>
+
+    <string name="settings_vehicle_section_title">Vehículo</string>
+    <string name="settings_vehicle_active">Vehículo activo: %1$s</string>
+    <string name="settings_vehicle_none">Ninguno</string>
+    <string name="settings_vehicle_ask_on_start">Preguntar vehículo al inicio</string>
+    <string name="settings_tools_section_title">Herramientas</string>
+    <string name="settings_vehicle_profiles">Perfiles de vehículo</string>
+    <string name="settings_keep_screen_on">Mantener pantalla encendida</string>
+    <string name="settings_keep_screen_on_description">Durante la conducción con el dashboard abierto. Apagarlo ahorra batería en soporte de carro.</string>
+    <string name="settings_auto_trip_on_move">Iniciar viaje automáticamente al moverse</string>
+    <string name="settings_auto_trip_on_move_description">Con el adaptador conectado y sin viaje (tras «Finalizar viaje (seguir conectado)»), abre uno al sostener 10 km/h durante 5 s.</string>
+    <string name="settings_fuel_section_title">Combustible</string>
+    <string name="settings_fuel_regular_price">Precio galón corriente (COP)</string>
+    <string name="settings_fuel_premium_price">Precio galón extra (COP)</string>
+    <string name="settings_fuel_diesel_price">Precio galón diésel / ACPM (COP)</string>
+    <string name="settings_fuel_price_description">Se usa el precio del tipo de combustible del vehículo activo para estimar el costo de cada viaje. No hay fuente oficial en línea vigente en datos.gov.co para precios de gasolina/ACPM por municipio (ver detalle en el código) — ajusta manualmente según tu estación.</string>
+    <string name="settings_fuel_save_prices">Guardar precios</string>
+
+    <string name="settings_social_server_title">Servidor colaborativo</string>
+    <string name="settings_social_server_description">Opcional. Conecta la app a un servidor RevScope para compartir huecos, hacer rodadas en grupo y fantasmas. La app funciona igual sin esto. Puedes usar el público, el de tu parche, o montar el tuyo (github.com/santiquiroz/revscope-server). Déjalo vacío para no usar ninguno.</string>
+    <string name="settings_social_server_url">URL del servidor (ej. https://mi-server:8080)</string>
+    <string name="settings_social_rider_name">Tu apodo (rodadas y fantasmas)</string>
+    <string name="settings_social_server_token">Token (solo si el server lo pide — déjalo vacío si no)</string>
+    <string name="settings_social_save_server">Guardar servidor</string>
+    <string name="settings_social_companion_title">Compañero de viaje</string>
+    <string name="settings_social_companion_description">Al llegar a un lugar nuevo — en el país o en el extranjero — te da un brief de conducción: precio del combustible, peajes, restricciones y, si estás fuera, qué necesitas para manejar allí. Pregunta PRIMERO al servidor colaborativo (gratis); si nadie ha reportado esa zona y tienes IA con búsqueda web, la genera y la comparte de vuelta para el próximo viajero. Apagado por defecto (el respaldo con IA cuesta).</string>
+    <string name="settings_social_companion_enabled">Activar compañero de viaje</string>
+    <string name="settings_social_voice_brief">Anunciar por voz al llegar</string>
+    <string name="settings_social_voice_brief_description">Avisa que el brief está listo; el detalle queda en la notificación</string>
+
+    <string name="settings_map_section_title">Mapa</string>
+    <string name="settings_offline_map_size">~913 MB</string>
+    <string name="settings_offline_map_gigabytes">%1$s GB</string>
+    <string name="settings_offline_map_title">Mapa offline de Colombia (%1$s)</string>
+    <string name="settings_offline_map_ready">Mapa offline listo</string>
+    <string name="settings_offline_map_downloaded">Descargado · %1$s · %2$s</string>
+    <string name="settings_offline_map_unknown_date">fecha desconocida</string>
+    <string name="settings_offline_map_delete">Borrar</string>
+    <string name="settings_offline_map_not_downloaded">No descargado</string>
+    <string name="settings_offline_map_download">Descargar</string>
+    <string name="settings_offline_map_downloading">Descargando… %1$d%%</string>
+    <string name="settings_offline_map_cancel">Cancelar</string>
+    <string name="settings_offline_map_retry">Reintentar</string>
+    <string name="settings_offline_map_download_title">Descargar mapa offline</string>
+    <string name="settings_offline_map_no_wifi">Sin WiFi</string>
+    <string name="settings_offline_map_download_wifi_message">Se descargará el mapa offline de Colombia (%1$s).</string>
+    <string name="settings_offline_map_download_mobile_message">Sin WiFi — ¿usar datos móviles? (%1$s)</string>
+    <string name="settings_offline_map_use_mobile_data">Usar datos móviles</string>
+    <string name="settings_offline_map_delete_title">Borrar mapa offline</string>
+    <string name="settings_offline_map_delete_message">Se eliminará el mapa descargado. Podrás volver a descargarlo cuando quieras.</string>
+
+    <string name="settings_sampling_section_title">Muestreo OBD</string>
+    <string name="settings_sampling_description">Cada cuánto se leen los sensores en el uso normal. Para ver uno o pocos sensores lo más rápido posible (pedal, mariposa) usa Taller → Sensores → Captura rápida.</string>
+    <string name="settings_sampling_capture_duration">Captura rápida: duración máxima</string>
+    <string name="settings_sampling_minutes">%1$d min</string>
+    <string name="settings_sampling_no_capture">Última tasa medida: todavía no hay capturas en esta sesión.</string>
+    <string name="settings_sampling_rate_item">%1$s %2$s Hz</string>
+    <string name="settings_sampling_latency"> · latencia p50 %1$s ms</string>
+    <string name="settings_sampling_last_rate">Última tasa medida: %1$s%2$s</string>
+    <string name="settings_sampling_note_standard">Por defecto: RPM y velocidad cada 100 ms, temperaturas y trims cada 2 s</string>
+    <string name="settings_sampling_note_battery">Más batería y calor</string>
+    <string name="settings_sampling_note_maximum">El adaptador fija la tasa real: más batería y calor</string>
+
+    <string name="settings_background_section_title">Avisos en segundo plano</string>
+    <string name="settings_background_description">El aviso de las 5:30am (pico y placa, documentos por vencer) necesita que el sistema deje despertar la app. Si te llega tarde o solo al abrirla, revisa estos dos permisos.</string>
+    <string name="settings_background_exact_allowed">✓ Alarmas exactas permitidas</string>
+    <string name="settings_background_exact_blocked">✗ Alarmas exactas bloqueadas — el aviso puede correrse</string>
+    <string name="settings_background_battery_unrestricted">✓ Sin restricción de batería</string>
+    <string name="settings_background_battery_optimized">✗ Con optimización de batería — Samsung puede dormir la app</string>
+    <string name="settings_background_allow_exact_alarms">Permitir alarmas exactas</string>
+    <string name="settings_background_battery_optimization">Optimización de batería</string>
+    <string name="settings_background_test_toast">Aviso de prueba en 15 segundos</string>
+    <string name="settings_background_test_button">Probar aviso (15 s)</string>
+</resources>

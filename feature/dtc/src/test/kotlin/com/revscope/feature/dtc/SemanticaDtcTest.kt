@@ -83,14 +83,17 @@ class SemanticaDtcTest {
     }
 
     private fun montar(onVolver: () -> Unit = {}) {
+        val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+            com.revscope.feature.dtc.R::class.java,
+            com.revscope.core.obd.R::class.java,
+            resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+        )
         val vm = DtcViewModel(
             mockk<IntelligenceOrchestrator>(relaxed = true),
             mockk<PidRegistry>(relaxed = true),
             registro,
-            BaseConocimientoDtc(
-                { GUIA_JSON },
-                com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = listOf("../../core/obd/src/main/res")),
-            ),
+            BaseConocimientoDtc({ GUIA_JSON }, resolver),
+            resolver,
         )
         compose.setContent {
             RevScopeTheme { DtcScreen(onNavigateBack = onVolver, connectionVm = connectionVm, vm = vm) }

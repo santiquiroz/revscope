@@ -41,6 +41,11 @@ class DtcViewModelTest {
     private val connectionVm = mockk<ConnectionViewModel>()
     private val orchestrator = mockk<IntelligenceOrchestrator>(relaxed = true)
     private val registro = mockk<RegistroTaller>(relaxed = true)
+    private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.feature.dtc.R::class.java,
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
 
     private fun scan(vararg codes: String) = DtcScan(
         activos = codes.map { DtcCode(it, DtcMode.Active) },
@@ -71,10 +76,11 @@ class DtcViewModelTest {
 
     private val guias = BaseConocimientoDtc(
         { GUIA_JSON },
-        com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = listOf("../../core/obd/src/main/res")),
+        resolver,
     )
 
-    private fun nuevoVm(): DtcViewModel = DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true), registro, guias)
+    private fun nuevoVm(): DtcViewModel =
+        DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true), registro, guias, resolver)
 
     private fun vmConCodigos(): DtcViewModel = nuevoVm().also { it.readDtcCodes(connectionVm) }
 
@@ -243,7 +249,7 @@ class DtcViewModelTest {
 
         vm.guardarEnSesionNueva()
 
-        coVerify(exactly = 1) { registro.abrirSesion(solicitudDesdeLectura(scan("P0122"))) }
+        coVerify(exactly = 1) { registro.abrirSesion(solicitudDesdeLectura(scan("P0122"), resolver)) }
         coVerify(exactly = 2) { registro.anotarLecturaDtc(scan("P0122"), any()) }
         coVerify(exactly = 1) { registro.marcarPaso("P0122#1", true) }
         assertTrue(vm.detalle.value.lecturaEnSesion)
@@ -273,7 +279,10 @@ class DtcViewModelTest {
 
         assertTrue(vm.detalle.value.lecturaEnSesion)
         assertTrue(vm.confirmacionBorrado.value!!.freezeFrameEnSesion)
-        assertTrue(avisosBorradoDtc(freezeFrameEnSesion = true)[1].contains("ya quedó guardado en la sesión"))
+        assertTrue(
+            avisosBorradoDtc(freezeFrameEnSesion = true, resolver = resolver)[1]
+                .contains("ya quedó guardado en la sesión"),
+        )
     }
 
     @Test
@@ -292,7 +301,7 @@ class DtcViewModelTest {
         assertEquals(
             "La ECU rechazó el borrado (7F 04 22: condiciones no correctas). Muchas ECU solo borran con el motor " +
                 "apagado: apaga el motor, deja el contacto puesto y vuelve a intentarlo. Los códigos siguen guardados.",
-            textoResultadoBorrado(resultado),
+            textoResultadoBorrado(resultado, resolver),
         )
     }
 
@@ -330,11 +339,11 @@ class DtcViewModelTest {
         val rechazado = sigue.copy(rechazadoPorEcu = true)
         val limpio = sigue.copy(despues = emptyList())
 
-        assert(textoResultadoBorrado(sigue).contains("sigue presente"))
-        assert(textoResultadoBorrado(rechazado).contains("7F 04 22"))
+        assert(textoResultadoBorrado(sigue, resolver).contains("sigue presente"))
+        assert(textoResultadoBorrado(rechazado, resolver).contains("7F 04 22"))
         assertEquals(
             "Códigos borrados. Antes: P0122. Después: sin códigos activos.",
-            textoResultadoBorrado(limpio),
+            textoResultadoBorrado(limpio, resolver),
         )
     }
 
@@ -356,6 +365,6 @@ class DtcViewModelTest {
         val vm = vmConCodigos()
 
         assertNull(vm.detalle.value.avisoLectura)
-        assertEquals(SIN_CODIGOS_LECTURA_COMPLETA, vm.detalle.value.sinCodigos)
+        assertEquals("Sin códigos activos, pendientes ni permanentes", vm.detalle.value.sinCodigos)
     }
 }

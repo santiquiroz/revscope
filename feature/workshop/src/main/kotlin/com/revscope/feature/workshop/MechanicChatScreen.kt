@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -88,10 +89,10 @@ private fun ChatTopBar(onNavigateBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onNavigateBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.workshop_mechanic_chat_back), tint = TextColor)
         }
         Text(
-            "Mecánico IA",
+            stringResource(R.string.workshop_mechanic_chat_title),
             color = TextColor,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -115,7 +116,7 @@ private fun NoProviderState(onNavigateToSettings: () -> Unit, onOpenAiValue: () 
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            "Para hablar con el Mecánico IA, configura un proveedor en Ajustes → Inteligencia artificial.",
+            stringResource(R.string.workshop_mechanic_chat_provider_required),
             color = TextMutedColor,
             fontSize = 14.sp,
         )
@@ -124,10 +125,10 @@ private fun NoProviderState(onNavigateToSettings: () -> Unit, onOpenAiValue: () 
             onClick = onNavigateToSettings,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor, contentColor = Color.Black),
         ) {
-            Text("Ir a Ajustes", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.workshop_mechanic_chat_go_to_settings), fontWeight = FontWeight.Bold)
         }
         TextButton(onClick = onOpenAiValue) {
-            Text("Configurar IA", color = AccentColor)
+            Text(stringResource(R.string.workshop_mechanic_chat_configure_ai), color = AccentColor)
         }
     }
 }
@@ -162,7 +163,7 @@ private fun ChatContent(state: MechanicChatUiState, onSend: (String) -> Unit) {
 private fun EmptyChatHint(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
         Text(
-            "Preguntale al mecánico sobre tu vehículo — ya tiene tus datos actuales a mano.",
+            stringResource(R.string.workshop_mechanic_chat_empty_hint),
             color = TextMutedColor,
             fontSize = 13.sp,
         )
@@ -208,7 +209,7 @@ private fun ThinkingBubble() {
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = AccentColor)
-            Text("Pensando…", color = TextMutedColor, fontSize = 12.sp)
+            Text(stringResource(R.string.workshop_mechanic_chat_thinking), color = TextMutedColor, fontSize = 12.sp)
         }
     }
 }
@@ -225,7 +226,7 @@ private fun MessageInput(enabled: Boolean, onSend: (String) -> Unit) {
             value = text,
             onValueChange = { text = it },
             enabled = enabled,
-            placeholder = { Text("Escribe tu pregunta…", color = TextMutedColor) },
+            placeholder = { Text(stringResource(R.string.workshop_mechanic_chat_question_hint), color = TextMutedColor) },
             modifier = Modifier.weight(1f),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             colors = OutlinedTextFieldDefaults.colors(
@@ -243,7 +244,11 @@ private fun MessageInput(enabled: Boolean, onSend: (String) -> Unit) {
                 text = ""
             },
         ) {
-            Icon(Icons.AutoMirrored.Filled.Send, "Enviar", tint = if (enabled && text.isNotBlank()) AccentColor else TextMutedColor)
+            Icon(
+                Icons.AutoMirrored.Filled.Send,
+                stringResource(R.string.workshop_mechanic_chat_send),
+                tint = if (enabled && text.isNotBlank()) AccentColor else TextMutedColor,
+            )
         }
     }
 }

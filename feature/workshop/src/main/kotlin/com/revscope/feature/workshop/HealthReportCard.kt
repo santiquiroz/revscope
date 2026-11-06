@@ -7,11 +7,11 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.workshop.DiagnosticRules
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 private const val WIDTH = 1080
 private const val HEIGHT = 1350
@@ -42,9 +42,10 @@ object HealthReportCard {
         dtcCodes: List<String>,
         vehicleName: String,
         timestamp: Long,
+        resolver: StringResolver,
     ): Uri? = runCatching {
         val bitmap = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)
-        draw(Canvas(bitmap), items, vehicleName, timestamp)
+        draw(Canvas(bitmap), items, vehicleName, timestamp, resolver)
         val dir = File(context.cacheDir, "exports").apply { mkdirs() }
         val file = File(dir, "revscope_health_card.png")
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 95, it) }
@@ -52,33 +53,44 @@ object HealthReportCard {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }.getOrNull()
 
-    private fun draw(canvas: Canvas, items: List<DiagnosticRules.Diagnosis>, vehicleName: String, timestamp: Long) {
+    private fun draw(
+        canvas: Canvas,
+        items: List<DiagnosticRules.Diagnosis>,
+        vehicleName: String,
+        timestamp: Long,
+        resolver: StringResolver,
+    ) {
         canvas.drawColor(BG)
-        drawHeader(canvas, vehicleName, timestamp)
-        drawSummary(canvas, items)
-        drawItems(canvas, items)
+        drawHeader(canvas, vehicleName, timestamp, resolver)
+        drawSummary(canvas, items, resolver)
+        drawItems(canvas, items, resolver)
         canvas.drawText("github.com/santiquiroz/revscope", MARGIN, HEIGHT - 60f, paint(MUTED, 30f))
     }
 
-    private fun drawHeader(canvas: Canvas, vehicleName: String, timestamp: Long) {
+    private fun drawHeader(canvas: Canvas, vehicleName: String, timestamp: Long, resolver: StringResolver) {
         canvas.drawText("REVSCOPE", MARGIN, 130f, paint(ACCENT, 60f, bold = true))
-        canvas.drawText("Chequeo de salud", MARGIN, 180f, paint(TEXT, 38f, bold = true))
-        val date = SimpleDateFormat("dd MMM yyyy · HH:mm", Locale("es")).format(Date(timestamp))
-        canvas.drawText("$vehicleName · $date", MARGIN, 225f, paint(MUTED, 32f))
+        canvas.drawText(resolver.get(R.string.workshop_health_report_title), MARGIN, 180f, paint(TEXT, 38f, bold = true))
+        val date = SimpleDateFormat("dd MMM yyyy · HH:mm", resolver.locale).format(Date(timestamp)) // i18n-ignore
+        canvas.drawText(resolver.get(R.string.workshop_health_report_vehicle_date, vehicleName, date), MARGIN, 225f, paint(MUTED, 32f))
     }
 
-    private fun drawSummary(canvas: Canvas, items: List<DiagnosticRules.Diagnosis>) {
-        canvas.drawText(summaryLine(items), MARGIN, 320f, paint(TEXT, 50f, bold = true))
+    private fun drawSummary(canvas: Canvas, items: List<DiagnosticRules.Diagnosis>, resolver: StringResolver) {
+        canvas.drawText(summaryLine(items, resolver), MARGIN, 320f, paint(TEXT, 50f, bold = true))
     }
 
-    private fun summaryLine(items: List<DiagnosticRules.Diagnosis>): String {
+    private fun summaryLine(items: List<DiagnosticRules.Diagnosis>, resolver: StringResolver): String {
         val ok = items.count { it.nivel == DiagnosticRules.Nivel.OK }
         val atencion = items.count { it.nivel == DiagnosticRules.Nivel.ATENCION }
         val fallas = items.count { it.nivel == DiagnosticRules.Nivel.FALLA }
-        return "$ok OK · $atencion atención · $fallas fallas"
+        return resolver.get(
+            R.string.workshop_health_report_summary,
+            resolver.plural(R.plurals.workshop_health_report_ok_count, ok, ok),
+            resolver.plural(R.plurals.workshop_health_report_attention_count, atencion, atencion),
+            resolver.plural(R.plurals.workshop_health_report_fault_count, fallas, fallas),
+        )
     }
 
-    private fun drawItems(canvas: Canvas, items: List<DiagnosticRules.Diagnosis>) {
+    private fun drawItems(canvas: Canvas, items: List<DiagnosticRules.Diagnosis>, resolver: StringResolver) {
         val displayCount = if (items.size > MAX_ITEM_ROWS) MAX_ITEM_ROWS - 1 else items.size
         val titlePaint = paint(TEXT, 32f, bold = true)
         val causaPaint = paint(MUTED, 26f)
@@ -94,7 +106,12 @@ object HealthReportCard {
         if (items.size > MAX_ITEM_ROWS) {
             val rowY = ITEMS_TOP + displayCount * ROW_HEIGHT
             val restantes = items.size - displayCount
-            canvas.drawText("… y $restantes más", MARGIN + 38f, rowY + 26f, paint(MUTED, 30f))
+            canvas.drawText(
+                resolver.plural(R.plurals.workshop_health_report_more_items, restantes, restantes),
+                MARGIN + 38f,
+                rowY + 26f,
+                paint(MUTED, 30f),
+            )
         }
     }
 
