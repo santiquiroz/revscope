@@ -38,7 +38,7 @@ class ArchivoCaptura(
     override fun abrir(lineasIniciales: List<String>) {
         dir.mkdirs()
         podarViejas()
-        val nuevo = File(dir, "$PREFIJO${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date(epochMs()))}.csv")
+        val nuevo = File(dir, "$PREFIJO${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date(epochMs()))}.csv") // i18n-ignore
         archivo = nuevo
         escribir(lineasIniciales)
     }

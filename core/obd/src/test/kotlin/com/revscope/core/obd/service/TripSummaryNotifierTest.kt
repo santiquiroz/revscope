@@ -1,12 +1,15 @@
 package com.revscope.core.obd.service
 
 import com.revscope.core.data.db.entities.SessionEntity
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TripSummaryNotifierTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private fun session(
         distanceKm: Float,
@@ -23,19 +26,19 @@ class TripSummaryNotifierTest {
 
     @Test
     fun `resumen con distancia velocidad y duracion`() {
-        val text = TripSummaryNotifier.summaryText(session(23.4f, 82, 34))
+        val text = TripSummaryNotifier.summaryText(session(23.4f, 82, 34), resolver)
         assertEquals("23,4 km · 82 km/h máx · 34 min", text)
     }
 
     @Test
     fun `resumen agrega costo de combustible cuando esta disponible`() {
-        val text = TripSummaryNotifier.summaryText(session(23.4f, 82, 34, fuelCostCop = 4_200.0))
+        val text = TripSummaryNotifier.summaryText(session(23.4f, 82, 34, fuelCostCop = 4_200.0), resolver)
         assertEquals("23,4 km · 82 km/h máx · 34 min · $4.200", text)
     }
 
     @Test
     fun `resumen agrega eco score cuando esta disponible`() {
-        val text = TripSummaryNotifier.summaryText(session(23.4f, 82, 34, ecoScore = 85))
+        val text = TripSummaryNotifier.summaryText(session(23.4f, 82, 34, ecoScore = 85), resolver)
         assertEquals("23,4 km · 82 km/h máx · 34 min · Eco 85", text)
     }
 
@@ -43,6 +46,7 @@ class TripSummaryNotifierTest {
     fun `resumen agrega costo y eco score juntos en orden`() {
         val text = TripSummaryNotifier.summaryText(
             session(23.4f, 82, 34, fuelCostCop = 4_200.0, ecoScore = 85),
+            resolver,
         )
         assertEquals("23,4 km · 82 km/h máx · 34 min · $4.200 · Eco 85", text)
     }

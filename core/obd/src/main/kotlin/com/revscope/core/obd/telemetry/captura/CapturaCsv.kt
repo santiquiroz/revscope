@@ -17,13 +17,13 @@ object CapturaCsv {
 
     fun metadatos(info: InfoAdaptador, pids: List<String>, inicioEpochMs: Long, tecnicas: Set<TecnicaCaptura>): String =
         listOf(
-            "revscope-captura v1",
-            "adaptador=${info.nombre ?: "?"}",
-            "elm=${info.elm ?: "?"}",
-            "protocolo=${info.protocoloDpn ?: "?"}",
+            "revscope-captura v1", // i18n-ignore
+            "adaptador=${info.nombre ?: "?"}", // i18n-ignore
+            "elm=${info.elm ?: "?"}", // i18n-ignore
+            "protocolo=${info.protocoloDpn ?: "?"}", // i18n-ignore
             "pids=${pids.joinToString(",")}",
             "inicio=${isoLocal(inicioEpochMs)}",
-            "tecnicas=${tecnicas.joinToString(",") { it.clave }}",
+            "tecnicas=${tecnicas.joinToString(",") { it.clave }}", // i18n-ignore
         ).joinToString("; ")
 
     fun lineasIniciales(meta: String): List<String> = listOf("# $meta", CsvFormat.linea(COLUMNAS))

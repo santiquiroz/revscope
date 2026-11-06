@@ -19,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,7 +89,7 @@ private fun PresetRow(preset: SamplingPreset, selected: Boolean, onSelect: () ->
             colors = RadioButtonDefaults.colors(selectedColor = RevScopeColors.Accent, unselectedColor = RevScopeColors.TextSecondary),
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text(preset.etiqueta, color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+            Text(stringResource(preset.etiquetaRes), color = RevScopeColors.TextPrimary, fontSize = 13.sp)
             notaDe(preset)?.let { Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall) }
         }
     }

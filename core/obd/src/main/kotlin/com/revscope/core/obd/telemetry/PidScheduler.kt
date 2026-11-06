@@ -246,7 +246,7 @@ class PidScheduler(
         batch: List<PidDefinition>,
         emit: (ObdReading) -> Unit,
     ) {
-        val command = "01 ${batch.joinToString(" ") { it.pid }}\r"
+        val command = "01 ${batch.joinToString(" ") { it.pid }}\r" // i18n-ignore
         val response = try {
             exchangeWhenRunning(command)
         } catch (e: CancellationException) {
@@ -334,7 +334,7 @@ class PidScheduler(
     private fun failLinkIfDead(cause: Exception) {
         val failures = consecutiveLinkFailures.incrementAndGet()
         if (failures >= MAX_CONSECUTIVE_LINK_FAILURES) {
-            throw IOException("Adapter link lost — $failures consecutive request failures", cause)
+            throw IOException("Adapter link lost — $failures consecutive request failures", cause) // i18n-ignore
         }
     }
 

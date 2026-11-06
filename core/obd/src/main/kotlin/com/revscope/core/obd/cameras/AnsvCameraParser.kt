@@ -9,7 +9,7 @@ import timber.log.Timber
 /** Only sites the registry marks as actually operating are worth alerting on. */
 private const val OPERATIONAL_STATUS = "Operando"
 
-/** Larger than any two points on Earth can be apart — effectively "no radius filter". */
+/** Larger than any two points on Earth can be apart — effectively "no radius filter". */ // i18n-ignore
 private const val NATIONWIDE_RADIUS_M = 20_040_000.0
 
 /**
@@ -22,7 +22,7 @@ object AnsvCameraParser {
     /**
      * Nationwide count of operational, coordinate-valid entries, ignoring any
      * particular search radius — used as a format-regression guard: distinguishes
-     * "no cameras near this point" (legitimate) from "the feed's schema changed
+     * "no cameras near this point" (legitimate) from "the feed's schema changed // i18n-ignore
      * and nothing parses anymore" (a bug), which a radius-scoped count can't tell apart.
      */
     fun countAllOperational(json: String): Int = parse(json, 0.0, 0.0, NATIONWIDE_RADIUS_M).size
@@ -75,7 +75,7 @@ object AnsvCameraParser {
         )
     }
 
-    /** Field is a string, and "not set" is serialized as the literal text "None". */
+    /** Field is a string, and "not set" is serialized as the literal text "None". */ // i18n-ignore
     private fun parseMaxSpeed(ubicacion: JSONObject): Int? =
         ubicacion.optString("velocidad_maxima_permitida").toIntOrNull()
 }

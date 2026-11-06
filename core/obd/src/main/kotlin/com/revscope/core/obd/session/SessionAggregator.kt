@@ -30,7 +30,7 @@ class SessionAggregator(
     /**
      * Closes the session and fills the trip aggregates.
      * [activeProfileProvider] is called lazily at the point the redline is needed,
-     * matching the manager's original "read the latest active profile" semantics.
+     * matching the manager's original "read the latest active profile" semantics. // i18n-ignore // i18n-ignore
      */
     suspend fun close(sessionId: Long, activeProfileProvider: () -> VehicleProfileEntity?) {
         val session = sessionDao.getById(sessionId) ?: return

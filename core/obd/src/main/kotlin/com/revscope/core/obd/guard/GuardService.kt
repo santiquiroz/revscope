@@ -22,6 +22,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.AdapterType
@@ -61,6 +62,7 @@ private const val CLASSIC_PROBE_INTERVAL_MS = 30_000L
 class GuardService : Service() {
 
     @Inject lateinit var settings: DataStore<Preferences>
+    @Inject lateinit var resolver: StringResolver
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var alarmPlayer: MediaPlayer? = null
@@ -196,12 +198,12 @@ class GuardService : Service() {
     private fun postAlarmNotification() {
         val notification = NotificationCompat.Builder(this, GUARD_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_revscope)
-            .setContentTitle("⚠ ¡Tu vehículo se encendió!")
-            .setContentText("El adaptador OBD despertó con el modo guardia activo")
+            .setContentTitle(resolver.get(R.string.obd_guard_alert_title))
+            .setContentText(resolver.get(R.string.obd_guard_alert_body))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setOngoing(true)
-            .addAction(0, "DESARMAR", disarmPendingIntent())
+            .addAction(0, resolver.get(R.string.obd_guard_disarm).uppercase(resolver.locale), disarmPendingIntent())
             .build()
         runCatching { notificationManager().notify(ALARM_NOTIFICATION_ID, notification) }
     }
@@ -209,11 +211,11 @@ class GuardService : Service() {
     private fun startInForeground() {
         val notification: Notification = NotificationCompat.Builder(this, GUARD_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_revscope)
-            .setContentTitle("Modo guardia activo")
-            .setContentText("Vigilando el adaptador OBD — si despierta, suena la alarma")
+            .setContentTitle(resolver.get(R.string.obd_guard_active_title))
+            .setContentText(resolver.get(R.string.obd_guard_active_body))
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .addAction(0, "Desarmar", disarmPendingIntent())
+            .addAction(0, resolver.get(R.string.obd_guard_disarm), disarmPendingIntent())
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(GUARD_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
@@ -231,7 +233,7 @@ class GuardService : Service() {
 
     private fun createChannel() {
         val channel = NotificationChannel(
-            GUARD_CHANNEL_ID, "Modo guardia antirrobo", NotificationManager.IMPORTANCE_HIGH,
+            GUARD_CHANNEL_ID, resolver.get(R.string.obd_guard_channel), NotificationManager.IMPORTANCE_HIGH,
         ).apply { setBypassDnd(true) }
         notificationManager().createNotificationChannel(channel)
     }

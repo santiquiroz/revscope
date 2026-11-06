@@ -5,7 +5,7 @@ import kotlin.math.abs
 /**
  * Decisión instantánea del guardián wet-lean, pura y testeable. El estado (sostenido
  * en el tiempo, cooldown) lo maneja [WetLeanGuard]; esto solo dice si en ESTE instante
- * las condiciones califican como "inclinación peligrosa en curva real bajo lluvia".
+ * las condiciones califican como "inclinación peligrosa en curva real bajo lluvia". // i18n-ignore
  *
  * La corroboración por G lateral es lo que descarta el teléfono suelto en el bolsillo:
  * inclinarse en una curva jala aceleración lateral sostenida; un bolsillo que se mece

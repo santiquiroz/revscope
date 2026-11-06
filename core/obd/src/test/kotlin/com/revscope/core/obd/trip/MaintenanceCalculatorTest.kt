@@ -2,11 +2,14 @@ package com.revscope.core.obd.trip
 
 import com.revscope.core.data.db.entities.MaintenanceItemEntity
 import com.revscope.core.obd.legal.DocumentStatusCalculator.Nivel
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class MaintenanceCalculatorTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private fun item(
         nombre: String = "Aceite",
@@ -104,17 +107,17 @@ class MaintenanceCalculatorTest {
     @Test
     fun `detalle texto describe el proximo item en kilometros`() {
         val estados = MaintenanceCalculator.calculate(2_580.0, listOf(item(intervaloKm = 3_000.0)))
-        assertEquals("Aceite en 420 km", MaintenanceCalculator.detalleTexto(estados))
+        assertEquals("Aceite en 420 km", MaintenanceCalculator.detalleTexto(estados, resolver))
     }
 
     @Test
     fun `detalle texto marca vencido cuando el proximo ya paso`() {
         val estados = MaintenanceCalculator.calculate(3_000.0, listOf(item(intervaloKm = 3_000.0)))
-        assertEquals("Aceite vencido", MaintenanceCalculator.detalleTexto(estados))
+        assertEquals("Aceite vencido", MaintenanceCalculator.detalleTexto(estados, resolver))
     }
 
     @Test
     fun `detalle texto es por configurar sin items`() {
-        assertEquals("Por configurar", MaintenanceCalculator.detalleTexto(emptyList()))
+        assertEquals("Por configurar", MaintenanceCalculator.detalleTexto(emptyList(), resolver))
     }
 }

@@ -1,5 +1,7 @@
 package com.revscope.core.obd.session
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,7 @@ class TripController(
     private val closer: SessionCloser,
     private val launcher: RecordingLauncher,
     private val publicarSesion: (Long?) -> Unit,
+    private val resolver: StringResolver,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -40,8 +43,8 @@ class TripController(
 
     suspend fun iniciar(adapterName: String): Result<Long> = mutex.withLock {
         when (_estado.value) {
-            EstadoViaje.SinEnlace -> Result.failure(ViajeNoDisponibleException("Sin adaptador conectado"))
-            is EstadoViaje.Grabando -> Result.failure(ViajeNoDisponibleException("Ya hay un viaje en curso"))
+            EstadoViaje.SinEnlace -> Result.failure(ViajeNoDisponibleException(resolver.get(R.string.obd_trip_no_adapter)))
+            is EstadoViaje.Grabando -> Result.failure(ViajeNoDisponibleException(resolver.get(R.string.obd_trip_already_running)))
             EstadoViaje.EnlaceSinViaje -> Result.success(abrir(adapterName))
         }
     }

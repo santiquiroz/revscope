@@ -73,7 +73,7 @@ fun AlDiaScreen(
         estados = statuses,
         licenciaVenceEn = licenseExpiresAt,
         mantenimientoNivel = MaintenanceCalculator.peorNivel(maintenanceEstados),
-        mantenimientoDetalle = MaintenanceCalculator.detalleTexto(maintenanceEstados),
+        mantenimientoDetalle = vm.maintenanceDetail(maintenanceEstados),
         zoneBrief = zoneBrief,
         acciones = AccionesAlDia(
             onVolver = onNavigateBack,

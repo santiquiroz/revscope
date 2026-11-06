@@ -41,7 +41,7 @@ object AnsvCameraSource {
         val isNonTrivialPayload = response.toByteArray(Charsets.UTF_8).size > NONTRIVIAL_PAYLOAD_BYTES
         if (!isNonTrivialPayload || AnsvCameraParser.countAllOperational(response) > 0) return
         Timber.e("AnsvCameraParser: payload no vacío con 0 registros — posible cambio de formato")
-        error("AnsvCameraSource: posible cambio de formato en el payload de ANSV")
+        error("AnsvCameraSource: posible cambio de formato en el payload de ANSV") // i18n-ignore
     }
 
     private fun fetchJson(): String {

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.stateInSafe
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -43,12 +44,16 @@ class AlDiaViewModel @Inject constructor(
     private val sessionDao: SessionDao,
     private val aiRulesSource: RestrictionRulesSource,
     zoneBriefHolder: com.revscope.core.obd.service.ZoneBriefHolder,
+    private val stringResolver: StringResolver,
 ) : ViewModel() {
 
     /** Último brief de zona del compañero de viaje — null si aún no hay. */
     val zoneBrief: StateFlow<com.revscope.core.obd.service.ZoneBriefHolder.ZoneBrief?> = zoneBriefHolder.brief
 
     val activeProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
+
+    fun maintenanceDetail(estados: List<MaintenanceCalculator.ItemStatus>): String =
+        MaintenanceCalculator.detalleTexto(estados, stringResolver)
 
     private val profileIdFlow: Flow<Long?> = activeProfile.map { it?.id }
 
