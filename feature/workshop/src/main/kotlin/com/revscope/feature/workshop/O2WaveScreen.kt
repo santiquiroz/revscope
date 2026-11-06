@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.i18n.AndroidStringResolver
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -170,7 +171,7 @@ fun O2WaveScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
 
-            val diagnosis = remember(samples) { DiagnosticRules.evaluarO2(samples.map { it.value }) }
+            val diagnosis = remember(samples, context) { DiagnosticRules.evaluarO2(samples.map { it.value }, AndroidStringResolver(context)) }
             DiagnosisChip(diagnosis)
         }
     }

@@ -53,14 +53,14 @@ private val TextColor = Color(0xFFE6E8F0)
 private data class MixtureRow(
     val pid: String,
     val label: String,
-    val diagnose: ((Double, Map<String, ObdReading>) -> DiagnosticRules.Diagnosis?)? = null,
+    val diagnose: ((Double, Map<String, ObdReading>, StringResolver) -> DiagnosticRules.Diagnosis?)? = null,
 )
 
 private val ROWS = listOf(
     MixtureRow("06", "Fuel trim corto B1"),
-    MixtureRow("07", "Fuel trim largo B1", { v, _ -> DiagnosticRules.evaluarFuelTrimLargo(v) }),
+    MixtureRow("07", "Fuel trim largo B1", { v, _, r -> DiagnosticRules.evaluarFuelTrimLargo(v, r) }),
     MixtureRow("08", "Fuel trim corto B2"),
-    MixtureRow("09", "Fuel trim largo B2", { v, _ -> DiagnosticRules.evaluarFuelTrimLargo(v) }),
+    MixtureRow("09", "Fuel trim largo B2", { v, _, r -> DiagnosticRules.evaluarFuelTrimLargo(v, r) }),
     MixtureRow("14", "Sensor O2 B1S1"),
     MixtureRow("15", "Sensor O2 B1S2"),
     MixtureRow("18", "Sensor O2 B2S1"),
@@ -159,7 +159,9 @@ private fun MixtureRowCard(
     val disponibilidadPid = disponibilidad(row.pid, row.label.lowercase())
     val reading = readings[row.pid].takeUnless { disponibilidadPid.estado == EstadoSoporte.NoSoportado }
     val definicion = definition(row.pid)
-    val diagnosis = reading?.let { row.diagnose?.invoke(it.value, readings) }
+    val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
+    val diagnosis = reading?.let { row.diagnose?.invoke(it.value, readings, resolver) }
 
     Surface(shape = RoundedCornerShape(12.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
@@ -236,13 +238,13 @@ private suspend fun exportMixtureSnapshot(
         context = context,
         tipo = "mezcla-snapshot",
         header = listOf("pid", "nombre", "valor", "unidad", "diagnostico"),
-        rows = visibleRows.asSequence().mapNotNull { row -> mixtureSnapshotRow(row, readings) },
+        rows = visibleRows.asSequence().mapNotNull { row -> mixtureSnapshotRow(row, readings, resolver) },
         resolver = resolver,
     )
 }
 
-private fun mixtureSnapshotRow(row: MixtureRow, readings: Map<String, ObdReading>): List<Any?>? {
+private fun mixtureSnapshotRow(row: MixtureRow, readings: Map<String, ObdReading>, resolver: StringResolver): List<Any?>? {
     val reading = readings[row.pid] ?: return null
-    val diagnosis = row.diagnose?.invoke(reading.value, readings)
+    val diagnosis = row.diagnose?.invoke(reading.value, readings, resolver)
     return listOf(row.pid, row.label, reading.value, reading.unit, diagnosis?.titulo ?: "")
 }
