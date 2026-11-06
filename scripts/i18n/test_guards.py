@@ -44,6 +44,11 @@ class HardcodedTests(unittest.TestCase):
         result = self.run_hardcoded(self.root / "mod")
         self.assertEqual(result, 0)
 
+    def test_sql_fragments_skipped(self) -> None:
+        self.write_kt("mod/src/main/kotlin/A.kt", '"WHERE t.pid = \'VBAT\' AND t.value > 0 " +\n"GROUP BY t.sessionId ORDER BY s.startedAt DESC"')
+        result = self.run_hardcoded(self.root / "mod")
+        self.assertEqual(result, 0)
+
     def test_log_line_skipped(self) -> None:
         self.write_kt("mod/src/main/kotlin/A.kt", 'Log.d(TAG, "conectado ok")')
         result = self.run_hardcoded(self.root / "mod")

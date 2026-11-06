@@ -19,6 +19,9 @@ SKIP_LINE_PATTERNS = (
 LITERAL_SKIP_REGEX = re.compile(r"^[A-Z0-9_]+$|^[a-z0-9_.\-/]+$")
 TEMPLATE_REGEX = re.compile(r"\$\w+|\$\{.*?\}")
 STRING_LITERAL_REGEX = re.compile(r'"(?:[^"\\]|\\.)*"')
+SQL_REGEX = re.compile(
+    r"\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|INSERT INTO|DELETE FROM|UPDATE \w+ SET|JOIN|CREATE TABLE|ALTER TABLE|CREATE INDEX)\b"
+)
 
 
 def has_latin1_extra(s: str) -> bool:
@@ -47,8 +50,14 @@ def extract_string_literals(line: str) -> list[str]:
     return [match.group(0)[1:-1] for match in STRING_LITERAL_REGEX.finditer(line)]
 
 
+def looks_like_sql(content: str) -> bool:
+    return SQL_REGEX.search(content) is not None
+
+
 def should_report_literal(content: str) -> bool:
     if count_letters(content) < 2:
+        return False
+    if looks_like_sql(content):
         return False
     if " " not in content and not has_latin1_extra(content):
         return False
