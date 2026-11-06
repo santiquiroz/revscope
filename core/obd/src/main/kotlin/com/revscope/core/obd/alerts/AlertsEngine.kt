@@ -510,7 +510,7 @@ class AlertsEngine @Inject constructor(
         val title = resolver.get(R.string.obd_ai_rules_updated, rules.displayName)
         Timber.i("AlertsEngine: $title")
         _alerts.tryEmit(ObdAlert(AlertType.PICO_Y_PLACA, title, 0.0))
-        postSilentInfoNotification(AI_RULES_NOTIFICATION_ID, title, CityRulesFormatter.resumen(rules))
+        postSilentInfoNotification(AI_RULES_NOTIFICATION_ID, title, CityRulesFormatter.resumen(rules, resolver))
         if (voicePicoPlaca) speak(title)
     }
 

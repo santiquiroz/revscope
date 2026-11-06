@@ -1,5 +1,9 @@
 package com.revscope.core.obd.workshop
 
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
+
 /**
  * Pure decision logic for the ECU odometer tamper check (PID 01 A6).
  *
@@ -26,13 +30,14 @@ object OdometerVerifier {
         historial: List<Reading>,
         nueva: Reading,
         distanciaAppKm: Double,
+        resolver: StringResolver,
     ): DiagnosticRules.Diagnosis {
-        val anterior = historial.lastOrNull() ?: return lineaBase(nueva)
+        val anterior = historial.lastOrNull() ?: return lineaBase(nueva, resolver)
         return when {
-            nueva.km < anterior.km -> retrocedio(anterior, nueva)
-            distanciaAppKm < DISTANCIA_MINIMA_COMPARACION_KM -> ventanaInsuficiente(nueva)
-            avanzaMenosQueApp(anterior, nueva, distanciaAppKm) -> avanceInsuficiente(anterior, nueva, distanciaAppKm)
-            else -> normal(nueva)
+            nueva.km < anterior.km -> retrocedio(anterior, nueva, resolver)
+            distanciaAppKm < DISTANCIA_MINIMA_COMPARACION_KM -> ventanaInsuficiente(nueva, resolver)
+            avanzaMenosQueApp(anterior, nueva, distanciaAppKm) -> avanceInsuficiente(anterior, nueva, distanciaAppKm, resolver)
+            else -> normal(nueva, resolver)
         }
     }
 
@@ -45,41 +50,52 @@ object OdometerVerifier {
         return deltaEcu < distanciaAppKm * UMBRAL_AVANCE_MINIMO
     }
 
-    private fun lineaBase(nueva: Reading) = DiagnosticRules.Diagnosis(
+    private fun km(value: Double, resolver: StringResolver): String = LocaleNumbers.decimal(value, 1, resolver.locale)
+
+    private fun diagnosis(
+        nivel: DiagnosticRules.Nivel,
+        titulo: String,
+        causa: String,
+        resolver: StringResolver,
+    ) = DiagnosticRules.Diagnosis(nivel, resolver.get(R.string.obd_odometer_area), titulo, causa)
+
+    private fun lineaBase(nueva: Reading, resolver: StringResolver) = diagnosis(
         DiagnosticRules.Nivel.OK,
-        "Odómetro",
-        "Línea base registrada (%.1f km)".format(nueva.km),
-        "Primera lectura del odómetro ECU — las próximas lecturas se comparan contra esta",
+        resolver.get(R.string.obd_odometer_baseline, km(nueva.km, resolver)),
+        resolver.get(R.string.obd_odometer_baseline_cause),
+        resolver,
     )
 
-    private fun retrocedio(anterior: Reading, nueva: Reading) = DiagnosticRules.Diagnosis(
+    private fun retrocedio(anterior: Reading, nueva: Reading, resolver: StringResolver) = diagnosis(
         DiagnosticRules.Nivel.FALLA,
-        "Odómetro",
-        "El odómetro retrocedió (%.1f km → %.1f km)".format(anterior.km, nueva.km),
-        "Posible manipulación del odómetro — el kilometraje no puede disminuir",
+        resolver.get(R.string.obd_odometer_rolled_back, km(anterior.km, resolver), km(nueva.km, resolver)),
+        resolver.get(R.string.obd_odometer_rolled_back_cause),
+        resolver,
     )
 
-    private fun avanceInsuficiente(anterior: Reading, nueva: Reading, distanciaAppKm: Double) = DiagnosticRules.Diagnosis(
+    private fun avanceInsuficiente(
+        anterior: Reading,
+        nueva: Reading,
+        distanciaAppKm: Double,
+        resolver: StringResolver,
+    ) = diagnosis(
         DiagnosticRules.Nivel.ATENCION,
-        "Odómetro",
-        "El odómetro avanzó %.1f km pero la app registró %.1f km recorridos".format(
-            nueva.km - anterior.km,
-            distanciaAppKm,
-        ),
-        "El odómetro avanza menos que la distancia registrada por la app — posible manipulación o lectura no confiable",
+        resolver.get(R.string.obd_odometer_behind_app, km(nueva.km - anterior.km, resolver), km(distanciaAppKm, resolver)),
+        resolver.get(R.string.obd_odometer_behind_app_cause),
+        resolver,
     )
 
-    private fun ventanaInsuficiente(nueva: Reading) = DiagnosticRules.Diagnosis(
+    private fun ventanaInsuficiente(nueva: Reading, resolver: StringResolver) = diagnosis(
         DiagnosticRules.Nivel.OK,
-        "Odómetro",
-        "Odómetro %.1f km".format(nueva.km),
-        "ventana insuficiente para comparar",
+        resolver.get(R.string.obd_odometer_reading, km(nueva.km, resolver)),
+        resolver.get(R.string.obd_odometer_window_too_short),
+        resolver,
     )
 
-    private fun normal(nueva: Reading) = DiagnosticRules.Diagnosis(
+    private fun normal(nueva: Reading, resolver: StringResolver) = diagnosis(
         DiagnosticRules.Nivel.OK,
-        "Odómetro",
-        "Odómetro %.1f km".format(nueva.km),
-        "Lectura consistente con la distancia registrada por la app",
+        resolver.get(R.string.obd_odometer_reading, km(nueva.km, resolver)),
+        resolver.get(R.string.obd_odometer_consistent),
+        resolver,
     )
 }

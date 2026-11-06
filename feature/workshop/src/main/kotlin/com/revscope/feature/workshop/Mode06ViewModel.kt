@@ -120,7 +120,7 @@ class Mode06ViewModel @Inject constructor(
             if (results == null) {
                 incomplete = true
             } else if (results.isNotEmpty()) {
-                groups += MidGroup(mid, Mode06MidNames.nameFor(mid), results)
+                groups += MidGroup(mid, Mode06MidNames.nameFor(mid, resolver), results)
             }
         }
         return FetchGroupsResult(groups, incomplete)

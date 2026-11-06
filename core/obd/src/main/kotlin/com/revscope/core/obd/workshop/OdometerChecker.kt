@@ -1,5 +1,6 @@
 package com.revscope.core.obd.workshop
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.pid.PidRegistry
@@ -23,6 +24,7 @@ class OdometerChecker(
     private val registry: PidRegistry,
     private val historyStore: OdometerHistoryStore,
     private val sessionDao: SessionDao,
+    private val resolver: StringResolver,
 ) {
 
     data class Result(
@@ -62,7 +64,7 @@ class OdometerChecker(
     private suspend fun evaluate(profileId: Long, nueva: OdometerVerifier.Reading): Result {
         val historialPrevio = historyStore.historialPara(profileId)
         val distanciaAppKm = distanciaAppEntre(profileId, historialPrevio.lastOrNull(), nueva)
-        val diagnosis = OdometerVerifier.evaluar(historialPrevio, nueva, distanciaAppKm)
+        val diagnosis = OdometerVerifier.evaluar(historialPrevio, nueva, distanciaAppKm, resolver)
         // Same open trip as the last reading (<30 min): app-km hasn't accrued yet, so persisting
         // a new entry would just add an inert same-trip reading — evaluate but don't store it.
         val historialActualizado = if (esMismoViajeQueUltimaLectura(historialPrevio, nueva)) {

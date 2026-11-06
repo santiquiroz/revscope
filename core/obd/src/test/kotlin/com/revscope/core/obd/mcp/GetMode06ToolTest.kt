@@ -1,5 +1,7 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import io.mockk.coEvery
 import io.mockk.coVerify
 import kotlinx.coroutines.test.runTest
@@ -10,11 +12,13 @@ import org.junit.Test
 
 class GetMode06ToolTest {
 
+    private val es = XmlStringResolver.es(R::class.java)
+
     @Test
     fun `sin conexion retorna mensaje de vehiculo no conectado`() = runTest {
         val fixture = leaseFixture(false)
 
-        val json = JSONObject(GetMode06Tool(fixture.manager).call(JSONObject()))
+        val json = JSONObject(GetMode06Tool(fixture.manager, es).call(JSONObject()))
 
         assertEquals(false, json.getBoolean("conectado"))
         assertEquals("vehículo no conectado", json.getString("mensaje"))
@@ -26,7 +30,7 @@ class GetMode06ToolTest {
         coEvery { fixture.transport.exchange("06 00\r", any()) } returns "4600 80 00 00 00\r>"
         coEvery { fixture.transport.exchange("06 01\r", any()) } returns "4601010100050000000A\r>"
 
-        val json = JSONObject(GetMode06Tool(fixture.manager).call(JSONObject()))
+        val json = JSONObject(GetMode06Tool(fixture.manager, es).call(JSONObject()))
         val prueba = json.getJSONArray("pruebas").getJSONObject(0)
 
         assertTrue(json.getBoolean("soportado"))
@@ -41,7 +45,7 @@ class GetMode06ToolTest {
         val fixture = leaseFixture()
         coEvery { fixture.transport.exchange("06 00\r", any()) } returns "NO DATA\r>"
 
-        val json = JSONObject(GetMode06Tool(fixture.manager).call(JSONObject()))
+        val json = JSONObject(GetMode06Tool(fixture.manager, es).call(JSONObject()))
 
         assertEquals(false, json.getBoolean("soportado"))
         assertEquals("la ECU no soporta el modo 06", json.getString("mensaje"))

@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
@@ -33,6 +34,7 @@ class DailyStatusNotifier @Inject constructor(
     private val vehicleProfileDao: VehicleProfileDao,
     private val settings: DataStore<Preferences>,
     private val aiRulesSource: RestrictionRulesSource,
+    private val resolver: StringResolver,
 ) {
 
     /**
@@ -82,7 +84,9 @@ class DailyStatusNotifier @Inject constructor(
     ): String? {
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
         val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, nowMs)
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, nowMs, aiFallbackRules = aiFallback)
+        val statuses = DocumentStatusCalculator.calculate(
+            documents, overrideRules, nowMs, aiFallbackRules = aiFallback, resolver = resolver,
+        )
         val notable = statuses.filter(::isNotable)
         if (notable.isEmpty()) return null
         val facts = notable.joinToString(" · ") { it.detalle }
@@ -106,7 +110,7 @@ class DailyStatusNotifier @Inject constructor(
         val pending = buildContentIntent() ?: return
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_revscope)
-            .setContentTitle("Vehículo al día")
+            .setContentTitle(resolver.get(R.string.obd_daily_status_title))
             .setContentText(lines.joinToString(" · "))
             .setStyle(NotificationCompat.BigTextStyle().bigText(lines.joinToString("\n")))
             .setContentIntent(pending)
@@ -132,7 +136,7 @@ class DailyStatusNotifier @Inject constructor(
 
     private fun createChannel() {
         val channel = NotificationChannel(
-            CHANNEL_ID, "Documentos del vehículo", NotificationManager.IMPORTANCE_DEFAULT,
+            CHANNEL_ID, resolver.get(R.string.obd_daily_status_channel), NotificationManager.IMPORTANCE_DEFAULT,
         )
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .createNotificationChannel(channel)

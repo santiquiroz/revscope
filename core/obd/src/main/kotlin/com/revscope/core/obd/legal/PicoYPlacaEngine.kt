@@ -54,7 +54,7 @@ object PicoYPlacaEngine {
 
     val MEDELLIN_2026_S1 = CityRules(
         cityId = "medellin",
-        displayName = "Medellín",
+        displayName = "Medellín", // i18n-ignore
         rotation = mapOf(
             2 to listOf(1, 7),
             3 to listOf(0, 3),
@@ -73,7 +73,7 @@ object PicoYPlacaEngine {
     /** Rotación oficial 2026-S2 (Alcaldía de Medellín): rige 2026-08-03 → 2027-01-29, L-V 5:00-20:00. */
     val MEDELLIN_2026_S2 = CityRules(
         cityId = "medellin",
-        displayName = "Medellín",
+        displayName = "Medellín", // i18n-ignore
         rotation = mapOf(
             2 to listOf(5, 8),
             3 to listOf(1, 4),
@@ -92,7 +92,7 @@ object PicoYPlacaEngine {
     /** L-V 6:00-21:00, par/impar por último dígito de la placa, motos exentas. Vigencia amplia 2026. */
     val BOGOTA_2026 = CityRules(
         cityId = "bogota",
-        displayName = "Bogotá",
+        displayName = "Bogotá", // i18n-ignore
         rotation = emptyMap(),
         startHour = 6,
         endHour = 21,

@@ -206,8 +206,10 @@ class DashboardViewModel @Inject constructor(
         val documents = DocumentStatusCalculator.fromProfile(profile, licenseExpiresAt)
         val now = System.currentTimeMillis()
         val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, now)
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
-        return DocumentStatusCalculator.bannerText(statuses)
+        val statuses = DocumentStatusCalculator.calculate(
+            documents, overrideRules, now, aiFallbackRules = aiFallback, resolver = resolver,
+        )
+        return DocumentStatusCalculator.bannerText(statuses, resolver)
     }
 
     private suspend fun aiFallbackFor(
