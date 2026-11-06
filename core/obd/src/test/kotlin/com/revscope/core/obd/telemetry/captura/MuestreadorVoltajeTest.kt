@@ -4,9 +4,11 @@ import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
+import com.revscope.core.obd.R
 import com.revscope.core.obd.session.DiagnosticLease
 import com.revscope.core.obd.telemetry.PollingGate
 import com.revscope.core.obd.testing.FakeElmTransport
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -21,6 +23,7 @@ import org.junit.Test
 import java.io.IOException
 
 class MuestreadorVoltajeTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private class EnlaceFalso(private val bt: Transport?, private val scope: CoroutineScope) : EnlaceCaptura {
         val pausas = mutableListOf<Boolean>()
@@ -93,12 +96,15 @@ class MuestreadorVoltajeTest {
         val relojNanos = { testScheduler.currentTime * 1_000_000 }
         val relojEpochMs = { 1_790_000_000_000L + testScheduler.currentTime }
         val io = StandardTestDispatcher(testScheduler)
-        val muestreador = MuestreadorVoltaje(enlace, gate, turno, { sumidero }, relojNanos, relojEpochMs, io)
+        val muestreador = MuestreadorVoltaje(
+            enlace, gate, turno, { sumidero }, resolver, relojNanos, relojEpochMs, io,
+        )
         val captura = CapturaRapida(
             enlace = enlace,
             gate = gate,
             registry = registry,
             nuevoSumidero = { SumideroEnMemoria() },
+            resolver = resolver,
             dispositivo = { LecturaDispositivo(80, cargando = false, termico = 0) },
             relojNanos = relojNanos,
             relojEpochMs = relojEpochMs,
@@ -269,7 +275,7 @@ class MuestreadorVoltajeTest {
         m.muestreador.iniciar(rafaga).getOrThrow()
         advanceTimeBy(100)
 
-        val lectura = DiagnosticLease(m.gate).run(fake, "mcp:get_dtc") { bt -> bt.exchange("03\r", 1_000) }
+        val lectura = DiagnosticLease(m.gate, resolver).run(fake, "mcp:get_dtc") { bt -> bt.exchange("03\r", 1_000) }
         advanceTimeBy(100)
         m.muestreador.detener()
 

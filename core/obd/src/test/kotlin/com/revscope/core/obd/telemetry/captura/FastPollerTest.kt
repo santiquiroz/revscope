@@ -3,8 +3,10 @@ package com.revscope.core.obd.telemetry.captura
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
+import com.revscope.core.obd.R
 import com.revscope.core.obd.telemetry.PollingGate
 import com.revscope.core.obd.testing.FakeElmTransport
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -17,6 +19,7 @@ import java.io.IOException
 
 class FastPollerTest {
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     private val registry = PidRegistry(TestPids.load())
 
     private fun defs(vararg pids: String): List<PidDefinition> = pids.map { registry.getDefinition(it)!! }
@@ -24,6 +27,7 @@ class FastPollerTest {
     private fun TestScope.poller(fake: FakeElmTransport, esCan: Boolean? = true) = FastPoller(
         exchange = { cmd -> fake.exchange(cmd, 1_000) },
         registry = registry,
+        resolver = resolver,
         relojNanos = { testScheduler.currentTime * 1_000_000 },
         relojEpochMs = { 1_790_000_000_000L + testScheduler.currentTime },
         esCan = esCan,
@@ -151,6 +155,7 @@ class FastPollerTest {
         val poller = FastPoller(
             exchange = { cmd -> fake.exchange(cmd, 1_000) },
             registry = registry,
+            resolver = resolver,
             relojNanos = { testScheduler.currentTime * 1_000_000 },
             relojEpochMs = { 1_790_000_000_000L + testScheduler.currentTime },
             esCan = true,

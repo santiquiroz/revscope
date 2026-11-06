@@ -1,6 +1,8 @@
 package com.revscope.core.obd.trip
 
 import com.revscope.core.data.db.entities.MaintenanceItemEntity
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.legal.DocumentStatusCalculator.Nivel
 import kotlin.math.roundToLong
 
@@ -10,7 +12,7 @@ private const val ATENCION_FRACTION = 0.10
  * Motor puro de mantenimiento por kilometraje — combina el odómetro actual del vehículo
  * (odometerBaseKm + suma de distanceKm de sus sesiones) con los ítems configurados para
  * decidir cuánto falta y qué tan urgente es cada uno. Reutiliza [Nivel] de
- * DocumentStatusCalculator para que la card de "Vehículo al día" use el mismo semáforo.
+ * DocumentStatusCalculator para que la card de "Vehículo al día" use el mismo semáforo. // i18n-ignore
  */
 object MaintenanceCalculator {
 
@@ -34,11 +36,15 @@ object MaintenanceCalculator {
     fun proximo(estados: List<ItemStatus>): ItemStatus? =
         estados.minByOrNull { it.kmRestantes }
 
-    /** Texto corto para la card de "Vehículo al día" — "Aceite en 420 km" o "Por configurar". */
-    fun detalleTexto(estados: List<ItemStatus>): String {
-        val proximoItem = proximo(estados) ?: return "Por configurar"
+    /** Texto corto para la card de "Vehículo al día" — "Aceite en 420 km" o "Por configurar". */ // i18n-ignore
+    fun detalleTexto(estados: List<ItemStatus>, resolver: StringResolver): String {
+        val proximoItem = proximo(estados) ?: return resolver.get(R.string.obd_maintenance_not_configured)
         val km = proximoItem.kmRestantes.roundToLong()
-        return if (km <= 0) "${proximoItem.item.nombre} vencido" else "${proximoItem.item.nombre} en $km km"
+        return if (km <= 0) {
+            resolver.get(R.string.obd_maintenance_overdue, proximoItem.item.nombre)
+        } else {
+            resolver.get(R.string.obd_maintenance_due_in, proximoItem.item.nombre, km)
+        }
     }
 
     private fun itemStatus(odometroActual: Double, item: MaintenanceItemEntity): ItemStatus {

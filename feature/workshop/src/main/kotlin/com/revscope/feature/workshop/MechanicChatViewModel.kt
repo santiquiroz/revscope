@@ -6,6 +6,7 @@ import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.intelligence.provider.AiProviderFactory
 import com.revscope.core.intelligence.provider.AiRequest
 import com.revscope.core.obd.connection.ConnectionState
@@ -42,6 +43,7 @@ class MechanicChatViewModel @Inject constructor(
     private val healthReportDao: HealthReportDao,
     private val sessionDao: SessionDao,
     private val maintenanceDao: MaintenanceDao,
+    private val stringResolver: StringResolver,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MechanicChatUiState())
@@ -168,7 +170,7 @@ class MechanicChatViewModel @Inject constructor(
         if (items.isEmpty()) return null
         val odometro = odometroYaCalculado ?: odometroActualPara(profile)
         val estados = MaintenanceCalculator.calculate(odometro, items)
-        return MaintenanceCalculator.detalleTexto(estados)
+        return MaintenanceCalculator.detalleTexto(estados, stringResolver)
     }
 
     /** Rethrows [CancellationException] instead of swallowing it, unlike [kotlin.runCatching]. */

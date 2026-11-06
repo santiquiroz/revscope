@@ -1,5 +1,7 @@
 package com.revscope.core.obd.telemetry.captura
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import java.util.ArrayDeque
 
 data class EstadisticasCaptura(
@@ -16,7 +18,11 @@ data class EstadisticasCaptura(
  * Tasa lograda, medida y no prometida: ventana deslizante por PID, peticiones/s y latencia p50/p95.
  * Los tiempos son ms monotónicos desde el inicio de la captura. Sincronizado: el poller registra y el vigilante lee.
  */
-class RateMeter(private val esCan: Boolean?, private val ventanaMs: Long = VENTANA_MS) {
+class RateMeter(
+    private val esCan: Boolean?,
+    private val resolver: StringResolver,
+    private val ventanaMs: Long = VENTANA_MS,
+) {
 
     private data class Peticion(val tMs: Long, val latenciaMs: Double, val falla: FallaLote?)
 
@@ -64,8 +70,8 @@ class RateMeter(private val esCan: Boolean?, private val ventanaMs: Long = VENTA
 
     private fun limitadoPor(p50: Double?): String? = when {
         peticiones.count { it.falla == FallaLote.BUFFER_FULL || it.falla == FallaLote.STOPPED } >= SATURACION_MIN ->
-            "adaptador saturado"
-        esCan == false -> "protocolo lento"
+            resolver.get(R.string.obd_capture_adapter_saturated)
+        esCan == false -> resolver.get(R.string.obd_capture_slow_protocol)
         p50 != null && p50 > LATENCIA_ALTA_MS -> "adaptador/ECU"
         else -> null
     }

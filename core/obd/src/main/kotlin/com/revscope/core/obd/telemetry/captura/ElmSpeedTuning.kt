@@ -88,13 +88,13 @@ class ElmSpeedTuning(private val exchange: suspend (String) -> String) {
         !respuesta.contains("?") && !ResponseParser.isErrorResponse(respuesta)
 
     companion object {
-        const val AT_HEADER_ECM = "AT SH 7E0\r"
-        const val AT_FILTRO_ECM = "AT CRA 7E8\r"
-        const val AT_FILTRO_RESET = "AT CRA\r"
-        const val AT_HEADER_FUNCIONAL = "AT SH 7DF\r"
-        const val AT_TIMING_AGRESIVO = "AT AT 2\r"
-        const val AT_TIMING_NORMAL = "AT AT 1\r"
-        const val AT_SINCRONIZAR = "AT E0\r"
+        const val AT_HEADER_ECM = "AT SH 7E0\r" // i18n-ignore
+        const val AT_FILTRO_ECM = "AT CRA 7E8\r" // i18n-ignore
+        const val AT_FILTRO_RESET = "AT CRA\r" // i18n-ignore
+        const val AT_HEADER_FUNCIONAL = "AT SH 7DF\r" // i18n-ignore
+        const val AT_TIMING_AGRESIVO = "AT AT 2\r" // i18n-ignore
+        const val AT_TIMING_NORMAL = "AT AT 1\r" // i18n-ignore
+        const val AT_SINCRONIZAR = "AT E0\r" // i18n-ignore
         private const val MAX_INTENTOS_AT = 3
         private const val MAX_INTENTOS_SINCRONIZAR = 4
     }

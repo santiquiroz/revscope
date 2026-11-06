@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -19,6 +20,7 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.alerts.AlertsEngine
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.AdapterType
 import com.revscope.core.obd.connection.BleTransport
 import com.revscope.core.obd.connection.ClassicBtTransport
@@ -124,6 +126,7 @@ class ObdSessionManager @Inject constructor(
     private val tripSummaryNotifier: TripSummaryNotifier,
     private val mcpActivity: McpActivityTracker,
     private val perfilesCan: PerfilesCanRepositorio,
+    private val resolver: StringResolver,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -180,7 +183,7 @@ class ObdSessionManager @Inject constructor(
     private val voltagePoller = VoltagePoller()
     private val milWatcher = MilWatcher(alertsEngine)
     private val pollingGate = PollingGate()
-    private val diagnosticLease = DiagnosticLease(pollingGate)
+    private val diagnosticLease = DiagnosticLease(pollingGate, resolver)
     private val dtcReader = DtcReader(registry)
     @Volatile private var protocoloEsCan: Boolean? = null
     @Volatile private var protocoloDpn: String? = null
@@ -227,6 +230,7 @@ class ObdSessionManager @Inject constructor(
         gate = pollingGate,
         registry = registry,
         nuevoSumidero = { ArchivoCaptura(CsvShare.exportsDir(appContext)) },
+        resolver = resolver,
         dispositivo = lectorDispositivo,
         turno = turnoCaptura,
     )
@@ -237,6 +241,7 @@ class ObdSessionManager @Inject constructor(
         gate = pollingGate,
         turno = turnoCaptura,
         nuevoSumidero = { ArchivoCaptura(CsvShare.exportsDir(appContext)) },
+        resolver = resolver,
     )
     private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
     private val odometerHistoryStore = OdometerHistoryStore(settings)
@@ -252,6 +257,7 @@ class ObdSessionManager @Inject constructor(
         closer = { sessionId -> cerrarSesionObd(sessionId) },
         launcher = { sessionId -> lanzarGrabacion(sessionId) },
         publicarSesion = { sessionId -> _currentSessionIdFlow.value = sessionId },
+        resolver = resolver,
     )
 
     /** Enlace y viaje por separado: se puede finalizar el viaje sin soltar el adaptador. */
@@ -505,7 +511,7 @@ class ObdSessionManager @Inject constructor(
         if (_gpsSessionActive.value) return
         val state = _connectionState.value
         if (state is ConnectionState.Connecting || state is ConnectionState.Connected) return
-        // User pressing "Iniciar viaje GPS" while Error+reconnectJob is pending means
+        // User pressing "Iniciar viaje GPS" while Error+reconnectJob is pending means // i18n-ignore
         // they chose GPS over the dead OBD link — cancel the background reconnect loop
         // immediately (non-suspend) so it can't schedule another attempt, then tear down
         // the stale transport before this GPS session starts (see connect()'s Connected
@@ -684,7 +690,7 @@ class ObdSessionManager @Inject constructor(
 
     /** Raw serialized command exchange for diagnostic tooling (Mode 22 scanner). */
     suspend fun rawExchange(command: String, timeoutMs: Long = DTC_TIMEOUT_MS): Result<String> {
-        val bt = transport ?: return Result.failure(IllegalStateException("Not connected"))
+        val bt = transport ?: return Result.failure(IllegalStateException("Not connected")) // i18n-ignore
         return try {
             Result.success(bt.exchange(command, timeoutMs))
         } catch (e: CancellationException) {
@@ -700,7 +706,7 @@ class ObdSessionManager @Inject constructor(
         request: String,
         timeoutMs: Long = MODULE_PROBE_TIMEOUT_MS,
     ): Result<String> {
-        val bt = transport ?: return Result.failure(IllegalStateException("Not connected"))
+        val bt = transport ?: return Result.failure(IllegalStateException("Not connected")) // i18n-ignore
         return try {
             Result.success(bt.targetedExchange(requestHeader, request, timeoutMs))
         } catch (e: CancellationException) {
@@ -714,7 +720,7 @@ class ObdSessionManager @Inject constructor(
     suspend fun currentProtocolNumber(): String? {
         val bt = transport ?: return null
         return try {
-            ResponseParser.cleanResponse(bt.exchange("AT DPN\r", 1_500L)).takeIf { it.isNotEmpty() }
+            ResponseParser.cleanResponse(bt.exchange("AT DPN\r", 1_500L)).takeIf { it.isNotEmpty() } // i18n-ignore
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -722,7 +728,7 @@ class ObdSessionManager @Inject constructor(
         }
     }
 
-    /** Manual "Leer ahora" — same read+compare+persist pipeline as the automatic one-shot check. */
+    /** Manual "Leer ahora" — same read+compare+persist pipeline as the automatic one-shot check. */ // i18n-ignore
     suspend fun checkOdometerNow(): OdometerChecker.Result? {
         val bt = transport ?: return null
         val profileId = _activeProfile.value?.id ?: return null
@@ -773,7 +779,7 @@ class ObdSessionManager @Inject constructor(
 
             val adapter = bluetoothAdapter ?: run {
                 if (mode == ConnectMode.NORMAL) {
-                    _connectionState.value = ConnectionState.Error("Bluetooth not available")
+                    _connectionState.value = ConnectionState.Error(resolver.get(R.string.obd_error_bluetooth_unavailable))
                 }
                 return@launch
             }
@@ -869,7 +875,7 @@ class ObdSessionManager @Inject constructor(
             if (adapterAnswer != null && parseVoltage(adapterAnswer) != null) {
                 val ecuAnswer = probe(bt, "010C\r", PROBE_TIMEOUT_MS)
                 val ecuSilent = ecuAnswer == null ||
-                    ecuAnswer.contains("NO DATA", ignoreCase = true) ||
+                    ecuAnswer.contains("NO DATA", ignoreCase = true) || // i18n-ignore
                     ecuAnswer.contains("UNABLE", ignoreCase = true) ||
                     ecuAnswer.contains("STOPPED", ignoreCase = true)
                 return if (ecuSilent) EngineOffDetector.LinkLossCause.ENGINE_OFF
@@ -909,12 +915,12 @@ class ObdSessionManager @Inject constructor(
             runCatching { bt.disconnect() }
             transport = null
             ObdForegroundService.stop(appContext)
-            _connectionState.value = ConnectionState.Error("ECU init failed: ${e.message}")
+            _connectionState.value = ConnectionState.Error(resolver.get(R.string.obd_error_ecu_init_failed, e.message.orEmpty()))
             return
         }
         registry.setSupportedPids(negotiationResult.supportedPids)
         elmVersion = negotiationResult.elmVersion
-        protocoloDpn = probe(bt, "AT DPN\r", DPN_TIMEOUT_MS)?.let(ResponseParser::cleanResponse)
+        protocoloDpn = probe(bt, "AT DPN\r", DPN_TIMEOUT_MS)?.let(ResponseParser::cleanResponse) // i18n-ignore
         protocoloEsCan = ProtocolInfo.esCan(protocoloDpn)
         _capacidadesEcu.value = CapacidadesEcu.desde(protocoloDpn, negotiationResult.supportedPids)
         alertsEngine.reloadThresholds()
@@ -943,7 +949,11 @@ class ObdSessionManager @Inject constructor(
                     scheduler.setIdleMode(idleModeEnabled)
                     scheduler.setRemoteViewerActive(remoteViewerActive)
                     scheduler.setPreset(_muestreoPreset.value)
-                    val bus = if (conBus) BusSesion(bt, pollingGate, scheduler, avisar = { _avisoBus.value = it }) else null
+                    val bus = if (conBus) {
+                        BusSesion(bt, pollingGate, scheduler, resolver, avisar = { _avisoBus.value = it })
+                    } else {
+                        null
+                    }
                     val rawFlow = lecturasCrudas(scheduler, bus)
                         .shareIn(this, SharingStarted.Eagerly, replay = 0)
 
@@ -980,7 +990,7 @@ class ObdSessionManager @Inject constructor(
                     }
                     EngineOffDetector.LinkLossCause.LINK_FAULT -> {
                         _connectionState.value =
-                            ConnectionState.Error("Connection lost — adapter not responding")
+                            ConnectionState.Error(resolver.get(R.string.obd_error_connection_lost))
                         scheduleAutoReconnect(closedSessionId)
                     }
                 }
@@ -1047,7 +1057,7 @@ class ObdSessionManager @Inject constructor(
     }
 
     private suspend fun iniciarViajeAutomatico() {
-        iniciarViajeSobreEnlace().onSuccess { _eventosViaje.tryEmit(AUTO_TRIP_MESSAGE) }
+        iniciarViajeSobreEnlace().onSuccess { _eventosViaje.tryEmit(resolver.get(R.string.obd_auto_trip_started)) }
     }
 
     private suspend fun observeAutoTripSetting() {
@@ -1130,7 +1140,6 @@ class ObdSessionManager @Inject constructor(
         /** Pseudo-PID for the GPS-only trip mode's live speed reading. */
         const val GPS_SPEED_PID = "GPS_SPEED"
         const val GPS_ADAPTER_NAME = "GPS"
-        const val AUTO_TRIP_MESSAGE = "Viaje iniciado automáticamente"
         private const val DEFAULT_ADAPTER_NAME = "OBD"
 
         private const val DTC_TIMEOUT_MS = 5_000L

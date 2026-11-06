@@ -1,9 +1,11 @@
 package com.revscope.core.obd.service
 
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.R
 import com.revscope.core.obd.service.TripServicePolicy.AccionViaje
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.core.obd.session.MotivoFin
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -11,6 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TripServicePolicyTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private val conectado = ConnectionState.Connected("Android-Vlink")
     private val grabando = EstadoViaje.Grabando(sessionId = 7L, inicioMs = 0L)
@@ -43,11 +46,11 @@ class TripServicePolicyTest {
     fun `titulo y cuerpo dicen sin viaje con el enlace vivo`() {
         assertEquals(
             "Conectado a Android-Vlink · sin viaje (diagnóstico)",
-            TripServicePolicy.titulo(conectado, EstadoViaje.EnlaceSinViaje),
+            TripServicePolicy.titulo(conectado, EstadoViaje.EnlaceSinViaje, resolver),
         )
-        assertEquals("Conectado a Android-Vlink", TripServicePolicy.titulo(conectado, grabando))
-        assertEquals("Sin grabar · lecturas en vivo", TripServicePolicy.cuerpoSinLecturas(EstadoViaje.EnlaceSinViaje))
-        assertEquals("Grabando telemetría", TripServicePolicy.cuerpoSinLecturas(grabando))
+        assertEquals("Conectado a Android-Vlink", TripServicePolicy.titulo(conectado, grabando, resolver))
+        assertEquals("Sin grabar · lecturas en vivo", TripServicePolicy.cuerpoSinLecturas(EstadoViaje.EnlaceSinViaje, resolver))
+        assertEquals("Grabando telemetría", TripServicePolicy.cuerpoSinLecturas(grabando, resolver))
     }
 
     @Test

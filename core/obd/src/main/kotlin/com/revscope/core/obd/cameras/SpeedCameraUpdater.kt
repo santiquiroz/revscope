@@ -1,7 +1,9 @@
 package com.revscope.core.obd.cameras
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.dao.SpeedCameraDao
 import com.revscope.core.data.db.entities.SpeedCameraEntity
+import com.revscope.core.obd.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,6 +36,7 @@ data class CameraDownloadResult(val total: Int, val osmCount: Int, val ansvCount
 class SpeedCameraUpdater @Inject constructor(
     private val dao: SpeedCameraDao,
     private val alerter: SpeedCameraAlerter,
+    private val resolver: StringResolver,
 ) {
 
     /**
@@ -54,15 +57,17 @@ class SpeedCameraUpdater @Inject constructor(
             val ansvCameras = fetchSource("ANSV") {
                 AnsvCameraSource.fetchWithinRadius(latitude, longitude, RADIUS_M.toDouble())
             }
-            if (osmCameras == null && ansvCameras == null) error("No se pudo descargar de ninguna fuente")
+            if (osmCameras == null && ansvCameras == null) {
+                error(resolver.get(R.string.obd_camera_sources_failed))
+            }
 
             val cameras = CameraDedupe.merge(osmCameras.orEmpty() + ansvCameras.orEmpty())
             val bothSourcesSucceeded = osmCameras != null && ansvCameras != null
             if (!bothSourcesSucceeded && cameras.isEmpty()) {
                 Timber.w(
-                    "SpeedCameraUpdater: partial failure with no cameras from the surviving source " +
-                        "(OSM=${osmCameras?.size ?: "failed"}, ANSV=${ansvCameras?.size ?: "failed"}) " +
-                        "— keeping existing table untouched",
+                    "SpeedCameraUpdater: partial failure with no cameras from the surviving source " + // i18n-ignore
+                        "(OSM=${osmCameras?.size ?: "failed"}, ANSV=${ansvCameras?.size ?: "failed"}) " + // i18n-ignore
+                        "— keeping existing table untouched", // i18n-ignore
                 )
                 return@withContext storedCounts()
             }
@@ -70,8 +75,8 @@ class SpeedCameraUpdater @Inject constructor(
             dao.replaceAll(cameras)
             alerter.invalidateCache()
             Timber.i(
-                "SpeedCameraUpdater: stored ${cameras.size} cameras " +
-                    "(OSM=${osmCameras?.size ?: "failed"}, ANSV=${ansvCameras?.size ?: "failed"})",
+                "SpeedCameraUpdater: stored ${cameras.size} cameras " + // i18n-ignore
+                    "(OSM=${osmCameras?.size ?: "failed"}, ANSV=${ansvCameras?.size ?: "failed"})", // i18n-ignore
             )
             CameraDownloadResult.from(cameras)
         }

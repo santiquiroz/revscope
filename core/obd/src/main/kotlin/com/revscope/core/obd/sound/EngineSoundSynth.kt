@@ -78,7 +78,7 @@ class EngineSoundSynth(private val sampleRate: Int = SAMPLE_RATE) {
         return sample / harmonicNorm()
     }
 
-    // Ruido blanco con envolvente rítmica atada al pulso de encendido — la "explosión"
+    // Ruido blanco con envolvente rítmica atada al pulso de encendido — la "explosión" // i18n-ignore
     // por cilindro es lo que hace que el escape suene a motor y no a estática.
     private fun exhaustNoise(p: Double): Double {
         val pulse = max(0.0, sin(TWO_PI * p)).pow(4)
