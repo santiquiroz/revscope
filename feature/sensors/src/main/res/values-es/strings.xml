@@ -1,0 +1,78 @@
+<resources>
+    <string name="sensors_fast_capture_description">Lee solo los PIDs elegidos lo más rápido que permita el adaptador; los demás gauges quedan en pausa. Para un pedal: contacto puesto, motor apagado o en ralentí, y barre el pedal despacio.</string>
+    <string name="sensors_pid_unavailable">No disponible en esta ECU</string>
+    <string name="sensors_pid_not_reported">Esta ECU no reporta %1$s (PID %2$s).</string>
+    <string name="sensors_ecu_pids_unknown">Aún no se conocen los PIDs que anuncia la ECU.</string>
+    <plurals name="sensors_pid_count">
+        <item quantity="one">PIDs (%1$d/%2$d)</item>
+        <item quantity="other">PIDs (%1$d/%2$d)</item>
+    </plurals>
+    <string name="sensors_pedal_throttle_preset">Pedal y mariposa (49, 4A, 11)</string>
+    <string name="sensors_pid_item">%1$s %2$s</string>
+    <string name="sensors_pid_item_unavailable">%1$s %2$s · no disponible</string>
+    <string name="sensors_pid_request_explanation">Cada petición lleva hasta 3 PIDs de 1 byte (o menos si alguno es de 2 bytes, como RPM): más PIDs = menos Hz por PID.</string>
+    <string name="sensors_stop_capture">Detener captura</string>
+    <string name="sensors_start_fast_capture">Iniciar captura rápida</string>
+    <string name="sensors_connect_adapter_to_capture">Conecta el adaptador para capturar.</string>
+    <string name="sensors_capture_limit">Limitada a %1$s Hz para cuidar batería y temperatura del teléfono</string>
+    <string name="sensors_measured_rate">Tasa medida</string>
+    <string name="sensors_measuring">Midiendo…</string>
+    <string name="sensors_pid_rate">%1$s %2$s: %3$s Hz</string>
+    <string name="sensors_request_latency">%1$s peticiones/s · latencia p50 %2$s · p95 %3$s</string>
+    <string name="sensors_limited_by">Limitado por: %1$s</string>
+    <string name="sensors_missing_value">—</string>
+    <string name="sensors_capture_summary">%1$s s · %2$s · latencia p50 %3$s</string>
+    <string name="sensors_last_capture">Última captura</string>
+    <plurals name="sensors_pid_sample_summary">
+        <item quantity="one">%1$s %2$s: %3$d muestras · %4$s Hz · %5$s–%6$s</item>
+        <item quantity="other">%1$s %2$s: %3$d muestras · %4$s Hz · %5$s–%6$s</item>
+    </plurals>
+    <string name="sensors_export_csv_samples">CSV (una fila por muestra)</string>
+    <string name="sensors_export_csv_batches">CSV ancho (una fila por lote)</string>
+    <string name="sensors_capture_reason_user">detenida por el usuario</string>
+    <string name="sensors_capture_reason_link_lost">enlace perdido</string>
+    <string name="sensors_capture_reason_duration">duración máxima alcanzada</string>
+    <string name="sensors_capture_reason_no_response">enlace perdido: el adaptador dejó de responder a AT RV</string>
+    <string name="sensors_graph_live">Gráfica en vivo</string>
+    <string name="sensors_graph_position">Posición</string>
+    <string name="sensors_graph_percent" formatted="false">En %</string>
+    <string name="sensors_graph_volts">En voltios</string>
+    <string name="sensors_graph_window">Ventana</string>
+    <string name="sensors_graph_last_seconds">Últimos %1$d s</string>
+    <string name="sensors_graph_resume">Reanudar gráfica</string>
+    <string name="sensors_graph_pause">Pausar gráfica</string>
+    <string name="sensors_graph_reference" formatted="false">Referencia para pasar % a V</string>
+    <string name="sensors_change">Cambiar</string>
+    <string name="sensors_graph_paused_recording">Gráfica en pausa: la captura sigue grabando</string>
+    <string name="sensors_graph_waiting_samples">Esperando muestras…</string>
+    <string name="sensors_graph_waiting_sensor_data">Esperando datos del sensor…</string>
+    <string name="sensors_graph_position_volts">Posición, en voltios</string>
+    <string name="sensors_graph_position_percent" formatted="false">Posición, en %</string>
+    <string name="sensors_graph_panel_unit">en %1$s</string>
+    <string name="sensors_graph_legend_series">%1$s %2$s: %3$s</string>
+    <string name="sensors_graph_band">Banda %1$s</string>
+    <string name="sensors_graph_bands">Bandas: %1$s</string>
+    <string name="sensors_graph_paused_summary">Gráfica en pausa, la captura sigue.</string>
+    <string name="sensors_graph_window_summary">Últimos %1$d s. %2$s.</string>
+    <string name="sensors_graph_pid_summary">%1$s %2$s: %3$s, %4$s</string>
+    <string name="sensors_graph_trend_stable">estable</string>
+    <string name="sensors_graph_trend_rising">subiendo</string>
+    <string name="sensors_graph_trend_falling">bajando</string>
+    <string name="sensors_graph_line_solid">trazo continuo</string>
+    <string name="sensors_graph_line_dashed">trazo discontinuo</string>
+    <string name="sensors_graph_line_dotted">trazo punteado</string>
+    <string name="sensors_value_content_description">%1$s %2$s: %3$s%4$s%5$s</string>
+    <string name="sensors_value_secondary"> (%1$s)</string>
+    <string name="sensors_value_rate">, %1$s</string>
+    <string name="sensors_time_axis">tiempo (mm:ss)</string>
+    <string name="sensors_capture_pid_unsupported">No soportados por este vehículo: %1$s</string>
+    <string name="sensors_this_parameter">este parámetro</string>
+    <string name="sensors_pedal_throttle_not_reported">Esta ECU no reporta posición de pedal ni mariposa.</string>
+    <string name="sensors_title_fast_capture">Captura rápida</string>
+    <string name="sensors_title">Sensores</string>
+    <string name="sensors_content_description_back_to_graph">Volver a la gráfica</string>
+    <string name="sensors_content_description_fast_capture">Captura rápida</string>
+    <string name="sensors_content_description_export_csv">Exportar CSV</string>
+    <string name="sensors_measured_expected_rate">Medida: %1$s Hz por PID · %2$s</string>
+    <string name="sensors_no_sensor_reading">--</string>
+</resources>

@@ -15,7 +15,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaPidsNoSoportadosTest {
 
     @get:Rule
@@ -66,7 +66,7 @@ class SemanticaPidsNoSoportadosTest {
         )
 
         compose.setContent {
-            RevScopeTheme { AvisoPidNoDisponible(disponibilidad) }
+            RevScopeTheme { AvisoPidNoDisponible(disponibilidad) { "posición de la mariposa" } }
         }
 
         compose.onNodeWithText("No disponible en esta ECU").assertIsDisplayed()

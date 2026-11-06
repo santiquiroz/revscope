@@ -6,11 +6,11 @@ import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
 import com.revscope.core.designsystem.SerieGrafica
 import com.revscope.core.designsystem.estiloDeSerie
-import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.grafica.BandaEnEscala
 import com.revscope.core.obd.taller.grafica.BandasPosicion
 import com.revscope.core.obd.taller.grafica.EstadoVref
-import com.revscope.core.obd.taller.grafica.FormatoPosicion
 import com.revscope.core.obd.taller.grafica.PidsPosicion
 import com.revscope.core.obd.taller.grafica.Tendencia
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
@@ -56,9 +56,9 @@ object MapeoGraficaCaptura {
     private const val PID_TPS = "11"
     private const val TPS_ESTABLE_V = 0.06
     private const val ESTABLE_RELATIVO = 0.02
-    private const val GRUPO_POSICION = "posición"
+    private const val GRUPO_POSICION = "posición" // i18n-ignore
 
-    fun de(e: EntradaGraficaCaptura): GraficaCapturaUi {
+    fun de(e: EntradaGraficaCaptura, resolver: StringResolver): GraficaCapturaUi {
         val recortadas = recortar(e.series, e.ventanaMs)
         return GraficaCapturaUi(
             hayPosicion = recortadas.keys.any(PidsPosicion::es),
@@ -66,46 +66,66 @@ object MapeoGraficaCaptura {
             referencia = e.referencia,
             ventanaS = (e.ventanaMs / 1_000).toInt(),
             pausada = e.pausada,
-            valores = recortadas.mapNotNull { (pid, serie) -> valor(pid, serie, e) },
+            valores = recortadas.mapNotNull { (pid, serie) -> valor(pid, serie, e, resolver) },
             paneles = recortadas.entries
                 .groupBy { grupo(it.key, e) }
-                .map { (grupo, series) -> panel(grupo, series.associate { it.toPair() }, e) },
+                .map { (grupo, series) -> panel(grupo, series.associate { it.toPair() }, e, resolver) },
         )
     }
 
     private fun grupo(pid: String, e: EntradaGraficaCaptura): String =
         if (PidsPosicion.es(pid)) GRUPO_POSICION else e.unidadPid(pid).ifEmpty { pid }
 
-    private fun panel(grupo: String, series: Map<String, SerieCaptura>, e: EntradaGraficaCaptura): PanelGrafica {
+    private fun panel(
+        grupo: String,
+        series: Map<String, SerieCaptura>,
+        e: EntradaGraficaCaptura,
+        resolver: StringResolver,
+    ): PanelGrafica {
         val vref = e.referencia.usada
         val posicion = grupo == GRUPO_POSICION
         val bandas = if (PID_TPS in series) BandasPosicion.tps(e.bandas, e.unidad, vref) else emptyList()
         val lineas = series.entries.mapIndexed { i, (pid, serie) -> serieGrafica(pid, serie, i, e.unidad, vref) }
         return PanelGrafica(
-            titulo = if (posicion) tituloPosicion(e.unidad) else tituloPanel(series.keys, grupo, e),
+            titulo = if (posicion) tituloPosicion(e.unidad, resolver) else tituloPanel(series.keys, grupo, e, resolver),
             modelo = ModeloGrafica(
                 series = lineas,
-                descripcion = resumen(series, e, bandas),
+                descripcion = resumen(series, e, bandas, resolver),
                 bandas = bandas.map { BandaGrafica(it.etiquetaCorta, it.min, it.max) },
                 rangoX = -e.ventanaMs / 1_000.0..0.0,
                 rangoY = if (posicion) rangoPosicion(e.unidad, vref) else null,
             ),
-            leyenda = leyendaSeries(lineas, e) + bandas.map { "Banda ${it.descripcion}" },
+            leyenda = leyendaSeries(lineas, e, resolver) + bandas.map {
+                resolver.get(R.string.sensors_graph_band, it.descripcion)
+            },
         )
     }
 
-    private fun tituloPosicion(unidad: UnidadPosicion): String =
-        if (unidad == UnidadPosicion.VOLTIOS) "Posición, en voltios" else "Posición, en %"
+    private fun tituloPosicion(unidad: UnidadPosicion, resolver: StringResolver): String =
+        resolver.get(
+            if (unidad == UnidadPosicion.VOLTIOS) R.string.sensors_graph_position_volts
+            else R.string.sensors_graph_position_percent,
+        )
 
-    private fun tituloPanel(pids: Set<String>, unidad: String, e: EntradaGraficaCaptura): String =
-        pids.joinToString(" · ") { e.nombre(it) } + if (unidadRedundante(pids, unidad, e)) "" else ", en $unidad"
+    private fun tituloPanel(
+        pids: Set<String>,
+        unidad: String,
+        e: EntradaGraficaCaptura,
+        resolver: StringResolver,
+    ): String = pids.joinToString(" · ") { e.nombre(it) } +
+        if (unidadRedundante(pids, unidad, e)) "" else ", ${resolver.get(R.string.sensors_graph_panel_unit, unidad)}"
 
     private fun unidadRedundante(pids: Set<String>, unidad: String, e: EntradaGraficaCaptura): Boolean =
         unidad in pids || pids.all { e.nombre(it).equals(unidad, ignoreCase = true) }
 
     // Con una sola línea el título del panel ya la nombra; con varias, cada una dice su trazo.
-    private fun leyendaSeries(lineas: List<SerieGrafica>, e: EntradaGraficaCaptura): List<String> =
-        if (lineas.size < 2) emptyList() else lineas.map { "${it.etiqueta} ${e.nombre(it.etiqueta)}: ${trazo(it.estilo)}" }
+    private fun leyendaSeries(
+        lineas: List<SerieGrafica>,
+        e: EntradaGraficaCaptura,
+        resolver: StringResolver,
+    ): List<String> = if (lineas.size < 2) emptyList() else lineas.map {
+        resolver.get(R.string.sensors_graph_legend_series, it.etiqueta, e.nombre(it.etiqueta), trazo(it.estilo, resolver))
+    }
 
     // Todas contra el último instante visto, así las series quedan alineadas a la derecha en 0 s.
     private fun recortar(series: Map<String, SerieCaptura>, ventanaMs: Long): Map<String, SerieCaptura> {
@@ -124,42 +144,68 @@ object MapeoGraficaCaptura {
     private fun rangoPosicion(unidad: UnidadPosicion, vref: ReferenciaVoltaje): ClosedFloatingPointRange<Double> =
         if (unidad == UnidadPosicion.VOLTIOS) 0.0..vref.voltios else 0.0..100.0
 
-    private fun valor(pid: String, serie: SerieCaptura, e: EntradaGraficaCaptura): ValorPidUi? {
+    private fun valor(pid: String, serie: SerieCaptura, e: EntradaGraficaCaptura, resolver: StringResolver): ValorPidUi? {
         val ultimo = serie.lastOrNull()?.second ?: return null
-        val (principal, secundario) = textos(pid, ultimo, e)
-        return ValorPidUi(pid, e.nombre(pid), principal, secundario, e.hz[pid]?.let { "${FormatoTaller.numero(it, 1)} Hz" })
+        val (principal, secundario) = textos(pid, ultimo, e, resolver)
+        return ValorPidUi(
+            pid,
+            e.nombre(pid),
+            principal,
+            secundario,
+            e.hz[pid]?.let { "${LocaleNumbers.decimal(it, 1, resolver.locale)} Hz" }, // i18n-ignore
+        )
     }
 
-    private fun textos(pid: String, valor: Double, e: EntradaGraficaCaptura): Pair<String, String?> {
-        if (!PidsPosicion.es(pid)) return "${numero(valor)} ${e.unidadPid(pid)}".trim() to null
+    private fun textos(pid: String, valor: Double, e: EntradaGraficaCaptura, resolver: StringResolver): Pair<String, String?> {
+        if (!PidsPosicion.es(pid)) return "${numero(valor, resolver)} ${e.unidadPid(pid)}".trim() to null
         val vref = e.referencia.usada
-        val pct = FormatoPosicion.porcentaje(valor)
-        val v = FormatoPosicion.voltios(vref.aVoltios(valor))
+        val pct = "${LocaleNumbers.decimal(valor, 1, resolver.locale)} %"
+        val v = "${LocaleNumbers.decimal(vref.aVoltios(valor), 2, resolver.locale)} V"
         return if (e.unidad == UnidadPosicion.VOLTIOS) v to pct else pct to v
     }
 
-    private fun resumen(series: Map<String, SerieCaptura>, e: EntradaGraficaCaptura, bandas: List<BandaEnEscala>): String {
-        val pausa = if (e.pausada) "Gráfica en pausa, la captura sigue. " else ""
-        val porPid = series.map { (pid, s) -> resumenPid(pid, s, e) }
-        val conBandas = bandas.takeIf { it.isNotEmpty() }?.joinToString("; ", prefix = " Bandas: ") { it.descripcion }.orEmpty()
-        return "${pausa}Últimos ${e.ventanaMs / 1_000} s. ${porPid.joinToString(". ")}.$conBandas"
+    private fun resumen(
+        series: Map<String, SerieCaptura>,
+        e: EntradaGraficaCaptura,
+        bandas: List<BandaEnEscala>,
+        resolver: StringResolver,
+    ): String {
+        val pausa = if (e.pausada) "${resolver.get(R.string.sensors_graph_paused_summary)} " else ""
+        val porPid = series.map { (pid, s) -> resumenPid(pid, s, e, resolver) }
+        val conBandas = bandas.takeIf { it.isNotEmpty() }
+            ?.joinToString("; ") { it.descripcion }
+            ?.let { " ${resolver.get(R.string.sensors_graph_bands, it)}" }
+            .orEmpty()
+        return pausa + resolver.get(
+            R.string.sensors_graph_window_summary,
+            e.ventanaMs / 1_000,
+            porPid.joinToString(". "),
+        ) + conBandas
     }
 
-    private fun resumenPid(pid: String, serie: SerieCaptura, e: EntradaGraficaCaptura): String {
-        val (principal, secundario) = textos(pid, serie.last().second, e)
+    private fun resumenPid(pid: String, serie: SerieCaptura, e: EntradaGraficaCaptura, resolver: StringResolver): String {
+        val (principal, secundario) = textos(pid, serie.last().second, e, resolver)
         val valor = secundario?.let { "$principal ($it)" } ?: principal
-        return "$pid ${e.nombre(pid)}: $valor, ${Tendencia.de(serie.map { it.second }, umbralEstable(pid, serie, e.referencia.usada))}"
+        val tendencia = when (Tendencia.de(serie.map { it.second }, umbralEstable(pid, serie, e.referencia.usada))) {
+            "estable" -> resolver.get(R.string.sensors_graph_trend_stable)
+            "subiendo" -> resolver.get(R.string.sensors_graph_trend_rising)
+            else -> resolver.get(R.string.sensors_graph_trend_falling)
+        }
+        return resolver.get(R.string.sensors_graph_pid_summary, pid, e.nombre(pid), valor, tendencia)
     }
 
     // Un TPS quieto varía un par de escalones (≈0,06 V); para lo demás, ±2 % de su valor.
     private fun umbralEstable(pid: String, serie: SerieCaptura, vref: ReferenciaVoltaje): Double =
         if (PidsPosicion.es(pid)) vref.aPorcentaje(TPS_ESTABLE_V) else maxOf(abs(serie.map { it.second }.average()), 1.0) * ESTABLE_RELATIVO
 
-    private fun numero(valor: Double): String = FormatoTaller.numero(valor, if (abs(valor) >= 100) 0 else 1)
+    private fun numero(valor: Double, resolver: StringResolver): String =
+        LocaleNumbers.decimal(valor, if (abs(valor) >= 100) 0 else 1, resolver.locale)
 
-    private fun trazo(estilo: EstiloLinea): String = when (estilo) {
-        EstiloLinea.CONTINUA -> "trazo continuo"
-        EstiloLinea.DISCONTINUA -> "trazo discontinuo"
-        EstiloLinea.PUNTEADA -> "trazo punteado"
-    }
+    private fun trazo(estilo: EstiloLinea, resolver: StringResolver): String = resolver.get(
+        when (estilo) {
+            EstiloLinea.CONTINUA -> R.string.sensors_graph_line_solid
+            EstiloLinea.DISCONTINUA -> R.string.sensors_graph_line_dashed
+            EstiloLinea.PUNTEADA -> R.string.sensors_graph_line_dotted
+        },
+    )
 }
