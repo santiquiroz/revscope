@@ -1,4 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">RevScope</string>
+    <string name="app_name" translatable="false">RevScope</string>
+
+    <!-- Barra de pestañas -->
+    <string name="app_tab_drive">Drive</string>
+    <string name="app_tab_map">Map</string>
+    <string name="app_tab_workshop">Workshop</string>
+    <string name="app_tab_trips">Trips</string>
+    <string name="app_tab_settings">Settings</string>
+
+    <!-- Estado del enlace -->
+    <string name="app_connection_connecting">Connecting…</string>
+    <string name="app_connection_error">Link error</string>
+    <string name="app_connection_none">Not connected</string>
+    <string name="app_connection_connected_a11y">%1$s connected</string>
+
+    <!-- Selector de vehículo -->
+    <string name="app_picker_title">Select</string>
+    <string name="app_picker_dont_ask">Don\'t ask again at startup</string>
+    <string name="app_picker_add_vehicle">Add another vehicle</string>
+    <string name="app_picker_adapter_row">Adapter: %1$s · Manage</string>
+    <string name="app_picker_active">Active</string>
+
+    <!-- Onboarding -->
+    <string name="app_onboarding_back">Back</string>
+    <string name="app_onboarding_skip">Skip</string>
+    <string name="app_onboarding_start">Get started</string>
+    <string name="app_onboarding_next">Next</string>
+    <string name="app_onboarding_welcome">Welcome to RevScope</string>
+    <string name="app_onboarding_permissions_intro">We need these permissions for the app to work properly. You can change them later in system Settings.</string>
+    <string name="app_onboarding_location">Location</string>
+    <string name="app_onboarding_location_rationale">To record your routes and warn you about speed cameras.</string>
+    <string name="app_onboarding_notifications">Notifications</string>
+    <string name="app_onboarding_notifications_rationale">For trip and pico y placa summaries.</string>
+    <string name="app_onboarding_bluetooth">Bluetooth</string>
+    <string name="app_onboarding_bluetooth_rationale">To connect the OBD2 adapter.</string>
+    <string name="app_onboarding_vehicle_title">Your vehicle</string>
+    <string name="app_onboarding_vehicle_intro">Create it now and the app adapts: gauges, gears and alerts depending on whether it\'s a motorcycle or a car.</string>
+    <string name="app_onboarding_vehicle_name">Name</string>
+    <string name="app_onboarding_vehicle_car">Car</string>
+    <string name="app_onboarding_vehicle_motorcycle">Motorcycle</string>
+    <string name="app_onboarding_vehicle_plate">License plate (optional)</string>
+    <string name="app_onboarding_vehicle_created">Created</string>
+    <string name="app_onboarding_vehicle_create">Create</string>
+    <string name="app_onboarding_adapter_title">Do you have an OBD2 adapter?</string>
+    <string name="app_onboarding_adapter_intro">A Bluetooth OBD2 adapter gives you live engine data: RPM, speed, temperature and more.</string>
+    <string name="app_onboarding_adapter_now">Yes, set it up now</string>
+    <string name="app_onboarding_adapter_now_subtitle">We\'ll take you straight to finding your adapter.</string>
+    <string name="app_onboarding_adapter_later">Yes, but later</string>
+    <string name="app_onboarding_adapter_later_subtitle">We\'ll continue with the rest of the setup; you can set it up later from Settings.</string>
+    <string name="app_onboarding_adapter_none">I don\'t have one — use GPS only</string>
+    <string name="app_onboarding_adapter_none_subtitle">RevScope works just as well with GPS data.</string>
+    <string name="app_onboarding_continue">Continue</string>
+    <string name="app_onboarding_gps_feature_radars">Map with automatic speed cameras</string>
+    <string name="app_onboarding_gps_feature_trips">GPS trips with motion telemetry</string>
+    <string name="app_onboarding_gps_feature_crash">Crash detection</string>
+    <string name="app_onboarding_gps_feature_pico_placa">Pico y placa (driving restriction)</string>
+    <string name="app_onboarding_gps_feature_history">History and reports</string>
+    <string name="app_onboarding_ai_title">Want the intelligence layer?</string>
+    <string name="app_onboarding_ai_intro">With a free Gemini API key you turn on the AI mechanic, the trip debrief, AI pico y placa and trouble code explanations.</string>
+    <string name="app_onboarding_done_title">All set</string>
+    <string name="app_onboarding_done_body">You can change all of this later in Settings.</string>
+    <string name="app_onboarding_allow">Allow</string>
+    <string name="app_onboarding_granted">Granted</string>
+    <string name="app_onboarding_not_granted">Not granted</string>
+
+    <!-- Valor de la IA -->
+    <string name="app_ai_bullet_chat">Mechanic chat specialized in YOUR vehicle</string>
+    <string name="app_ai_bullet_debrief">AI debrief at the end of every trip</string>
+    <string name="app_ai_bullet_pico_placa">AI pico y placa in any city</string>
+    <string name="app_ai_bullet_dtc">Trouble code (DTC) explanations</string>
+    <string name="app_ai_key_label">Gemini API key</string>
+    <string name="app_ai_get_key">Get a free key</string>
+    <string name="app_ai_testing">Testing…</string>
+    <string name="app_ai_test">Test</string>
+    <string name="app_ai_save">Save</string>
+    <string name="app_ai_later">Later</string>
+    <string name="app_ai_title">Artificial intelligence</string>
+    <string name="app_ai_back">Back</string>
+
+    <!-- Alarma de caída -->
+    <string name="app_crash_title">Are you OK?</string>
+    <string name="app_crash_detected">A possible crash of %1$s was detected.</string>
+    <string name="app_crash_countdown">%1$ds</string>
+    <string name="app_crash_sms_warning">If you don\'t respond, we\'ll send an emergency SMS with your location.</string>
+    <string name="app_crash_im_ok">I\'M OK</string>
 </resources>

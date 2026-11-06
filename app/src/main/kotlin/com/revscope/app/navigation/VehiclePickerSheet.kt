@@ -39,7 +39,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.revscope.app.R
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 
 
@@ -70,7 +72,7 @@ fun VehiclePickerSheet(
     ) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
             Text(
-                "Selecciona",
+                stringResource(R.string.app_picker_title),
                 color = RevScopeColors.TextPrimary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -106,7 +108,7 @@ fun VehiclePickerSheet(
                             checkmarkColor = RevScopeColors.Surface,
                         ),
                     )
-                    Text("No volver a preguntar al inicio", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
+                    Text(stringResource(R.string.app_picker_dont_ask), color = RevScopeColors.TextSecondary, fontSize = 13.sp)
                 }
             }
 
@@ -119,7 +121,7 @@ fun VehiclePickerSheet(
                 ),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Agregar otro vehículo", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.app_picker_add_vehicle), fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(Modifier.height(12.dp))
@@ -132,7 +134,7 @@ fun VehiclePickerSheet(
                 horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    "Adaptador: ${connectionStatusLabel(connectionState)} · Administrar",
+                    stringResource(R.string.app_picker_adapter_row, connectionStatusLabel(connectionState, vm.resolver)),
                     color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
@@ -176,7 +178,7 @@ private fun VehiclePickerRow(
         if (isActive) {
             Icon(
                 imageVector = Icons.Default.Check,
-                contentDescription = "Activo",
+                contentDescription = stringResource(R.string.app_picker_active),
                 tint = RevScopeColors.Accent,
                 modifier = Modifier.size(18.dp),
             )

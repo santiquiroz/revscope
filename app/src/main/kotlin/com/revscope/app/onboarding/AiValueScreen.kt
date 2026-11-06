@@ -37,12 +37,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.app.R
 import com.revscope.core.intelligence.provider.AI_PROVIDER_GEMINI
 import com.revscope.feature.settings.SettingsViewModel
 import kotlinx.coroutines.flow.first
@@ -58,10 +60,10 @@ private val ErrorColor = Color(0xFFFF4D4D)
 private const val GEMINI_API_KEY_URL = "https://aistudio.google.com/apikey"
 
 private val AiValueBullets = listOf(
-    "Chat mecánico especializado en TU vehículo",
-    "Debrief IA al final de cada viaje",
-    "Pico y placa por IA en cualquier ciudad",
-    "Explicación de códigos de falla (DTC)",
+    R.string.app_ai_bullet_chat,
+    R.string.app_ai_bullet_debrief,
+    R.string.app_ai_bullet_pico_placa,
+    R.string.app_ai_bullet_dtc,
 )
 
 @Composable
@@ -88,13 +90,13 @@ fun AiValueContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            AiValueBullets.forEach { bullet -> AiValueBulletRow(bullet) }
+            AiValueBullets.forEach { bullet -> AiValueBulletRow(stringResource(bullet)) }
         }
 
         OutlinedTextField(
             value = aiApiKey,
             onValueChange = vm::updateAiApiKey,
-            label = { Text("API key de Gemini") },
+            label = { Text(stringResource(R.string.app_ai_key_label)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -105,7 +107,7 @@ fun AiValueContent(
         TextButton(onClick = {
             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(GEMINI_API_KEY_URL))) }
         }) {
-            Text("Obtener key gratis", color = AccentColor)
+            Text(stringResource(R.string.app_ai_get_key), color = AccentColor)
         }
 
         testResult?.let { result ->
@@ -123,7 +125,7 @@ fun AiValueContent(
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceColor),
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             ) {
-                Text(if (aiTesting) "Probando…" else "Probar", color = TextPrimaryColor)
+                Text(stringResource(if (aiTesting) R.string.app_ai_testing else R.string.app_ai_test), color = TextPrimaryColor)
             }
             Button(
                 onClick = {
@@ -133,12 +135,12 @@ fun AiValueContent(
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp),
             ) {
-                Text("Guardar", color = BgColor, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.app_ai_save), color = BgColor, fontWeight = FontWeight.SemiBold)
             }
         }
 
         TextButton(onClick = onDone) {
-            Text("Después", color = TextMutedColor)
+            Text(stringResource(R.string.app_ai_later), color = TextMutedColor)
         }
     }
 }
@@ -159,11 +161,11 @@ fun AiValueScreen(onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Inteligencia artificial", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.app_ai_title), color = TextPrimaryColor, fontWeight = FontWeight.SemiBold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = TextPrimaryColor)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.app_ai_back), tint = TextPrimaryColor)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
