@@ -22,6 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -37,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -51,6 +56,7 @@ import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
 import com.revscope.core.designsystem.conCifrasTabulares
+import com.revscope.core.intelligence.efficiency.DriveStyle
 import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.feature.dashboard.gauges.BoostBar
@@ -428,11 +434,20 @@ internal fun TripScoreBar(tripScore: TripScore) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = "${tripScore.style.emoji} ${stringResource(tripScore.style.labelRes)}",
-            style = RevScopeType.label,
-            color = RevScopeColors.TextPrimary,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = driveStyleIcon(tripScore.style),
+                contentDescription = null,
+                tint = RevScopeColors.TextPrimary,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = stringResource(tripScore.style.labelRes),
+                style = RevScopeType.label,
+                color = RevScopeColors.TextPrimary,
+            )
+        }
         Text(
             text = stringResource(R.string.drive_score, tripScore.overall),
             style = RevScopeType.label.conCifrasTabulares(),
@@ -440,6 +455,13 @@ internal fun TripScoreBar(tripScore: TripScore) {
             color = RevScopeColors.Accent,
         )
     }
+}
+
+internal fun driveStyleIcon(style: DriveStyle): ImageVector = when (style) {
+    DriveStyle.ECO -> Icons.Default.Eco
+    DriveStyle.NORMAL -> Icons.Default.DirectionsCar
+    DriveStyle.SPORT -> Icons.Default.Speed
+    DriveStyle.AGGRESSIVE -> Icons.Default.LocalFireDepartment
 }
 
 /** Fuente de la velocidad bajo el velocímetro: toca para alternar entre la ECU y el GPS. */

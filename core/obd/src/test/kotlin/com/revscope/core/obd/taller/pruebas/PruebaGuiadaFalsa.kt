@@ -14,11 +14,18 @@ import com.revscope.core.obd.telemetry.captura.ConfigCaptura
 import com.revscope.core.obd.telemetry.captura.InicioCaptura
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
 import com.revscope.core.obd.telemetry.captura.ResumenCaptura
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import java.io.File
+
+private val resolver = XmlStringResolver.es(
+    com.revscope.core.obd.R::class.java,
+    com.revscope.core.common.R::class.java,
+    resDirs = listOf("src/main/res", "../common/src/main/res"),
+)
 
 // Captura con el reloj virtual del test: genera muestras del PID principal a [hz] con el valor que diga el guion.
 class CapturaFalsa(
@@ -122,6 +129,7 @@ class MontajePrueba(
         captura, enlace, registro, repositorio, { vehiculo }, voz, scope.backgroundScope, reloj,
         rafagaVoltaje = rafaga,
         fuentes = fuentes,
+        resolver = resolver,
     )
 
     suspend fun abrirSesion() = registro.abrirSesion(SolicitudSesion()).getOrThrow()

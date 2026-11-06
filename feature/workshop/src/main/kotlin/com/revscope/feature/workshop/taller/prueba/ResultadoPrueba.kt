@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,7 +39,7 @@ import com.revscope.feature.workshop.taller.texto
 
 @Composable
 internal fun ColumnScope.ResultadoPrueba(r: ResultadoUi, estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
-    BarraConVolver(titulo = r.tipo.titulo, subtitulo = estado.vehiculo, onVolver = acciones.onTerminar)
+    BarraConVolver(titulo = stringResource(r.tipo.tituloRes), subtitulo = estado.vehiculo, onVolver = acciones.onTerminar)
     CuerpoDesplazable {
         TarjetaVeredicto(r)
         r.siguientePaso?.let { TarjetaSiguiente(it) }

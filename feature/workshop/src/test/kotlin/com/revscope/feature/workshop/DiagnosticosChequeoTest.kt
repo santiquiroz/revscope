@@ -3,11 +3,13 @@ package com.revscope.feature.workshop
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.protocol.ReadinessParser
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiagnosticosChequeoTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     @Test
     fun `readiness no soportado no produce un diagnostico contradictorio`() {
@@ -18,7 +20,7 @@ class DiagnosticosChequeoTest {
             monitors = emptyList(),
         )
 
-        val diagnosticos = DiagnosticosChequeo.readiness(EstadoSoporte.NoSoportado, estado)
+        val diagnosticos = DiagnosticosChequeo.readiness(EstadoSoporte.NoSoportado, estado, resolver)
 
         assertTrue(diagnosticos.isEmpty())
     }
@@ -49,7 +51,7 @@ class DiagnosticosChequeoTest {
 
     @Test
     fun `RPM no soportada invalida su lectura anterior y aparece como no disponible`() {
-        val resolver: (String) -> EstadoSoporte = { pid ->
+        val estadoSoporte: (String) -> EstadoSoporte = { pid ->
             if (pid == "0C") EstadoSoporte.NoSoportado else EstadoSoporte.Soportado
         }
         val lecturas = mapOf(
@@ -57,8 +59,8 @@ class DiagnosticosChequeoTest {
             "VBAT" to lectura("VBAT", 11.2, "V"),
         )
 
-        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), resolver)
-        val noDisponibles = DiagnosticosChequeo.parametrosNoDisponibles(resolver)
+        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), estadoSoporte)
+        val noDisponibles = DiagnosticosChequeo.parametrosNoDisponibles(estadoSoporte, resolver)
 
         assertFalse(diagnosticos.any { it.area == "Eléctrico" })
         assertTrue(noDisponibles.contains("RPM del motor"))

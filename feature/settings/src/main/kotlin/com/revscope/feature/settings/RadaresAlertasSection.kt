@@ -64,13 +64,13 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
     val redlineRpm by vm.redlineRpm.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Alertas de audio y vibración")
+        SectionTitle(stringResource(R.string.settings_alertas_title))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Alertas activas (suenan por el intercom/parlante)",
+                stringResource(R.string.settings_alertas_active),
                 color = TextPrimaryColor,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
@@ -89,7 +89,7 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Voz (TTS): alertas y tiempos 0-100 hablados",
+                stringResource(R.string.settings_alertas_tts),
                 color = TextPrimaryColor,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
@@ -106,62 +106,66 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
 
         Spacer(Modifier.height(4.dp))
         Text(
-            "Alertas de voz por categoría",
+            stringResource(R.string.settings_alertas_voice_categories),
             color = TextMutedColor,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
         )
-        ToggleRow("Temperatura", voiceTemperature, vm::updateVoiceTemperature)
-        ToggleRow("Batería y carga", voiceVoltage, vm::updateVoiceVoltage)
-        ToggleRow("Radares de velocidad", voiceSpeedCameras, vm::updateVoiceSpeedCameras)
-        ToggleRow("Anomalías inteligentes", voiceAnomalies, vm::updateVoiceAnomalies)
-        ToggleRow("Testigo del motor (MIL)", voiceMil, vm::updateVoiceMil)
-        ToggleRow("Zona roja", voiceRedline, vm::updateVoiceRedline)
-        ToggleRow("Umbrales personalizados", voiceCustomThresholds, vm::updateVoiceCustomThresholds)
-        ToggleRow("Tiempos 0-100 y vueltas", voiceSport, vm::updateVoiceSport)
-        ToggleRow("Pico y placa al entrar a otra ciudad", voicePicoPlaca, vm::updateVoicePicoPlaca)
+        ToggleRow(stringResource(R.string.settings_alertas_voice_temperature), voiceTemperature, vm::updateVoiceTemperature)
+        ToggleRow(stringResource(R.string.settings_alertas_voice_voltage), voiceVoltage, vm::updateVoiceVoltage)
+        ToggleRow(stringResource(R.string.settings_alertas_voice_speed_cameras), voiceSpeedCameras, vm::updateVoiceSpeedCameras)
+        ToggleRow(stringResource(R.string.settings_alertas_voice_anomalies), voiceAnomalies, vm::updateVoiceAnomalies)
+        ToggleRow(stringResource(R.string.settings_alertas_voice_mil), voiceMil, vm::updateVoiceMil)
+        ToggleRow(stringResource(R.string.settings_alertas_voice_redline), voiceRedline, vm::updateVoiceRedline)
         ToggleRow(
-            "Aviso de atardecer",
+            stringResource(R.string.settings_alertas_voice_custom_thresholds),
+            voiceCustomThresholds,
+            vm::updateVoiceCustomThresholds,
+        )
+        ToggleRow(stringResource(R.string.settings_alertas_voice_sport), voiceSport, vm::updateVoiceSport)
+        ToggleRow(stringResource(R.string.settings_alertas_voice_pico_placa), voicePicoPlaca, vm::updateVoicePicoPlaca)
+        ToggleRow(
+            stringResource(R.string.settings_alertas_voice_sunset),
             voiceSunset,
             vm::updateVoiceSunset,
-            subtitle = "Un aviso diario ~25 min antes del ocaso: enciende luces y hazte visible",
+            subtitle = stringResource(R.string.settings_alertas_voice_sunset_subtitle),
         )
         ToggleRow(
-            "Huecos y resaltos",
+            stringResource(R.string.settings_alertas_voice_potholes),
             voicePotholes,
             vm::updateVoicePotholes,
-            subtitle = "Avisa al acercarte a un hueco que tu propio IMU ya detectó antes",
+            subtitle = stringResource(R.string.settings_alertas_voice_potholes_subtitle),
         )
         ToggleRow(
-            "Lluvia e inclinación en mojado",
+            stringResource(R.string.settings_alertas_voice_rain),
             voiceRain,
             vm::updateVoiceRain,
-            subtitle = "Lluvia inminente en tu zona + guardián de lean con piso mojado",
+            subtitle = stringResource(R.string.settings_alertas_voice_rain_subtitle),
         )
         ToggleRow(
-            "Fatiga e hidratación",
+            stringResource(R.string.settings_alertas_voice_fatigue),
             voiceFatigue,
             vm::updateVoiceFatigue,
-            subtitle = "Pausa sugerida cada 2 h; hidratación cuando hace calor",
+            subtitle = stringResource(R.string.settings_alertas_voice_fatigue_subtitle),
         )
         ToggleRow(
-            "Información local al cambiar de ciudad",
+            stringResource(R.string.settings_alertas_voice_local_info),
             voiceLocalInfo,
             vm::updateVoiceLocalInfo,
             subtitle = if (aiProviderSupportsWebSearch(aiProvider)) {
-                "Usa tu proveedor de IA con búsqueda web (~$0.02 por ciudad)"
+                stringResource(R.string.settings_alertas_voice_local_info_supported)
             } else {
-                "Requiere Claude, OpenAI o Gemini (no disponible con Nodo ni Compatible OpenAI)"
+                stringResource(R.string.settings_alertas_voice_local_info_unsupported)
             },
         )
         ToggleRow(
-            "Pico y placa por IA en cualquier ciudad",
+            stringResource(R.string.settings_alertas_ai_pico_placa),
             aiPicoPlaca,
             vm::updateAiPicoPlaca,
             subtitle = if (aiProviderSupportsWebSearch(aiProvider)) {
-                "Investiga la restricción de la ciudad donde estés (pico y placa, hoy no circula, rodízio…) y la guarda hasta que venza"
+                stringResource(R.string.settings_alertas_ai_pico_placa_supported)
             } else {
-                "Configura primero un proveedor de IA con búsqueda web — recomendamos Gemini por su capa gratuita"
+                stringResource(R.string.settings_alertas_ai_pico_placa_unsupported)
             },
         )
 
@@ -172,7 +176,7 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
             OutlinedTextField(
                 value = tempMaxC,
                 onValueChange = vm::updateTempMaxC,
-                label = { Text("Temp máx °C", fontSize = 11.sp) },
+                label = { Text(stringResource(R.string.settings_alertas_temp_max), fontSize = 11.sp) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = settingsFieldColors(),
@@ -181,7 +185,7 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
             OutlinedTextField(
                 value = voltageMin,
                 onValueChange = vm::updateVoltageMin,
-                label = { Text("Volt mín", fontSize = 11.sp) },
+                label = { Text(stringResource(R.string.settings_alertas_voltage_min), fontSize = 11.sp) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 colors = settingsFieldColors(),
@@ -190,7 +194,7 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
             OutlinedTextField(
                 value = redlineRpm,
                 onValueChange = vm::updateRedlineRpm,
-                label = { Text("Zona roja RPM", fontSize = 11.sp) },
+                label = { Text(stringResource(R.string.settings_alertas_redline_rpm), fontSize = 11.sp) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = settingsFieldColors(),
@@ -198,14 +202,14 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
             )
         }
         Text(
-            "La zona roja también controla el shift light del dashboard.",
+            stringResource(R.string.settings_alertas_redline_hint),
             color = TextMutedColor,
             fontSize = 11.sp,
         )
         Button(
             onClick = vm::saveAlertSettings,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Guardar alertas", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_alertas_save), color = BgColor) }
     }
 }
 
@@ -216,26 +220,24 @@ internal fun SonidoMotorCard(vm: SettingsViewModel) {
     val engineSoundVolume by vm.engineSoundVolume.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Sonido de motor")
+        SectionTitle(stringResource(R.string.settings_alertas_engine_sound_title))
         Text(
-            "Sintetiza el sonido de un motor deportivo (o uno gracioso) siguiendo las RPM " +
-                "reales del OBD2 — suena por los parlantes o el intercomunicador Bluetooth. " +
-                "Estilo SoundRacer, sin comprar el adaptador.",
+            stringResource(R.string.settings_alertas_engine_sound_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         ToggleRow(
-            "Sonido de motor al conducir",
+            stringResource(R.string.settings_alertas_engine_sound_toggle),
             engineSoundEnabled,
             vm::updateEngineSoundEnabled,
-            subtitle = "Se activa solo con telemetría OBD conectada",
+            subtitle = stringResource(R.string.settings_alertas_engine_sound_toggle_subtitle),
         )
         if (engineSoundEnabled) {
             EngineSoundPackDropdown(selected = engineSoundPack, onSelected = vm::updateEngineSoundPack)
             OutlinedTextField(
                 value = engineSoundVolume,
                 onValueChange = vm::updateEngineSoundVolume,
-                label = { Text("Volumen (0-100)", fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.settings_alertas_engine_sound_volume), fontSize = 12.sp) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 colors = settingsFieldColors(),
@@ -244,7 +246,7 @@ internal fun SonidoMotorCard(vm: SettingsViewModel) {
             Button(
                 onClick = vm::saveEngineSoundVolume,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            ) { Text("Guardar volumen", color = BgColor) }
+            ) { Text(stringResource(R.string.settings_alertas_engine_sound_save_volume), color = BgColor) }
         }
     }
 }
@@ -262,7 +264,7 @@ private fun EngineSoundPackDropdown(selected: String, onSelected: (String) -> Un
             value = stringResource(SoundPack.fromId(selected).displayNameRes),
             onValueChange = {},
             readOnly = true,
-            label = { Text("Pack de sonido", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_alertas_engine_sound_pack), fontSize = 12.sp) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -292,11 +294,9 @@ internal fun RadaresVelocidadCard(vm: SettingsViewModel) {
     val cameraAlertRadius by vm.cameraAlertRadius.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Radares de velocidad")
+        SectionTitle(stringResource(R.string.settings_alertas_cameras_title))
         Text(
-            "Descarga los radares en 50 km a tu alrededor. " +
-                "Fuentes: OpenStreetMap + registro oficial ANSV · se actualiza cada semana automáticamente. " +
-                "Al conducir, la app avisa por voz al acercarte (funciona offline tras descargar).",
+            stringResource(R.string.settings_alertas_cameras_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
@@ -304,26 +304,26 @@ internal fun RadaresVelocidadCard(vm: SettingsViewModel) {
         Button(
             onClick = vm::downloadSpeedCameras,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Descargar radares de mi zona", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_alertas_cameras_download), color = BgColor) }
 
         OutlinedTextField(
             value = cameraAlertRadius,
             onValueChange = vm::updateCameraAlertRadius,
-            label = { Text("Radio de aviso (m)") },
+            label = { Text(stringResource(R.string.settings_alertas_cameras_radius)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             colors = settingsFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            "Distancia a la que suena el aviso por voz (100-1000 m). Menos metros = menos avisos anticipados.",
+            stringResource(R.string.settings_alertas_cameras_radius_hint),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         Button(
             onClick = vm::saveCameraAlertRadius,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Guardar radio", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_alertas_cameras_save_radius), color = BgColor) }
     }
 }
 
@@ -332,17 +332,16 @@ internal fun PicoPlacaPersonalizadoCard(vm: SettingsViewModel) {
     val picoPlacaRulesJson by vm.picoPlacaRulesJson.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Pico y placa personalizado")
+        SectionTitle(stringResource(R.string.settings_alertas_pico_placa_title))
         Text(
-            "Reglas propias para tu ciudad o rotaciones nuevas — sobreescriben las integradas " +
-                "cuando el cityId coincide.",
+            stringResource(R.string.settings_alertas_pico_placa_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         OutlinedTextField(
             value = picoPlacaRulesJson,
             onValueChange = vm::updatePicoPlacaRulesJson,
-            label = { Text("JSON de reglas de pico y placa", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_alertas_pico_placa_json), fontSize = 12.sp) },
             minLines = 4,
             maxLines = 10,
             textStyle = androidx.compose.ui.text.TextStyle(
@@ -353,12 +352,7 @@ internal fun PicoPlacaPersonalizadoCard(vm: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            "Ejemplo (Medellín, rotación por día de semana):\n" +
-                "{\"cityId\":\"medellin\",\"displayName\":\"Medellín\"," +
-                "\"rotation\":{\"2\":[1,7],\"3\":[0,3]}," +
-                "\"startHour\":5,\"endHour\":20," +
-                "\"carDigit\":\"LAST\",\"motoDigit\":\"FIRST\"," +
-                "\"validFromMs\":1770008400000,\"validUntilMs\":1785560399000}",
+            stringResource(R.string.settings_alertas_pico_placa_example),
             color = TextMutedColor,
             fontSize = 11.sp,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
@@ -366,6 +360,6 @@ internal fun PicoPlacaPersonalizadoCard(vm: SettingsViewModel) {
         Button(
             onClick = vm::savePicoPlacaRules,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Validar y aplicar", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_alertas_pico_placa_apply), color = BgColor) }
     }
 }
