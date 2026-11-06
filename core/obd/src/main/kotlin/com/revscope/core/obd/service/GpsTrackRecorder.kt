@@ -14,6 +14,7 @@ import com.revscope.core.data.db.entities.GpsPointEntity
 import com.revscope.core.obd.cameras.CameraCoverageTracker
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.legal.CityEnforcementAlerter
+import com.revscope.core.obd.telemetry.RetryingBatchBuffer
 import com.revscope.core.obd.track.TrackModeEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -55,7 +56,10 @@ class GpsTrackRecorder(
     private val navigation: NavigationController? = null,
 ) {
 
-    private val buffer = mutableListOf<GpsPointEntity>()
+    private val buffer = RetryingBatchBuffer<GpsPointEntity>(
+        onDrop = { Timber.w("GpsTrackRecorder: dropped $it oldest buffered points (limit reached)") },
+        onFailure = { error, count -> Timber.e(error, "GpsTrackRecorder: flush failed ($count points retained)") },
+    )
     private var listener: LocationListener? = null
     private var flushJob: Job? = null
     private var recorderScope: CoroutineScope? = null
@@ -163,7 +167,7 @@ class GpsTrackRecorder(
             speedKmh = if (location.hasSpeed()) location.speed * MPS_TO_KMH else 0f,
         )
         if (persistenceEnabled) {
-            synchronized(buffer) { buffer += point }
+            buffer.add(point)
         }
         trackModeEngine?.onGpsFix(location.latitude, location.longitude, timestamp)
         cameraAlerter?.onGpsFix(
@@ -194,12 +198,7 @@ class GpsTrackRecorder(
     }
 
     private suspend fun flush() {
-        val snapshot = synchronized(buffer) {
-            if (buffer.isEmpty()) return
-            buffer.toList().also { buffer.clear() }
-        }
-        runCatching { gpsDao.insertAll(snapshot) }
-            .onFailure { Timber.e(it, "GpsTrackRecorder: flush failed (${snapshot.size} points)") }
+        buffer.flush(gpsDao::insertAll)
     }
 }
 
