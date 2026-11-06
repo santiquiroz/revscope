@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,7 +72,7 @@ private fun TarjetaOpcion(opcion: OpcionPrueba, onClick: () -> Unit) {
                 tint = if (opcion.disponible) RevScopeColors.Accent else RevScopeColors.TextSecondary,
             )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(opcion.tipo.titulo, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                Text(stringResource(opcion.tipo.tituloRes), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
                 Text(opcion.descripcion, color = RevScopeColors.TextSecondary, style = RevScopeType.body)
                 if (!opcion.disponible) Text("Llega en una próxima versión", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
             }
@@ -83,7 +84,7 @@ private fun TarjetaOpcion(opcion: OpcionPrueba, onClick: () -> Unit) {
 
 @Composable
 internal fun ColumnScope.PreparacionPrueba(fase: FasePantalla.Preparacion, estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
-    BarraConVolver(titulo = fase.tipo.titulo, subtitulo = estado.vehiculo, onVolver = acciones.onVolver)
+    BarraConVolver(titulo = stringResource(fase.tipo.tituloRes), subtitulo = estado.vehiculo, onVolver = acciones.onVolver)
     CuerpoDesplazable {
         Text(fase.descripcion, color = RevScopeColors.TextPrimary, style = RevScopeType.body)
         Seccion("Antes de empezar")

@@ -69,31 +69,33 @@ class HealthCheckViewModel @Inject constructor(
     fun runHealthCheck() {
         if (_state.value is UiState.Running) return
         if (sessionManager.connectionState.value !is ConnectionState.Connected) {
-            _state.value = UiState.Error("Conecta el adaptador primero")
+            _state.value = UiState.Error(resolver.get(R.string.workshop_health_check_connect_adapter))
             return
         }
         viewModelScope.launch {
             try {
                 val items = mutableListOf<DiagnosticRules.Diagnosis>()
 
-                _state.value = UiState.Running("Leyendo códigos de falla…")
+                _state.value = UiState.Running(resolver.get(R.string.workshop_health_check_stage_dtcs))
                 val dtcScan = readAllDtcs()
-                items += buildDtcDiagnosis(dtcScan)
+                items += buildDtcDiagnosis(dtcScan, resolver)
 
-                _state.value = UiState.Running("Consultando monitores de readiness…")
+                _state.value = UiState.Running(resolver.get(R.string.workshop_health_check_stage_readiness))
                 val readiness = readReadiness()
                 items += DiagnosticosChequeo.readiness(
-                    registry.estadoSoporte(DiagnosticosChequeo.READINESS_PID), readiness, resolver,
+                    registry.estadoSoporte(DiagnosticosChequeo.READINESS_PID),
+                    readiness,
+                    resolver,
                 )
 
-                _state.value = UiState.Running("Muestreando mezcla y sensores ($SAMPLE_SECONDS s)…")
+                _state.value = UiState.Running(resolver.get(R.string.workshop_health_check_stage_mixture, SAMPLE_SECONDS))
                 val mezcla = sampleMixture()
                 items += mezcla.diagnosticos
 
-                _state.value = UiState.Running("Verificando odómetro…")
+                _state.value = UiState.Running(resolver.get(R.string.workshop_health_check_stage_odometer))
                 items += odometerDiagnoses()
 
-                _state.value = UiState.Running("Analizando tendencia de batería…")
+                _state.value = UiState.Running(resolver.get(R.string.workshop_health_check_stage_battery))
                 batteryTrendDiagnosis()?.let { items += it }
 
                 val now = System.currentTimeMillis()
@@ -105,7 +107,7 @@ class HealthCheckViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "HealthCheck failed")
-                _state.value = UiState.Error("Falló el chequeo: ${e.message}")
+                _state.value = UiState.Error(resolver.get(R.string.workshop_health_check_failed, e.message ?: "null"))
             }
         }
     }
@@ -116,7 +118,9 @@ class HealthCheckViewModel @Inject constructor(
             val uri = withContext(Dispatchers.IO) {
                 HealthReportCard.render(
                     context, done.items, done.dtcCodes,
-                    sessionManager.activeProfile.value?.name ?: "Mi vehículo", done.timestamp,
+                    sessionManager.activeProfile.value?.name ?: resolver.get(R.string.workshop_health_check_vehicle_fallback),
+                    done.timestamp,
+                    resolver,
                 )
             } ?: return@launch
             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -124,7 +128,7 @@ class HealthCheckViewModel @Inject constructor(
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Compartir informe"))
+            context.startActivity(Intent.createChooser(intent, resolver.get(R.string.workshop_health_check_share)))
         }
     }
 
@@ -153,13 +157,22 @@ class HealthCheckViewModel @Inject constructor(
         return when (result.verdict) {
             com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.SIN_DATOS -> null
             com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.OK -> DiagnosticRules.Diagnosis(
-                DiagnosticRules.Nivel.OK, "Batería (tendencia)", "Carga estable entre viajes", result.detalle,
+                DiagnosticRules.Nivel.OK,
+                resolver.get(R.string.workshop_health_battery_trend_area),
+                resolver.get(R.string.workshop_health_battery_trend_stable),
+                result.detalle,
             )
             com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.DEGRADANDO -> DiagnosticRules.Diagnosis(
-                DiagnosticRules.Nivel.ATENCION, "Batería (tendencia)", "Voltaje de carga en descenso", result.detalle,
+                DiagnosticRules.Nivel.ATENCION,
+                resolver.get(R.string.workshop_health_battery_trend_area),
+                resolver.get(R.string.workshop_health_battery_trend_declining),
+                result.detalle,
             )
             com.revscope.core.obd.workshop.BatteryTrendAnalyzer.Verdict.CARGA_DEBIL -> DiagnosticRules.Diagnosis(
-                DiagnosticRules.Nivel.ATENCION, "Batería (tendencia)", "Carga débil sostenida", result.detalle,
+                DiagnosticRules.Nivel.ATENCION,
+                resolver.get(R.string.workshop_health_battery_trend_area),
+                resolver.get(R.string.workshop_health_battery_trend_weak),
+                result.detalle,
             )
         }
     }
@@ -173,27 +186,36 @@ class HealthCheckViewModel @Inject constructor(
         val lecturas: Map<String, ObdReading>,
     )
 
-    private fun buildDtcDiagnosis(scan: DtcScanResult): DiagnosticRules.Diagnosis = when {
+    private fun buildDtcDiagnosis(scan: DtcScanResult, resolver: StringResolver): DiagnosticRules.Diagnosis = when {
         scan.readFailed -> DiagnosticRules.Diagnosis(
-            DiagnosticRules.Nivel.ATENCION, "DTC", "Lectura de códigos incompleta", detalleLecturaFallida(scan.scan),
+            DiagnosticRules.Nivel.ATENCION,
+            resolver.get(R.string.workshop_health_dtc_area),
+            resolver.get(R.string.workshop_health_dtc_read_incomplete),
+            detalleLecturaFallida(scan.scan, resolver),
         )
-        scan.codes.isEmpty() -> diagnosticoSinCodigos(scan.scan)
+        scan.codes.isEmpty() -> diagnosticoSinCodigos(scan.scan, resolver)
         else -> DiagnosticRules.Diagnosis(
-            DiagnosticRules.Nivel.FALLA, "DTC",
-            "${scan.codes.size} códigos: ${scan.codes.joinToString()}",
-            "Ábrelos en Códigos de falla para explicación con IA",
+            DiagnosticRules.Nivel.FALLA,
+            resolver.get(R.string.workshop_health_dtc_area),
+            resolver.plural(
+                R.plurals.workshop_health_dtc_codes_found,
+                scan.codes.size,
+                scan.codes.size,
+                scan.codes.joinToString(),
+            ),
+            resolver.get(R.string.workshop_health_dtc_open_for_ai),
         )
     }
 
-    private fun detalleLecturaFallida(scan: DtcScan?): String =
+    private fun detalleLecturaFallida(scan: DtcScan?, resolver: StringResolver): String =
         if (scan != null && !scan.enlacePerdido) AvisoLecturaDtc.ACTIVOS_SIN_RESPUESTA
-        else "Se perdió el enlace durante el escaneo — repite el chequeo"
+        else resolver.get(R.string.workshop_health_dtc_link_lost)
 
-    private fun diagnosticoSinCodigos(scan: DtcScan?): DiagnosticRules.Diagnosis {
+    private fun diagnosticoSinCodigos(scan: DtcScan?, resolver: StringResolver): DiagnosticRules.Diagnosis {
         val parcial = scan?.takeIf { it.serviciosFallidos.isNotEmpty() }
-        val titulo = parcial?.let(AvisoLecturaDtc::sinCodigos) ?: "Sin códigos de falla"
-        val detalle = scan?.let(AvisoLecturaDtc::de) ?: "Memoria de fallas limpia"
-        return DiagnosticRules.Diagnosis(DiagnosticRules.Nivel.OK, "DTC", titulo, detalle)
+        val titulo = parcial?.let(AvisoLecturaDtc::sinCodigos) ?: resolver.get(R.string.workshop_health_dtc_none)
+        val detalle = scan?.let(AvisoLecturaDtc::de) ?: resolver.get(R.string.workshop_health_dtc_memory_clear)
+        return DiagnosticRules.Diagnosis(DiagnosticRules.Nivel.OK, resolver.get(R.string.workshop_health_dtc_area), titulo, detalle)
     }
 
     private suspend fun readReadiness(): ReadinessParser.ReadinessStatus? {
@@ -227,8 +249,10 @@ class HealthCheckViewModel @Inject constructor(
     }
 
     private fun odometerLecturaNoDisponibleDiagnosis(): DiagnosticRules.Diagnosis = DiagnosticRules.Diagnosis(
-        DiagnosticRules.Nivel.ATENCION, "Odómetro", "Lectura no disponible",
-        "No se pudo leer el odómetro — repite el chequeo",
+        DiagnosticRules.Nivel.ATENCION,
+        resolver.get(R.string.workshop_health_odometer_area),
+        resolver.get(R.string.workshop_health_odometer_read_unavailable),
+        resolver.get(R.string.workshop_health_odometer_read_failed),
     )
 
     private suspend fun collectO2Samples(): List<Double> {
@@ -248,8 +272,8 @@ class HealthCheckViewModel @Inject constructor(
         val scan = sessionManager.leerDtcCompleto("ui:chequeo", DtcLectura(freezeFrame = false)).getOrNull()
             ?: return DtcScanResult(emptyList(), readFailed = true, scan = null)
         val codes = scan.activos.map { it.code } +
-            scan.pendientes.map { "${it.code} (pendiente)" } +
-            scan.permanentes.map { "${it.code} (permanente)" }
+            scan.pendientes.map { resolver.get(R.string.workshop_health_dtc_pending_suffix, it.code) } +
+            scan.permanentes.map { resolver.get(R.string.workshop_health_dtc_permanent_suffix, it.code) }
         return DtcScanResult(codes, readFailed = scan.enlacePerdido || !scan.activosConfirmados, scan = scan)
     }
 
@@ -274,7 +298,7 @@ class HealthCheckViewModel @Inject constructor(
     }
 
     private fun parametrosNoDisponibles(): List<String> =
-        DiagnosticosChequeo.parametrosNoDisponibles(registry::estadoSoporte)
+        DiagnosticosChequeo.parametrosNoDisponibles(registry::estadoSoporte, resolver)
 }
 
 internal object DiagnosticosChequeo {
@@ -288,13 +312,13 @@ internal object DiagnosticosChequeo {
     private const val RPM_PID = "0C"
     private const val COOLANT_TEMP_PID = "05"
     private val PARAMETROS = linkedMapOf(
-        READINESS_PID to "Monitores de readiness",
-        COOLANT_TEMP_PID to "Temperatura del motor",
-        SHORT_TRIM_B1_PID to "Ajuste corto de combustible B1",
-        LONG_TRIM_B1_PID to "Ajuste largo de combustible B1",
-        LONG_TRIM_B2_PID to "Ajuste largo de combustible B2",
-        RPM_PID to "RPM del motor",
-        O2_SENSOR_B1S1_PID to "Sensor O2 B1S1",
+        READINESS_PID to R.string.workshop_health_parameter_readiness,
+        COOLANT_TEMP_PID to R.string.workshop_health_parameter_coolant_temperature,
+        SHORT_TRIM_B1_PID to R.string.workshop_health_parameter_short_trim_b1,
+        LONG_TRIM_B1_PID to R.string.workshop_health_parameter_long_trim_b1,
+        LONG_TRIM_B2_PID to R.string.workshop_health_parameter_long_trim_b2,
+        RPM_PID to R.string.workshop_health_parameter_engine_rpm,
+        O2_SENSOR_B1S1_PID to R.string.workshop_health_parameter_o2_b1s1,
     )
 
     fun readiness(
@@ -304,7 +328,7 @@ internal object DiagnosticosChequeo {
     ): List<DiagnosticRules.Diagnosis> = when {
         soporte == EstadoSoporte.NoSoportado -> emptyList()
         status != null -> DiagnosticRules.evaluarReadiness(status, resolver)
-        else -> listOf(readinessNoDisponible())
+        else -> listOf(readinessNoDisponible(resolver))
     }
 
     fun mezcla(
@@ -329,9 +353,9 @@ internal object DiagnosticosChequeo {
             ?.let { add(DiagnosticRules.evaluarTemperatura(it.value, resolver)) }
     }
 
-    fun parametrosNoDisponibles(estadoSoporte: (String) -> EstadoSoporte): List<String> =
-        PARAMETROS.mapNotNull { (pid, nombre) ->
-            nombre.takeIf { estadoSoporte(pid) == EstadoSoporte.NoSoportado }
+    fun parametrosNoDisponibles(estadoSoporte: (String) -> EstadoSoporte, resolver: StringResolver): List<String> =
+        PARAMETROS.mapNotNull { (pid, resourceId) ->
+            resolver.get(resourceId).takeIf { estadoSoporte(pid) == EstadoSoporte.NoSoportado }
         }
 
     private fun MutableList<DiagnosticRules.Diagnosis>.agregarVoltajeSiHayRpm(
@@ -351,10 +375,10 @@ internal object DiagnosticosChequeo {
         estadoSoporte: (String) -> EstadoSoporte,
     ): ObdReading? = lecturas[pid].takeUnless { estadoSoporte(pid) == EstadoSoporte.NoSoportado }
 
-    private fun readinessNoDisponible() = DiagnosticRules.Diagnosis(
+    private fun readinessNoDisponible(resolver: StringResolver) = DiagnosticRules.Diagnosis(
         DiagnosticRules.Nivel.ATENCION,
-        "Readiness",
-        "Readiness no disponible",
-        "Se perdió el enlace durante el escaneo — repite el chequeo",
+        resolver.get(R.string.workshop_health_readiness_area),
+        resolver.get(R.string.workshop_health_readiness_unavailable),
+        resolver.get(R.string.workshop_health_dtc_link_lost),
     )
 }

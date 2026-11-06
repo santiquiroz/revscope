@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
@@ -26,7 +28,7 @@ object AnalizadorBateria {
         const val RPM_ALTAS = "RPM_ALTAS"
     }
 
-    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>): ResultadoPrueba {
+    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>, resolver: StringResolver): ResultadoPrueba {
         val contacto = tramo(serie(datos, Pasos.CONTACTO))
         val base = AnalisisBateria(
             desfase = datos.contexto.desfaseVoltaje,
@@ -38,8 +40,8 @@ object AnalizadorBateria {
             comprobaciones = emptyList(),
             patron = PatronBateria.NORMAL,
         )
-        val comprobado = base.copy(comprobaciones = comprobaciones(base, bandas))
-        return TextosBateria.resultado(comprobado.copy(patron = patron(comprobado)))
+        val comprobado = base.copy(comprobaciones = comprobaciones(base, bandas, resolver))
+        return TextosBateria.resultado(comprobado.copy(patron = patron(comprobado)), resolver)
     }
 
     // Motos: la farola suele quedar encendida con el contacto (AHO), así que el reposo se mide con esa carga.
@@ -77,14 +79,25 @@ object AnalizadorBateria {
 
     // ── Comprobaciones y patrón ─────────────────────────────────────────────
 
-    private fun comprobaciones(a: AnalisisBateria, bandas: Map<String, BandaReferencia>): List<Comprobacion> = listOfNotNull(
-        a.contacto?.let { Comprobacion.contra(claveContacto(a.conFarola), etiquetaContacto(a.conFarola), it.mediaV, "V", bandas) },
-        a.arranque?.valleV?.let { Comprobacion.contra(ClavesBanda.ARRANQUE_MIN_V, "Valle al arrancar", it, "V", bandas) },
-        a.arranque?.let { Comprobacion.siNo(CLAVE_ADAPTADOR_AGUANTO, "El adaptador siguió respondiendo al arrancar", !it.adaptadorReiniciado) },
-        cargaEnMinimo(a)?.let { Comprobacion.siNo(CLAVE_CARGA_EN_MINIMO, "Carga en mínimo (sube sobre el reposo)", it) },
-        a.rpmAltas?.let { Comprobacion.contra(ClavesBanda.CARGA_V, "Carga a rpm altas", it.mediaV, "V", bandas) },
-        a.cargaMaxV?.let { Comprobacion.contra(ClavesBanda.SOBRECARGA_MAX_V, "Máximo con el motor en marcha", it, "V", bandas) },
-    )
+    private fun comprobaciones(a: AnalisisBateria, bandas: Map<String, BandaReferencia>, res: StringResolver): List<Comprobacion> =
+        listOfNotNull(
+            a.contacto?.let {
+                Comprobacion.contra(claveContacto(a.conFarola), res.get(etiquetaContacto(a.conFarola)), it.mediaV, "V", bandas)
+            },
+            a.arranque?.valleV?.let {
+                Comprobacion.contra(ClavesBanda.ARRANQUE_MIN_V, res.get(R.string.obd_bateria_comprobacion_valle_arranque), it, "V", bandas)
+            },
+            a.arranque?.let {
+                Comprobacion.siNo(CLAVE_ADAPTADOR_AGUANTO, res.get(R.string.obd_bateria_comprobacion_adaptador_aguanto), !it.adaptadorReiniciado)
+            },
+            cargaEnMinimo(a)?.let { Comprobacion.siNo(CLAVE_CARGA_EN_MINIMO, res.get(R.string.obd_bateria_comprobacion_carga_minimo), it) },
+            a.rpmAltas?.let {
+                Comprobacion.contra(ClavesBanda.CARGA_V, res.get(R.string.obd_bateria_comprobacion_carga_altas), it.mediaV, "V", bandas)
+            },
+            a.cargaMaxV?.let {
+                Comprobacion.contra(ClavesBanda.SOBRECARGA_MAX_V, res.get(R.string.obd_bateria_comprobacion_maximo), it, "V", bandas)
+            },
+        )
 
     fun cargaEnMinimo(a: AnalisisBateria): Boolean? {
         val minimo = a.minimo ?: return null
@@ -92,8 +105,8 @@ object AnalizadorBateria {
         return minimo.mediaV >= reposo.mediaV + CARGA_SOBRE_REPOSO_V
     }
 
-    private fun etiquetaContacto(conFarola: Boolean) =
-        if (conFarola) "Batería en contacto (con la farola encendida)" else "Batería en contacto (sin cargas)"
+    private fun etiquetaContacto(conFarola: Boolean): Int =
+        if (conFarola) R.string.obd_bateria_comprobacion_contacto_farola else R.string.obd_bateria_comprobacion_contacto_sin_cargas
 
     private fun patron(a: AnalisisBateria): PatronBateria = when {
         a.contacto == null && a.arranque?.valleV == null && a.cargaMaxV == null -> PatronBateria.SIN_DATOS

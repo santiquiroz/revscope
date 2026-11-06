@@ -13,6 +13,7 @@ import com.revscope.core.obd.taller.referencia.OrigenBanda
 import com.revscope.core.obd.taller.referencia.PosicionEnBanda
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.core.uitesting.XmlStringResolver
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,10 +23,16 @@ import org.junit.Test
 
 class AnalizadorBateriaTest {
 
+    private val resolver = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
     private val moto = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
     private val carro = ResolutorBandas.resolverTodas(VehicleType.CAR, emptyList())
 
-    private fun resultado(p: Perfil, bandas: Map<String, BandaReferencia> = moto) = AnalizadorBateria.analizar(datos(p), bandas).plano()
+    private fun resultado(p: Perfil, bandas: Map<String, BandaReferencia> = moto) =
+        AnalizadorBateria.analizar(datos(p), bandas, resolver).plano()
 
     private fun comprobacion(r: ResultadoPrueba, clave: String) = (r.detalle as AnalisisBateria).comprobaciones.single { it.clave == clave }
 
@@ -202,7 +209,9 @@ class AnalizadorBateriaTest {
 
     @Test
     fun `el detalle guarda cada tramo, el desfase y el patrón`() {
-        val json = JSONObject(AnalizadorBateria.analizar(datos(Perfil(arranque = arranque(valle = 8.9))), moto).detalle.json().toString())
+        val json = JSONObject(
+            AnalizadorBateria.analizar(datos(Perfil(arranque = arranque(valle = 8.9))), moto, resolver).detalle.json().toString(),
+        )
 
         assertEquals("ARRANQUE_BAJO", json.getString("patron"))
         assertEquals(8.9, json.getJSONObject("arranque").getDouble("valleV"), 1e-9)

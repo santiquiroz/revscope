@@ -1,6 +1,7 @@
 package com.revscope.feature.session
 
 import com.revscope.core.data.db.entities.SessionEntity
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.uitesting.MatrizCaptura
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,6 +45,7 @@ class CapturasViajesTest {
                 maxSpeed = 80,
                 distanceKm = 12.3f,
             ),
+            resolver = XmlStringResolver.es(R::class.java),
             onConfirmar = {},
             onCancelar = {},
         )
@@ -53,6 +55,7 @@ class CapturasViajesTest {
     fun historialVacio() = MatrizCaptura.pantalla("SessionHistoryContent_vacio") {
         SessionHistoryContent(
             historial = HistorialUi(emptyList(), emptyList(), filtro = null, candidatoComparar = null),
+            resolver = XmlStringResolver.es(R::class.java),
             acciones = AccionesHistorial({}, {}, {}, {}, {}),
         )
     }

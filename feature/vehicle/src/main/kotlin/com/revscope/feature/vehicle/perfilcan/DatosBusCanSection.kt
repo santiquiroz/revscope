@@ -1,5 +1,6 @@
 package com.revscope.feature.vehicle.perfilcan
 
+import com.revscope.feature.vehicle.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.designsystem.RevScopeColors
@@ -73,9 +75,9 @@ fun DatosBusCanContenido(datos: DatosBusCanUi, acciones: AccionesBusCan) {
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("Datos del bus CAN", color = RevScopeColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.vehicle_can_data_title), color = RevScopeColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(
-            "Señales que tu vehículo publica solo, como la marcha real o la pata lateral.",
+            stringResource(R.string.vehicle_can_data_description),
             color = RevScopeColors.TextSecondary,
             fontSize = 12.sp,
         )
@@ -92,13 +94,13 @@ fun DatosBusCanContenido(datos: DatosBusCanUi, acciones: AccionesBusCan) {
 @Composable
 private fun SelectorPerfil(perfiles: List<OpcionPerfil>, seleccionado: String?, onElegir: (String?) -> Unit) {
     var abierto by remember { mutableStateOf(false) }
-    val nombre = perfiles.firstOrNull { it.id == seleccionado }?.nombre ?: "Ninguno"
+    val nombre = perfiles.firstOrNull { it.id == seleccionado }?.nombre ?: stringResource(R.string.vehicle_none)
     ExposedDropdownMenuBox(expanded = abierto, onExpandedChange = { abierto = it }) {
         OutlinedTextField(
             value = nombre,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Perfil CAN", color = RevScopeColors.TextSecondary) },
+            label = { Text(stringResource(R.string.vehicle_can_profile), color = RevScopeColors.TextSecondary) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(abierto) },
             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
             colors = OutlinedTextFieldDefaults.colors(
@@ -110,7 +112,7 @@ private fun SelectorPerfil(perfiles: List<OpcionPerfil>, seleccionado: String?, 
         )
         ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             DropdownMenuItem(
-                text = { Text("Ninguno") },
+                text = { Text(stringResource(R.string.vehicle_none)) },
                 onClick = {
                     onElegir(null)
                     abierto = false
@@ -132,7 +134,7 @@ private fun SelectorPerfil(perfiles: List<OpcionPerfil>, seleccionado: String?, 
 @Composable
 private fun SelectorModo(modo: ModoFuente, onElegir: (ModoFuente) -> Unit) {
     Column {
-        Text("Cómo se leen los datos", color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.vehicle_can_how_data_is_read), color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         ModoFuente.entries.forEach { opcion ->
             Row(
                 modifier = Modifier
@@ -147,8 +149,8 @@ private fun SelectorModo(modo: ModoFuente, onElegir: (ModoFuente) -> Unit) {
                     colors = RadioButtonDefaults.colors(selectedColor = RevScopeColors.Accent),
                 )
                 Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    Text(TextosBusCan.modo(opcion), color = RevScopeColors.TextPrimary, fontSize = 14.sp)
-                    Text(TextosBusCan.descripcionModo(opcion), color = RevScopeColors.TextSecondary, fontSize = 12.sp)
+                    Text(stringResource(TextosBusCan.modo(opcion)), color = RevScopeColors.TextPrimary, fontSize = 14.sp)
+                    Text(stringResource(TextosBusCan.descripcionModo(opcion)), color = RevScopeColors.TextSecondary, fontSize = 12.sp)
                 }
             }
         }
@@ -158,9 +160,9 @@ private fun SelectorModo(modo: ModoFuente, onElegir: (ModoFuente) -> Unit) {
 @Composable
 private fun ListaSenales(datos: DatosBusCanUi, onProbar: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Señales", color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.vehicle_can_signals), color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(
-            "Solo las señales verificadas se usan. Pruébalas en vivo para verificarlas.",
+            stringResource(R.string.vehicle_can_verified_only),
             color = RevScopeColors.TextSecondary,
             fontSize = 12.sp,
         )
@@ -175,13 +177,13 @@ private fun FilaSenal(senal: SenalBusUi, onProbar: (String) -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(senal.nombre, color = RevScopeColors.TextPrimary, fontSize = 14.sp)
             Text(
-                if (senal.verificada) "Verificada ✓" else "Sin verificar",
+                stringResource(if (senal.verificada) R.string.vehicle_can_verified else R.string.vehicle_can_unverified),
                 color = if (senal.verificada) RevScopeColors.Success else RevScopeColors.TextMuted,
                 fontSize = 12.sp,
             )
         }
         OutlinedButton(onClick = { onProbar(senal.clave) }, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Probar en vivo", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+            Text(stringResource(R.string.vehicle_can_test_live), color = RevScopeColors.TextPrimary, fontSize = 13.sp)
         }
     }
 }
@@ -192,7 +194,9 @@ private fun FuentesAvanzadas(senales: List<SenalBusUi>, onElegir: (String, Fuent
     var abierto by remember { mutableStateOf(false) }
     TextButton(onClick = { abierto = !abierto }, modifier = Modifier.heightIn(min = 48.dp)) {
         Text(
-            if (abierto) "Ocultar fuente por señal" else "Avanzado: fuente por señal",
+            stringResource(
+                if (abierto) R.string.vehicle_can_hide_signal_source else R.string.vehicle_can_advanced_signal_source,
+            ),
             color = RevScopeColors.Accent,
             fontSize = 13.sp,
         )
@@ -204,7 +208,7 @@ private fun FuentesAvanzadas(senales: List<SenalBusUi>, onElegir: (String, Fuent
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 senal.opciones.forEach { opcion ->
                     ChipSeleccion(
-                        texto = TextosBusCan.fuente(opcion),
+                        texto = stringResource(TextosBusCan.fuente(opcion)),
                         seleccionado = opcion == senal.fuente,
                         onClick = { onElegir(senal.clave, opcion) },
                     )

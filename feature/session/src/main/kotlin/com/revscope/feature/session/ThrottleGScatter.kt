@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -33,6 +34,8 @@ fun ThrottleGScatter(
     points: List<Pair<Float, Float>>, // (throttle %, gLong)
     modifier: Modifier = Modifier,
 ) {
+    val longitudinalLabel = stringResource(R.string.trips_g_longitudinal)
+    val throttleLabel = stringResource(R.string.trips_throttle_label)
     val axisTextPx = with(LocalDensity.current) { 9.sp.toPx() }
     val leftPaint = remember(axisTextPx) { axisLabelPaint(axisTextPx, Paint.Align.LEFT) }
     val centerPaint = remember(axisTextPx) { axisLabelPaint(axisTextPx, Paint.Align.CENTER) }
@@ -90,7 +93,7 @@ fun ThrottleGScatter(
 
         // Axis names in the corners, raised above the tick row they belong to — this
         // chart plots longitudinal G (accel/brake), not lateral G.
-        drawAxisText("G longitudinal", size.width - margin, 10.dp.toPx(), rightPaint)
-        drawAxisText("% mariposa (PID 11)", size.width - margin, raisedRow, rightPaint)
+        drawAxisText(longitudinalLabel, size.width - margin, 10.dp.toPx(), rightPaint)
+        drawAxisText(throttleLabel, size.width - margin, raisedRow, rightPaint)
     }
 }

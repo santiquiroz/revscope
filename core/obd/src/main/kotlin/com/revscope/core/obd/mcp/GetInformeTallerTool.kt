@@ -1,5 +1,6 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.informe.GeneradorInformeTaller
 import com.revscope.core.obd.taller.informe.InformeTallerHtml
 import com.revscope.core.obd.taller.informe.InformeTallerJson
@@ -16,9 +17,9 @@ class GetInformeTallerTool internal constructor(
 ) : McpTool {
 
     @Inject
-    constructor(generador: GeneradorInformeTaller) : this(
+    constructor(generador: GeneradorInformeTaller, resolver: StringResolver) : this(
         generarJson = { sesionId -> generador.generar(sesionId)?.let(InformeTallerJson::render) },
-        generarHtml = { sesionId -> generador.generar(sesionId)?.let(InformeTallerHtml::render) },
+        generarHtml = { sesionId -> generador.generar(sesionId)?.let { InformeTallerHtml.render(it, resolver) } },
     )
 
     override val name = "get_informe_taller"

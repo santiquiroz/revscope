@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 
 private val TextMutedColor = Color(0xFF6B7089)
@@ -31,34 +32,28 @@ internal fun McpPermisosToggles(viajeVm: ViajeObdSettingsViewModel = hiltViewMod
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ToggleRow(
-            "Permitir control desde MCP (viaje, muestreo, captura)",
+            stringResource(R.string.settings_mcp_allow_control),
             control,
             viajeVm::updateMcpControlEnabled,
-            subtitle = "El PC puede finalizar e iniciar viajes, cambiar el muestreo y hacer capturas rápidas " +
-                "(finalizar_viaje, iniciar_viaje, set_muestreo, iniciar_captura, detener_captura). " +
-                "Solo en redes de confianza: el token viaja sin cifrar por la WiFi.",
+            subtitle = stringResource(R.string.settings_mcp_control_description),
         )
         if (control) {
             ToggleRow(
-                "Permitir borrar códigos desde MCP",
+                stringResource(R.string.settings_mcp_allow_clear_codes),
                 borrado,
                 viajeVm::updateMcpClearDtcEnabled,
-                subtitle = "borrar_dtc exige el vehículo detenido y tu toque en la notificación, y reinicia los " +
-                    "monitores de readiness: la revisión técnico-mecánica puede rechazar el vehículo hasta " +
-                    "completar ciclos de manejo.",
+                subtitle = stringResource(R.string.settings_mcp_clear_codes_description),
             )
             ToggleRow(
-                "Permitir escrituras de taller desde MCP",
+                stringResource(R.string.settings_mcp_allow_workshop_writes),
                 escritura,
                 viajeVm::updateMcpWriteEnabled,
-                subtitle = "Borrar códigos por módulo (UDS 14), reiniciar la ECU (UDS 11), pruebas a bordo (modo 08), " +
-                    "operaciones del catálogo de fabricante y secuencias crudas. Cada escritura pide tu toque en " +
-                    "una notificación; con el vehículo en movimiento nunca se ejecuta y el flasheo está bloqueado.",
+                subtitle = stringResource(R.string.settings_mcp_workshop_writes_description),
             )
             if (escritura) BypassToggle(viajeVm)
         }
         Text(
-            "Estos permisos no viajan en el respaldo: restaurar nunca los activa.",
+            stringResource(R.string.settings_mcp_permissions_not_backed_up),
             color = TextMutedColor,
             fontSize = 11.sp,
         )
@@ -71,10 +66,10 @@ private fun BypassToggle(viajeVm: ViajeObdSettingsViewModel) {
     var pidiendoConfirmacion by remember { mutableStateOf(false) }
 
     ToggleRow(
-        "Saltar confirmaciones (bypass)",
+        stringResource(R.string.settings_mcp_bypass_label),
         bypass,
         { activar -> if (activar) pidiendoConfirmacion = true else viajeVm.updateBypassEscrituras(false) },
-        subtitle = "Las escrituras del MCP se ejecutan sin preguntarte. Se apaga solo al detener el servidor MCP.",
+        subtitle = stringResource(R.string.settings_mcp_bypass_description),
     )
     if (pidiendoConfirmacion) {
         BypassConfirmDialog(
@@ -92,18 +87,29 @@ private fun BypassConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = SurfaceColor,
-        title = { Text("¿Escrituras sin confirmación?", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+        title = {
+            Text(
+                stringResource(R.string.settings_mcp_bypass_confirm_title),
+                color = TextPrimaryColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
         text = {
             Text(
-                "Cualquier cliente con el token del MCP podrá borrar códigos, reiniciar módulos y mandar comandos " +
-                    "de fabricante a la ECU sin que lo apruebes. Un comando equivocado puede dejar un módulo " +
-                    "inservible hasta llevarlo al concesionario. Las guardas de vehículo detenido y el bloqueo " +
-                    "de flasheo siguen activos.",
+                stringResource(R.string.settings_mcp_bypass_warning),
                 color = TextMutedColor,
                 fontSize = 13.sp,
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Activar bypass", color = DangerColor) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = TextPrimaryColor) } },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.settings_mcp_enable_bypass), color = DangerColor)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_common_cancel), color = TextPrimaryColor)
+            }
+        },
     )
 }

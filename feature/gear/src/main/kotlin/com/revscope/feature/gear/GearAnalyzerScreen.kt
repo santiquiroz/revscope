@@ -27,6 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.designsystem.FilaEtiquetaValor
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.conCifrasTabulares
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.intelligence.gear.AdaptiveGearLearner
 import com.revscope.core.intelligence.gear.GearCluster
@@ -54,6 +58,7 @@ fun GearAnalyzerScreen(
     onNavigateBack: () -> Unit,
     orchestrator: IntelligenceOrchestrator = hiltViewModel<GearAnalyzerViewModel>().orchestrator,
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     val gearTable by orchestrator.gearLearner.gearTable.collectAsState()
     val isCalibrated = gearTable.all { it.observationCount >= AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR }
 
@@ -62,7 +67,7 @@ fun GearAnalyzerScreen(
             .fillMaxSize()
             .background(RevScopeColors.Background),
     ) {
-        BarraConVolver(titulo = "Marchas", onVolver = onNavigateBack)
+        BarraConVolver(titulo = stringResource(R.string.gear_title), onVolver = onNavigateBack)
 
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             // Calibration status banner
@@ -75,7 +80,7 @@ fun GearAnalyzerScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (isCalibrated) "Tabla calibrada" else "Calibrando…",
+                    text = stringResource(if (isCalibrated) R.string.gear_table_calibrated else R.string.gear_calibrating),
                     color = if (isCalibrated) RevScopeColors.Success else RevScopeColors.Accent,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
@@ -84,7 +89,7 @@ fun GearAnalyzerScreen(
                 val totalObs = gearTable.sumOf { it.observationCount }
                 val needed = gearTable.size * AdaptiveGearLearner.MIN_OBSERVATIONS_PER_GEAR
                 Text(
-                    text = "$totalObs / $needed obs",
+                    text = pluralStringResource(R.plurals.gear_observation_progress, needed, totalObs, needed),
                     color = RevScopeColors.TextSecondary,
                     style = RevScopeType.bodySmall,
                 )
@@ -93,7 +98,7 @@ fun GearAnalyzerScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                "Tabla de ratios velocidad/RPM",
+                stringResource(R.string.gear_speed_rpm_ratio_table),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
                 fontWeight = FontWeight.Medium,
@@ -111,6 +116,7 @@ fun GearAnalyzerScreen(
 
 @Composable
 private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
+    val locale = LocalConfiguration.current.locales[0]
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -137,8 +143,15 @@ private fun GearClusterRow(cluster: GearCluster, gearColor: Color) {
 
         Column(modifier = Modifier.weight(1f)) {
             FilaEtiquetaValor(
-                etiqueta = "Ratio: %.2f".format(cluster.centerRatio),
-                valor = "${cluster.observationCount} obs",
+                etiqueta = stringResource(
+                    R.string.gear_ratio,
+                    LocaleNumbers.decimal(cluster.centerRatio, 2, locale),
+                ),
+                valor = pluralStringResource(
+                    R.plurals.gear_observations,
+                    cluster.observationCount,
+                    cluster.observationCount,
+                ),
                 colorEtiqueta = RevScopeColors.TextPrimary,
                 colorValor = RevScopeColors.TextSecondary,
                 estiloEtiqueta = RevScopeType.label,

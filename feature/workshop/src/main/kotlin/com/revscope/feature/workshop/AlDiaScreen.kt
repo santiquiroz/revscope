@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -233,7 +234,7 @@ private fun DocCardContent(
 private fun TituloConNivel(titulo: String, nivel: NivelConTexto) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(titulo, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        NivelBadge(nivel.nivel, texto = nivel.texto)
+        NivelBadge(nivel.nivel, texto = stringResource(nivel.textoRes))
     }
 }
 
@@ -242,7 +243,7 @@ private fun MultasCard(plate: String?) {
     val context = LocalContext.current
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            TituloConNivel("Multas", NivelConTexto(NivelEstado.SIN_DATO, "Sin consultar"))
+            TituloConNivel("Multas", NivelConTexto(NivelEstado.SIN_DATO, R.string.workshop_health_level_not_checked))
             Spacer(Modifier.height(8.dp))
             Text("Consulta comparendos en el sistema SIMIT", color = RevScopeColors.TextSecondary, fontSize = 12.sp)
             TextButton(

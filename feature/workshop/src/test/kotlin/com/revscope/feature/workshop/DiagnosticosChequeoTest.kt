@@ -9,6 +9,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiagnosticosChequeoTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
+    private val todos = XmlStringResolver.es(
+        R::class.java,
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
 
     private val strings = XmlStringResolver.es(
         com.revscope.core.obd.R::class.java,
@@ -24,7 +30,7 @@ class DiagnosticosChequeoTest {
             monitors = emptyList(),
         )
 
-        val diagnosticos = DiagnosticosChequeo.readiness(EstadoSoporte.NoSoportado, estado, strings)
+        val diagnosticos = DiagnosticosChequeo.readiness(EstadoSoporte.NoSoportado, estado, todos)
 
         assertTrue(diagnosticos.isEmpty())
     }
@@ -57,7 +63,7 @@ class DiagnosticosChequeoTest {
 
     @Test
     fun `RPM no soportada invalida su lectura anterior y aparece como no disponible`() {
-        val resolver: (String) -> EstadoSoporte = { pid ->
+        val estadoSoporte: (String) -> EstadoSoporte = { pid ->
             if (pid == "0C") EstadoSoporte.NoSoportado else EstadoSoporte.Soportado
         }
         val lecturas = mapOf(
@@ -65,8 +71,8 @@ class DiagnosticosChequeoTest {
             "VBAT" to lectura("VBAT", 11.2, "V"),
         )
 
-        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), resolver, strings)
-        val noDisponibles = DiagnosticosChequeo.parametrosNoDisponibles(resolver)
+        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), estadoSoporte, todos)
+        val noDisponibles = DiagnosticosChequeo.parametrosNoDisponibles(estadoSoporte, todos)
 
         assertFalse(diagnosticos.any { it.area == "Eléctrico" })
         assertTrue(noDisponibles.contains("RPM del motor"))

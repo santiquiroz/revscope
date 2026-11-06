@@ -10,12 +10,20 @@ import org.junit.Test
 class BorradoDtcUiTest {
 
     private val limpio = ResultadoBorradoUi(antes = listOf("P0122"), despues = emptyList(), rechazadoPorEcu = false)
+    private val resolverEs = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.feature.dtc.R::class.java,
+        resDirs = listOf("src/main/res"),
+    )
+    private val resolverEn = com.revscope.core.uitesting.XmlStringResolver.en(
+        com.revscope.feature.dtc.R::class.java,
+        resDirs = listOf("src/main/res"),
+    )
 
     @Test
     fun `sin relectura valida no afirma que no quedan codigos`() {
         assertEquals(
             "Se envió el borrado, pero no se pudo releer la ECU para confirmarlo. Vuelve a leer los códigos.",
-            textoResultadoBorrado(limpio.copy(despuesLeido = false)),
+            textoResultadoBorrado(limpio.copy(despuesLeido = false), resolverEs),
         )
     }
 
@@ -23,7 +31,7 @@ class BorradoDtcUiTest {
     fun `si el borrado no se pudo enviar lo dice`() {
         assertEquals(
             "No se pudo enviar el borrado: el adaptador no respondió. Vuelve a leer los códigos antes de intentarlo otra vez.",
-            textoResultadoBorrado(limpio.copy(enviado = false)),
+            textoResultadoBorrado(limpio.copy(enviado = false), resolverEs),
         )
     }
 
@@ -31,7 +39,7 @@ class BorradoDtcUiTest {
     fun `una lectura previa fallida no se presenta como sin codigos`() {
         assertEquals(
             "Códigos borrados. Antes: no se pudieron leer. Después: sin códigos activos.",
-            textoResultadoBorrado(limpio.copy(antes = emptyList(), antesLeido = false)),
+            textoResultadoBorrado(limpio.copy(antes = emptyList(), antesLeido = false), resolverEs),
         )
     }
 
@@ -55,5 +63,13 @@ class BorradoDtcUiTest {
         assertFalse(ui.enviado)
         assertFalse(ui.antesLeido)
         assertFalse(ui.despuesLeido)
+    }
+
+    @Test
+    fun `el resumen de borrado se localiza al ingles`() {
+        assertEquals(
+            "Codes cleared. Before: P0122. After: no active codes.",
+            textoResultadoBorrado(limpio, resolverEn),
+        )
     }
 }

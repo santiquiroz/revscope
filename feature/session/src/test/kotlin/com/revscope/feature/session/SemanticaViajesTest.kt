@@ -9,6 +9,7 @@ import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -40,6 +41,7 @@ class SemanticaViajesTest {
             RevScopeTheme {
                 SessionHistoryContent(
                     historial = HistorialUi(sesiones, emptyList(), filtro = null, candidatoComparar = null),
+                    resolver = XmlStringResolver.es(R::class.java),
                     acciones = AccionesHistorial(
                         onAbrir = {},
                         onComparar = {},
@@ -60,7 +62,7 @@ class SemanticaViajesTest {
         compose.onNodeWithContentDescription("Borrar viaje").performClick()
 
         compose.onNodeWithText("¿Borrar el viaje?").assertIsDisplayed()
-        compose.onNodeWithText(descripcionViaje(viaje)).assertIsDisplayed()
+        compose.onNodeWithText(descripcionViaje(viaje, XmlStringResolver.es(R::class.java))).assertIsDisplayed()
         assertTrue(borrados.isEmpty())
 
         compose.onNodeWithText("Borrar viaje").performClick()
@@ -97,5 +99,13 @@ class SemanticaViajesTest {
         montar(listOf(viaje), mutableListOf())
 
         compose.onNodeWithContentDescription("Comparar este viaje").assertIsDisplayed()
+    }
+
+    @Test
+    fun `trip description uses English resources`() {
+        val description = descripcionViaje(viaje, XmlStringResolver.en(R::class.java))
+
+        assertTrue(description.startsWith("Trip on "))
+        assertTrue(description.endsWith("12.3 km"))
     }
 }

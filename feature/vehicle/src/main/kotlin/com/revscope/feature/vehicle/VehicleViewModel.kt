@@ -2,6 +2,7 @@ package com.revscope.feature.vehicle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
@@ -29,6 +30,7 @@ class VehicleViewModel @Inject constructor(
     private val registry: PidRegistry,
     private val sessionManager: ObdSessionManager,
     private val repositorioTaller: TallerRepository,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
@@ -155,15 +157,15 @@ class VehicleViewModel @Inject constructor(
     /** Reads the VIN from the connected vehicle (Mode 09 02) into the form. */
     fun readVinFromVehicle(connectionVm: ConnectionViewModel) {
         viewModelScope.launch {
-            _vinStatus.value = "Leyendo VIN…"
+            _vinStatus.value = resolver.get(R.string.vehicle_vin_reading)
             val vin = connectionVm.rawExchange("09 02\r", 4_000)
                 .getOrNull()
                 ?.let { ResponseParser.parseVinResponse(it) }
             if (vin != null) {
                 _formVin.value = vin
-                _vinStatus.value = "VIN leído"
+                _vinStatus.value = resolver.get(R.string.vehicle_vin_read)
             } else {
-                _vinStatus.value = "El vehículo no reporta VIN por OBD"
+                _vinStatus.value = resolver.get(R.string.vehicle_vin_unavailable)
             }
         }
     }
@@ -179,7 +181,7 @@ class VehicleViewModel @Inject constructor(
             profileDao.update(updated)
             sessionManager.notifyProfileUpdated(updated)
             _editingProfile.value = updated
-            _adapterLinkStatus.value = "Adaptador vinculado a este perfil"
+            _adapterLinkStatus.value = resolver.get(R.string.vehicle_adapter_linked_status)
         }
     }
 
@@ -192,7 +194,7 @@ class VehicleViewModel @Inject constructor(
             profileDao.update(updated)
             sessionManager.notifyProfileUpdated(updated)
             _editingProfile.value = updated
-            _adapterLinkStatus.value = "Adaptador desvinculado"
+            _adapterLinkStatus.value = resolver.get(R.string.vehicle_adapter_unlinked_status)
         }
     }
 
