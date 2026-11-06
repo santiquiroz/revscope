@@ -37,6 +37,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.NivelBadge
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeColors
@@ -46,6 +49,7 @@ import com.revscope.core.obd.model.DtcMode
 import com.revscope.core.obd.taller.dtc.GuiaDtc
 import com.revscope.core.obd.taller.dtc.PasosGuia
 import com.revscope.core.obd.taller.dtc.UrgenciaDtc
+import com.revscope.feature.dtc.R
 
 data class EstadoTarjetaDtc(
     val item: DtcCodeUi,
@@ -55,7 +59,7 @@ data class EstadoTarjetaDtc(
 )
 
 @Composable
-internal fun TarjetaCodigoDtc(estado: EstadoTarjetaDtc, acciones: AccionesDtc) {
+internal fun TarjetaCodigoDtc(estado: EstadoTarjetaDtc, acciones: AccionesDtc, resolver: StringResolver) {
     val item = estado.item
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -64,12 +68,12 @@ internal fun TarjetaCodigoDtc(estado: EstadoTarjetaDtc, acciones: AccionesDtc) {
             .background(RevScopeColors.Surface, RoundedCornerShape(12.dp))
             .padding(14.dp),
     ) {
-        EncabezadoCodigo(item)
+        EncabezadoCodigo(item, resolver)
         item.guia?.let { guia ->
             Text(guia.titulo, color = RevScopeColors.TextPrimary, style = RevScopeType.body)
-            UrgenciaFila(guia.urgencia)
+            UrgenciaFila(guia.urgencia, resolver)
             HorizontalDivider(color = RevScopeColors.SurfaceHigh)
-            GuiaPlegable(guia, estado, acciones)
+            GuiaPlegable(guia, estado, acciones, resolver)
         } ?: SinGuiaLocal(item)
         ExplicacionIaSeccion(item, acciones)
     }
@@ -77,7 +81,7 @@ internal fun TarjetaCodigoDtc(estado: EstadoTarjetaDtc, acciones: AccionesDtc) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EncabezadoCodigo(item: DtcCodeUi) {
+private fun EncabezadoCodigo(item: DtcCodeUi, resolver: StringResolver) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -89,19 +93,19 @@ private fun EncabezadoCodigo(item: DtcCodeUi) {
             style = RevScopeType.title.copy(fontFamily = FontFamily.Monospace),
             modifier = Modifier.semantics { heading() },
         )
-        item.modos.forEach { NivelBadge(nivelModo(it), texto = etiquetaModo(it)) }
+        item.modos.forEach { NivelBadge(nivelModo(it), texto = etiquetaModo(it, resolver)) }
     }
 }
 
 private fun nivelModo(modo: DtcMode): NivelEstado = if (modo == DtcMode.Pending) NivelEstado.ATENCION else NivelEstado.FALLA
 
 @Composable
-private fun UrgenciaFila(urgencia: UrgenciaDtc) {
+private fun UrgenciaFila(urgencia: UrgenciaDtc, resolver: StringResolver) {
     val (icono, color) = estiloUrgencia(urgencia)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
         Icon(icono, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
         Text(
-            "Urgencia: ${urgencia.etiqueta}",
+            stringResource(R.string.dtc_urgency_label, urgencia.etiqueta(resolver)),
             color = color,
             style = RevScopeType.label,
             modifier = Modifier.weight(1f),
@@ -116,18 +120,26 @@ private fun estiloUrgencia(urgencia: UrgenciaDtc): Pair<ImageVector, Color> = wh
 }
 
 @Composable
-private fun GuiaPlegable(guia: GuiaDtc, estado: EstadoTarjetaDtc, acciones: AccionesDtc) {
+private fun GuiaPlegable(
+    guia: GuiaDtc,
+    estado: EstadoTarjetaDtc,
+    acciones: AccionesDtc,
+    resolver: StringResolver,
+) {
     val total = guia.verificaciones.size
     val hechos = PasosGuia.contarMarcados(estado.pasosMarcados, guia.codigo, total)
-    EncabezadoGuia(abierta = estado.guiaAbierta, progreso = "$hechos de $total verificaciones hechas") {
+    EncabezadoGuia(
+        abierta = estado.guiaAbierta,
+        progreso = pluralStringResource(R.plurals.dtc_guide_progress, total, hechos, total),
+    ) {
         acciones.onAlternarGuia(guia.codigo)
     }
-    if (estado.guiaAbierta) CuerpoGuia(guia, estado, acciones)
+    if (estado.guiaAbierta) CuerpoGuia(guia, estado, acciones, resolver)
 }
 
 @Composable
 private fun EncabezadoGuia(abierta: Boolean, progreso: String, onAlternar: () -> Unit) {
-    val descripcionEstado = if (abierta) "Desplegada" else "Plegada"
+    val descripcionEstado = stringResource(if (abierta) R.string.dtc_expanded else R.string.dtc_collapsed)
     Row(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -139,7 +151,7 @@ private fun EncabezadoGuia(abierta: Boolean, progreso: String, onAlternar: () ->
     ) {
         Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = RevScopeColors.Accent, modifier = Modifier.size(20.dp))
         Column(Modifier.weight(1f)) {
-            Text("Guía de diagnóstico", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+            Text(stringResource(R.string.dtc_diagnostic_guide), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
             Text(progreso, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
         Icon(
@@ -151,11 +163,11 @@ private fun EncabezadoGuia(abierta: Boolean, progreso: String, onAlternar: () ->
 }
 
 @Composable
-private fun CuerpoGuia(guia: GuiaDtc, estado: EstadoTarjetaDtc, acciones: AccionesDtc) {
+private fun CuerpoGuia(guia: GuiaDtc, estado: EstadoTarjetaDtc, acciones: AccionesDtc, resolver: StringResolver) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AvisoOrientacion()
-        ListaNumerada("Causas probables, de la más a la menos común", guia.causas)
-        TituloSeccion("Verificaciones en orden")
+        ListaNumerada(stringResource(R.string.dtc_likely_causes), guia.causas)
+        TituloSeccion(stringResource(R.string.dtc_checks_in_order))
         guia.verificaciones.forEachIndexed { indice, verificacion ->
             val numero = indice + 1
             PasoVerificacion(
@@ -167,12 +179,13 @@ private fun CuerpoGuia(guia: GuiaDtc, estado: EstadoTarjetaDtc, acciones: Accion
                 ),
                 onMarcar = { marcado -> acciones.onMarcarPaso(PasosGuia.clave(guia.codigo, numero), marcado) },
                 acciones = acciones,
+                resolver = resolver,
             )
         }
-        if (guia.notasMoto.isNotEmpty()) ListaNumerada("Notas para moto", guia.notasMoto, numerada = false)
+        if (guia.notasMoto.isNotEmpty()) ListaNumerada(stringResource(R.string.dtc_motorcycle_notes), guia.notasMoto, numerada = false)
         if (guia.relacionados.isNotEmpty()) {
             Text(
-                "Códigos relacionados: ${guia.relacionados.joinToString(" · ")}",
+                stringResource(R.string.dtc_related_codes, guia.relacionados.joinToString(" · ")),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
@@ -191,7 +204,7 @@ private fun AvisoOrientacion() {
     ) {
         Icon(Icons.Filled.Info, contentDescription = null, tint = RevScopeColors.TextSecondary, modifier = Modifier.size(18.dp))
         Text(
-            "$AVISO_ORIENTACION_GENERAL. El título es la descripción genérica de SAE J2012.",
+            stringResource(R.string.dtc_orientation_notice),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
             modifier = Modifier.weight(1f),
@@ -238,18 +251,20 @@ private fun SinGuiaLocal(item: DtcCodeUi) {
 @Composable
 private fun ExplicacionIaSeccion(item: DtcCodeUi, acciones: AccionesDtc) {
     when (val explicacion = item.explicacion) {
-        ExplicacionIa.NoPedida -> BotonExplicarIa { acciones.onExplicarIa(item.codigo) }
+        ExplicacionIa.NoPedida -> BotonExplicarIa(texto = stringResource(R.string.dtc_explain_with_ai)) {
+            acciones.onExplicarIa(item.codigo)
+        }
         ExplicacionIa.Cargando -> CargandoExplicacion()
         ExplicacionIa.NoDisponible -> Column {
-            Text("La explicación con IA no está disponible ahora.", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
-            BotonExplicarIa(texto = "Reintentar explicación con IA") { acciones.onExplicarIa(item.codigo) }
+            Text(stringResource(R.string.dtc_ai_explanation_unavailable), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+            BotonExplicarIa(texto = stringResource(R.string.dtc_retry_ai_explanation)) { acciones.onExplicarIa(item.codigo) }
         }
         is ExplicacionIa.Lista -> ExplicacionLista(explicacion, acciones.onOpenAiValue)
     }
 }
 
 @Composable
-private fun BotonExplicarIa(texto: String = "Explicar con IA", onClick: () -> Unit) {
+private fun BotonExplicarIa(texto: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) {
         Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = RevScopeColors.Accent, modifier = Modifier.size(18.dp))
         Text(texto, color = RevScopeColors.Accent, style = RevScopeType.label, modifier = Modifier.padding(start = 8.dp))
@@ -264,21 +279,19 @@ private fun CargandoExplicacion() {
         modifier = Modifier.heightIn(min = 48.dp),
     ) {
         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = RevScopeColors.Accent)
-        Text("Consultando la explicación con IA…", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        Text(stringResource(R.string.dtc_loading_ai_explanation), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
 }
 
 @Composable
 private fun ExplicacionLista(explicacion: ExplicacionIa.Lista, onOpenAiValue: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Explicación con IA", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        Text(stringResource(R.string.dtc_ai_explanation), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         Text(explicacion.texto, color = RevScopeColors.TextPrimary, style = RevScopeType.body)
         if (explicacion.faltaConfigurar) {
             TextButton(onClick = onOpenAiValue, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Configurar IA", color = RevScopeColors.Accent, style = RevScopeType.label)
+                Text(stringResource(R.string.dtc_configure_ai), color = RevScopeColors.Accent, style = RevScopeType.label)
             }
         }
     }
 }
-
-const val AVISO_ORIENTACION_GENERAL = "Orientación general, no es el procedimiento del fabricante"

@@ -26,10 +26,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.taller.dtc.AccionGuia
 import com.revscope.core.obd.taller.dtc.VerificacionDtc
+import com.revscope.feature.dtc.R
 
 data class PasoVerificacionUi(
     val numero: Int,
@@ -38,10 +40,19 @@ data class PasoVerificacionUi(
     val borradoHabilitado: Boolean,
 )
 
-fun textoAccionGuia(accion: AccionGuia): String = when (accion) {
-    is AccionGuia.Prueba -> "Iniciar prueba: ${accion.tipo.titulo}"
-    is AccionGuia.Multimetro -> "Medir con multímetro"
-    AccionGuia.BorrarCodigos -> "Borrar códigos"
+fun textoAccionGuia(accion: AccionGuia, resolver: StringResolver): String = when (accion) {
+    is AccionGuia.Prueba ->
+        resolver.get(R.string.dtc_start_test_action, resolver.get(tituloPrueba(accion.tipo)))
+    is AccionGuia.Multimetro -> resolver.get(R.string.dtc_measure_with_multimeter)
+    AccionGuia.BorrarCodigos -> accion.etiqueta(resolver)
+}
+
+private fun tituloPrueba(tipo: TipoPrueba): Int = when (tipo) {
+    TipoPrueba.TPS_BARRIDO -> R.string.dtc_test_title_tps_sweep
+    TipoPrueba.MINIMO_RETORNO -> R.string.dtc_test_title_idle_return
+    TipoPrueba.ARRANQUE_FRIO -> R.string.dtc_test_title_cold_start
+    TipoPrueba.BATERIA_CARGA -> R.string.dtc_test_title_battery_charging
+    TipoPrueba.MAP_BARO -> R.string.dtc_test_title_map_barometric_pressure
 }
 
 // Una acción sin destino todavía (p. ej. una prueba que la app aún no trae) no muestra botón.
@@ -52,12 +63,17 @@ fun AccionesDtc.ejecutor(accion: AccionGuia): (() -> Unit)? = when (accion) {
 }
 
 @Composable
-internal fun PasoVerificacion(paso: PasoVerificacionUi, onMarcar: (Boolean) -> Unit, acciones: AccionesDtc) {
+internal fun PasoVerificacion(
+    paso: PasoVerificacionUi,
+    onMarcar: (Boolean) -> Unit,
+    acciones: AccionesDtc,
+    resolver: StringResolver,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         CasillaPaso(paso, onMarcar)
         paso.verificacion.accion?.let { accion ->
             acciones.ejecutor(accion)?.let { ejecutar ->
-                BotonAccionPaso(accion, habilitado = accion != AccionGuia.BorrarCodigos || paso.borradoHabilitado, ejecutar)
+                BotonAccionPaso(accion, habilitado = accion != AccionGuia.BorrarCodigos || paso.borradoHabilitado, ejecutar, resolver)
             }
         }
     }
@@ -97,7 +113,7 @@ private fun CasillaPaso(paso: PasoVerificacionUi, onMarcar: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun BotonAccionPaso(accion: AccionGuia, habilitado: Boolean, onClick: () -> Unit) {
+private fun BotonAccionPaso(accion: AccionGuia, habilitado: Boolean, onClick: () -> Unit, resolver: StringResolver) {
     val (icono, color) = estiloAccion(accion)
     val colorVisible = if (habilitado) color else RevScopeColors.TextMuted
     OutlinedButton(
@@ -108,7 +124,7 @@ private fun BotonAccionPaso(accion: AccionGuia, habilitado: Boolean, onClick: ()
     ) {
         Icon(icono, contentDescription = null, tint = colorVisible, modifier = Modifier.size(18.dp))
         Text(
-            textoAccionGuia(accion),
+            textoAccionGuia(accion, resolver),
             color = colorVisible,
             style = RevScopeType.label,
             textAlign = TextAlign.Center,
