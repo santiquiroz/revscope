@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_section_language">Language and units</string>
+    <string name="settings_entry_language">Language</string>
+    <string name="settings_language_system">Phone language</string>
+    <string name="settings_language_english" translatable="false">English</string>
+    <string name="settings_language_spanish" translatable="false">Español</string>
+</resources>

@@ -52,6 +52,10 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        localeFilters += listOf("en", "es")
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }

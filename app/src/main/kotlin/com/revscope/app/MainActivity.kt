@@ -1,6 +1,8 @@
 package com.revscope.app
 
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,6 +18,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val base = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            com.revscope.core.common.i18n.AppLanguage.localizedContext(newBase)
+        } else {
+            newBase
+        }
+        super.attachBaseContext(base)
+    }
 
     private val pendingSessionId = MutableStateFlow<Long?>(null)
     private val pendingOpenAlDia = MutableStateFlow(false)

@@ -4,6 +4,7 @@ import java.text.Normalizer
 
 /** Agrupación temática de las cards de Ajustes — cada una es una sección colapsable en la UI. */
 internal enum class SettingsSectionId(val title: String) {
+    IDIOMA_UNIDADES("Idioma y unidades"),
     VEHICULO_GARAGE("Vehículo y garage"),
     RADARES_ALERTAS("Radares y alertas"),
     MAPA("Mapa"),
