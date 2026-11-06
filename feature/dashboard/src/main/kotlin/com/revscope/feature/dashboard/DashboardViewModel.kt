@@ -64,7 +64,7 @@ class DashboardViewModel @Inject constructor(
     val redlineRpm: Int get() = alertsEngine.currentRedlineRpm
 
     fun disponibilidad(pid: String, nombre: String): DisponibilidadPid =
-        DisponibilidadPid.resolver(pid, nombre, registry)
+        DisponibilidadPid.resolver(pid, nombre, registry, resolver)
 
     /**
      * Big speedometer source while connected via OBD: true = GPS_SPEED, false = PID 0D.

@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.multimetro
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.multimetro.Cable
 import com.revscope.core.obd.taller.multimetro.ContextoMultimetro
 import com.revscope.core.obd.taller.multimetro.EvaluadorCelda
@@ -25,17 +26,18 @@ internal object MapeoMultimetro {
 
     const val SIN_COLORES = "Plantilla genérica típica, sin colores: los colores cambian con cada modelo"
 
-    fun ui(l: LocalMultimetro): MultimetroUi {
+    fun ui(l: LocalMultimetro, resolver: StringResolver): MultimetroUi {
         val ctx = l.contexto ?: return MultimetroUi(cargando = l.cargando, error = l.error, sensor = l.sensor, mensaje = l.mensaje)
         val plantilla = plantillaEfectiva(ctx, l.colores)
         val lecturas = lecturas(plantilla, l.textos)
-        val veredicto = lecturas.takeIf { it.isNotEmpty() }?.let { VeredictoMultimetro.combinar(plantilla, it, ctx.bandas, ctx.ecu) }
+        val veredicto = lecturas.takeIf { it.isNotEmpty() }
+            ?.let { VeredictoMultimetro.combinar(plantilla, it, ctx.bandas, ctx.ecu, resolver) }
         return MultimetroUi(
             cargando = false,
             error = l.error,
             vehiculo = ctx.vehiculo?.nombre,
             sensor = l.sensor,
-            plantilla = plantillaUi(plantilla, l.textos, ctx.bandas, veredicto, editados(ctx, l.colores)),
+            plantilla = plantillaUi(plantilla, l.textos, ctx.bandas, veredicto, editados(ctx, l.colores), resolver),
             veredicto = veredicto?.let(::veredictoUi),
             colores = coloresUi(ctx, plantilla, l.colores),
             guardar = guardarUi(ctx, lecturas.isNotEmpty(), l.ocupado),
@@ -65,6 +67,7 @@ internal object MapeoMultimetro {
         bandas: Map<String, BandaReferencia>,
         veredicto: VeredictoCombinado?,
         editados: Boolean,
+        resolver: StringResolver,
     ) = PlantillaUi(
         titulo = p.titulo,
         dondeMedir = p.dondeMedir,
@@ -76,7 +79,7 @@ internal object MapeoMultimetro {
         },
         unidad = p.unidad,
         condiciones = p.condiciones.map { it.etiqueta },
-        filas = p.cables.map { fila(p, it, textos, bandas, veredicto) },
+        filas = p.cables.map { fila(p, it, textos, bandas, veredicto, resolver) },
     )
 
     private fun origenSinCables(sensor: SensorMultimetro): String =
@@ -89,6 +92,7 @@ internal object MapeoMultimetro {
         textos: Map<Pair<FuncionCable, String>, String>,
         bandas: Map<String, BandaReferencia>,
         veredicto: VeredictoCombinado?,
+        resolver: StringResolver,
     ): FilaCableUi {
         val filaMedida = lecturas(p, textos).filter { it.funcion == cable.funcion }.associate { it.condicion to it.valor }
         val celdas = p.condiciones.map { condicion ->
@@ -100,7 +104,7 @@ internal object MapeoMultimetro {
                 etiquetaCondicion = condicion.etiqueta,
                 texto = texto,
                 estado = evaluada?.estado,
-                referencia = evaluada?.referencia ?: referenciaEsperada(p, cable, condicion.clave, filaMedida, bandas),
+                referencia = evaluada?.referencia ?: referenciaEsperada(p, cable, condicion.clave, filaMedida, bandas, resolver),
                 invalido = texto.isNotBlank() && LectorDecimal.leer(texto) == null,
                 aplica = cable.esperado(condicion.clave) != null,
             )
@@ -115,9 +119,10 @@ internal object MapeoMultimetro {
         condicion: String,
         fila: Map<String, Double>,
         bandas: Map<String, BandaReferencia>,
+        resolver: StringResolver,
     ): String? {
         if (cable.esperado(condicion) == null) return null
-        return EvaluadorCelda.evaluar(p, LecturaMultimetro(cable.funcion, condicion, 0.0, p.unidad), fila, bandas).referencia
+        return EvaluadorCelda.evaluar(p, LecturaMultimetro(cable.funcion, condicion, 0.0, p.unidad), fila, bandas, resolver).referencia
     }
 
     private fun veredictoUi(v: VeredictoCombinado) = VeredictoUi(

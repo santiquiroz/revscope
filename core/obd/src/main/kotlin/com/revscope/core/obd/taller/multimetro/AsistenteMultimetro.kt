@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.multimetro
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.sesion.OrigenEvento
 import com.revscope.core.obd.taller.sesion.RegistroTaller
@@ -37,6 +39,7 @@ class AsistenteMultimetro @Inject constructor(
     private val repositorio: TallerRepository,
     private val vehiculo: VehiculoActivo,
     private val registro: RegistroTaller,
+    private val resolver: StringResolver,
 ) {
 
     suspend fun contexto(sensor: SensorMultimetro): ContextoMultimetro {
@@ -48,28 +51,28 @@ class AsistenteMultimetro @Inject constructor(
         return ContextoMultimetro(
             vehiculo = actual,
             modelo = conocimiento?.let { ModeloReferencia(it.clave, it.nombre) },
-            plantilla = ResolutorPlantilla.para(sensor, tipo, conocimiento?.cableado.orEmpty()),
+            plantilla = ResolutorPlantilla.para(sensor, tipo, conocimiento?.cableado.orEmpty(), resolver),
             bandas = repositorio.bandasResueltas(actual?.claveModelo, tipo),
             sesion = sesion,
             lecturasSesion = LecturasSesion.de(eventos, sensor),
-            ecu = LecturasEcuSesion.desde(eventos, sensor),
+            ecu = LecturasEcuSesion.desde(eventos, sensor, resolver),
         )
     }
 
     suspend fun registrarCelda(sensor: SensorMultimetro, lectura: LecturaMultimetro, origen: OrigenEvento): Result<CeldaRegistrada> {
         val ctx = contexto(sensor)
-        val sesion = ctx.sesion ?: return Result.failure(IllegalStateException(SIN_SESION))
-        validar(ctx.plantilla, lectura)?.let { return Result.failure(IllegalArgumentException(it)) }
+        val sesion = ctx.sesion ?: return Result.failure(IllegalStateException(resolver.get(R.string.obd_multimeter_unnamed_session)))
+        validar(ctx.plantilla, lectura, resolver)?.let { return Result.failure(IllegalArgumentException(it)) }
         val todas = LecturasSesion.reemplazar(ctx.lecturasSesion, lectura)
-        val acumulado = VeredictoMultimetro.combinar(ctx.plantilla, todas, ctx.bandas, ctx.ecu)
-        val celda = EvaluadorCelda.evaluar(ctx.plantilla, lectura, EvaluadorCelda.filaDe(todas, lectura.funcion), ctx.bandas)
-        val eventoId = registro.anotar(EventoMedicion.celda(ctx.plantilla, celda, acumulado, origen))
-            ?: return Result.failure(IllegalStateException("No se pudo guardar la medición en la sesión"))
+        val acumulado = VeredictoMultimetro.combinar(ctx.plantilla, todas, ctx.bandas, ctx.ecu, resolver)
+        val celda = EvaluadorCelda.evaluar(ctx.plantilla, lectura, EvaluadorCelda.filaDe(todas, lectura.funcion), ctx.bandas, resolver)
+        val eventoId = registro.anotar(EventoMedicion.celda(ctx.plantilla, celda, acumulado, origen, resolver))
+            ?: return Result.failure(IllegalStateException(resolver.get(R.string.obd_multimeter_save_failed)))
         return Result.success(CeldaRegistrada(sesion.id, eventoId, ctx.plantilla, celda, acumulado, pendientes(ctx.plantilla, todas)))
     }
 
     suspend fun guardarTabla(plantilla: PlantillaCableado, veredicto: VeredictoCombinado): Long? =
-        registro.anotar(EventoMedicion.tabla(plantilla, veredicto))
+        registro.anotar(EventoMedicion.tabla(plantilla, veredicto, resolver = resolver))
 
     suspend fun guardarColores(plantilla: PlantillaCableado, colores: Map<FuncionCable, String?>): Boolean {
         val clave = vehiculo.actual()?.claveModelo ?: return false
@@ -77,18 +80,28 @@ class AsistenteMultimetro @Inject constructor(
     }
 
     companion object {
-        const val SIN_SESION = "No hay sesión de taller abierta: ábrela con iniciar_sesion_taller"
+        const val SIN_SESION = "No hay sesión de taller abierta: ábrela con iniciar_sesion_taller" // i18n-ignore
 
-        fun validar(plantilla: PlantillaCableado, lectura: LecturaMultimetro): String? {
+        fun validar(plantilla: PlantillaCableado, lectura: LecturaMultimetro, resolver: StringResolver): String? {
             val cable = plantilla.cable(lectura.funcion)
-                ?: return "La plantilla ${plantilla.sensor.name} no tiene el cable ${lectura.funcion.name}: usa " +
-                    plantilla.cables.joinToString { it.funcion.name }
+                ?: return resolver.get(
+                    R.string.obd_multimeter_missing_wire,
+                    plantilla.sensor.name,
+                    lectura.funcion.name,
+                    plantilla.cables.joinToString { it.funcion.name },
+                )
             if (cable.esperado(lectura.condicion) == null) {
-                return "La condición ${lectura.condicion} no existe para ${lectura.funcion.name}: usa " +
-                    plantilla.condiciones.filter { cable.esperado(it.clave) != null }.joinToString { it.clave }
+                return resolver.get(
+                    R.string.obd_multimeter_missing_condition,
+                    lectura.condicion,
+                    lectura.funcion.name,
+                    plantilla.condiciones.filter { cable.esperado(it.clave) != null }.joinToString { it.clave },
+                )
             }
-            if (lectura.unidad != plantilla.unidad) return "La plantilla ${plantilla.sensor.name} se mide en ${plantilla.unidad}"
-            if (!lectura.valor.isFinite()) return "El valor no es un número"
+            if (lectura.unidad != plantilla.unidad) {
+                return resolver.get(R.string.obd_multimeter_wrong_unit, plantilla.sensor.name, plantilla.unidad)
+            }
+            if (!lectura.valor.isFinite()) return resolver.get(R.string.obd_multimeter_not_number)
             return null
         }
 

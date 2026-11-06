@@ -55,10 +55,11 @@ internal object MapeoPaso {
         bandas: Map<String, BandaReferencia>,
         resolver: StringResolver,
     ): PasoUi {
-        val objetivo = BandasPosicion.tps(bandas, UnidadPosicion.VOLTIOS, vref).filter { it.clave in BANDAS_POR_PASO[e.paso.clave].orEmpty() }
+        val objetivo = BandasPosicion.tps(bandas, UnidadPosicion.VOLTIOS, vref, resolver)
+            .filter { it.clave in BANDAS_POR_PASO[e.paso.clave].orEmpty() }
         return base(e, resolver).copy(
-            vivo = serie.lastOrNull()?.let { valorVivo(pid, it.second, vref) },
-            grafica = grafica(pid, serie, vref, objetivo),
+            vivo = serie.lastOrNull()?.let { valorVivo(pid, it.second, vref, resolver) },
+            grafica = grafica(pid, serie, vref, objetivo, resolver),
             tituloGrafica = "Últimos 10 s, en voltios",
             leyendaGrafica = objetivo.map { it.descripcion },
         )
@@ -74,10 +75,10 @@ internal object MapeoPaso {
     ): PasoUi {
         val banda = MapeoMagnitud.banda(pid, e.paso.clave, bandas)
         return base(e, resolver).copy(
-            vivo = serie.lastOrNull()?.let { MapeoMagnitud.valorVivo(pid, it.second) },
-            grafica = MapeoMagnitud.grafica(pid, serie, VENTANA_MS, banda),
+            vivo = serie.lastOrNull()?.let { MapeoMagnitud.valorVivo(pid, it.second, resolver) },
+            grafica = MapeoMagnitud.grafica(pid, serie, VENTANA_MS, banda, resolver),
             tituloGrafica = "Últimos 10 s, en ${MapeoMagnitud.de(pid).unidad.ifEmpty { "unidades del PID" }}",
-            leyendaGrafica = listOfNotNull(banda?.let(MapeoMagnitud::leyenda)),
+            leyendaGrafica = listOfNotNull(banda?.let { MapeoMagnitud.leyenda(it, resolver) }),
         )
     }
 
@@ -110,30 +111,36 @@ internal object MapeoPaso {
         return "${textoPaso(e.indice + 1, e.total, resolver, e.paso.titulo)}. ${TextosPrueba.estadoFase(e.fase)}"
     }
 
-    private fun valorVivo(pid: String, porcentaje: Double, vref: ReferenciaVoltaje) = ValorVivoUi(
-        etiqueta = "TPS · PID $pid · con ${FormatoPosicion.voltios(vref.voltios)} de referencia",
-        principal = FormatoPosicion.porcentaje(porcentaje),
-        secundario = FormatoPosicion.voltios(vref.aVoltios(porcentaje)),
+    private fun valorVivo(pid: String, porcentaje: Double, vref: ReferenciaVoltaje, resolver: StringResolver) = ValorVivoUi(
+        etiqueta = "TPS · PID $pid · con ${FormatoPosicion.voltios(vref.voltios, resolver)} de referencia",
+        principal = FormatoPosicion.porcentaje(porcentaje, resolver),
+        secundario = FormatoPosicion.voltios(vref.aVoltios(porcentaje), resolver),
     )
 
-    private fun grafica(pid: String, serie: SerieVivo, vref: ReferenciaVoltaje, bandas: List<BandaEnEscala>): ModeloGrafica {
+    private fun grafica(
+        pid: String,
+        serie: SerieVivo,
+        vref: ReferenciaVoltaje,
+        bandas: List<BandaEnEscala>,
+        resolver: StringResolver,
+    ): ModeloGrafica {
         val ultimo = serie.lastOrNull()?.first ?: 0L
         val puntos = serie.filter { ultimo - it.first <= VENTANA_MS }
             .map { (t, pct) -> PuntoGrafica((t - ultimo) / 1_000.0, vref.aVoltios(pct)) }
         return ModeloGrafica(
             series = listOf(SerieGrafica("TPS", puntos)),
-            descripcion = descripcion(pid, puntos.map { it.y }, bandas),
+            descripcion = descripcion(pid, puntos.map { it.y }, bandas, resolver),
             bandas = bandas.map { BandaGrafica(it.etiquetaCorta, it.min, it.max) },
             rangoX = -VENTANA_MS / 1_000.0..0.0,
             rangoY = 0.0..vref.voltios,
         )
     }
 
-    private fun descripcion(pid: String, valoresV: List<Double>, bandas: List<BandaEnEscala>): String {
+    private fun descripcion(pid: String, valoresV: List<Double>, bandas: List<BandaEnEscala>, resolver: StringResolver): String {
         val objetivo = bandas.joinToString("; ") { it.descripcion }.let { if (it.isEmpty()) "" else ". Banda: $it" }
         if (valoresV.isEmpty()) return "PID $pid en los últimos 10 s: esperando muestras$objetivo"
-        val min = FormatoPosicion.voltios(valoresV.min())
-        val max = FormatoPosicion.voltios(valoresV.max())
-        return "PID $pid en los últimos 10 s: de $min a $max, ${Tendencia.de(valoresV, ESTABLE_MAX_V)}$objetivo"
+        val min = FormatoPosicion.voltios(valoresV.min(), resolver)
+        val max = FormatoPosicion.voltios(valoresV.max(), resolver)
+        return "PID $pid en los últimos 10 s: de $min a $max, ${Tendencia.de(valoresV, ESTABLE_MAX_V, resolver)}$objetivo"
     }
 }

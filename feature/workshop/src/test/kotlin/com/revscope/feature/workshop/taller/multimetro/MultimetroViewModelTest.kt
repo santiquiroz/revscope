@@ -10,6 +10,7 @@ import com.revscope.core.obd.taller.multimetro.SensorMultimetro
 import com.revscope.core.obd.taller.sesion.SolicitudSesion
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.BENELLI
 import com.revscope.feature.workshop.taller.TallerDePrueba
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,11 @@ class MultimetroViewModelTest {
 
     private val despachador = UnconfinedTestDispatcher()
     private lateinit var taller: TallerDePrueba
+    private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        R::class.java,
+        resDirs = listOf("../../core/obd/src/main/res"),
+    )
 
     @Before
     fun setUp() {
@@ -49,8 +55,9 @@ class MultimetroViewModelTest {
 
     private fun vm(sensor: String? = null) = MultimetroViewModel(
         SavedStateHandle(mapOf(MultimetroViewModel.ARG_SENSOR to sensor)),
-        AsistenteMultimetro(taller.repositorio, { taller.entorno.vehiculoFlujo.value }, taller.registro),
+        AsistenteMultimetro(taller.repositorio, { taller.entorno.vehiculoFlujo.value }, taller.registro, resolver),
         taller.registro,
+        resolver,
     )
 
     private fun MultimetroViewModel.escribirCaso() =

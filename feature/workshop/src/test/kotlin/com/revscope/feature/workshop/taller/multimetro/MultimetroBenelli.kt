@@ -1,5 +1,7 @@
 package com.revscope.feature.workshop.taller.multimetro
 
+import com.revscope.core.obd.R as ObdR
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.taller.modelo.CableModelo
 import com.revscope.core.obd.taller.modelo.CableadoSensor
@@ -21,6 +23,7 @@ import org.json.JSONObject
 
 // El caso del 25-sep-2026: cableado del TPS medido por el dueño y lo que marcó el multímetro por detrás del conector.
 object MultimetroBenelli {
+    private val resolver = XmlStringResolver.es(ObdR::class.java, resDirs = listOf("../../core/obd/src/main/res"))
 
     val cableadoTps = CableadoSensor(
         sensor = "TPS",
@@ -73,7 +76,12 @@ object MultimetroBenelli {
         ContextoMultimetro(
             vehiculo = BENELLI,
             modelo = if (conModelo) ModeloReferencia(conocimiento.clave, conocimiento.nombre) else null,
-            plantilla = ResolutorPlantilla.para(sensor, VehicleType.MOTORCYCLE, if (conModelo) conocimiento.cableado else emptyList()),
+            plantilla = ResolutorPlantilla.para(
+                sensor,
+                VehicleType.MOTORCYCLE,
+                if (conModelo) conocimiento.cableado else emptyList(),
+                resolver,
+            ),
             bandas = BandasTipicas.para(VehicleType.MOTORCYCLE),
             sesion = if (conSesion) sesion else null,
             lecturasSesion = emptyList(),
@@ -86,5 +94,6 @@ object MultimetroBenelli {
         colores: Map<FuncionCable, String?> = contexto.plantilla.colores(),
     ): MultimetroUi = MapeoMultimetro.ui(
         LocalMultimetro(sensor = contexto.plantilla.sensor, contexto = contexto, cargando = false, textos = textos, colores = colores),
+        resolver,
     )
 }

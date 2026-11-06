@@ -1,11 +1,13 @@
 package com.revscope.core.obd.taller.grafica
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.OrigenBanda
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -13,6 +15,7 @@ import org.junit.Test
 
 class EscalaPosicionTest {
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     private val tipicas = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
 
     @Test
@@ -32,7 +35,7 @@ class EscalaPosicionTest {
 
     @Test
     fun `las bandas del tps en voltios son cerrado y fondo con su origen`() {
-        val bandas = BandasPosicion.tps(tipicas, UnidadPosicion.VOLTIOS, ReferenciaVoltaje.TIPICA)
+        val bandas = BandasPosicion.tps(tipicas, UnidadPosicion.VOLTIOS, ReferenciaVoltaje.TIPICA, resolver)
 
         assertEquals(listOf(ClavesBanda.TPS_CERRADO_V, ClavesBanda.TPS_FONDO_V), bandas.map { it.clave })
         val cerrado = bandas.first()
@@ -44,7 +47,7 @@ class EscalaPosicionTest {
 
     @Test
     fun `en porcentaje las bandas se pasan con la referencia usada`() {
-        val bandas = BandasPosicion.tps(tipicas, UnidadPosicion.PORCENTAJE, ReferenciaVoltaje.editada(4.8))
+        val bandas = BandasPosicion.tps(tipicas, UnidadPosicion.PORCENTAJE, ReferenciaVoltaje.editada(4.8), resolver)
 
         assertEquals(6.25, bandas[0].min, 1e-9)
         assertEquals(20.833, bandas[0].max, 1e-3)
@@ -59,7 +62,7 @@ class EscalaPosicionTest {
             ClavesBanda.TPS_FONDO_V to BandaReferencia(ClavesBanda.TPS_FONDO_V, 4.0, null, "V", OrigenBanda.USUARIO),
         )
 
-        val escala = BandasPosicion.tps(bandas, UnidadPosicion.VOLTIOS, ReferenciaVoltaje.TIPICA)
+        val escala = BandasPosicion.tps(bandas, UnidadPosicion.VOLTIOS, ReferenciaVoltaje.TIPICA, resolver)
 
         assertEquals(1, escala.size)
         assertEquals("Cerrado según fuente", escala.single().etiquetaCorta)
@@ -68,16 +71,16 @@ class EscalaPosicionTest {
 
     @Test
     fun `la tendencia es estable dentro del umbral y si no sube o baja`() {
-        assertEquals("estable", Tendencia.de(listOf(0.45, 0.47, 0.46), estableHasta = 0.06))
-        assertEquals("estable", Tendencia.de(listOf(0.45), estableHasta = 0.06))
-        assertEquals("subiendo", Tendencia.de(listOf(0.12, 0.3, 0.47), estableHasta = 0.06))
-        assertEquals("bajando", Tendencia.de(listOf(0.9, 0.5, 0.14), estableHasta = 0.06))
+        assertEquals("estable", Tendencia.de(listOf(0.45, 0.47, 0.46), 0.06, resolver))
+        assertEquals("estable", Tendencia.de(listOf(0.45), 0.06, resolver))
+        assertEquals("subiendo", Tendencia.de(listOf(0.12, 0.3, 0.47), 0.06, resolver))
+        assertEquals("bajando", Tendencia.de(listOf(0.9, 0.5, 0.14), 0.06, resolver))
     }
 
     @Test
     fun `el valor en vivo se muestra en porcentaje y en voltios con coma decimal`() {
-        assertEquals("9,2 %", FormatoPosicion.porcentaje(9.2))
-        assertEquals("0,46 V", FormatoPosicion.voltios(0.46))
-        assertEquals("9,2 % · 0,46 V", FormatoPosicion.ambos(9.2, ReferenciaVoltaje.TIPICA))
+        assertEquals("9,2 %", FormatoPosicion.porcentaje(9.2, resolver))
+        assertEquals("0,46 V", FormatoPosicion.voltios(0.46, resolver))
+        assertEquals("9,2 % · 0,46 V", FormatoPosicion.ambos(9.2, ReferenciaVoltaje.TIPICA, resolver))
     }
 }

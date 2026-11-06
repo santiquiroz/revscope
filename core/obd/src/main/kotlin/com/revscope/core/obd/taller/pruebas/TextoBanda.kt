@@ -13,7 +13,7 @@ import com.revscope.core.obd.taller.referencia.PosicionEnBanda
 object TextoBanda {
 
     fun citar(b: BandaReferencia, decimales: Int, resolver: StringResolver? = null): String =
-        "${rango(b, decimales, resolver)}, ${b.etiquetaOrigen}"
+        "${rango(b, decimales, resolver)}, ${resolver?.let(b::etiquetaOrigen) ?: b.etiquetaOrigen}"
 
     fun rango(b: BandaReferencia, decimales: Int, resolver: StringResolver? = null): String {
         val min = b.min

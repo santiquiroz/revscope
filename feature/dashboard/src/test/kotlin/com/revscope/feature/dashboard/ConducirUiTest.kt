@@ -4,6 +4,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.EstadoSoporte
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.feature.dashboard.gauges.ladoAcotado
@@ -15,8 +16,16 @@ import org.junit.Test
 
 class ConducirUiTest {
 
-    private val es = XmlStringResolver.es(R::class.java)
-    private val en = XmlStringResolver.en(R::class.java)
+    private val es = XmlStringResolver.es(
+        ObdR::class.java,
+        R::class.java,
+        resDirs = listOf("../../core/obd/src/main/res", "src/main/res"),
+    )
+    private val en = XmlStringResolver.en(
+        ObdR::class.java,
+        R::class.java,
+        resDirs = listOf("../../core/obd/src/main/res", "src/main/res"),
+    )
 
     @Test
     fun `el gauge se achica a la columna que le toca`() {
@@ -71,7 +80,7 @@ class ConducirUiTest {
             temperatura = null,
             boost = 0f,
             marcha = 0,
-            disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, EstadoSoporte.Soportado) },
+            disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, EstadoSoporte.Soportado, es) },
             resolver = resolver,
         ).motivoTemperatura
 
@@ -90,7 +99,7 @@ class ConducirUiTest {
             boost = 9f,
             marcha = 3,
             disponibilidad = { pid, nombre ->
-                DisponibilidadPid.resolver(pid, nombre, EstadoSoporte.Soportado)
+                DisponibilidadPid.resolver(pid, nombre, EstadoSoporte.Soportado, es)
             },
             resolver = es,
         )

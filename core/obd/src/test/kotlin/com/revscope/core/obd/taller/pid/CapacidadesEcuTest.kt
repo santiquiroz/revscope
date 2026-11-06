@@ -1,11 +1,14 @@
 package com.revscope.core.obd.taller.pid
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CapacidadesEcuTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     @Test
     fun `names every standard ELM protocol including automatic prefix`() {
@@ -26,11 +29,11 @@ class CapacidadesEcuTest {
         )
 
         expected.forEach { (dpn, name) ->
-            assertEquals(name, CapacidadesEcu.desde(dpn, emptySet()).protocolo)
+            assertEquals(name, CapacidadesEcu.desde(dpn, emptySet(), resolver).protocolo)
         }
         assertEquals(
             "ISO 15765-4 CAN (11 bits, 500 kbit/s)",
-            CapacidadesEcu.desde("A6", emptySet()).protocolo,
+            CapacidadesEcu.desde("A6", emptySet(), resolver).protocolo,
         )
     }
 
@@ -39,6 +42,7 @@ class CapacidadesEcuTest {
         val result = CapacidadesEcu.desde(
             atDpn = "A5",
             pidsAnunciados = setOf("0c", "05", "20", "21", "40", "41", "60", "61"),
+            resolver = resolver,
         )
 
         assertEquals(8, result.cantidadPids)
@@ -50,7 +54,7 @@ class CapacidadesEcuTest {
 
     @Test
     fun `K-line capability is honest about expected rate and few motorcycle PIDs`() {
-        val result = CapacidadesEcu.desde("A5", setOf("05", "0C"))
+        val result = CapacidadesEcu.desde("A5", setOf("05", "0C"), resolver)
 
         assertTrue(result.esKLine)
         assertEquals("Baja: una petición por vez; mídela en la captura", result.tasaEsperada)
@@ -63,7 +67,7 @@ class CapacidadesEcuTest {
 
     @Test
     fun `CAN capability does not claim the motorcycle limitation`() {
-        val result = CapacidadesEcu.desde("6", setOf("0C"), tasaMedidaHz = 18.5)
+        val result = CapacidadesEcu.desde("6", setOf("0C"), resolver, tasaMedidaHz = 18.5)
 
         assertFalse(result.esKLine)
         assertEquals(18.5, result.tasaMedidaHz!!, 0.0)
@@ -73,7 +77,7 @@ class CapacidadesEcuTest {
 
     @Test
     fun `unknown ATDPN remains explicit`() {
-        val result = CapacidadesEcu.desde("FF", emptySet())
+        val result = CapacidadesEcu.desde("FF", emptySet(), resolver)
 
         assertEquals("Protocolo no identificado", result.protocolo)
         assertEquals("No estimada; mídela en la captura", result.tasaEsperada)

@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.multimetro
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.modelo.CableModelo
 import com.revscope.core.obd.taller.modelo.CableadoSensor
 
@@ -8,10 +10,15 @@ import com.revscope.core.obd.taller.modelo.CableadoSensor
 // o la banda que el modelo o el técnico hayan editado, que llega por las bandas resueltas.
 object ResolutorPlantilla {
 
-    const val FUENTE_EDITADA = "Editado por ti"
+    const val FUENTE_EDITADA = "Editado por ti" // i18n-ignore
 
-    fun para(sensor: SensorMultimetro, tipo: VehicleType, cableadoModelo: List<CableadoSensor>): PlantillaCableado {
-        val generica = PlantillasGenericas.para(sensor, tipo)
+    fun para(
+        sensor: SensorMultimetro,
+        tipo: VehicleType,
+        cableadoModelo: List<CableadoSensor>,
+        resolver: StringResolver,
+    ): PlantillaCableado {
+        val generica = PlantillasGenericas.para(sensor, tipo, resolver)
         val delModelo = cableadoModelo.firstOrNull { it.sensor == sensor.name } ?: return generica
         return conColores(generica, delModelo.cables.associate { it.funcion to it.color }, delModelo.fuente)
     }

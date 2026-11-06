@@ -19,4 +19,11 @@ class LocaleNumbersTest {
     fun `signed negativo en español`() {
         assertEquals("-0,3", LocaleNumbers.signed(-0.3, 1, Locale.forLanguageTag("es")))
     }
+
+    @Test
+    fun `compact quita el decimal cuando es entero y si no usa la coma del idioma`() {
+        assertEquals("6", LocaleNumbers.compact(6.0, Locale.forLanguageTag("es")))
+        assertEquals("6,3", LocaleNumbers.compact(6.25, Locale.forLanguageTag("es")))
+        assertEquals("6.3", LocaleNumbers.compact(6.25, Locale.US))
+    }
 }

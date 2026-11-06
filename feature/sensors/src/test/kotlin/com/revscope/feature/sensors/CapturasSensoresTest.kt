@@ -1,6 +1,7 @@
 package com.revscope.feature.sensors
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
 import com.revscope.core.obd.taller.grafica.VrefSesion
@@ -21,7 +22,11 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 class CapturasSensoresTest {
 
-    private val resolver = XmlStringResolver.es(R::class.java)
+    private val resolver = XmlStringResolver.es(
+        R::class.java,
+        ObdR::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
     private val nombres = mapOf("11" to "Posición de la mariposa", "0C" to "RPM", "05" to "Temperatura del motor")
 
     private fun grafica(unidad: UnidadPosicion, pausada: Boolean = false) = MapeoGraficaCaptura.de(

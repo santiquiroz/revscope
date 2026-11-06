@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.multimetro
 
-import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.TipoEvento
@@ -28,7 +30,12 @@ object ComparadorEcu {
     // Típico: el multímetro y la conversión de % a V de la ECU difieren unas centésimas; más de 0,1 V ya es otra señal.
     const val TOLERANCIA_V = 0.1
 
-    fun comparar(plantilla: PlantillaCableado, senal: Map<String, Double>, ecu: LecturasEcu?): ComparacionEcu? {
+    fun comparar(
+        plantilla: PlantillaCableado,
+        senal: Map<String, Double>,
+        ecu: LecturasEcu?,
+        resolver: StringResolver,
+    ): ComparacionEcu? {
         if (ecu == null) return null
         if (!hayCondicionesRequeridas(plantilla.condicionesEcu, senal, ecu.voltiosPorCondicion)) return null
         val filas = plantilla.condiciones.map { it.clave }
@@ -36,7 +43,7 @@ object ComparadorEcu {
             .mapNotNull { c -> fila(c, senal[c], ecu.voltiosPorCondicion[c]) }
         if (filas.isEmpty()) return null
         val resultado = resultado(filas)
-        return ComparacionEcu(ecu.origen, filas, resultado, texto(resultado, filas, plantilla))
+        return ComparacionEcu(ecu.origen, filas, resultado, texto(resultado, filas, plantilla, resolver))
     }
 
     private fun hayCondicionesRequeridas(
@@ -60,48 +67,48 @@ object ComparadorEcu {
         }
     }
 
-    private fun texto(resultado: ResultadoEcu, filas: List<FilaComparacionEcu>, plantilla: PlantillaCableado): String {
-        val todas = condiciones(filas, plantilla)
-        val distintas = condiciones(filas.filterNot { it.coincide }, plantilla)
-        val tolerancia = "±${FormatoTaller.numero(TOLERANCIA_V, 1)} V, típico"
+    private fun texto(
+        resultado: ResultadoEcu,
+        filas: List<FilaComparacionEcu>,
+        plantilla: PlantillaCableado,
+        resolver: StringResolver,
+    ): String {
+        val todas = condiciones(filas, plantilla, resolver)
+        val distintas = condiciones(filas.filterNot { it.coincide }, plantilla, resolver)
+        val tolerancia = resolver.get(
+            R.string.obd_multimeter_ecu_tolerance,
+            LocaleNumbers.decimal(TOLERANCIA_V, 1, resolver.locale),
+        )
         return when (resultado) {
-            ResultadoEcu.COINCIDE ->
-                "Coincide con la prueba guiada: la ECU recibe lo mismo que mide el multímetro ($tolerancia, en $todas), " +
-                    "así que el cableado entre el sensor y la ECU no cambia la señal."
-            ResultadoEcu.ECU_RECIBE_MENOS ->
-                "La ECU recibe menos de lo que mide el multímetro en $distintas: apunta al cableado o al conector del " +
-                    "lado de la ECU."
-            ResultadoEcu.ECU_RECIBE_MAS ->
-                "La ECU recibe más de lo que mide el multímetro en $distintas: revisa la masa del sensor del lado de la " +
-                    "ECU o un cruce en el cableado."
-            ResultadoEcu.DIFIEREN ->
-                "La ECU y el multímetro difieren más de $tolerancia en $distintas: repite las dos medidas en la " +
-                    "misma posición."
+            ResultadoEcu.COINCIDE -> resolver.get(R.string.obd_multimeter_ecu_matches, tolerancia, todas)
+            ResultadoEcu.ECU_RECIBE_MENOS -> resolver.get(R.string.obd_multimeter_ecu_receives_less, distintas)
+            ResultadoEcu.ECU_RECIBE_MAS -> resolver.get(R.string.obd_multimeter_ecu_receives_more, distintas)
+            ResultadoEcu.DIFIEREN -> resolver.get(R.string.obd_multimeter_ecu_differs, tolerancia, distintas)
         }
     }
 
-    private fun condiciones(filas: List<FilaComparacionEcu>, plantilla: PlantillaCableado): String =
-        filas.map { plantilla.condicion(it.condicion)?.etiqueta?.lowercase() ?: it.condicion }.let(::enumerar)
+    private fun condiciones(filas: List<FilaComparacionEcu>, plantilla: PlantillaCableado, resolver: StringResolver): String =
+        filas.map { plantilla.condicion(it.condicion)?.etiqueta?.lowercase(resolver.locale) ?: it.condicion }.let { enumerar(it, resolver) }
 
-    private fun enumerar(partes: List<String>): String = when (partes.size) {
+    private fun enumerar(partes: List<String>, resolver: StringResolver): String = when (partes.size) {
         0 -> ""
         1 -> partes.single()
-        else -> partes.dropLast(1).joinToString(", ") + " y " + partes.last()
+        else -> partes.dropLast(1).joinToString(", ") + " ${resolver.get(R.string.obd_multimeter_and)} " + partes.last()
     }
 }
 
 // La última prueba guiada terminada de la sesión que lee el mismo sensor: por ahora solo el barrido del TPS.
 object LecturasEcuSesion {
 
-    fun desde(eventos: List<EventoTaller>, sensor: SensorMultimetro): LecturasEcu? {
+    fun desde(eventos: List<EventoTaller>, sensor: SensorMultimetro, resolver: StringResolver): LecturasEcu? {
         if (sensor != SensorMultimetro.TPS) return null
         return eventos
             .filter { it.tipo == TipoEvento.PRUEBA_GUIADA }
             .sortedByDescending { it.instante }
-            .firstNotNullOfOrNull(::barridoTps)
+            .firstNotNullOfOrNull { barridoTps(it, resolver) }
     }
 
-    private fun barridoTps(evento: EventoTaller): LecturasEcu? {
+    private fun barridoTps(evento: EventoTaller, resolver: StringResolver): LecturasEcu? {
         val payload = runCatching { JSONObject(evento.payloadJson) }.getOrNull() ?: return null
         if (payload.optString("prueba") != TipoPrueba.TPS_BARRIDO.name || payload.optString("estado") != "TERMINADA") return null
         val detalle = payload.optJSONObject("detalle") ?: return null
@@ -110,7 +117,9 @@ object LecturasEcuSesion {
             CondicionesMultimetro.MEDIO to detalle.numero("medioV"),
             CondicionesMultimetro.FONDO to detalle.numero("fondoV"),
         ).filterValues { it != null }.mapValues { it.value!! }
-        return voltios.takeIf { it.isNotEmpty() }?.let { LecturasEcu("Prueba guiada «${evento.titulo}» de esta sesión", it) }
+        return voltios.takeIf { it.isNotEmpty() }?.let {
+            LecturasEcu(resolver.get(R.string.obd_multimeter_ecu_source, evento.titulo), it)
+        }
     }
 
     private fun JSONObject.numero(nombre: String): Double? = optDouble(nombre).takeUnless(Double::isNaN)

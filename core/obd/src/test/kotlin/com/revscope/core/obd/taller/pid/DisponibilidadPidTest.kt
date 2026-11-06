@@ -1,13 +1,16 @@
 package com.revscope.core.obd.taller.pid
 
+import com.revscope.core.obd.R
 import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.pid.PidRegistry
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DisponibilidadPidTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private val registry = PidRegistry(
         """
@@ -26,6 +29,7 @@ class DisponibilidadPidTest {
             pid = "05",
             nombre = "la temperatura del motor",
             registry = registry,
+            stringResolver = resolver,
         )
 
         assertEquals(EstadoSoporte.Desconocido, result.estado)
@@ -41,6 +45,7 @@ class DisponibilidadPidTest {
             pid = "05",
             nombre = "la temperatura del motor",
             registry = registry,
+            stringResolver = resolver,
         )
 
         assertEquals(EstadoSoporte.NoSoportado, result.estado)
@@ -55,6 +60,7 @@ class DisponibilidadPidTest {
             pid = "05",
             nombre = "la temperatura del motor",
             registry = registry,
+            stringResolver = resolver,
         )
 
         assertEquals(EstadoSoporte.Soportado, result.estado)

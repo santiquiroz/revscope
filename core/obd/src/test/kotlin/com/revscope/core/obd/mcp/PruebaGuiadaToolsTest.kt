@@ -1,6 +1,7 @@
 package com.revscope.core.obd.mcp
 
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.grafica.FuenteVref
 import com.revscope.core.obd.taller.grafica.PreferenciasVref
 import com.revscope.core.obd.taller.grafica.PreferenciasVrefEnMemoria
@@ -12,6 +13,7 @@ import com.revscope.core.obd.taller.sesion.BENELLI
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.OrigenEvento
 import com.revscope.core.obd.taller.sesion.TipoEvento
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -25,6 +27,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class PruebaGuiadaToolsTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     @get:Rule
     val carpeta = TemporaryFolder()
@@ -38,7 +41,7 @@ class PruebaGuiadaToolsTest {
 
     private fun TestScope.tools(preferencias: PreferenciasVref = PreferenciasVrefEnMemoria()): Tools {
         val m = MontajePrueba(this, carpeta.root)
-        val fuenteVref = FuenteVref(preferencias, m.repositorio) { m.vehiculo }
+        val fuenteVref = FuenteVref(preferencias, m.repositorio, resolver) { m.vehiculo }
         return Tools(m, fuenteVref)
     }
 

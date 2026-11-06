@@ -1,5 +1,6 @@
 package com.revscope.feature.sensors
 
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.telemetry.captura.CapturaRapida
 import com.revscope.core.obd.telemetry.captura.MuestreadorVoltaje
 import com.revscope.core.uitesting.XmlStringResolver
@@ -8,8 +9,16 @@ import org.junit.Test
 
 class MotivoVisibleTest {
 
-    private val english = XmlStringResolver.en(R::class.java)
-    private val spanish = XmlStringResolver.es(R::class.java)
+    private val english = XmlStringResolver.en(
+        R::class.java,
+        ObdR::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
+    private val spanish = XmlStringResolver.es(
+        R::class.java,
+        ObdR::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
 
     @Test
     fun `capture end reasons use the selected language and preserve link details`() {

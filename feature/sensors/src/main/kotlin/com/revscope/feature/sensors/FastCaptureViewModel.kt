@@ -19,6 +19,7 @@ import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.taller.grafica.FuenteVref
+import com.revscope.core.obd.taller.grafica.ResolutorVref
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.referencia.BandaReferencia
@@ -125,7 +126,7 @@ class FastCaptureViewModel @Inject constructor(
     fun disponibilidad(pid: String): DisponibilidadPid {
         val nombre = registry.getDefinition(pid)?.nameEs?.lowercase()
             ?: resolver.get(R.string.sensors_this_parameter)
-        return DisponibilidadPid.resolver(pid, nombre, registry)
+        return DisponibilidadPid.resolver(pid, nombre, registry, resolver)
     }
 
     fun nombreDe(pid: String): String = registry.getDefinition(pid)?.nameEs ?: pid
@@ -191,6 +192,8 @@ class FastCaptureViewModel @Inject constructor(
     }
 
     fun motivoVisible(motivo: String): String = motivoVisible(motivo, resolver)
+
+    fun textoRestablecerVref(referencia: EstadoVref): String? = ResolutorVref.textoRestablecer(referencia, resolver)
 
     fun elegirUnidad(unidad: UnidadPosicion) = opciones.update { it.copy(unidad = unidad) }
 

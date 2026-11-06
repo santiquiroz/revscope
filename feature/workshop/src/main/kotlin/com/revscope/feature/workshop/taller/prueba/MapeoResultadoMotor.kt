@@ -5,6 +5,7 @@ import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
 import com.revscope.core.designsystem.SerieGrafica
 import com.revscope.core.designsystem.TramoGrafica
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.AnalisisArranqueFrio
@@ -29,28 +30,28 @@ internal object MapeoResultadoMotor {
     fun minimo(base: ResultadoUi, a: AnalisisMinimo, datos: DatosPrueba?, resolver: StringResolver): ResultadoUi {
         val banda = a.comprobacion(ClavesBanda.MINIMO_RPM)?.banda
         return base.copy(
-            comprobaciones = a.comprobaciones.map(::comprobacion),
+            comprobaciones = a.comprobaciones.map { comprobacion(it, resolver) },
             medidas = TextosMinimo.medidas(a, resolver),
-            graficas = listOfNotNull(datos?.let { grafica(it, AnalizadorMinimo.PID_RPM, TextosMinimo.titulosPaso(resolver), banda) }),
+            graficas = listOfNotNull(datos?.let { grafica(it, AnalizadorMinimo.PID_RPM, TextosMinimo.titulosPaso(resolver), banda, resolver) }),
         )
     }
 
-    fun arranque(base: ResultadoUi, a: AnalisisArranqueFrio, datos: DatosPrueba?): ResultadoUi = base.copy(
-        comprobaciones = a.comprobaciones.map(::comprobacion),
+    fun arranque(base: ResultadoUi, a: AnalisisArranqueFrio, datos: DatosPrueba?, resolver: StringResolver): ResultadoUi = base.copy(
+        comprobaciones = a.comprobaciones.map { comprobacion(it, resolver) },
         medidas = TextosArranqueFrio.medidas(a),
         graficas = datos?.let { d ->
             listOfNotNull(
-                grafica(d, AnalizadorArranqueFrio.PID_RPM, TextosArranqueFrio.TITULOS_PASO, null),
-                grafica(d, AnalizadorArranqueFrio.PID_ECT, TextosArranqueFrio.TITULOS_PASO, null),
+                grafica(d, AnalizadorArranqueFrio.PID_RPM, TextosArranqueFrio.TITULOS_PASO, null, resolver),
+                grafica(d, AnalizadorArranqueFrio.PID_ECT, TextosArranqueFrio.TITULOS_PASO, null, resolver),
             )
         }.orEmpty(),
         codigoGuia = CODIGO_ECT_INTERMITENTE.takeIf { a.patron == PatronArranque.SALTOS_ECT },
     )
 
-    fun comprobacion(c: Comprobacion): ComprobacionUi {
+    fun comprobacion(c: Comprobacion, resolver: StringResolver): ComprobacionUi {
         val banda = c.banda ?: return ComprobacionUi(c.etiqueta, c.cumple)
-        val valor = c.valor?.let { "${FormatoTaller.numero(it, decimales(c.unidad))} ${TextoBanda.unidad(c.unidad)}".trim() } ?: "—"
-        return ComprobacionUi("${c.etiqueta}: $valor · banda ${TextoBanda.citar(banda, decimalesBanda(banda.unidad))}", c.cumple)
+        val valor = c.valor?.let { "${LocaleNumbers.decimal(it, decimales(c.unidad), resolver.locale)} ${TextoBanda.unidad(c.unidad)}".trim() } ?: "—"
+        return ComprobacionUi("${c.etiqueta}: $valor · banda ${TextoBanda.citar(banda, decimalesBanda(banda.unidad), resolver)}", c.cumple)
     }
 
     private fun decimales(unidad: String): Int = when (unidad) {
@@ -63,8 +64,21 @@ internal object MapeoResultadoMotor {
 
     // ── Serie de toda la prueba ─────────────────────────────────────────────
 
-    fun grafica(datos: DatosPrueba, pid: String, titulos: Map<String, String>, banda: BandaReferencia?): GraficaResultadoUi? =
-        graficaCon(datos, pid, titulos, banda?.let(MapeoMagnitud::bandaGrafica), banda?.let(MapeoMagnitud::leyenda))
+    fun grafica(
+        datos: DatosPrueba,
+        pid: String,
+        titulos: Map<String, String>,
+        banda: BandaReferencia?,
+        resolver: StringResolver,
+    ): GraficaResultadoUi? =
+        graficaCon(
+            datos,
+            pid,
+            titulos,
+            banda?.let(MapeoMagnitud::bandaGrafica),
+            banda?.let { MapeoMagnitud.leyenda(it, resolver) },
+            resolver,
+        )
 
     // [leyendaBanda] describe la banda sombreada (o la de un solo lado, que no se sombrea) con su origen.
     fun graficaCon(
@@ -73,13 +87,14 @@ internal object MapeoResultadoMotor {
         titulos: Map<String, String>,
         bandaGrafica: BandaGrafica?,
         leyendaBanda: String?,
+        resolver: StringResolver,
     ): GraficaResultadoUi? {
         val m = MapeoMagnitud.de(pid)
         val puntos = datos.muestras.filter { it.pid == pid }.sortedBy { it.tMicros }.map { PuntoGrafica(it.tMicros / 1_000_000.0, it.valor) }
         if (puntos.size < 2) return null
         val modelo = ModeloGrafica(
             series = listOf(SerieGrafica(m.nombre, puntos)),
-            descripcion = "${m.nombre} en toda la prueba: de ${m.texto(puntos.minOf { it.y })} a ${m.texto(puntos.maxOf { it.y })}, " +
+            descripcion = "${m.nombre} en toda la prueba: de ${m.texto(puntos.minOf { it.y }, resolver)} a ${m.texto(puntos.maxOf { it.y }, resolver)}, " +
                 "${pasosSombreados(datos.segmentos.size)}." + leyendaBanda?.let { " Banda $it" }.orEmpty(),
             bandas = listOfNotNull(bandaGrafica),
             tramos = datos.segmentos.mapIndexed { i, s -> TramoGrafica("${i + 1}", s.inicioMs / 1_000.0, s.finMs / 1_000.0) },

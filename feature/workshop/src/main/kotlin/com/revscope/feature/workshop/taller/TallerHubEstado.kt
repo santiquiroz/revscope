@@ -37,7 +37,7 @@ data class TallerHubEstado(
     val sesionAbierta: TarjetaSesionAbierta? = null,
     val anteriores: List<FilaSesionAnterior> = emptyList(),
     val verTodas: Boolean = false,
-    val capacidades: CapacidadesEcu = CapacidadesEcu.desde(null, emptySet()),
+    val capacidades: CapacidadesEcu = CapacidadesEcu.SIN_DATOS,
 ) {
     val anterioresVisibles: List<FilaSesionAnterior>
         get() = if (verTodas) anteriores else anteriores.take(ANTERIORES_EN_RESUMEN)
@@ -62,7 +62,7 @@ internal object ResumenHub {
         conexion: ConnectionState,
         verTodas: Boolean,
         zona: ZoneId,
-        capacidades: CapacidadesEcu = CapacidadesEcu.desde(null, emptySet()),
+        capacidades: CapacidadesEcu = CapacidadesEcu.SIN_DATOS,
     ): TallerHubEstado {
         val abierta = datos.sesiones.firstOrNull { it.abierta }
         return TallerHubEstado(
