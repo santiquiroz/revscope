@@ -1,10 +1,13 @@
 package com.revscope.core.navigation
 
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RouteScoringTest {
+
+    private val es = XmlStringResolver.es(R::class.java)
 
     private val origin = LatLon(6.2000, -75.5800)
     private val dest = LatLon(6.2010, -75.5800)
@@ -29,21 +32,21 @@ class RouteScoringTest {
 
     @Test
     fun `la ruta de menor duracion queda Rapida`() {
-        val labels = RouteScoring.labelAlternatives(listOf(rapida(), curva(), alternativa()))
+        val labels = RouteScoring.labelAlternatives(listOf(rapida(), curva(), alternativa()), es)
 
         assertEquals("Rápida", labels[0])
     }
 
     @Test
     fun `la mas sinuosa por encima del umbral queda Curvas`() {
-        val labels = RouteScoring.labelAlternatives(listOf(rapida(), curva(), alternativa()))
+        val labels = RouteScoring.labelAlternatives(listOf(rapida(), curva(), alternativa()), es)
 
         assertEquals("Curvas", labels[1])
     }
 
     @Test
     fun `la restante sin cruzar el umbral queda Alt`() {
-        val labels = RouteScoring.labelAlternatives(listOf(rapida(), curva(), alternativa()))
+        val labels = RouteScoring.labelAlternatives(listOf(rapida(), curva(), alternativa()), es)
 
         assertEquals("Alt", labels[2])
     }
@@ -53,21 +56,31 @@ class RouteScoringTest {
         // La más sinuosa de todas coincide con la de menor duración: Rápida manda, Curvas no
         // se reasigna a otra que no cruce el umbral.
         val muyRapidaYCurva = syntheticRoute(distanceM = straightLineM * 3, durationS = 200.0)
-        val labels = RouteScoring.labelAlternatives(listOf(muyRapidaYCurva, alternativa()))
+        val labels = RouteScoring.labelAlternatives(listOf(muyRapidaYCurva, alternativa()), es)
 
         assertEquals(listOf("Rápida", "Alt"), labels)
     }
 
     @Test
     fun `una sola ruta no tiene con que compararse y queda Rapida`() {
-        val labels = RouteScoring.labelAlternatives(listOf(rapida()))
+        val labels = RouteScoring.labelAlternatives(listOf(rapida()), es)
 
         assertEquals(listOf("Rápida"), labels)
     }
 
     @Test
+    fun `en ingles las etiquetas salen en ingles`() {
+        val labels = RouteScoring.labelAlternatives(
+            listOf(rapida(), curva(), alternativa()),
+            XmlStringResolver.en(R::class.java),
+        )
+
+        assertEquals(listOf("Fastest", "Curvy", "Alt"), labels)
+    }
+
+    @Test
     fun `sin rutas no hay nada que etiquetar`() {
-        assertTrue(RouteScoring.labelAlternatives(emptyList()).isEmpty())
+        assertTrue(RouteScoring.labelAlternatives(emptyList(), es).isEmpty())
     }
 
     private fun rapida() = syntheticRoute(distanceM = straightLineM, durationS = 300.0)
