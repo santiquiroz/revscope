@@ -78,7 +78,6 @@ import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.maps.peekMapLayersAsset
 import com.revscope.core.maps.readMapLayersAsset
-import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.common.i18n.AppLanguage
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
