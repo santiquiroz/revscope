@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.perfilcan.ClavesSenal
 import com.revscope.core.obd.perfilcan.EstadoSenal
@@ -20,6 +21,7 @@ import com.revscope.core.obd.perfilcan.VehiculoPerfil
 import com.revscope.core.obd.perfilcan.fuentesPorSenalDe
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.taller.pid.CapacidadesEcu
+import com.revscope.feature.vehicle.R
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -60,6 +62,7 @@ class PerfilCanViewModelTest {
     private val dao = mockk<VehicleProfileDao>(relaxed = true)
     private val repositorio = mockk<PerfilesCanRepositorio>(relaxed = true)
     private val sesion = mockk<ObdSessionManager>(relaxed = true)
+    private val resolver = XmlStringResolver.es(R::class.java)
     private lateinit var ajustes: DataStore<Preferences>
 
     @Before
@@ -85,7 +88,8 @@ class PerfilCanViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm() = PerfilCanViewModel(dao, repositorio, sesion, ajustes, despachador).also { it.cargar(ID_VEHICULO) }
+    private fun vm() = PerfilCanViewModel(dao, repositorio, sesion, ajustes, despachador, resolver)
+        .also { it.cargar(ID_VEHICULO) }
 
     @Test
     fun `elegir perfil adopta y guarda perfilCanId`() {
@@ -185,10 +189,20 @@ class PerfilCanViewModelTest {
 
         val prueba = vm.prueba.value!!
         assertFalse(prueba.disponible)
-        assertEquals(TextosBusCan.SIN_CONEXION, prueba.motivoSinPrueba)
-        assertEquals(TextosBusCan.SIN_CONEXION, vm.datos.value?.motivoSinPrueba)
+        assertEquals(resolver.get(R.string.vehicle_can_no_connection), prueba.motivoSinPrueba)
+        assertEquals(resolver.get(R.string.vehicle_can_no_connection), vm.datos.value?.motivoSinPrueba)
         verify(exactly = 0) { sesion.probarSenal(any()) }
         verify(exactly = 0) { repositorio.marcarEstado(any(), any(), any()) }
+    }
+
+    @Test
+    fun `resuelve la descripcion CAN en ingles`() {
+        val english = XmlStringResolver.en(R::class.java)
+
+        assertEquals(
+            "Standard OBD plus short bus scans after each polling cycle. Recommended.",
+            english.get(R.string.vehicle_can_combined_description),
+        )
     }
 
     private companion object {

@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.VehicleProfileDao
@@ -20,6 +21,7 @@ import com.revscope.core.obd.perfilcan.SenalCan
 import com.revscope.core.obd.perfilcan.fuentesPorSenalDe
 import com.revscope.core.obd.perfilcan.modoFuenteDe
 import com.revscope.core.obd.session.ObdSessionManager
+import com.revscope.feature.vehicle.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +74,7 @@ class PerfilCanViewModel internal constructor(
     private val sessionManager: ObdSessionManager,
     private val settings: DataStore<Preferences>,
     private val despachadorDisco: CoroutineDispatcher,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     @Inject
@@ -80,7 +83,8 @@ class PerfilCanViewModel internal constructor(
         repositorio: PerfilesCanRepositorio,
         sessionManager: ObdSessionManager,
         settings: DataStore<Preferences>,
-    ) : this(profileDao, repositorio, sessionManager, settings, Dispatchers.IO)
+        resolver: StringResolver,
+    ) : this(profileDao, repositorio, sessionManager, settings, Dispatchers.IO, resolver)
 
     private val vehiculo = MutableStateFlow<VehicleProfileEntity?>(null)
     private val velocidadGps = settings.data.map { it[PreferencesKeys.SPEED_SOURCE_GPS] ?: false }
@@ -159,8 +163,8 @@ class PerfilCanViewModel internal constructor(
 
     private fun motivoSinPrueba(estado: ConnectionState): String? = when {
         sessionManager.puedeProbarBus() -> null
-        estado is ConnectionState.Connected -> TextosBusCan.SIN_CAN
-        else -> TextosBusCan.SIN_CONEXION
+        estado is ConnectionState.Connected -> resolver.get(R.string.vehicle_can_no_bus)
+        else -> resolver.get(R.string.vehicle_can_no_connection)
     }
 
     private fun perfilDe(v: VehicleProfileEntity): PerfilCan? = v.perfilCanId?.let(repositorio::leer)
@@ -190,8 +194,8 @@ class PerfilCanViewModel internal constructor(
     private fun pruebaInicial(senal: SenalCan, motivo: String?) = PruebaEnVivoUi(
         clave = senal.clave,
         nombre = senal.nombre,
-        instruccion = TextosBusCan.instruccion(senal.clave),
-        detalle = TextosBusCan.detalle(senal),
+        instruccion = TextosBusCan.instruccion(senal.clave, resolver),
+        detalle = TextosBusCan.detalle(senal, resolver),
         valor = null,
         disponible = motivo == null,
         motivoSinPrueba = motivo,

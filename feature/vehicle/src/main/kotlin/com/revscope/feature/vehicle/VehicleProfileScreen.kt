@@ -1,5 +1,6 @@
 package com.revscope.feature.vehicle
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -107,7 +109,7 @@ fun VehicleProfileScreen(
             .fillMaxSize()
             .background(RevScopeColors.Background),
     ) {
-        BarraConVolver(titulo = "Perfiles de vehículo", onVolver = onNavigateBack)
+        BarraConVolver(titulo = stringResource(R.string.vehicle_profiles_title), onVolver = onNavigateBack)
 
         Column(
             modifier = Modifier
@@ -130,7 +132,8 @@ fun VehicleProfileScreen(
 
             // Profile form (create or edit)
             Text(
-                editingProfile?.let { "Editando: ${it.name}" } ?: "Nuevo perfil",
+                editingProfile?.let { stringResource(R.string.vehicle_editing, it.name) }
+                    ?: stringResource(R.string.vehicle_new_profile),
                 color = if (editingProfile != null) RevScopeColors.Accent else RevScopeColors.TextSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
@@ -139,7 +142,7 @@ fun VehicleProfileScreen(
             OutlinedTextField(
                 value = formName,
                 onValueChange = { vm.setName(it) },
-                label = { Text("Nombre del vehículo", color = RevScopeColors.TextSecondary) },
+                label = { Text(stringResource(R.string.vehicle_name), color = RevScopeColors.TextSecondary) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = RevScopeColors.Accent,
@@ -152,13 +155,13 @@ fun VehicleProfileScreen(
             // Type picker
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 TypeChip(
-                    label = "Auto",
+                    label = stringResource(R.string.vehicle_car),
                     icon = { Icon(Icons.Default.DirectionsCar, null, modifier = Modifier.size(16.dp)) },
                     selected = formType == "CAR",
                     onClick = { vm.setType("CAR") },
                 )
                 TypeChip(
-                    label = "Moto",
+                    label = stringResource(R.string.vehicle_motorcycle),
                     icon = { Icon(Icons.Default.TwoWheeler, null, modifier = Modifier.size(16.dp)) },
                     selected = formType == "MOTORCYCLE",
                     onClick = { vm.setType("MOTORCYCLE") },
@@ -166,20 +169,20 @@ fun VehicleProfileScreen(
             }
 
             // Fuel type picker
-            Text("Combustible", color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.vehicle_fuel), color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FuelTypeChip(
-                    label = "Corriente",
+                    label = stringResource(R.string.vehicle_fuel_regular),
                     selected = formFuelType == "CORRIENTE",
                     onClick = { vm.setFuelType("CORRIENTE") },
                 )
                 FuelTypeChip(
-                    label = "Extra",
+                    label = stringResource(R.string.vehicle_fuel_premium),
                     selected = formFuelType == "EXTRA",
                     onClick = { vm.setFuelType("EXTRA") },
                 )
                 FuelTypeChip(
-                    label = "Diésel",
+                    label = stringResource(R.string.vehicle_fuel_diesel),
                     selected = formFuelType == "DIESEL",
                     onClick = { vm.setFuelType("DIESEL") },
                 )
@@ -192,7 +195,7 @@ fun VehicleProfileScreen(
                 OutlinedTextField(
                     value = formVin,
                     onValueChange = { vm.setVin(it) },
-                    label = { Text("VIN — activa el perfil solo al conectar", color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
+                    label = { Text(stringResource(R.string.vehicle_vin_hint), color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
                     modifier = Modifier.weight(1f),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = RevScopeColors.Accent,
@@ -206,7 +209,7 @@ fun VehicleProfileScreen(
                     enabled = connectionState is ConnectionState.Connected,
                     colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
                 ) {
-                    Text("Leer VIN", color = RevScopeColors.TextPrimary, fontSize = 12.sp)
+                    Text(stringResource(R.string.vehicle_read_vin), color = RevScopeColors.TextPrimary, fontSize = 12.sp)
                 }
             }
             vinStatus?.let { Text(it, color = RevScopeColors.TextSecondary, fontSize = 12.sp) }
@@ -233,7 +236,7 @@ fun VehicleProfileScreen(
                 OutlinedTextField(
                     value = formMaxRpm,
                     onValueChange = { vm.setMaxRpm(it) },
-                    label = { Text("RPM máx gauge", color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
+                    label = { Text(stringResource(R.string.vehicle_max_rpm), color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
@@ -247,7 +250,7 @@ fun VehicleProfileScreen(
                 OutlinedTextField(
                     value = formRedlineRpm,
                     onValueChange = { vm.setRedlineRpm(it) },
-                    label = { Text("Zona roja RPM", color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
+                    label = { Text(stringResource(R.string.vehicle_redline_rpm), color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
@@ -261,7 +264,7 @@ fun VehicleProfileScreen(
                 OutlinedTextField(
                     value = formGearCount,
                     onValueChange = { vm.setGearCount(it) },
-                    label = { Text("Marchas", color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
+                    label = { Text(stringResource(R.string.vehicle_gears), color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
@@ -275,7 +278,7 @@ fun VehicleProfileScreen(
             }
 
             // PID enablement
-            Text("PIDs activos", color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.vehicle_active_pids), color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -302,12 +305,12 @@ fun VehicleProfileScreen(
             }
 
             // Documents and pico y placa
-            Text("Documentos y normativa", color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.vehicle_documents_and_rules), color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
 
             OutlinedTextField(
                 value = formPlate,
                 onValueChange = { vm.setPlate(it) },
-                label = { Text("Placa", color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.vehicle_license_plate), color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -324,17 +327,17 @@ fun VehicleProfileScreen(
             )
 
             DateField(
-                label = "SOAT vence",
+                label = R.string.vehicle_soat_expires,
                 valueMs = formSoatExpiresAt,
                 onValueChange = { vm.setSoatExpiresAt(it) },
             )
             DateField(
-                label = "Tecnomecánica vence",
+                label = R.string.vehicle_rtm_expires,
                 valueMs = formRtmExpiresAt,
                 onValueChange = { vm.setRtmExpiresAt(it) },
             )
             DateField(
-                label = "Todo riesgo vence",
+                label = R.string.vehicle_comprehensive_insurance_expires,
                 valueMs = formInsuranceExpiresAt,
                 onValueChange = { vm.setInsuranceExpiresAt(it) },
             )
@@ -346,7 +349,7 @@ fun VehicleProfileScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
             ) {
                 Text(
-                    if (editingProfile != null) "Actualizar perfil" else "Guardar perfil",
+                    stringResource(if (editingProfile != null) R.string.vehicle_update_profile else R.string.vehicle_save_profile),
                     color = RevScopeColors.Background,
                     fontWeight = FontWeight.Bold,
                 )
@@ -357,7 +360,7 @@ fun VehicleProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
                 ) {
-                    Text("Cancelar edición", color = RevScopeColors.TextPrimary)
+                    Text(stringResource(R.string.vehicle_cancel_editing), color = RevScopeColors.TextPrimary)
                 }
             }
         }
@@ -372,16 +375,16 @@ private fun ModeloReferenciaDropdown(
     onSeleccionar: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val nombre = modelos.firstOrNull { it.clave == seleccionado }?.nombre ?: "Sin modelo de referencia"
+    val nombre = modelos.firstOrNull { it.clave == seleccionado }?.nombre ?: stringResource(R.string.vehicle_no_reference_model)
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
             value = nombre,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Modelo de referencia", color = RevScopeColors.TextSecondary) },
+            label = { Text(stringResource(R.string.vehicle_reference_model), color = RevScopeColors.TextSecondary) },
             supportingText = {
                 Text(
-                    "Aporta ECU, repuestos, cableado y referencias citadas.",
+                    stringResource(R.string.vehicle_reference_model_description),
                     color = RevScopeColors.TextSecondary,
                 )
             },
@@ -396,7 +399,7 @@ private fun ModeloReferenciaDropdown(
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("Sin modelo de referencia") },
+                text = { Text(stringResource(R.string.vehicle_no_reference_model)) },
                 onClick = {
                     onSeleccionar(null)
                     expanded = false
@@ -423,7 +426,7 @@ private fun PicoYPlacaCityDropdown(
     onCitySelected: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = CityRegistry.CITIES.firstOrNull { it.id == selectedCityId }?.nombre ?: "Ninguna"
+    val selectedLabel = CityRegistry.CITIES.firstOrNull { it.id == selectedCityId }?.nombre ?: stringResource(R.string.vehicle_none)
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -433,7 +436,7 @@ private fun PicoYPlacaCityDropdown(
             value = selectedLabel,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Pico y placa", color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.vehicle_pico_y_placa_city), color = RevScopeColors.TextSecondary, fontSize = 12.sp) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -450,7 +453,7 @@ private fun PicoYPlacaCityDropdown(
             onDismissRequest = { expanded = false },
         ) {
             DropdownMenuItem(
-                text = { Text("Ninguna") },
+                text = { Text(stringResource(R.string.vehicle_none)) },
                 onClick = {
                     onCitySelected(null)
                     expanded = false
@@ -477,7 +480,7 @@ private fun PicoYPlacaCityDropdown(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateField(
-    label: String,
+    @StringRes label: Int,
     valueMs: Long?,
     onValueChange: (Long?) -> Unit,
 ) {
@@ -497,9 +500,9 @@ private fun DateField(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = RevScopeColors.TextSecondary, fontSize = 12.sp)
+            Text(stringResource(label), color = RevScopeColors.TextSecondary, fontSize = 12.sp)
             Text(
-                text = valueMs?.let { formatter.format(Date(it)) } ?: "Sin definir",
+                text = valueMs?.let { formatter.format(Date(it)) } ?: stringResource(R.string.vehicle_sin_definir),
                 color = if (valueMs != null) RevScopeColors.TextPrimary else RevScopeColors.TextSecondary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
@@ -507,7 +510,7 @@ private fun DateField(
         }
         if (valueMs != null) {
             IconButton(onClick = { onValueChange(null) }) {
-                Icon(Icons.Default.Clear, contentDescription = "Limpiar $label", tint = RevScopeColors.TextSecondary)
+                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.vehicle_clear_label, stringResource(label)), tint = RevScopeColors.TextSecondary)
             }
         }
     }
@@ -520,10 +523,10 @@ private fun DateField(
                 TextButton(onClick = {
                     onValueChange(pickerState.selectedDateMillis)
                     showPicker = false
-                }) { Text("Aceptar") }
+                }) { Text(stringResource(R.string.vehicle_accept)) }
             },
             dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text("Cancelar") }
+                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.vehicle_cancel)) }
             },
         ) {
             DatePicker(state = pickerState)
@@ -549,9 +552,10 @@ private fun AdapterLinkSection(
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("Adaptador vinculado", color = RevScopeColors.TextSecondary, fontSize = 12.sp)
+        Text(stringResource(R.string.vehicle_adapter_linked), color = RevScopeColors.TextSecondary, fontSize = 12.sp)
         Text(
-            text = (adapterAddress ?: "Ninguno") + if (isLinkedToConnected) " (conectado ahora)" else "",
+            text = (adapterAddress ?: stringResource(R.string.vehicle_adapter_none)) +
+                if (isLinkedToConnected) stringResource(R.string.vehicle_connected_now) else "",
             color = if (isLinkedToConnected) RevScopeColors.Accent else RevScopeColors.TextPrimary,
             fontSize = 14.sp,
             fontFamily = FontFamily.Monospace,
@@ -564,11 +568,11 @@ private fun AdapterLinkSection(
                 enabled = isConnected,
                 colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
             ) {
-                Text("Vincular adaptador conectado", color = RevScopeColors.Background, fontSize = 12.sp)
+                Text(stringResource(R.string.vehicle_link_connected_adapter), color = RevScopeColors.Background, fontSize = 12.sp)
             }
             if (adapterAddress != null) {
                 TextButton(onClick = onUnlink) {
-                    Text("Desvincular", color = RevScopeColors.Danger, fontSize = 12.sp)
+                    Text(stringResource(R.string.vehicle_unlink_adapter), color = RevScopeColors.Danger, fontSize = 12.sp)
                 }
             }
         }
@@ -599,10 +603,10 @@ private fun TypeChip(
     )
 }
 
-private fun fuelTypeLabel(fuelType: String): String = when (fuelType) {
-    "EXTRA" -> "Extra"
-    "DIESEL" -> "Diésel"
-    else -> "Corriente"
+private fun fuelTypeLabel(fuelType: String): Int = when (fuelType) {
+    "EXTRA" -> R.string.vehicle_fuel_premium
+    "DIESEL" -> R.string.vehicle_fuel_diesel
+    else -> R.string.vehicle_fuel_regular
 }
 
 @Composable
@@ -632,7 +636,7 @@ internal fun PerfilesGuardados(
     var porBorrar by remember { mutableStateOf<VehicleProfileEntity?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "Perfiles guardados (toca uno para editarlo)",
+            stringResource(R.string.vehicle_saved_profiles),
             color = RevScopeColors.TextSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
@@ -668,13 +672,12 @@ internal fun ConfirmarBorrarVehiculoDialog(
     onCancelar: () -> Unit,
 ) {
     ConfirmarDestructivoDialog(
-        titulo = "¿Eliminar «${perfil.name}»?",
+        titulo = stringResource(R.string.vehicle_delete_profile_title, perfil.name),
         avisos = listOf(
-            "Se borra el perfil con su configuración: PIDs, marchas, placa y vencimientos de documentos. " +
-                "No se puede deshacer.",
-            "Los viajes de este vehículo se conservan en el historial (filtro «Todos»).",
+            stringResource(R.string.vehicle_delete_profile_warning),
+            stringResource(R.string.vehicle_delete_profile_trips_warning),
         ),
-        textoConfirmar = "Eliminar vehículo",
+        textoConfirmar = stringResource(R.string.vehicle_delete_vehicle),
         onConfirmar = onConfirmar,
         onCancelar = onCancelar,
     )
@@ -711,15 +714,20 @@ private fun ProfileItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(profile.name, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(
-                "gauge ${profile.maxRpm} · roja ${profile.redlineRpm} · ${fuelTypeLabel(profile.fuelType)}" +
-                    (profile.vin?.let { " · VIN ${it.takeLast(6)}" } ?: ""),
+                stringResource(
+                    R.string.vehicle_profile_gauge_summary,
+                    profile.maxRpm,
+                    profile.redlineRpm,
+                    stringResource(fuelTypeLabel(profile.fuelType)),
+                ) + (profile.vin?.let { stringResource(R.string.vehicle_profile_vin_suffix, it.takeLast(6)) } ?: ""),
                 color = RevScopeColors.TextSecondary,
                 fontSize = 12.sp,
             )
             profile.adapterAddress?.let { address ->
                 val isConnectedNow = address == connectedAdapterAddress
                 Text(
-                    text = "Adaptador: $address" + if (isConnectedNow) " (conectado ahora)" else "",
+                    text = stringResource(R.string.vehicle_adapter_address, address) +
+                        if (isConnectedNow) stringResource(R.string.vehicle_connected_now) else "",
                     color = if (isConnectedNow) RevScopeColors.Accent else RevScopeColors.TextSecondary,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace,
@@ -728,7 +736,7 @@ private fun ProfileItem(
         }
         if (isActive) {
             Text(
-                "ACTIVO",
+                stringResource(R.string.vehicle_active),
                 color = RevScopeColors.Accent,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
@@ -741,11 +749,11 @@ private fun ProfileItem(
                 onClick = onActivate,
                 colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
             ) {
-                Text("Usar", color = RevScopeColors.TextPrimary, fontSize = 12.sp)
+                Text(stringResource(R.string.vehicle_use_profile), color = RevScopeColors.TextPrimary, fontSize = 12.sp)
             }
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "Eliminar ${profile.name}", tint = RevScopeColors.Danger)
+            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.vehicle_delete_profile_content_description, profile.name), tint = RevScopeColors.Danger)
         }
     }
 }
