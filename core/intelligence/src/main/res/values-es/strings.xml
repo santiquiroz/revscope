@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_response_language">Escribe toda tu respuesta en español.</string>
+
+    <string name="ai_dtc_no_provider">Para obtener explicaciones con IA, configura un proveedor en Ajustes → Inteligencia artificial.</string>
+    <string name="ai_dtc_offline">Código %1$s — sin conexión. Conectate a internet para obtener la explicación IA.</string>
+    <string name="ai_dtc_fallback">Código %1$s — la explicación IA no está disponible en este momento.</string>
+
+    <string name="ai_debrief_no_provider">Configura un proveedor de IA en Ajustes</string>
+
+    <string name="ai_anomaly_high_temperature">Temperatura anómala en PID %1$s: %2$s</string>
+    <string name="ai_anomaly_fuel_trim">Corrección de combustible anómala en PID %1$s: %2$s%%</string>
+    <string name="ai_anomaly_abnormal_reading">Lectura anómala en PID %1$s: %2$s</string>
+
+    <string name="ai_drive_style_eco">Eco</string>
+    <string name="ai_drive_style_normal">Normal</string>
+    <string name="ai_drive_style_sport">Sport</string>
+    <string name="ai_drive_style_aggressive">Agresivo</string>
+
+    <string name="ai_provider_openai_compatible">Compatible OpenAI</string>
+</resources>

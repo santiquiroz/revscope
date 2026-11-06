@@ -42,6 +42,8 @@ dependencies {
     testImplementation(libs.mockk)
     // org.json available on Android runtime; add for JVM unit tests (AiResponseParsersTest)
     testImplementation(libs.org.json)
+    // XmlStringResolver: textos de strings.xml en tests JVM (español por defecto).
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

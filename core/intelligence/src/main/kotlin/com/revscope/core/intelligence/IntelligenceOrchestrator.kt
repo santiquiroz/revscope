@@ -1,5 +1,6 @@
 package com.revscope.core.intelligence
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.intelligence.anomaly.AnomalyAlert
 import com.revscope.core.intelligence.anomaly.AnomalyDetector
 import com.revscope.core.intelligence.dtc.DtcExplanation
@@ -45,6 +46,7 @@ class IntelligenceOrchestrator(
     val tier: IntelligenceTier,
     private val dtcExplainer: DtcExplainer,
     private val alertsEngine: AlertsEngine,
+    private val resolver: StringResolver,
 ) {
     val gearLearner = AdaptiveGearLearner()
 
@@ -134,7 +136,7 @@ class IntelligenceOrchestrator(
             _anomalyAlerts.emit(alert)
             // Single app-wide Hilt singleton — the one non-duplicating place to speak anomalies,
             // regardless of which (if any) screen is collecting anomalyAlerts.
-            alertsEngine.announceAnomaly(anomalyAlertKey(alert), alert.message)
+            alertsEngine.announceAnomaly(anomalyAlertKey(alert), alert.message(resolver))
         }
     }
 

@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import com.revscope.core.data.backup.BackupManager
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.secure.SecureKeyStore
+import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.intelligence.provider.AI_PROVIDER_ANTHROPIC
 import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
 import com.revscope.core.intelligence.provider.AI_PROVIDER_NODO
@@ -589,7 +590,7 @@ class SettingsViewModel @Inject constructor(
                 model = _aiModel.value.trim(),
                 customBaseUrl = _aiCustomBaseUrl.value.trim(),
             )
-            val provider = AiProviderFactory { selection }.current()
+            val provider = AiProviderFactory(AndroidStringResolver(appContext)) { selection }.current()
             _lastSaveResult.value = if (provider == null) {
                 SaveResult(false, "Falta la API key" + if (selection.provider == AI_PROVIDER_CUSTOM) " o la base URL" else "")
             } else {

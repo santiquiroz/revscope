@@ -14,15 +14,16 @@ import java.net.URL
  * covers LM Studio, DeepSeek, Groq, OpenRouter, etc. No server-side web search tool
  * across these backends, so [supportsWebSearch] is always false. Plain [HttpURLConnection]
  * (not Https-only) since local endpoints like LM Studio are typically http://.
+ * [displayName] comes from resources (R.string.ai_provider_openai_compatible) via [AiProviderFactory].
  */
 class OpenAiCompatibleProvider(
     private val baseUrl: String,
     private val apiKey: String?,
     private val model: String = DEFAULT_MODEL,
+    override val displayName: String,
 ) : AiProvider {
 
     override val providerId: String = "custom"
-    override val displayName: String = "Compatible OpenAI"
     override val supportsWebSearch: Boolean = false
 
     override suspend fun complete(request: AiRequest): Result<String> = withContext(Dispatchers.IO) {
@@ -35,7 +36,7 @@ class OpenAiCompatibleProvider(
                 AiResponseParsers.parseOpenAiChatResponse(responseBody)
             } else {
                 val errorBody = runCatching { conn.errorStream?.bufferedReader()?.readText() }.getOrNull()
-                Result.failure(Exception(AiResponseParsers.httpErrorMessage("Compatible OpenAI", code, errorBody)))
+                Result.failure(Exception(AiResponseParsers.httpErrorMessage(displayName, code, errorBody)))
             }
         } catch (e: CancellationException) {
             throw e
@@ -49,7 +50,7 @@ class OpenAiCompatibleProvider(
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
-            apiKey?.takeIf { it.isNotBlank() }?.let { setRequestProperty("Authorization", "Bearer $it") }
+            apiKey?.takeIf { it.isNotBlank() }?.let { setRequestProperty("Authorization", "Bearer $it") } // i18n-ignore
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
             doOutput = true
