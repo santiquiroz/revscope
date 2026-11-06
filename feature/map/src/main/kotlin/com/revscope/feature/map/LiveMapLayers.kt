@@ -76,7 +76,7 @@ internal const val ICON_ME = "icono-yo"
 internal const val ICON_ME_MOTO = "icono-yo-moto"
 internal const val ICON_ME_AUTO = "icono-yo-auto"
 
-private const val TEXT_FONT = "Noto Sans Regular"
+private const val TEXT_FONT = "Noto Sans Regular" // i18n-ignore
 
 /** Datos que las capas dibujan. Un solo objeto para no arrastrar ocho parámetros. */
 data class LiveMapData(
@@ -387,7 +387,7 @@ private fun Feature.addExtraProperty(key: String, value: Any?) {
 /** "$rider" solo, o "$rider\n$speed km/h" cuando el peer reporta velocidad. */
 private fun peerLabel(peer: RoomClient.Peer): String {
     val speedKmh = peer.speedKmh ?: return peer.rider
-    return "${peer.rider}\n${speedKmh.roundToInt()} km/h"
+    return "${peer.rider}\n${speedKmh.roundToInt()} km/h" // i18n-ignore
 }
 
 /**

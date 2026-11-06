@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,12 +79,12 @@ fun SearchOverlay(
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("Buscar dirección o lugar", color = TextMuted, fontSize = 14.sp) },
+            placeholder = { Text(stringResource(R.string.map_search_hint), color = TextMuted, fontSize = 14.sp) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
             trailingIcon = {
                 if (query.isNotEmpty()) {
                     IconButton(onClick = onClear) {
-                        Icon(Icons.Default.Close, contentDescription = "Limpiar búsqueda", tint = TextMuted)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_search_clear), tint = TextMuted)
                     }
                 }
             },
@@ -143,13 +144,13 @@ fun SearchOverlay(
                     items(results) { place -> ResultRow(place, selectAndClearFocus, onSaveFavorite) }
                 }
                 searching -> Text(
-                    "Buscando…",
+                    stringResource(R.string.map_search_searching),
                     color = TextMuted,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(14.dp),
                 )
                 else -> Text(
-                    "Sin resultados — revisa la escritura o si hay internet",
+                    stringResource(R.string.map_search_no_results),
                     color = TextMuted,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(14.dp),
@@ -182,7 +183,11 @@ private fun PlaceChip(place: SavedPlaceEntity, onSelect: (SavedPlaceEntity) -> U
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                when (place.type) { "HOME" -> "Casa"; "WORK" -> "Trabajo"; else -> place.name },
+                when (place.type) {
+                    "HOME" -> stringResource(R.string.map_place_home)
+                    "WORK" -> stringResource(R.string.map_place_work)
+                    else -> place.name
+                },
                 color = TextPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -209,7 +214,7 @@ private fun RecentRow(
             modifier = Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 14.dp),
         )
         IconButton(onClick = { onRemove(place.id) }) {
-            Icon(Icons.Default.Close, contentDescription = "Quitar de recientes", tint = TextMuted)
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_search_remove_recent), tint = TextMuted)
         }
     }
 }
@@ -231,7 +236,7 @@ private fun ResultRow(place: PlaceResult, onSelect: (PlaceResult) -> Unit, onSav
             }
         }
         IconButton(onClick = { onSaveFavorite(place) }) {
-            Icon(Icons.Default.Star, contentDescription = "Guardar favorito", tint = TextMuted)
+            Icon(Icons.Default.Star, contentDescription = stringResource(R.string.map_search_save_favorite), tint = TextMuted)
         }
     }
 }

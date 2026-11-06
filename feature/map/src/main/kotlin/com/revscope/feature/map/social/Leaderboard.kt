@@ -20,12 +20,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.telemetry.TripStatsCalculator
+import com.revscope.feature.map.R
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -192,7 +197,7 @@ fun Leaderboard(
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onToggleExpanded),
             ) {
                 Text(
-                    "🏁 Posiciones (${entries.size})",
+                    stringResource(R.string.map_leaderboard_title, entries.size),
                     color = AccentYellow,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
@@ -200,7 +205,7 @@ fun Leaderboard(
                 )
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Contraer posiciones" else "Expandir posiciones",
+                    contentDescription = stringResource(if (expanded) R.string.map_leaderboard_collapse else R.string.map_leaderboard_expand),
                     tint = AccentYellow,
                 )
             }
@@ -234,13 +239,13 @@ private fun RaceControlRow(
     ) {
         when {
             race == null -> TextButton(onClick = onStartRace) {
-                Text("🏁 Largar carrera", color = AccentYellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(stringResource(R.string.map_race_start), color = AccentYellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
             race.startedBy == selfRiderName -> TextButton(onClick = onStopRace) {
-                Text("Detener carrera", color = DangerRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(stringResource(R.string.map_race_stop), color = DangerRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
             else -> Text(
-                "Carrera en curso · largada por ${race.startedBy}",
+                stringResource(R.string.map_race_in_progress, race.startedBy),
                 color = TextMuted,
                 fontSize = 11.sp,
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -270,7 +275,11 @@ private fun LeaderboardRow(position: Int, entry: RankingCalc.Entry, raceMode: Bo
             modifier = Modifier.weight(1f),
         )
         Text(
-            if (entry.arrived) "Llegó ✓" else "${formatRemaining(entry.remainingM)} · ${formatEta(entry.etaMin)}",
+            if (entry.arrived) {
+                stringResource(R.string.map_race_arrived)
+            } else {
+                "${formatRemaining(entry.remainingM, LocalConfiguration.current.locales[0])} · ${formatEta(entry.etaMin)}"
+            },
             color = TextMuted,
             fontSize = 11.sp,
         )
@@ -291,7 +300,7 @@ private fun positionBadge(position: Int): String = when (position) {
 fun RaceCountdownOverlay(secondsToShow: Int, modifier: Modifier = Modifier) {
     Surface(color = Color(0xCC0A0A0F), shape = RoundedCornerShape(16.dp), modifier = modifier) {
         Text(
-            if (secondsToShow > 0) "$secondsToShow" else "¡YA!",
+            if (secondsToShow > 0) "$secondsToShow" else stringResource(R.string.map_race_countdown_go),
             color = AccentYellow,
             fontSize = 56.sp,
             fontWeight = FontWeight.Black,
@@ -300,8 +309,8 @@ fun RaceCountdownOverlay(secondsToShow: Int, modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatRemaining(remainingM: Double): String =
-    if (remainingM >= 1_000) "%.1f km".format(remainingM / 1_000.0) else "${remainingM.toInt()} m"
+private fun formatRemaining(remainingM: Double, locale: Locale): String =
+    if (remainingM >= 1_000) LocaleNumbers.decimal(remainingM / 1_000.0, 1, locale) + " km" else "${remainingM.toInt()} m" // i18n-ignore
 
 private fun formatEta(etaMin: Double?): String =
-    etaMin?.let { "${it.toInt()} min" } ?: "—"
+    etaMin?.let { "${it.toInt()} min" } ?: "—" // i18n-ignore
