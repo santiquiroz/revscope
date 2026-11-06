@@ -113,7 +113,10 @@ class CapturasDtcTest {
         DtcCenterContent(
             DtcPantallaUi(
                 estado = DtcUiState.HasCodes(emptyList()),
-                detalle = DetalleDtc(mil = MilUi(encendida = false, texto = "Testigo de falla apagado · la ECU reporta 0 códigos confirmados")),
+                detalle = DetalleDtc(
+                    mil = MilUi(encendida = false, texto = "Testigo de falla apagado · la ECU reporta 0 códigos confirmados"),
+                    sinCodigos = "Sin códigos activos, pendientes ni permanentes",
+                ),
             ),
             acciones,
         )

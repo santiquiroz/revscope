@@ -1,6 +1,7 @@
 package com.revscope.feature.dtc
 
 import androidx.compose.foundation.BorderStroke
+import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
