@@ -3,6 +3,7 @@ package com.revscope.feature.workshop.taller.informe
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.informe.GeneradorInformeTaller
 import com.revscope.core.obd.taller.informe.InformeTallerHtml
 import com.revscope.core.obd.taller.sesion.TallerRepository
@@ -27,6 +28,7 @@ class InformeViewModel @Inject constructor(
     guardado: SavedStateHandle,
     private val generador: GeneradorInformeTaller,
     private val repositorio: TallerRepository,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val sesionId = checkNotNull(guardado.get<Long>(ARG_SESION)) { "Falta el argumento $ARG_SESION" }
@@ -97,7 +99,7 @@ class InformeViewModel @Inject constructor(
         return InformeUi(
             cargando = false,
             titulo = informe.titulo,
-            html = InformeTallerHtml.render(informe),
+            html = InformeTallerHtml.render(informe, resolver),
             interpretacion = informe.interpretacionTecnico,
         )
     }

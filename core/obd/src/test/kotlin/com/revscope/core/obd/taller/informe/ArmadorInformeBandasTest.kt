@@ -1,6 +1,7 @@
 package com.revscope.core.obd.taller.informe
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.sesion.AnalisisSesion
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.SesionTaller
@@ -8,11 +9,14 @@ import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
 import org.json.JSONArray
 import org.json.JSONObject
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ArmadorInformeBandasTest {
+
+    private val resolverEs = XmlStringResolver.es(R::class.java)
 
     @Test
     fun `una banda de un solo lado ignora los numeros del nombre de la fuente`() {
@@ -56,7 +60,7 @@ class ArmadorInformeBandasTest {
             titulo = "Multímetro · Batería",
             payloadJson = payload(referencia).toString(),
         )
-        val informe = ArmadorInformeTaller().armar(
+        val informe = ArmadorInformeTaller(resolverEs).armar(
             sesion = sesion,
             eventos = listOf(evento),
             vehiculo = VehiculoTaller(7, "Benelli TNT 150i", null, VehicleType.MOTORCYCLE),

@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.informe
 
-import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.dtc.GuiaDtc
 import com.revscope.core.obd.taller.dtc.PasosGuia
 import com.revscope.core.obd.taller.modelo.ConocimientoModelo
@@ -9,10 +11,10 @@ import com.revscope.core.obd.taller.sesion.AnalisisSesion
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.FilaComparacion
 import com.revscope.core.obd.taller.sesion.SesionTaller
-import com.revscope.core.obd.taller.sesion.etiqueta
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.core.obd.taller.sesion.etiqueta
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
@@ -90,7 +92,9 @@ data class PasoGuiaInforme(val numero: Int, val titulo: String, val detalle: Str
 
 data class FuenteInforme(val nombre: String, val url: String? = null)
 
-class ArmadorInformeTaller @Inject constructor() {
+class ArmadorInformeTaller @Inject constructor(
+    private val resolver: StringResolver,
+) {
 
     fun armar(
         sesion: SesionTaller,
@@ -111,7 +115,7 @@ class ArmadorInformeTaller @Inject constructor() {
             generadoEn = generadoEn,
             titulo = sesion.titulo,
             vehiculo = vehiculo.nombre,
-            codigo = analisis.codigos.joinToString().ifBlank { "Sin códigos registrados" },
+            codigo = analisis.codigos.joinToString().ifBlank { resolver.get(R.string.obd_report_no_codes) },
             sintomas = sintomas(sesion),
             comoSeMidio = comoSeMidio(ordenados, conocimiento),
             conclusion = conclusion(ordenados, mediciones),
@@ -132,26 +136,26 @@ class ArmadorInformeTaller @Inject constructor() {
     }
 
     private fun sintomas(sesion: SesionTaller): String =
-        (sesion.sintomas.sortedBy { it.ordinal }.map { it.etiqueta } + sesion.sintomasTexto.trim().takeIf { it.isNotEmpty() })
+        (sesion.sintomas.sortedBy { it.ordinal }.map { it.etiqueta(resolver) } + sesion.sintomasTexto.trim().takeIf { it.isNotEmpty() })
             .filterNotNull()
             .joinToString(" · ")
-            .ifBlank { "Sin síntomas anotados" }
+            .ifBlank { resolver.get(R.string.obd_report_no_symptoms) }
 
     private fun comoSeMidio(eventos: List<EventoTaller>, conocimiento: ConocimientoModelo?): String = buildList {
-        add("Adaptador OBD2")
+        add(resolver.get(R.string.obd_report_obd_adapter))
         conocimiento?.notasProtocolo?.takeIf(String::isNotBlank)?.let(::add)
-        if (eventos.any { it.tipo == TipoEvento.PRUEBA_GUIADA }) add("RevScope")
-        if (eventos.any { it.tipo == TipoEvento.MEDICION_MULTIMETRO }) add("Multímetro")
+        if (eventos.any { it.tipo == TipoEvento.PRUEBA_GUIADA }) add(resolver.get(R.string.obd_report_revscope))
+        if (eventos.any { it.tipo == TipoEvento.MEDICION_MULTIMETRO }) add(resolver.get(R.string.obd_report_multimeter))
     }.joinToString(" · ")
 
     private fun conclusion(eventos: List<EventoTaller>, mediciones: List<MedicionInforme>): ConclusionInforme {
         val peor = eventos.map(EventoTaller::veredicto).maxByOrNull(::peso) ?: Veredicto.INFO
         val frase = eventos.lastOrNull { it.veredicto == peor }?.resumen?.takeIf(String::isNotBlank)
             ?: when (peor) {
-                Veredicto.FALLA -> "Hay hallazgos compatibles con una falla; confirma antes de reemplazar piezas."
-                Veredicto.ATENCION -> "Hay mediciones que conviene confirmar."
-                Veredicto.OK -> "Las comprobaciones registradas quedaron dentro de referencia."
-                Veredicto.INFO -> "Aún no hay suficientes mediciones para una conclusión."
+                Veredicto.FALLA -> resolver.get(R.string.obd_report_conclusion_failure)
+                Veredicto.ATENCION -> resolver.get(R.string.obd_report_conclusion_attention)
+                Veredicto.OK -> resolver.get(R.string.obd_report_conclusion_ok)
+                Veredicto.INFO -> resolver.get(R.string.obd_report_conclusion_not_enough_data)
             }
         val cables = mediciones.map { CableInforme(it.cable, valor(it.valor, it.unidad), veredictoMedicion(it.estado)) }
         return ConclusionInforme(peor, frase, cables)
@@ -170,7 +174,7 @@ class ArmadorInformeTaller @Inject constructor() {
         val sensor = payload.optString("titulo", evento.titulo)
         return payload.optJSONArray("lecturas").objetos().mapNotNull { lectura ->
             val valor = lectura.optDouble("valor").takeUnless(Double::isNaN) ?: return@mapNotNull null
-            val referencia = lectura.optString("referencia", "Sin referencia")
+            val referencia = lectura.optString("referencia", resolver.get(R.string.obd_report_no_reference))
             val (min, max) = limites(referencia)
             MedicionInforme(
                 sensor = sensor,
@@ -281,7 +285,9 @@ class ArmadorInformeTaller @Inject constructor() {
         pruebas: List<PruebaInforme>,
     ): List<String> = buildList {
         conocimiento?.notas?.filter { it.tipo == TipoNota.PENDIENTE }?.forEach { add(it.texto) }
-        if (pasosGuia.isNotEmpty()) add("Quedan ${pasosGuia.size} pasos de la guía sin marcar.")
+        if (pasosGuia.isNotEmpty()) {
+            add(resolver.plural(R.plurals.obd_report_unchecked_guide_steps, pasosGuia.size, pasosGuia.size))
+        }
         val ejecutadas = pruebas.map { it.titulo.lowercase() }
         analisis.sugeridas.filterNot { sugerida -> ejecutadas.any { it.contains(sugerida.accion.etiqueta.substringAfter(": ").lowercase()) } }
             .forEach { add("${it.accion.etiqueta} ${it.motivo}") }
@@ -308,7 +314,8 @@ class ArmadorInformeTaller @Inject constructor() {
         else -> Veredicto.INFO
     }
 
-    private fun valor(valor: Double, unidad: String) = "${FormatoTaller.numero(valor, if (unidad == "V") 2 else 1)} $unidad".trim()
+    private fun valor(valor: Double, unidad: String) =
+        "${LocaleNumbers.decimal(valor, if (unidad == "V") 2 else 1, resolver.locale)} $unidad".trim() // i18n-ignore
 
     private fun String.aVeredicto(porDefecto: Veredicto) = Veredicto.entries.firstOrNull { it.name == this } ?: porDefecto
 

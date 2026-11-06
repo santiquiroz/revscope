@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.informe
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.taller.dtc.GuiaDtc
 import com.revscope.core.obd.taller.dtc.UrgenciaDtc
@@ -24,9 +26,12 @@ import org.junit.Test
 
 class InformeTallerHtmlTest {
 
+    private val resolverEs = XmlStringResolver.es(R::class.java)
+    private val resolverEn = XmlStringResolver.en(R::class.java)
+
     @Test
     fun `genera las diez secciones del caso Benelli en orden`() {
-        val html = InformeTallerHtml.render(informeBenelli())
+        val html = InformeTallerHtml.render(informeBenelli(), resolverEs)
         val titulos = listOf(
             "Informe de taller",
             "Conclusión",
@@ -52,8 +57,16 @@ class InformeTallerHtmlTest {
     }
 
     @Test
+    fun `genera el informe en ingles`() {
+        val html = InformeTallerHtml.render(informeBenelli(resolver = resolverEn), resolverEn)
+
+        assertTrue(html.contains("<html lang=\"en\""))
+        assertTrue(html.contains("<h1>Workshop report</h1>"))
+    }
+
+    @Test
     fun `escapa todo texto del usuario y no carga recursos externos`() {
-        val html = InformeTallerHtml.render(informeBenelli("<script>alert('x')</script>"))
+        val html = InformeTallerHtml.render(informeBenelli("<script>alert('x')</script>"), resolverEs)
 
         assertFalse(html.contains("<script>"))
         assertTrue(html.contains("&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;"))
@@ -68,12 +81,15 @@ class InformeTallerHtmlTest {
         val base = informeBenelli()
         val informe = base.copy(pruebas = List(3) { base.pruebas.single().copy(titulo = "Prueba ${it + 1}") })
 
-        val bytes = InformeTallerHtml.render(informe).toByteArray(Charsets.UTF_8).size
+        val bytes = InformeTallerHtml.render(informe, resolverEs).toByteArray(Charsets.UTF_8).size
 
         assertTrue("El HTML ocupa $bytes bytes", bytes < 300 * 1024)
     }
 
-    private fun informeBenelli(interpretacion: String = "La señal baja es compatible con P0122"): InformeTaller {
+    private fun informeBenelli(
+        interpretacion: String = "La señal baja es compatible con P0122",
+        resolver: XmlStringResolver = resolverEs,
+    ): InformeTaller {
         val sesion = SesionTaller(
             vehiculoId = 7,
             claveModelo = "benelli-tnt-150i",
@@ -152,7 +168,7 @@ class InformeTallerHtmlTest {
             notasMoto = emptyList(),
             relacionados = emptyList(),
         )
-        return ArmadorInformeTaller().armar(
+        return ArmadorInformeTaller(resolver).armar(
             sesion = sesion,
             eventos = eventos,
             vehiculo = VehiculoTaller(7, "Benelli TNT 150i", "benelli-tnt-150i", VehicleType.MOTORCYCLE),

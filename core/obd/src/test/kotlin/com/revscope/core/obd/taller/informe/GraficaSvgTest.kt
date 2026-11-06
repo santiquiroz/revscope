@@ -1,11 +1,15 @@
 package com.revscope.core.obd.taller.informe
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GraficaSvgTest {
+
+    private val resolverEs = XmlStringResolver.es(R::class.java)
 
     @Test
     fun `reduce a cuatrocientos puntos y conserva minimo y maximo`() {
@@ -32,9 +36,11 @@ class GraficaSvgTest {
                 SerieGrafica("Referencia", listOf(PuntoGrafica(0.0, 0.3), PuntoGrafica(1.0, 4.2))),
             ),
             tramos = listOf(TramoGrafica(0.0, 0.5, "Cerrado")),
+            resolver = resolverEs,
         )
         val pesas = GraficaSvg.pesas(
             listOf(PesaGrafica("Señal & masa", 0.22, 0.4, 0.8, "V", "Típico")),
+            resolver = resolverEs,
         )
 
         parsear(linea)
