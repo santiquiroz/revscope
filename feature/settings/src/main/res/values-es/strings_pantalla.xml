@@ -2,7 +2,7 @@
 <resources>
     <string name="settings_screen_title">Ajustes</string>
     <string name="settings_search_label">Buscar en ajustes</string>
-    <string name="settings_search_keywords_language">idioma|language|english|español|inglés</string>
+    <string name="settings_search_keywords_language">idioma|language|english|español|inglés|unidades|métrico|imperial|mph|km/h|fahrenheit|psi</string>
     <string name="settings_section_vehicle_garage">Vehículo y garage</string>
     <string name="settings_section_speed_cameras_alerts">Radares y alertas</string>
     <string name="settings_section_map">Mapa</string>
