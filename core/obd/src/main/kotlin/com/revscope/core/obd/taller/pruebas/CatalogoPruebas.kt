@@ -51,7 +51,7 @@ object CatalogoPruebas {
                 descartarInicioMs = 0,
             ),
         ),
-        analizar = AnalizadorBarridoTps::analizar,
+        analizar = { datos, bandas, _ -> AnalizadorBarridoTps.analizar(datos, bandas) },
     )
 
     val minimoRetorno = DefinicionPrueba(
@@ -67,7 +67,7 @@ object CatalogoPruebas {
         pasos = listOf(
             PasoPrueba(
                 clave = PasosMinimo.MINIMO,
-                titulo = TextosMinimo.TITULOS_PASO.getValue(PasosMinimo.MINIMO),
+                tituloRes = TextosMinimo.TITULOS_PASO.getValue(PasosMinimo.MINIMO),
                 instruccion = "No toques el acelerador: deja el motor en mínimo",
                 modo = ModoPaso.Grabar(MINIMO_MS),
             ),
@@ -117,7 +117,7 @@ object CatalogoPruebas {
                 pidPrincipal = AnalizadorArranqueFrio.PID_ECT,
             ),
         ),
-        analizar = AnalizadorArranqueFrio::analizar,
+        analizar = { datos, bandas, _ -> AnalizadorArranqueFrio.analizar(datos, bandas) },
     )
 
     val bateriaCarga = DefinicionPrueba(
@@ -132,26 +132,26 @@ object CatalogoPruebas {
         pasos = listOf(
             PasoPrueba(
                 clave = PasosBateria.CONTACTO,
-                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.CONTACTO),
+                tituloRes = TextosBateria.TITULOS_PASO.getValue(PasosBateria.CONTACTO),
                 instruccion = "Contacto puesto y motor apagado: no arranques todavía",
                 modo = ModoPaso.Grabar(CONTACTO_MS),
             ),
             PasoPrueba(
                 clave = PasosBateria.ARRANQUE,
-                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.ARRANQUE),
+                tituloRes = TextosBateria.TITULOS_PASO.getValue(PasosBateria.ARRANQUE),
                 instruccion = "Arranca ahora, como lo haces siempre",
                 modo = ModoPaso.Grabar(RAFAGA_ARRANQUE_MS),
                 descartarInicioMs = 0,
             ),
             PasoPrueba(
                 clave = PasosBateria.MINIMO,
-                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.MINIMO),
+                tituloRes = TextosBateria.TITULOS_PASO.getValue(PasosBateria.MINIMO),
                 instruccion = "Déjalo en mínimo sin acelerar",
                 modo = ModoPaso.Grabar(CARGA_MINIMO_MS),
             ),
             PasoPrueba(
                 clave = PasosBateria.RPM_ALTAS,
-                titulo = TextosBateria.TITULOS_PASO.getValue(PasosBateria.RPM_ALTAS),
+                tituloRes = TextosBateria.TITULOS_PASO.getValue(PasosBateria.RPM_ALTAS),
                 instruccion = "Acelera en neutro hasta unas 3 000-4 000 rpm y sostenlas",
                 modo = ModoPaso.Sostener(RPM_ALTAS_MS),
             ),
@@ -184,7 +184,7 @@ object CatalogoPruebas {
                 modo = ModoPaso.Grabar(CONTACTO_MS),
             ),
         ),
-        analizar = AnalizadorMapBaro::analizar,
+        analizar = { datos, bandas, _ -> AnalizadorMapBaro.analizar(datos, bandas) },
         usaAmbiente = true,
     )
 
@@ -196,7 +196,7 @@ object CatalogoPruebas {
 
     private fun retorno(clave: String) = PasoPrueba(
         clave = clave,
-        titulo = TextosMinimo.TITULOS_PASO.getValue(clave),
+        tituloRes = TextosMinimo.TITULOS_PASO.getValue(clave),
         instruccion = "Acelera hasta unas 3 000 rpm y suelta de golpe",
         modo = ModoPaso.Grabar(RETORNO_MS),
         descartarInicioMs = 0,

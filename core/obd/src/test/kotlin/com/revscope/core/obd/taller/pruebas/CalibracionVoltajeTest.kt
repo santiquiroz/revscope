@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -7,6 +8,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CalibracionVoltajeTest {
+
+    private val resolver = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
 
     @Test
     fun `el desfase es lo del multímetro en los bornes menos lo del adaptador`() {
@@ -36,8 +43,14 @@ class CalibracionVoltajeTest {
 
     @Test
     fun `el texto dice el desfase con su origen o que AT RV está sin calibrar`() {
-        assertEquals("+0,22 V · Calibrado con el multímetro", CalibracionVoltaje.texto(DesfaseVoltaje.medido(12.62, 12.4)).plano())
-        assertEquals("Sin calibrar: AT RV mide con ±0,1-0,2 V (típico)", CalibracionVoltaje.texto(DesfaseVoltaje.SIN_CALIBRAR).plano())
+        assertEquals(
+            "+0,22 V · Calibrado con el multímetro",
+            CalibracionVoltaje.texto(DesfaseVoltaje.medido(12.62, 12.4), resolver).plano(),
+        )
+        assertEquals(
+            "Sin calibrar: AT RV mide con ±0,1-0,2 V (típico)",
+            CalibracionVoltaje.texto(DesfaseVoltaje.SIN_CALIBRAR, resolver).plano(),
+        )
         assertFalse(DesfaseVoltaje.SIN_CALIBRAR.calibrado)
     }
 

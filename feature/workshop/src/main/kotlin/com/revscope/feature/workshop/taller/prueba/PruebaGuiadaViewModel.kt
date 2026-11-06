@@ -3,6 +3,7 @@ package com.revscope.feature.workshop.taller.prueba
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.grafica.EstadoVref
@@ -70,7 +71,11 @@ class PruebaGuiadaViewModel @Inject constructor(
     private val vehiculo: VehiculoActivo,
     private val registro: RegistroTaller,
     private val fuenteDesfase: FuenteDesfase,
+<<<<<<< HEAD
     resolver: StringResolver,
+=======
+    private val resolver: StringResolver,
+>>>>>>> i18n/lane-g
 ) : ViewModel() {
 
     private val tipoDeArgumento = guardado.get<String>(ARG_TIPO)?.let { nombre -> TipoPrueba.entries.firstOrNull { it.name == nombre } }
@@ -175,7 +180,7 @@ class PruebaGuiadaViewModel @Inject constructor(
     fun guardarEnSesion() = accion {
         val tipo = estado.value.fase.tipo ?: return@accion
         if (registro.sesionAbierta() == null) {
-            registro.abrirSesion(SolicitudSesion(titulo = tipo.titulo)).onFailure { return@accion avisar(it.message) }
+            registro.abrirSesion(SolicitudSesion(titulo = tipo.titulo(resolver))).onFailure { return@accion avisar(it.message) }
         }
         val id = controlador.guardarResultadoEnSesion()
         avisar(if (id != null) "Resultado guardado en una sesión nueva" else "No se pudo guardar el resultado")

@@ -19,11 +19,15 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 class CapturasPruebasElectricasTest {
 
+<<<<<<< HEAD
     private val pantalla = PantallaPrueba(
         CatalogoPruebas::definicion,
         CatalogoPruebas.disponibles,
         XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res")),
     )
+=======
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
+>>>>>>> i18n/lane-g
     private val calibrado = DesfaseVoltaje.medido(multimetroV = 12.58, adaptadorV = 12.4)
 
     private fun ui(entrada: EntradaPantalla, desfase: DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR) =

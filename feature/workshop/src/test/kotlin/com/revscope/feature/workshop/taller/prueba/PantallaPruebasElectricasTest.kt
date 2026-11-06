@@ -14,11 +14,15 @@ import org.junit.Test
 
 class PantallaPruebasElectricasTest {
 
+<<<<<<< HEAD
     private val pantalla = PantallaPrueba(
         CatalogoPruebas::definicion,
         CatalogoPruebas.disponibles,
         XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res")),
     )
+=======
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
+>>>>>>> i18n/lane-g
 
     private fun paso(e: EstadoPrueba.EnPaso, serie: SerieVivo) =
         (pantalla.fase(EntradaPantalla(e, serieVivo = serie, bandas = PruebasElectricasBenelli.bandas)) as FasePantalla.Paso).paso

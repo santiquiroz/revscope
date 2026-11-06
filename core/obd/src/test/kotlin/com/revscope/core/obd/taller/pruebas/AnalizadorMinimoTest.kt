@@ -14,6 +14,7 @@ import com.revscope.core.obd.taller.referencia.OrigenBanda
 import com.revscope.core.obd.taller.referencia.PosicionEnBanda
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -22,6 +23,11 @@ import org.junit.Test
 
 class AnalizadorMinimoTest {
 
+    private val resolver = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
     private val moto = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
 
     private val sanos = List(3) { retornoSano() }
@@ -37,7 +43,8 @@ class AnalizadorMinimoTest {
         descartarMinimoMs = 0,
     )
 
-    private fun analizarPlano(d: DatosPrueba, bandas: Map<String, BandaReferencia>) = AnalizadorMinimo.analizar(d, bandas).plano()
+    private fun analizarPlano(d: DatosPrueba, bandas: Map<String, BandaReferencia>) =
+        AnalizadorMinimo.analizar(d, bandas, resolver).plano()
 
     private fun analisis(d: DatosPrueba, bandas: Map<String, BandaReferencia> = moto) =
         analizarPlano(d, bandas).detalle as AnalisisMinimo
@@ -183,7 +190,7 @@ class AnalizadorMinimoTest {
 
     @Test
     fun `las medidas del caso Benelli dan la deriva y cada retorno en una línea`() {
-        val medidas = TextosMinimo.medidas(analisis(benelli)).map { it.plano() }
+        val medidas = TextosMinimo.medidas(analisis(benelli), resolver).map { it.plano() }
 
         assertTrue(medidas.toString(), "Deriva: -61,8 rpm/s (de 2010 a 1454 rpm)" in medidas)
         assertTrue(medidas.toString(), "TPS en ralentí: 0,14-0,16 V (media 0,15 V)" in medidas)

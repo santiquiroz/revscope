@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.pruebas
 
-import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.pruebas.AnalizadorBateria.Pasos
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 
@@ -8,164 +10,177 @@ import com.revscope.core.obd.taller.referencia.ClavesBanda
 // «compatible con…», nunca un dictamen. Las unidades van con espacio duro.
 object TextosBateria {
 
-    val TITULOS_PASO = mapOf(
-        Pasos.CONTACTO to "Contacto",
-        Pasos.ARRANQUE to "Arranque",
-        Pasos.MINIMO to "Mínimo",
-        Pasos.RPM_ALTAS to "Rpm altas",
+    val TITULOS_PASO: Map<String, Int> = mapOf(
+        Pasos.CONTACTO to R.string.obd_bateria_titulo_paso_contacto,
+        Pasos.ARRANQUE to R.string.obd_bateria_titulo_paso_arranque,
+        Pasos.MINIMO to R.string.obd_bateria_titulo_paso_minimo,
+        Pasos.RPM_ALTAS to R.string.obd_bateria_titulo_paso_rpm_altas,
     )
 
-    const val AVISO_FAROLA = "En muchas motos la farola queda encendida con el contacto (AHO) y el voltaje baja por eso."
-    const val NOTA_AT_RV = "AT RV mide en el conector OBD con ±0,1-0,2 V (típico): calibra el desfase del vehículo con " +
-        "el multímetro en los bornes para afinarlo."
+    fun titulosPaso(resolver: StringResolver): Map<String, String> = TITULOS_PASO.mapValues { resolver.get(it.value) }
 
-    fun resultado(a: AnalisisBateria) = ResultadoPrueba(
-        tipo = TipoPrueba.BATERIA_CARGA,
-        veredicto = a.patron.veredicto,
-        titulo = titulo(a),
-        interpretacion = interpretacion(a),
-        siguientePaso = siguientePaso(a),
-        hallazgos = hallazgos(a),
-        bajaConfianza = a.bajaConfianza,
-        detalle = a,
-    )
+    fun resultado(a: AnalisisBateria, resolver: StringResolver): ResultadoPrueba = Redactor(a, resolver).resultado()
 
-    fun titulo(a: AnalisisBateria): String = when (a.patron) {
-        PatronBateria.SIN_DATOS -> "Sin lecturas de voltaje del adaptador"
-        PatronBateria.SOBRECARGA -> "Sobrecarga: ${v(a.cargaMaxV)} con el motor en marcha"
-        PatronBateria.ARRANQUE_BAJO -> "El voltaje cae a ${v(a.arranque?.valleV)} al arrancar"
-        PatronBateria.ADAPTADOR_REINICIADO -> "El adaptador se reinició al arrancar"
-        PatronBateria.NO_CARGA -> "No carga: ${v(a.rpmAltas?.mediaV)} a rpm altas"
-        PatronBateria.CARGA_ALTA -> "Carga alta: ${v(a.rpmAltas?.mediaV)} a rpm altas"
-        PatronBateria.SIN_CARGA_EN_MINIMO -> "Carga a rpm altas, pero no en mínimo"
-        PatronBateria.BATERIA_BAJA -> "Carga bien, pero la batería está baja en reposo"
-        PatronBateria.NORMAL -> "Batería y carga dentro de las bandas"
-    }
+    fun titulo(a: AnalisisBateria, resolver: StringResolver): String = Redactor(a, resolver).titulo()
 
-    // ── Interpretación ──────────────────────────────────────────────────────
+    fun medidas(a: AnalisisBateria, resolver: StringResolver): List<String> = Redactor(a, resolver).medidas()
 
-    private fun interpretacion(a: AnalisisBateria): String {
-        if (a.patron == PatronBateria.SIN_DATOS) return "El adaptador no devolvió lecturas de voltaje (AT RV): no hay nada que medir."
-        return listOfNotNull(
-            fraseContacto(a),
-            fraseArranque(a),
-            fraseCarga(a),
-            fraseVeredicto(a),
-            fraseDesfase(a.desfase),
-        ).joinToString(" ")
-    }
+    private class Redactor(private val a: AnalisisBateria, private val res: StringResolver) {
 
-    private fun fraseContacto(a: AnalisisBateria): String? {
-        val contacto = a.contacto ?: return null
-        val banda = banda(a, AnalizadorBateria.claveContacto(a.conFarola))
-        val condicion = if (a.conFarola) "con la farola encendida" else "sin cargas"
-        val farola = if (a.conFarola) " $AVISO_FAROLA" else ""
-        return "Con el contacto puesto y el motor apagado marcó ${v(contacto.mediaV)}; $condicion se espera $banda.$farola"
-    }
+        fun resultado() = ResultadoPrueba(
+            tipo = TipoPrueba.BATERIA_CARGA,
+            veredicto = a.patron.veredicto,
+            titulo = titulo(),
+            interpretacion = interpretacion(),
+            siguientePaso = siguientePaso(),
+            hallazgos = hallazgos(),
+            bajaConfianza = a.bajaConfianza,
+            detalle = a,
+        )
 
-    private fun fraseArranque(a: AnalisisBateria): String? {
-        val r = a.arranque ?: return null
-        if (r.adaptadorReiniciado) return fraseReinicio(r)
-        if (!r.visto) return "No se vio la caída del arranque."
-        return "Al arrancar cayó hasta ${v(r.valleV)} (${v(r.caidaV)} menos que en reposo); se espera ${banda(a, ClavesBanda.ARRANQUE_MIN_V)}."
-    }
+        fun titulo(): String = when (a.patron) {
+            PatronBateria.SIN_DATOS -> res.get(R.string.obd_bateria_titulo_sin_datos)
+            PatronBateria.SOBRECARGA -> res.get(R.string.obd_bateria_titulo_sobrecarga, v(a.cargaMaxV))
+            PatronBateria.ARRANQUE_BAJO -> res.get(R.string.obd_bateria_titulo_arranque_bajo, v(a.arranque?.valleV))
+            PatronBateria.ADAPTADOR_REINICIADO -> res.get(R.string.obd_bateria_titulo_adaptador_reiniciado)
+            PatronBateria.NO_CARGA -> res.get(R.string.obd_bateria_titulo_no_carga, v(a.rpmAltas?.mediaV))
+            PatronBateria.CARGA_ALTA -> res.get(R.string.obd_bateria_titulo_carga_alta, v(a.rpmAltas?.mediaV))
+            PatronBateria.SIN_CARGA_EN_MINIMO -> res.get(R.string.obd_bateria_titulo_sin_carga_en_minimo)
+            PatronBateria.BATERIA_BAJA -> res.get(R.string.obd_bateria_titulo_bateria_baja)
+            PatronBateria.NORMAL -> res.get(R.string.obd_bateria_titulo_normal)
+        }
 
-    private fun fraseReinicio(r: ArranqueVoltaje): String {
-        val ultimo = r.valleV?.let { " Lo más bajo que alcanzó a medir fue ${v(it)}." }.orEmpty()
-        val cuanto = if (r.enlacePerdido) {
-            "se perdió el enlace con el adaptador"
+        // ── Interpretación ──────────────────────────────────────────────────
+
+        private fun interpretacion(): String {
+            if (a.patron == PatronBateria.SIN_DATOS) return res.get(R.string.obd_bateria_interp_sin_datos)
+            return listOfNotNull(
+                fraseContacto(),
+                fraseArranque(),
+                fraseCarga(),
+                fraseVeredicto(),
+                fraseDesfase(a.desfase),
+            ).joinToString(" ")
+        }
+
+        private fun fraseContacto(): String? {
+            val contacto = a.contacto ?: return null
+            val banda = banda(AnalizadorBateria.claveContacto(a.conFarola))
+            val condicion = res.get(if (a.conFarola) R.string.obd_bateria_condicion_farola else R.string.obd_bateria_condicion_sin_cargas)
+            val farola = if (a.conFarola) " " + res.get(R.string.obd_bateria_aviso_farola) else ""
+            return res.get(R.string.obd_bateria_frase_contacto, v(contacto.mediaV), condicion, banda) + farola
+        }
+
+        private fun fraseArranque(): String? {
+            val r = a.arranque ?: return null
+            if (r.adaptadorReiniciado) return fraseReinicio(r)
+            if (!r.visto) return res.get(R.string.obd_bateria_arranque_no_visto)
+            return res.get(R.string.obd_bateria_frase_arranque, v(r.valleV), v(r.caidaV), banda(ClavesBanda.ARRANQUE_MIN_V))
+        }
+
+        private fun fraseReinicio(r: ArranqueVoltaje): String {
+            val ultimo = r.valleV?.let { " " + res.get(R.string.obd_bateria_reinicio_ultimo, v(it)) }.orEmpty()
+            val cuanto = if (r.enlacePerdido) {
+                res.get(R.string.obd_bateria_reinicio_enlace_perdido)
+            } else {
+                res.get(R.string.obd_bateria_reinicio_sin_respuesta, n(r.sinRespuestaMs / 1_000.0, 1))
+            }
+            return res.get(R.string.obd_bateria_frase_reinicio, cuanto, v(AnalizadorBateria.REINICIO_TIPICO_V, 0)) + ultimo
+        }
+
+        private fun fraseCarga(): String? {
+            val altas = a.rpmAltas
+            val minimo = a.minimo
+            if (altas == null && minimo == null) return null
+            val partes = listOfNotNull(
+                minimo?.let { res.get(R.string.obd_bateria_carga_minimo, v(it.mediaV)) },
+                altas?.let { res.get(R.string.obd_bateria_carga_altas, v(it.mediaV)) },
+            )
+            val texto = partes.singleOrNull() ?: res.get(R.string.obd_bateria_partes_y, partes[0], partes[1])
+            return res.get(R.string.obd_bateria_frase_carga, texto, banda(ClavesBanda.CARGA_V))
+        }
+
+        private fun fraseVeredicto(): String? = when (a.patron) {
+            PatronBateria.SOBRECARGA -> res.get(R.string.obd_bateria_veredicto_sobrecarga, banda(ClavesBanda.SOBRECARGA_MAX_V))
+            PatronBateria.ARRANQUE_BAJO -> res.get(R.string.obd_bateria_veredicto_arranque_bajo)
+            PatronBateria.NO_CARGA -> res.get(R.string.obd_bateria_veredicto_no_carga)
+            PatronBateria.CARGA_ALTA -> res.get(R.string.obd_bateria_veredicto_carga_alta)
+            PatronBateria.SIN_CARGA_EN_MINIMO -> res.get(R.string.obd_bateria_veredicto_sin_carga_en_minimo)
+            PatronBateria.BATERIA_BAJA -> res.get(R.string.obd_bateria_veredicto_bateria_baja)
+            else -> null
+        }
+
+        private fun fraseDesfase(d: DesfaseVoltaje): String = if (d.calibrado) {
+            res.get(R.string.obd_bateria_desfase_corregido, conSigno(d.voltios), d.origenTexto(res))
         } else {
-            "el adaptador no respondió durante ${seg(r.sinRespuestaMs / 1_000.0)} s"
+            res.get(R.string.obd_bateria_nota_at_rv)
         }
-        return "Durante el arranque $cuanto: se reinició, lo que suele pasar cuando el voltaje cae mucho " +
-            "(típico por debajo de ~${v(AnalizadorBateria.REINICIO_TIPICO_V, 0)}, depende del adaptador).$ultimo"
-    }
 
-    private fun fraseCarga(a: AnalisisBateria): String? {
-        val altas = a.rpmAltas
-        val minimo = a.minimo
-        if (altas == null && minimo == null) return null
-        val partes = listOfNotNull(minimo?.let { "en mínimo marcó ${v(it.mediaV)}" }, altas?.let { "a rpm altas ${v(it.mediaV)}" })
-        return "Con el motor en marcha, ${partes.joinToString(" y ")}; la carga se espera en ${banda(a, ClavesBanda.CARGA_V)}."
-    }
+        // ── Hallazgos y siguiente paso ──────────────────────────────────────
 
-    private fun fraseVeredicto(a: AnalisisBateria): String? = when (a.patron) {
-        PatronBateria.SOBRECARGA -> "Supera el máximo (${banda(a, ClavesBanda.SOBRECARGA_MAX_V)}): compatible con un " +
-            "regulador/rectificador que no limita la carga; puede dañar la batería y las luces."
-        PatronBateria.ARRANQUE_BAJO -> "Compatible con una batería débil o sulfatada, con bornes o masas flojos o sulfatados, " +
-            "o con un motor de arranque que consume de más."
-        PatronBateria.NO_CARGA -> "Compatible con un regulador/rectificador, un estator o su conector en falla, o con un fusible de carga abierto."
-        PatronBateria.CARGA_ALTA -> "Algo por encima de la banda sin llegar a sobrecarga: compatible con un regulador que empieza a fallar."
-        PatronBateria.SIN_CARGA_EN_MINIMO ->
-            "En mínimo no sube sobre el reposo: en motos pequeñas puede ser normal, pero con luces encendidas la batería se descarga."
-        PatronBateria.BATERIA_BAJA -> "Compatible con una batería descargada o con un consumo que la baja con el contacto apagado."
-        else -> null
-    }
-
-    private fun fraseDesfase(d: DesfaseVoltaje): String = if (d.calibrado) {
-        "Voltajes corregidos con el desfase del vehículo (${conSigno(d.voltios)}, ${d.origen})."
-    } else {
-        NOTA_AT_RV
-    }
-
-    // ── Hallazgos y siguiente paso ──────────────────────────────────────────
-
-    private fun hallazgos(a: AnalisisBateria): List<String> = buildList {
-        val r = a.arranque
-        if (r?.adaptadorReiniciado == true) add("El adaptador se reinició durante el arranque: caída severa del voltaje (típico por debajo de ~8 V)")
-        if (r != null && !r.adaptadorReiniciado && !r.visto && r.valleV != null) {
-            add("No se vio la caída del arranque: puede que no se haya arrancado en ese paso")
+        private fun hallazgos(): List<String> = buildList {
+            val r = a.arranque
+            if (r?.adaptadorReiniciado == true) add(res.get(R.string.obd_bateria_hallazgo_reinicio))
+            if (r != null && !r.adaptadorReiniciado && !r.visto && r.valleV != null) {
+                add(res.get(R.string.obd_bateria_hallazgo_no_visto))
+            }
+            if (a.bajaConfianza) add(res.get(R.string.obd_bateria_hallazgo_baja_confianza, n(r?.tasaHz, 0)))
+            if (a.patron == PatronBateria.SOBRECARGA) add(res.get(R.string.obd_bateria_titulo_sobrecarga, v(a.cargaMaxV)))
+            if (a.patron == PatronBateria.ARRANQUE_BAJO) add(res.get(R.string.obd_bateria_hallazgo_arranque_bajo, v(r?.valleV)))
+            if (a.patron == PatronBateria.NO_CARGA) add(res.get(R.string.obd_bateria_hallazgo_no_carga, v(a.rpmAltas?.mediaV)))
         }
-        if (a.bajaConfianza) add("Con ${hz(r?.tasaHz)} lecturas por segundo, el valle real puede ser más profundo que el medido")
-        if (a.patron == PatronBateria.SOBRECARGA) add("Sobrecarga: ${v(a.cargaMaxV)} con el motor en marcha")
-        if (a.patron == PatronBateria.ARRANQUE_BAJO) add("El voltaje cayó a ${v(r?.valleV)} al arrancar")
-        if (a.patron == PatronBateria.NO_CARGA) add("A rpm altas marcó ${v(a.rpmAltas?.mediaV)}: no está cargando")
+
+        private fun siguientePaso(): String? = when (a.patron) {
+            PatronBateria.SIN_DATOS -> res.get(R.string.obd_bateria_siguiente_sin_datos)
+            PatronBateria.ARRANQUE_BAJO, PatronBateria.ADAPTADOR_REINICIADO -> res.get(R.string.obd_bateria_siguiente_arranque)
+            PatronBateria.SOBRECARGA, PatronBateria.NO_CARGA, PatronBateria.CARGA_ALTA, PatronBateria.SIN_CARGA_EN_MINIMO ->
+                res.get(R.string.obd_bateria_siguiente_carga)
+            PatronBateria.BATERIA_BAJA -> res.get(R.string.obd_bateria_siguiente_bateria_baja)
+            PatronBateria.NORMAL -> null
+        }
+
+        // ── Medidas: una línea por cifra, para la pantalla y el informe ──────
+
+        fun medidas(): List<String> = listOfNotNull(
+            a.contacto?.let { res.get(R.string.obd_bateria_medida_contacto, tramo(it)) },
+            a.arranque?.let(::medidaArranque),
+            a.minimo?.let { res.get(R.string.obd_bateria_medida_minimo, tramo(it)) },
+            a.rpmAltas?.let { res.get(R.string.obd_bateria_medida_rpm_altas, tramo(it)) },
+            res.get(R.string.obd_bateria_medida_desfase, desfase()),
+        )
+
+        private fun desfase(): String = if (a.desfase.calibrado) {
+            "${conSigno(a.desfase.voltios)} (${a.desfase.origenTexto(res)})"
+        } else {
+            res.get(R.string.obd_bateria_desfase_sin_calibrar)
+        }
+
+        private fun medidaArranque(r: ArranqueVoltaje): String = when {
+            r.adaptadorReiniciado -> res.get(R.string.obd_bateria_medida_arranque_reinicio) +
+                (r.valleV?.let { " " + res.get(R.string.obd_bateria_medida_arranque_ultimo, v(it)) } ?: "")
+            !r.visto -> res.get(R.string.obd_bateria_medida_arranque_no_visto, n(r.tasaHz, 0))
+            else -> res.get(R.string.obd_bateria_medida_arranque, v(r.valleV), v(r.caidaV), n(r.tasaHz, 0))
+        }
+
+        // ── Formato ─────────────────────────────────────────────────────────
+
+        private fun tramo(t: TramoVoltaje): String {
+            val desde = n(t.minV, 1)
+            val hasta = n(t.maxV, 1)
+            return if (desde == hasta) v(t.mediaV) else res.get(R.string.obd_bateria_tramo, v(t.mediaV), desde, v(t.maxV))
+        }
+
+        private fun banda(clave: String): String {
+            val c = a.comprobacion(clave)?.banda ?: return res.get(R.string.obd_bateria_banda_tipica)
+            return TextoBanda.citar(c, 1, res)
+        }
+
+        private fun v(x: Double?, decimales: Int = 1) = n(x, decimales) + ESPACIO_DURO + "V"
+
+        private fun conSigno(x: Double) = LocaleNumbers.signed(x, 2, res.locale) + ESPACIO_DURO + "V"
+
+        private fun n(x: Double?, decimales: Int) = LocaleNumbers.decimal(x ?: 0.0, decimales, res.locale)
     }
 
-    private fun siguientePaso(a: AnalisisBateria): String? = when (a.patron) {
-        PatronBateria.SIN_DATOS -> "Revisa que el adaptador responda a AT RV y repite la prueba"
-        PatronBateria.ARRANQUE_BAJO, PatronBateria.ADAPTADOR_REINICIADO ->
-            "Mide la batería en los bornes durante el arranque con el multímetro (plantilla batería) y revisa bornes y masas"
-        PatronBateria.SOBRECARGA, PatronBateria.NO_CARGA, PatronBateria.CARGA_ALTA, PatronBateria.SIN_CARGA_EN_MINIMO ->
-            "Mide la carga en los bornes con el multímetro (plantilla batería) y revisa el regulador/rectificador, el estator y su conector"
-        PatronBateria.BATERIA_BAJA -> "Carga la batería y repite; si vuelve a bajar en reposo, busca consumos con el contacto apagado"
-        PatronBateria.NORMAL -> null
-    }
-
-    // ── Medidas: una línea por cifra, para la pantalla y el informe ──────────
-
-    fun medidas(a: AnalisisBateria): List<String> = listOfNotNull(
-        a.contacto?.let { "Contacto: ${tramo(it)}" },
-        a.arranque?.let(::medidaArranque),
-        a.minimo?.let { "Mínimo: ${tramo(it)}" },
-        a.rpmAltas?.let { "Rpm altas: ${tramo(it)}" },
-        "Desfase: " + if (a.desfase.calibrado) "${conSigno(a.desfase.voltios)} (${a.desfase.origen})" else "sin calibrar (AT RV ±0,1-0,2 V, típico)",
-    )
-
-    private fun medidaArranque(r: ArranqueVoltaje): String = when {
-        r.adaptadorReiniciado -> "Arranque: el adaptador se reinició" + (r.valleV?.let { " (lo último, ${v(it)})" } ?: "")
-        !r.visto -> "Arranque: sin caída visible (${hz(r.tasaHz)} lecturas/s)"
-        else -> "Arranque: valle ${v(r.valleV)}, caída de ${v(r.caidaV)} (${hz(r.tasaHz)} lecturas/s)"
-    }
-
-    // ── Formato ─────────────────────────────────────────────────────────────
-
-    private fun tramo(t: TramoVoltaje): String {
-        val desde = FormatoTaller.numero(t.minV, 1)
-        val hasta = FormatoTaller.numero(t.maxV, 1)
-        return if (desde == hasta) v(t.mediaV) else "${v(t.mediaV)} (de $desde a ${v(t.maxV)})"
-    }
-
-    private fun banda(a: AnalisisBateria, clave: String): String {
-        val c = a.comprobacion(clave)?.banda ?: return "la banda típica"
-        return TextoBanda.citar(c, 1)
-    }
-
-    private fun v(x: Double?, decimales: Int = 1) = "${FormatoTaller.numero(x ?: 0.0, decimales)} V"
-
-    private fun conSigno(x: Double) = "${FormatoTaller.conSigno(x, 2)} V"
-
-    private fun hz(x: Double?) = FormatoTaller.numero(x ?: 0.0, 0)
-
-    private fun seg(x: Double) = FormatoTaller.numero(x, 1)
+    private const val ESPACIO_DURO = " "
 }

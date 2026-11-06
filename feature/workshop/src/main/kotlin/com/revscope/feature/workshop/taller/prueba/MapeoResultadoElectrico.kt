@@ -1,6 +1,7 @@
 package com.revscope.feature.workshop.taller.prueba
 
 import com.revscope.core.designsystem.BandaGrafica
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.AnalisisBateria
 import com.revscope.core.obd.taller.pruebas.AnalisisMapBaro
@@ -17,12 +18,14 @@ import com.revscope.core.obd.taller.referencia.ClavesBanda
 // y la serie de toda la prueba (el voltaje con la banda de carga; el MAP con la barométrica ± la tolerancia).
 internal object MapeoResultadoElectrico {
 
-    fun bateria(base: ResultadoUi, a: AnalisisBateria, datos: DatosPrueba?): ResultadoUi {
+    fun bateria(base: ResultadoUi, a: AnalisisBateria, datos: DatosPrueba?, resolver: StringResolver): ResultadoUi {
         val carga = a.comprobacion(ClavesBanda.CARGA_V)?.banda
         return base.copy(
             comprobaciones = a.comprobaciones.map(MapeoResultadoMotor::comprobacion),
-            medidas = TextosBateria.medidas(a),
-            graficas = listOfNotNull(datos?.let { MapeoResultadoMotor.grafica(it, AnalizadorBateria.PID_VOLTAJE, TextosBateria.TITULOS_PASO, carga) }),
+            medidas = TextosBateria.medidas(a, resolver),
+            graficas = listOfNotNull(
+                datos?.let { MapeoResultadoMotor.grafica(it, AnalizadorBateria.PID_VOLTAJE, TextosBateria.titulosPaso(resolver), carga) },
+            ),
             codigoGuia = codigoBateria(a.patron),
         )
     }

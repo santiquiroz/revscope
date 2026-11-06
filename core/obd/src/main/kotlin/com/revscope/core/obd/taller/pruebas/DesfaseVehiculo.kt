@@ -5,7 +5,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.sesion.VehiculoActivo
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -23,12 +25,13 @@ object CalibracionVoltaje {
 
     fun leer(texto: String): Double? = texto.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it in VOLTAJE_PLAUSIBLE }
 
-    fun texto(d: DesfaseVoltaje): String = if (d.calibrado) {
-        "${FormatoTaller.conSigno(d.voltios, 2)} V · ${d.origen}"
+    fun texto(d: DesfaseVoltaje, resolver: StringResolver): String = if (d.calibrado) {
+        "${LocaleNumbers.signed(d.voltios, 2, resolver.locale)}${ESPACIO_DURO}V · ${d.origenTexto(resolver)}"
     } else {
-        "Sin calibrar: AT RV mide con ±0,1-0,2 V (típico)"
+        resolver.get(R.string.obd_calibracion_sin_calibrar)
     }
 
+    private const val ESPACIO_DURO = " "
     private val VOLTAJE_PLAUSIBLE = 6.0..18.0
 }
 

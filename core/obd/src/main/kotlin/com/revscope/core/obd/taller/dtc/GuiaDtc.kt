@@ -53,9 +53,18 @@ sealed interface AccionGuia {
 
     data class Prueba(val tipo: TipoPrueba) : AccionGuia {
         override val clave get() = "$PREFIJO_PRUEBA${tipo.name}"
-        override val etiqueta get() = "Prueba guiada: ${tipo.titulo}" // i18n-ignore
+        override val etiqueta get() = "Prueba guiada: $nombre" // i18n-ignore
         override fun etiqueta(resolver: StringResolver) =
-            resolver.get(R.string.obd_dtc_action_guided_test, tipo.titulo)
+            resolver.get(R.string.obd_dtc_action_guided_test, tipo.titulo(resolver))
+
+        // Sin resolutor (MCP y registros en español): el nombre de la prueba en español.
+        val nombre: String get() = when (tipo) {
+            TipoPrueba.TPS_BARRIDO -> "Barrido del TPS" // i18n-ignore
+            TipoPrueba.MINIMO_RETORNO -> "Mínimo y retorno" // i18n-ignore
+            TipoPrueba.ARRANQUE_FRIO -> "Arranque en frío" // i18n-ignore
+            TipoPrueba.BATERIA_CARGA -> "Batería y carga" // i18n-ignore
+            TipoPrueba.MAP_BARO -> "MAP contra presión barométrica" // i18n-ignore
+        }
     }
 
     data class Multimetro(val sensor: SensorMultimetro) : AccionGuia {

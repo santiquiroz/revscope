@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tipos de prueba guiada -->
+    <string name="obd_prueba_tps_barrido">Barrido del TPS</string>
+    <string name="obd_prueba_minimo_retorno">Mínimo y retorno</string>
+    <string name="obd_prueba_arranque_frio">Arranque en frío</string>
+    <string name="obd_prueba_bateria_carga">Batería y carga</string>
+    <string name="obd_prueba_map_baro">MAP contra presión barométrica</string>
+
+    <!-- Evento de la prueba en la sesión -->
+    <string name="obd_prueba_baja_confianza">%1$s (baja confianza por la tasa)</string>
+    <string name="obd_prueba_sin_terminar">%1$s sin terminar</string>
+    <plurals name="obd_prueba_pasos_completos">
+        <item quantity="one">%1$s · %2$d de %3$d pasos completos</item>
+        <item quantity="other">%1$s · %2$d de %3$d pasos completos</item>
+    </plurals>
+
+    <!-- Origen del desfase de AT RV y de la referencia de 5 V -->
+    <string name="obd_origen_multimetro">Calibrado con el multímetro</string>
+    <string name="obd_origen_editado">Editado por ti</string>
+    <string name="obd_origen_sin_calibrar">Sin calibrar</string>
+    <string name="obd_origen_tipico_editable">Típico (editable)</string>
+    <string name="obd_calibracion_sin_calibrar">Sin calibrar: AT RV mide con ±0,1-0,2&#160;V (típico)</string>
+
+    <!-- Bandas -->
+    <string name="obd_banda_por_debajo">por debajo</string>
+    <string name="obd_banda_por_encima">por encima</string>
+
+    <!-- Batería y carga: pasos -->
+    <string name="obd_bateria_titulo_paso_contacto">Contacto</string>
+    <string name="obd_bateria_titulo_paso_arranque">Arranque</string>
+    <string name="obd_bateria_titulo_paso_minimo">Mínimo</string>
+    <string name="obd_bateria_titulo_paso_rpm_altas">Rpm altas</string>
+
+    <!-- Batería y carga: comprobaciones -->
+    <string name="obd_bateria_comprobacion_contacto_farola">Batería en contacto (con la farola encendida)</string>
+    <string name="obd_bateria_comprobacion_contacto_sin_cargas">Batería en contacto (sin cargas)</string>
+    <string name="obd_bateria_comprobacion_valle_arranque">Valle al arrancar</string>
+    <string name="obd_bateria_comprobacion_adaptador_aguanto">El adaptador siguió respondiendo al arrancar</string>
+    <string name="obd_bateria_comprobacion_carga_minimo">Carga en mínimo (sube sobre el reposo)</string>
+    <string name="obd_bateria_comprobacion_carga_altas">Carga a rpm altas</string>
+    <string name="obd_bateria_comprobacion_maximo">Máximo con el motor en marcha</string>
+
+    <!-- Batería y carga: títulos -->
+    <string name="obd_bateria_titulo_sin_datos">Sin lecturas de voltaje del adaptador</string>
+    <string name="obd_bateria_titulo_sobrecarga">Sobrecarga: %1$s con el motor en marcha</string>
+    <string name="obd_bateria_titulo_arranque_bajo">El voltaje cae a %1$s al arrancar</string>
+    <string name="obd_bateria_titulo_adaptador_reiniciado">El adaptador se reinició al arrancar</string>
+    <string name="obd_bateria_titulo_no_carga">No carga: %1$s a rpm altas</string>
+    <string name="obd_bateria_titulo_carga_alta">Carga alta: %1$s a rpm altas</string>
+    <string name="obd_bateria_titulo_sin_carga_en_minimo">Carga a rpm altas, pero no en mínimo</string>
+    <string name="obd_bateria_titulo_bateria_baja">Carga bien, pero la batería está baja en reposo</string>
+    <string name="obd_bateria_titulo_normal">Batería y carga dentro de las bandas</string>
+
+    <!-- Batería y carga: interpretación -->
+    <string name="obd_bateria_aviso_farola">En muchas motos la farola queda encendida con el contacto (AHO) y el voltaje baja por eso.</string>
+    <string name="obd_bateria_nota_at_rv">AT RV mide en el conector OBD con ±0,1-0,2&#160;V (típico): calibra el desfase del vehículo con el multímetro en los bornes para afinarlo.</string>
+    <string name="obd_bateria_interp_sin_datos">El adaptador no devolvió lecturas de voltaje (AT RV): no hay nada que medir.</string>
+    <string name="obd_bateria_condicion_farola">con la farola encendida</string>
+    <string name="obd_bateria_condicion_sin_cargas">sin cargas</string>
+    <string name="obd_bateria_frase_contacto">Con el contacto puesto y el motor apagado marcó %1$s; %2$s se espera %3$s.</string>
+    <string name="obd_bateria_arranque_no_visto">No se vio la caída del arranque.</string>
+    <string name="obd_bateria_frase_arranque">Al arrancar cayó hasta %1$s (%2$s menos que en reposo); se espera %3$s.</string>
+    <string name="obd_bateria_reinicio_ultimo">Lo más bajo que alcanzó a medir fue %1$s.</string>
+    <string name="obd_bateria_reinicio_enlace_perdido">se perdió el enlace con el adaptador</string>
+    <string name="obd_bateria_reinicio_sin_respuesta">el adaptador no respondió durante %1$s&#160;s</string>
+    <string name="obd_bateria_frase_reinicio">Durante el arranque %1$s: se reinició, lo que suele pasar cuando el voltaje cae mucho (típico por debajo de ~%2$s, depende del adaptador).</string>
+    <string name="obd_bateria_carga_minimo">en mínimo marcó %1$s</string>
+    <string name="obd_bateria_carga_altas">a rpm altas %1$s</string>
+    <string name="obd_bateria_partes_y">%1$s y %2$s</string>
+    <string name="obd_bateria_frase_carga">Con el motor en marcha, %1$s; la carga se espera en %2$s.</string>
+    <string name="obd_bateria_veredicto_sobrecarga">Supera el máximo (%1$s): compatible con un regulador/rectificador que no limita la carga; puede dañar la batería y las luces.</string>
+    <string name="obd_bateria_veredicto_arranque_bajo">Compatible con una batería débil o sulfatada, con bornes o masas flojos o sulfatados, o con un motor de arranque que consume de más.</string>
+    <string name="obd_bateria_veredicto_no_carga">Compatible con un regulador/rectificador, un estator o su conector en falla, o con un fusible de carga abierto.</string>
+    <string name="obd_bateria_veredicto_carga_alta">Algo por encima de la banda sin llegar a sobrecarga: compatible con un regulador que empieza a fallar.</string>
+    <string name="obd_bateria_veredicto_sin_carga_en_minimo">En mínimo no sube sobre el reposo: en motos pequeñas puede ser normal, pero con luces encendidas la batería se descarga.</string>
+    <string name="obd_bateria_veredicto_bateria_baja">Compatible con una batería descargada o con un consumo que la baja con el contacto apagado.</string>
+    <string name="obd_bateria_desfase_corregido">Voltajes corregidos con el desfase del vehículo (%1$s, %2$s).</string>
+
+    <!-- Batería y carga: hallazgos y siguiente paso -->
+    <string name="obd_bateria_hallazgo_reinicio">El adaptador se reinició durante el arranque: caída severa del voltaje (típico por debajo de ~8&#160;V)</string>
+    <string name="obd_bateria_hallazgo_no_visto">No se vio la caída del arranque: puede que no se haya arrancado en ese paso</string>
+    <string name="obd_bateria_hallazgo_baja_confianza">Con %1$s lecturas por segundo, el valle real puede ser más profundo que el medido</string>
+    <string name="obd_bateria_hallazgo_arranque_bajo">El voltaje cayó a %1$s al arrancar</string>
+    <string name="obd_bateria_hallazgo_no_carga">A rpm altas marcó %1$s: no está cargando</string>
+    <string name="obd_bateria_siguiente_sin_datos">Revisa que el adaptador responda a AT RV y repite la prueba</string>
+    <string name="obd_bateria_siguiente_arranque">Mide la batería en los bornes durante el arranque con el multímetro (plantilla batería) y revisa bornes y masas</string>
+    <string name="obd_bateria_siguiente_carga">Mide la carga en los bornes con el multímetro (plantilla batería) y revisa el regulador/rectificador, el estator y su conector</string>
+    <string name="obd_bateria_siguiente_bateria_baja">Carga la batería y repite; si vuelve a bajar en reposo, busca consumos con el contacto apagado</string>
+
+    <!-- Batería y carga: medidas -->
+    <string name="obd_bateria_medida_contacto">Contacto: %1$s</string>
+    <string name="obd_bateria_medida_minimo">Mínimo: %1$s</string>
+    <string name="obd_bateria_medida_rpm_altas">Rpm altas: %1$s</string>
+    <string name="obd_bateria_medida_desfase">Desfase: %1$s</string>
+    <string name="obd_bateria_desfase_sin_calibrar">sin calibrar (AT RV ±0,1-0,2&#160;V, típico)</string>
+    <string name="obd_bateria_medida_arranque_reinicio">Arranque: el adaptador se reinició</string>
+    <string name="obd_bateria_medida_arranque_ultimo">(lo último, %1$s)</string>
+    <string name="obd_bateria_medida_arranque_no_visto">Arranque: sin caída visible (%1$s lecturas/s)</string>
+    <string name="obd_bateria_medida_arranque">Arranque: valle %1$s, caída de %2$s (%3$s lecturas/s)</string>
+    <string name="obd_bateria_tramo">%1$s (de %2$s a %3$s)</string>
+    <string name="obd_bateria_banda_tipica">la banda típica</string>
+
+    <!-- Mínimo y retorno: pasos -->
+    <string name="obd_minimo_titulo_paso_minimo">Mínimo</string>
+    <string name="obd_minimo_titulo_paso_retorno_1">Retorno 1</string>
+    <string name="obd_minimo_titulo_paso_retorno_2">Retorno 2</string>
+    <string name="obd_minimo_titulo_paso_retorno_3">Retorno 3</string>
+
+    <!-- Mínimo y retorno: comprobaciones -->
+    <string name="obd_minimo_comprobacion_media">Mínimo (media)</string>
+    <string name="obd_minimo_comprobacion_deriva">Deriva del mínimo (sin signo)</string>
+    <string name="obd_minimo_comprobacion_desviacion">Desviación del mínimo</string>
+    <string name="obd_minimo_comprobacion_sin_oscilacion">Sin oscilación de más de %1$d rpm</string>
+    <string name="obd_minimo_comprobacion_sin_apagones">No se apagó</string>
+    <string name="obd_minimo_comprobacion_valle">Valle más bajo al soltar</string>
+    <string name="obd_minimo_comprobacion_tps">TPS en ralentí</string>
+    <string name="obd_minimo_unidad_del_minimo">del mínimo</string>
+
+    <!-- Mínimo y retorno: títulos -->
+    <string name="obd_minimo_titulo_inestable">Mínimo inestable</string>
+    <string name="obd_minimo_titulo_retorno_bajo">Al soltar, las RPM caen demasiado</string>
+    <string name="obd_minimo_titulo_fuera_de_banda">Mínimo estable, pero fuera de la banda</string>
+    <string name="obd_minimo_titulo_tps_ralenti_fuera">Mínimo estable, con el TPS de ralentí fuera de la banda de cerrado</string>
+    <string name="obd_minimo_titulo_sin_retornos">Mínimo estable; no se detectaron las aceleradas</string>
+    <string name="obd_minimo_titulo_sin_datos">Sin datos suficientes de RPM</string>
+    <string name="obd_minimo_titulo_normal">Mínimo estable y buen retorno</string>
+    <plurals name="obd_minimo_apagones_al_soltar">
+        <item quantity="one">%1$d de %2$d veces al soltar el acelerador</item>
+        <item quantity="other">%1$d de %2$d veces al soltar el acelerador</item>
+    </plurals>
+    <string name="obd_minimo_titulo_se_apago_al_soltar">Se apagó %1$s</string>
+    <string name="obd_minimo_titulo_se_apago_en_minimo">Se apagó en el mínimo sin tocar el acelerador</string>
+    <string name="obd_minimo_titulo_se_apago_ambos">Se apagó en el mínimo y %1$s</string>
+
+    <!-- Mínimo y retorno: interpretación -->
+    <string name="obd_minimo_interp_sin_datos">No llegaron lecturas de RPM durante el mínimo: sin ellas no hay nada que medir.</string>
+    <string name="obd_minimo_ect">Motor a %1$s&#160;°C durante el mínimo.</string>
+    <string name="obd_minimo_deriva_cayo">El mínimo cayó de %1$s a %2$s&#160;rpm en %3$s&#160;s (%4$s&#160;%5$s)</string>
+    <string name="obd_minimo_deriva_subio">El mínimo subió de %1$s a %2$s&#160;rpm en %3$s&#160;s (%4$s&#160;%5$s)</string>
+    <string name="obd_minimo_media">El mínimo quedó en %1$s&#160;rpm de media, con desviación de %2$s&#160;rpm</string>
+    <string name="obd_minimo_con_oscilacion">%1$s, y oscila ±%2$s&#160;rpm%3$s</string>
+    <string name="obd_minimo_cada">cada %1$s&#160;s</string>
+    <string name="obd_minimo_inestable_sufijo">%1$s: inestable%2$s.</string>
+    <string name="obd_minimo_frase_banda">La media, %1$s&#160;rpm, queda %2$s de la banda (%3$s).</string>
+    <plurals name="obd_minimo_apagones_retorno">
+        <item quantity="one">Al soltar el acelerador se apagó %1$d de %2$d veces.</item>
+        <item quantity="other">Al soltar el acelerador se apagó %1$d de %2$d veces.</item>
+    </plurals>
+    <string name="obd_minimo_vuelta">y volvió al mínimo en %1$s&#160;s como mucho</string>
+    <string name="obd_minimo_frase_valle">Al soltar, el valle más bajo fue de %1$s&#160;rpm (%2$s del mínimo)%3$s.</string>
+    <string name="obd_minimo_compatibilidad">Compatible con un mínimo mal controlado: válvula o motor paso a paso del mínimo, cuerpo de aceleración sucio, aire falso o una señal del TPS que la ECU no reconoce como ralentí.</string>
+
+    <!-- Mínimo y retorno: hallazgos -->
+    <plurals name="obd_minimo_hallazgo_apagones">
+        <item quantity="one">Se apagó %1$d vez en el mínimo sin tocar el acelerador</item>
+        <item quantity="other">Se apagó %1$d veces en el mínimo sin tocar el acelerador</item>
+    </plurals>
+    <string name="obd_minimo_hallazgo_se_apago_al_soltar">Se apagó al soltar en %1$s</string>
+    <string name="obd_minimo_nombre_articulo">el %1$s</string>
+    <string name="obd_minimo_nombres_varios">%1$s y %2$s</string>
+    <string name="obd_minimo_hallazgo_inestable">Mínimo inestable: deriva de %1$s&#160;%2$s y desviación de %3$s&#160;rpm%4$s</string>
+    <string name="obd_minimo_hallazgo_oscila">, oscila ±%1$s&#160;rpm</string>
+    <string name="obd_minimo_hallazgo_sin_acelerada">%1$s: no se detectó la acelerada (llegó a %2$s&#160;rpm); no cuenta</string>
+    <string name="obd_minimo_hallazgo_no_volvio">%1$s: no volvió a ±%2$d&#160;%% del mínimo antes de terminar el paso</string>
+    <string name="obd_minimo_hallazgo_valle">Valle al soltar de %1$s&#160;%% del mínimo, por debajo de la banda%2$s</string>
+    <string name="obd_minimo_hallazgo_banda">Mínimo de %1$s&#160;rpm, %2$s de la banda%3$s</string>
+    <string name="obd_minimo_hallazgo_tps">TPS en ralentí %1$s-%2$s&#160;V, %3$s de la banda de cerrado%4$s: %5$s</string>
+    <string name="obd_minimo_tps_bajo">la ECU puede no reconocer la posición de ralentí</string>
+    <string name="obd_minimo_tps_alto">el acelerador puede no cerrar del todo o el tope estar desajustado</string>
+
+    <!-- Mínimo y retorno: siguiente paso -->
+    <string name="obd_minimo_siguiente_tps">Corre el barrido del TPS con el motor apagado y mide su señal con el multímetro (plantilla TPS)</string>
+    <string name="obd_minimo_siguiente_inestable">Revisa el cuerpo de aceleración y el control del mínimo, busca entradas de aire falso y repite la prueba en frío y en caliente para comparar</string>
+    <string name="obd_minimo_siguiente_fuera_de_banda">Confirma el mínimo que indica el fabricante para este modelo; si difiere de la banda típica, edítala</string>
+    <string name="obd_minimo_siguiente_sin_retornos">Repite la prueba acelerando hasta unas 3 000 rpm en cada retorno</string>
+    <string name="obd_minimo_siguiente_sin_datos">Revisa que el adaptador siga conectado y repite la prueba</string>
+
+    <!-- Mínimo y retorno: medidas -->
+    <plurals name="obd_minimo_muestras">
+        <item quantity="one">%1$d muestras en %2$s&#160;s</item>
+        <item quantity="other">%1$d muestras en %2$s&#160;s</item>
+    </plurals>
+    <string name="obd_minimo_medida_minimo">Mínimo: media %1$s&#160;rpm, desviación %2$s&#160;rpm, de %3$s a %4$s&#160;rpm (%5$s)</string>
+    <string name="obd_minimo_medida_deriva">Deriva: %1$s&#160;%2$s (de %3$s a %4$s&#160;rpm)</string>
+    <string name="obd_minimo_medida_oscilacion">Oscilación: %1$s</string>
+    <string name="obd_minimo_oscilacion_valor">±%1$s&#160;rpm</string>
+    <string name="obd_minimo_oscilacion_no">no</string>
+    <string name="obd_minimo_medida_tps">TPS en ralentí: %1$s-%2$s&#160;V (media %3$s&#160;V)</string>
+    <string name="obd_minimo_medida_ect">Motor a %1$s&#160;°C durante el mínimo</string>
+    <string name="obd_minimo_retorno_sin_acelerada">%1$s: sin acelerada (máximo %2$s&#160;rpm)</string>
+    <string name="obd_minimo_retorno_se_apago">%1$s: pico %2$s&#160;rpm y se apagó al soltar</string>
+    <string name="obd_minimo_retorno">%1$s: pico %2$s&#160;rpm, valle %3$s&#160;rpm (%4$s del mínimo), %5$s</string>
+    <string name="obd_minimo_retorno_volvio">volvió en %1$s&#160;s</string>
+    <string name="obd_minimo_retorno_no_volvio">no volvió a ±%1$d&#160;%% del mínimo</string>
+</resources>

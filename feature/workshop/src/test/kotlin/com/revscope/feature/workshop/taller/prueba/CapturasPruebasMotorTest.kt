@@ -17,11 +17,15 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 class CapturasPruebasMotorTest {
 
+<<<<<<< HEAD
     private val pantalla = PantallaPrueba(
         CatalogoPruebas::definicion,
         CatalogoPruebas.disponibles,
         XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res")),
     )
+=======
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
+>>>>>>> i18n/lane-g
 
     private fun ui(entrada: EntradaPantalla) = PruebaGuiadaUi(fase = pantalla.fase(entrada), vehiculo = "Benelli TNT 150i")
 
