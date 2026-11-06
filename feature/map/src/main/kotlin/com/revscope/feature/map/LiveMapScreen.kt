@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +70,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.maps.MapDownloadState
 import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
@@ -98,6 +102,7 @@ import org.maplibre.android.gestures.StandardScaleGestureDetector
 import org.maplibre.android.maps.MapLibreMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 private val AttributionColor = Color(0xFF6B7089)
 
@@ -182,6 +187,7 @@ fun LiveMapScreen(
     // del provider duplicaría los re-writes del dataset completo sin cambio visual (T4 lo enmascara).
     val standaloneFix = if (route.isEmpty()) liveFix else null
     val context = LocalContext.current
+    val tapResolver = remember(context) { AndroidStringResolver(context) }
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
@@ -319,13 +325,13 @@ fun LiveMapScreen(
     LaunchedEffect(mapDownloadState) {
         val current = mapDownloadState
         if (wasDownloadingMap && current is MapDownloadState.Idle && current.exists) {
-            snackbarHostState.showSnackbar("Mapa offline listo")
+            snackbarHostState.showSnackbar(context.getString(R.string.map_offline_ready))
         }
         // Sin esto, una descarga que falla (caída de celular en moto — el caso que el confirm
         // de datos móviles habilita) hacía desaparecer el banner de progreso sin una palabra,
         // con la promo ya consumida y sin vía de retry visible en el mapa.
         if (wasDownloadingMap && current is MapDownloadState.Error) {
-            snackbarHostState.showSnackbar("Descarga del mapa falló: ${current.message} — reintentá desde Ajustes")
+            snackbarHostState.showSnackbar(context.getString(R.string.map_download_failed, current.message))
         }
         wasDownloadingMap = current is MapDownloadState.Downloading
     }
@@ -406,7 +412,7 @@ fun LiveMapScreen(
             // ningún marcador cierra la tarjeta que estuviera abierta (resolveTappedFeature
             // devuelve null en ese caso).
             map.addOnMapClickListener { latLng ->
-                tappedFeature = resolveTappedFeature(map, latLng)
+                tappedFeature = resolveTappedFeature(map, latLng, tapResolver)
                 true
             }
             map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
@@ -562,7 +568,7 @@ fun LiveMapScreen(
         }
 
         Text(
-            "© OpenStreetMap contributors",
+            stringResource(R.string.map_osm_attribution),
             color = AttributionColor,
             fontSize = 10.sp,
             modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
@@ -583,7 +589,7 @@ fun LiveMapScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Ubicación desactivada",
+                        stringResource(R.string.map_location_disabled),
                         color = Color(0xFFF0F0F8),
                         fontSize = 13.sp,
                         modifier = Modifier.weight(1f, fill = false).padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
@@ -595,7 +601,7 @@ fun LiveMapScreen(
                             )
                         },
                     ) {
-                        Text("Permitir", color = Color(0xFFE8FF00), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.map_location_allow), color = Color(0xFFE8FF00), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -649,11 +655,13 @@ fun LiveMapScreen(
             ) {
                 Icon(
                     if (nightMode == "auto") Icons.Default.BrightnessAuto else Icons.Default.DarkMode,
-                    contentDescription = "Mapa nocturno: " + when (nightMode) {
-                        "auto" -> "automático"
-                        "on" -> "encendido"
-                        else -> "apagado"
-                    },
+                    contentDescription = stringResource(
+                        when (nightMode) {
+                            "auto" -> R.string.map_night_mode_auto
+                            "on" -> R.string.map_night_mode_on
+                            else -> R.string.map_night_mode_off
+                        },
+                    ),
                     tint = if (darkTiles) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                 )
             }
@@ -667,7 +675,7 @@ fun LiveMapScreen(
                 ) {
                     Icon(
                         Icons.Default.Explore,
-                        contentDescription = "Rumbo arriba",
+                        contentDescription = stringResource(R.string.map_heading_up),
                         tint = if (headingUp) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                     )
                 }
@@ -679,7 +687,7 @@ fun LiveMapScreen(
             ) {
                 Icon(
                     Icons.Default.MyLocation,
-                    contentDescription = "Seguir mi posición",
+                    contentDescription = stringResource(R.string.map_follow_me),
                     tint = if (followEnabled) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                 )
             }
@@ -690,7 +698,7 @@ fun LiveMapScreen(
             ) {
                 Icon(
                     Icons.Default.Group,
-                    contentDescription = "Rodada en grupo",
+                    contentDescription = stringResource(R.string.map_group_ride),
                     tint = if (roomCode != null) Color(0xFF0A0A0F) else Color(0xFFF0F0F8),
                 )
             }
@@ -709,7 +717,7 @@ fun LiveMapScreen(
                 },
                 containerColor = Color(0xFF1C1C28),
             ) {
-                Icon(Icons.Default.Navigation, contentDescription = "Abrir en Maps", tint = Color(0xFFF0F0F8))
+                Icon(Icons.Default.Navigation, contentDescription = stringResource(R.string.map_open_in_maps), tint = Color(0xFFF0F0F8))
             }
         }
 
@@ -823,7 +831,7 @@ fun LiveMapScreen(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
                 ) {
                     Text(
-                        "\uD83C\uDFCD\uFE0F Sala $roomCode \u00b7 ${peers.size} en l\u00ednea",
+                        stringResource(R.string.map_room_status, roomCode.orEmpty(), peers.size),
                         color = Color(0xFFE8FF00),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -912,15 +920,15 @@ private fun GroupRideDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF12121A),
-        title = { Text("Rodada en grupo", color = Color(0xFFF0F0F8), fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.map_group_ride), color = Color(0xFFF0F0F8), fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 if (activeCode != null) {
-                    Text("Est\u00e1s en la sala $activeCode. Comparte el c\u00f3digo con tu parche.", color = Color(0xFF6B7089), fontSize = 13.sp)
+                    Text(stringResource(R.string.map_room_active, activeCode), color = Color(0xFF6B7089), fontSize = 13.sp)
                     if (legacyServer) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "El servidor necesita actualizarse para las funciones sociales (destino compartido, carreras).",
+                            stringResource(R.string.map_room_legacy_server),
                             color = Color(0xFFFF5252),
                             fontSize = 12.sp,
                         )
@@ -928,30 +936,30 @@ private fun GroupRideDialog(
                     Spacer(Modifier.height(12.dp))
                     GhostModeToggle(enabled = ghostEnabled, onToggle = onToggleGhost)
                 } else {
-                    Text("Crea una sala y comparte el c\u00f3digo, o \u00fanete a la de un parcero. Ver\u00e1s sus posiciones en el mapa en vivo.", color = Color(0xFF6B7089), fontSize = 13.sp)
+                    Text(stringResource(R.string.map_room_intro), color = Color(0xFF6B7089), fontSize = 13.sp)
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = codeInput,
                         onValueChange = { codeInput = it.uppercase().take(6) },
-                        label = { Text("C\u00f3digo de sala", fontSize = 12.sp) },
+                        label = { Text(stringResource(R.string.map_room_code), fontSize = 12.sp) },
                         singleLine = true,
                     )
-                    Text("Requiere un servidor configurado en Ajustes.", color = Color(0xFF6B7089), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text(stringResource(R.string.map_room_requires_server), color = Color(0xFF6B7089), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         },
         confirmButton = {
             if (activeCode != null) {
-                TextButton(onClick = onLeave) { Text("Salir de la sala", color = Color(0xFFFF5252)) }
+                TextButton(onClick = onLeave) { Text(stringResource(R.string.map_room_leave), color = Color(0xFFFF5252)) }
             } else {
-                TextButton(onClick = onCreate, enabled = !busy) { Text(if (busy) "Creando\u2026" else "Crear sala", color = Color(0xFFE8FF00)) }
+                TextButton(onClick = onCreate, enabled = !busy) { Text(stringResource(if (busy) R.string.map_room_creating else R.string.map_room_create), color = Color(0xFFE8FF00)) }
             }
         },
         dismissButton = {
             if (activeCode == null && codeInput.length == 6) {
-                TextButton(onClick = { onJoin(codeInput) }) { Text("Unirse", color = Color(0xFFE8FF00)) }
+                TextButton(onClick = { onJoin(codeInput) }) { Text(stringResource(R.string.map_room_join), color = Color(0xFFE8FF00)) }
             } else {
-                TextButton(onClick = onDismiss) { Text("Cerrar", color = Color(0xFF6B7089)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.map_close), color = Color(0xFF6B7089)) }
             }
         },
     )
@@ -966,9 +974,9 @@ private fun GhostModeToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("Modo fantasma", color = Color(0xFFF0F0F8), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.map_ghost_mode), color = Color(0xFFF0F0F8), fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Ves a la sala, pero tu posición no se comparte.",
+                stringResource(R.string.map_ghost_mode_summary),
                 color = Color(0xFF6B7089),
                 fontSize = 11.sp,
             )
@@ -1007,9 +1015,9 @@ private fun RouteInfoChip(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     when {
-                        routing -> "Calculando ruta…"
-                        plannedRoute != null -> formatRouteSummary(plannedRoute)
-                        else -> "Sin ruta — ¿hay internet?"
+                        routing -> stringResource(R.string.map_route_calculating)
+                        plannedRoute != null -> formatRouteSummary(plannedRoute, LocalConfiguration.current.locales[0])
+                        else -> stringResource(R.string.map_route_none)
                     },
                     color = Color(0xFFE8FF00),
                     fontSize = 14.sp,
@@ -1018,16 +1026,16 @@ private fun RouteInfoChip(
                 )
                 if (plannedRoute != null) {
                     TextButton(onClick = onStart) {
-                        Text("Navegar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                        Text(stringResource(R.string.map_route_navigate), color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
                     }
                 }
                 if (canShare) {
                     IconButton(onClick = onShare) {
-                        Icon(Icons.Default.Share, contentDescription = "Compartir con la sala", tint = Color(0xFFE8FF00))
+                        Icon(Icons.Default.Share, contentDescription = stringResource(R.string.map_share_with_room), tint = Color(0xFFE8FF00))
                     }
                 }
                 IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = "Quitar destino", tint = Color(0xFF6B7089))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_clear_destination), tint = Color(0xFF6B7089))
                 }
             }
             if (routeAlternatives.size > 1) {
@@ -1110,7 +1118,7 @@ internal fun SharedDestBanner(
             modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         ) {
             Text(
-                "🎯 ${dest.rider} propone destino: ${dest.name}",
+                stringResource(R.string.map_shared_dest_proposal, dest.rider, dest.name),
                 color = Color(0xFFF0F0F8),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -1119,20 +1127,20 @@ internal fun SharedDestBanner(
                 modifier = Modifier.weight(1f, fill = false),
             )
             TextButton(onClick = onAccept) {
-                Text("Ir", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                Text(stringResource(R.string.map_shared_dest_go), color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
             }
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Descartar propuesta", tint = Color(0xFF6B7089))
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_shared_dest_dismiss), tint = Color(0xFF6B7089))
             }
         }
     }
 }
 
-private fun formatRouteSummary(route: NavigationRoute): String {
+private fun formatRouteSummary(route: NavigationRoute, locale: Locale): String {
     val km = route.distanceM / 1000.0
     val minutes = (route.durationS / 60.0).toInt()
-    val distance = if (km >= 10) "%.0f km".format(km) else "%.1f km".format(km)
-    val time = if (minutes >= 60) "${minutes / 60} h ${minutes % 60} min" else "$minutes min"
+    val distance = LocaleNumbers.decimal(km, if (km >= 10) 0 else 1, locale) + " km" // i18n-ignore
+    val time = if (minutes >= 60) "${minutes / 60} h ${minutes % 60} min" else "$minutes min" // i18n-ignore
     return "$distance · $time"
 }
 
@@ -1159,7 +1167,7 @@ internal fun ErrorBanner(message: String, onDismiss: () -> Unit, modifier: Modif
                 modifier = Modifier.weight(1f, fill = false).padding(start = 14.dp, top = 8.dp, bottom = 8.dp),
             )
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_close_notice), tint = AttributionColor)
             }
         }
     }
@@ -1181,11 +1189,11 @@ private fun currentBearingDegrees(route: List<LiveRouteHolder.RoutePoint>): Doub
  * dibuja como texto por encima de su ícono (offset -2.2em), así que tocar el nombre cae fuera
  * del hit-test de los íconos solos — misma fuente (SRC_MARKERS), mismas properties, sin caso
  * especial en describeFeature. */
-private fun resolveTappedFeature(map: MapLibreMap, latLng: LatLng): MapFeatureDescription? {
+private fun resolveTappedFeature(map: MapLibreMap, latLng: LatLng, resolver: StringResolver): MapFeatureDescription? {
     val screenPoint = map.projection.toScreenLocation(latLng)
     val feature = map.queryRenderedFeatures(screenPoint, LYR_MARKERS, LYR_MARKERS_ROTANTES, LYR_PEER_LABELS).firstOrNull() ?: return null
     val (kind, properties) = describableProperties(feature)
-    return describeFeature(kind, properties)
+    return describeFeature(kind, properties, resolver)
 }
 
 /** Banner del radar al que el vehículo se dirige — solo ese, nunca los de otras calles.
@@ -1204,8 +1212,8 @@ internal fun ApproachingCameraBanner(
             Spacer(Modifier.width(8.dp))
             Text(
                 buildString {
-                    append("Radar en ${target.distanceM} m")
-                    target.maxSpeedKmh?.let { append("  ·  límite $it") }
+                    append(stringResource(R.string.map_camera_ahead, target.distanceM))
+                    target.maxSpeedKmh?.let { append("  ·  ").append(stringResource(R.string.map_camera_limit, it)) }
                 },
                 color = Color.White,
                 fontSize = 15.sp,
@@ -1231,16 +1239,16 @@ internal fun RemoteMapPromoBanner(onDownload: () -> Unit, onDismiss: () -> Unit,
     ) {
         Column(modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 4.dp)) {
             Text(
-                "Mapa premium activo por internet — descargalo para usarlo sin datos",
+                stringResource(R.string.map_remote_promo),
                 color = Color(0xFFF0F0F8),
                 fontSize = 12.sp,
             )
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onDownload) {
-                    Text("Descargar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                    Text(stringResource(R.string.map_download), color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = AttributionColor)
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_close_notice), tint = AttributionColor)
                 }
             }
         }
@@ -1263,7 +1271,7 @@ internal fun MapDownloadProgressBanner(
         modifier = modifier.widthIn(max = 280.dp),
     ) {
         Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 4.dp)) {
-            Text("Descargando mapa offline… $percent%", color = Color(0xFFF0F0F8), fontSize = 12.sp)
+            Text(stringResource(R.string.map_downloading_offline, percent), color = Color(0xFFF0F0F8), fontSize = 12.sp)
             Spacer(Modifier.height(6.dp))
             LinearProgressIndicator(
                 progress = { state.progress },
@@ -1273,7 +1281,7 @@ internal fun MapDownloadProgressBanner(
             )
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onCancel) {
-                    Text("Cancelar", color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
+                    Text(stringResource(R.string.map_cancel), color = Color(0xFFE8FF00), fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -1301,7 +1309,7 @@ private fun MapDownloadConfirmDialog(
         containerColor = Color(0xFF12121A),
         title = {
             Text(
-                if (isOnWifi) "Descargar mapa offline" else "Sin WiFi",
+                stringResource(if (isOnWifi) R.string.map_download_offline_title else R.string.map_no_wifi),
                 color = Color(0xFFF0F0F8),
                 fontWeight = FontWeight.Bold,
             )
@@ -1309,26 +1317,24 @@ private fun MapDownloadConfirmDialog(
         text = {
             Column {
                 Text(
-                    if (isOnWifi) {
-                        "Se descargará el mapa offline de Colombia (~913 MB)."
-                    } else {
-                        "Sin WiFi — ¿usar datos móviles? (~913 MB)"
-                    },
+                    stringResource(
+                        if (isOnWifi) R.string.map_download_confirm_wifi else R.string.map_download_confirm_cellular,
+                    ),
                     color = Color(0xFF6B7089),
                     fontSize = 13.sp,
                 )
                 TextButton(onClick = onGoToSettings) {
-                    Text("Ir a Ajustes", color = Color(0xFF6B7089), fontSize = 12.sp)
+                    Text(stringResource(R.string.map_go_to_settings), color = Color(0xFF6B7089), fontSize = 12.sp)
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(!isOnWifi) }) {
-                Text(if (isOnWifi) "Descargar" else "Usar datos móviles", color = Color(0xFFE8FF00))
+                Text(stringResource(if (isOnWifi) R.string.map_download else R.string.map_use_mobile_data), color = Color(0xFFE8FF00))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color(0xFF6B7089)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.map_cancel), color = Color(0xFF6B7089)) }
         },
     )
 }
@@ -1350,7 +1356,7 @@ private fun RecenterChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
         ) {
             Icon(Icons.Default.Navigation, contentDescription = null, tint = Color(0xFF0A0A0F))
             Spacer(Modifier.width(6.dp))
-            Text("Recentrar", color = Color(0xFF0A0A0F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.map_recenter), color = Color(0xFF0A0A0F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -1365,7 +1371,7 @@ private fun SpeedOverlay(speedFlow: StateFlow<Int?>, modifier: Modifier = Modifi
 private fun CurrentSpeedBadge(speedKmh: Int, modifier: Modifier = Modifier) {
     Surface(color = Color(0xCC12121A), modifier = modifier) {
         Text(
-            "$speedKmh km/h",
+            "$speedKmh km/h", // i18n-ignore
             color = Color(0xFFE8FF00),
             fontSize = 28.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
