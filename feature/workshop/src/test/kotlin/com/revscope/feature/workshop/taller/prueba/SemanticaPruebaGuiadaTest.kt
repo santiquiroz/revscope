@@ -36,7 +36,7 @@ class SemanticaPruebaGuiadaTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
 
     private fun ui(estado: EstadoPrueba, dialogo: DialogoPrueba? = null) = PruebaGuiadaUi(
         fase = pantalla.fase(EntradaPantalla(estado, serieVivo = BarridoBenelli.serieMedio(), bandas = BarridoBenelli.bandas)),

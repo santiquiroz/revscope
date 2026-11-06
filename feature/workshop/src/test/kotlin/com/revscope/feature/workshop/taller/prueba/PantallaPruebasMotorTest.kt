@@ -12,7 +12,7 @@ import org.junit.Test
 
 class PantallaPruebasMotorTest {
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
 
     private fun paso(e: EstadoPrueba.EnPaso, serie: SerieVivo) =
         (pantalla.fase(EntradaPantalla(e, serieVivo = serie, bandas = PruebasMotorBenelli.bandas)) as FasePantalla.Paso).paso

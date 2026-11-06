@@ -19,7 +19,6 @@ data class PruebaGuiadaUi(
     val desfase: DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR,
     val voltajeAdaptador: Double? = null,
 ) {
-    val titulo: String get() = fase.tipo?.titulo ?: "Pruebas guiadas"
     val vref: ReferenciaVoltaje get() = referencia.usada
     val enCurso: Boolean get() = fase is FasePantalla.Paso || fase is FasePantalla.Analizando
 }

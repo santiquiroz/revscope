@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.pruebas
 
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.telemetry.captura.LimitesCaptura
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
@@ -16,17 +18,20 @@ data class DefinicionPrueba(
     val pidsOpcionales: List<String> = emptyList(),
     val precondiciones: List<Precondicion>,
     val pasos: List<PasoPrueba>,
-    val analizar: (DatosPrueba, Map<String, BandaReferencia>) -> ResultadoPrueba,
+    val analizar: (DatosPrueba, Map<String, BandaReferencia>, StringResolver) -> ResultadoPrueba,
     val fuente: FuenteMuestras = FuenteMuestras.PIDS,
     val analizarSiSeCortaEn: Set<String> = emptySet(),
     val usaAmbiente: Boolean = false,
 ) {
     init {
-        require(pids.isNotEmpty()) { "La prueba $tipo necesita al menos un PID" }
-        require(pasos.isNotEmpty()) { "La prueba $tipo necesita al menos un paso" }
+        require(pids.isNotEmpty()) { "La prueba $tipo necesita al menos un PID" } // i18n-ignore
+        require(pasos.isNotEmpty()) { "La prueba $tipo necesita al menos un paso" } // i18n-ignore
     }
 
-    val titulo: String get() = tipo.titulo
+    fun titulo(resolver: StringResolver): String = tipo.titulo(resolver)
+
+    // Los pasos con [PasoPrueba.tituloRes] quedan con su título en el idioma del resolutor.
+    fun resuelta(resolver: StringResolver): DefinicionPrueba = copy(pasos = pasos.map { it.copy(titulo = it.titulo(resolver)) })
 
     // El PID que se muestra en vivo en cada paso: el del paso si lo dice, si no el primero de la prueba.
     fun pidPrincipal(paso: PasoPrueba): String = paso.pidPrincipal ?: pids.first()
@@ -40,15 +45,19 @@ data class DefinicionPrueba(
     }
 }
 
+// [tituloRes], si está, manda sobre [titulo]: el catálogo no tiene resolutor y la definición se resuelve al usarla.
 data class PasoPrueba(
     val clave: String,
-    val titulo: String,
+    val titulo: String = "",
     val instruccion: String,
     val modo: ModoPaso,
     val descartarInicioMs: Long = 1_000,
     val terminarCuando: CriterioFin? = null,
     val pidPrincipal: String? = null,
-)
+    @StringRes val tituloRes: Int? = null,
+) {
+    fun titulo(resolver: StringResolver): String = tituloRes?.let { resolver.get(it) } ?: titulo
+}
 
 sealed interface ModoPaso {
     val limiteMs: Long

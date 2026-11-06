@@ -39,7 +39,7 @@ data class PasoVerificacionUi(
 )
 
 fun textoAccionGuia(accion: AccionGuia): String = when (accion) {
-    is AccionGuia.Prueba -> "Iniciar prueba: ${accion.tipo.titulo}"
+    is AccionGuia.Prueba -> "Iniciar prueba: ${accion.nombre}"
     is AccionGuia.Multimetro -> "Medir con multímetro"
     AccionGuia.BorrarCodigos -> "Borrar códigos"
 }

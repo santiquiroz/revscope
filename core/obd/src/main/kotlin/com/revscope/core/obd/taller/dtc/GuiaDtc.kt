@@ -35,7 +35,16 @@ sealed interface AccionGuia {
 
     data class Prueba(val tipo: TipoPrueba) : AccionGuia {
         override val clave get() = "$PREFIJO_PRUEBA${tipo.name}"
-        override val etiqueta get() = "Prueba guiada: ${tipo.titulo}"
+        override val etiqueta get() = "Prueba guiada: $nombre"
+
+        // Sin resolutor todavía (la guía DTC se traduce aparte): el nombre de la prueba en español.
+        val nombre: String get() = when (tipo) {
+            TipoPrueba.TPS_BARRIDO -> "Barrido del TPS"
+            TipoPrueba.MINIMO_RETORNO -> "Mínimo y retorno"
+            TipoPrueba.ARRANQUE_FRIO -> "Arranque en frío"
+            TipoPrueba.BATERIA_CARGA -> "Batería y carga"
+            TipoPrueba.MAP_BARO -> "MAP contra presión barométrica"
+        }
     }
 
     data class Multimetro(val sensor: SensorMultimetro) : AccionGuia {

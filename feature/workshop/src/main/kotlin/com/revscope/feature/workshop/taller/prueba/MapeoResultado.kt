@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.prueba
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.BandaGrafica
 import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
@@ -35,13 +36,13 @@ internal object MapeoResultado {
         Pasos.A_FONDO to ClavesBanda.TPS_FONDO_V,
     )
 
-    fun de(t: EstadoPrueba.Terminada): ResultadoUi {
+    fun de(t: EstadoPrueba.Terminada, resolver: StringResolver): ResultadoUi {
         val base = base(t)
         return when (val detalle = t.resultado.detalle) {
             is AnalisisBarridoTps -> conBarrido(base, detalle, t.datos)
-            is AnalisisMinimo -> MapeoResultadoMotor.minimo(base, detalle, t.datos)
+            is AnalisisMinimo -> MapeoResultadoMotor.minimo(base, detalle, t.datos, resolver)
             is AnalisisArranqueFrio -> MapeoResultadoMotor.arranque(base, detalle, t.datos)
-            is AnalisisBateria -> MapeoResultadoElectrico.bateria(base, detalle, t.datos)
+            is AnalisisBateria -> MapeoResultadoElectrico.bateria(base, detalle, t.datos, resolver)
             is AnalisisMapBaro -> MapeoResultadoElectrico.mapBaro(base, detalle, t.datos)
             else -> base
         }

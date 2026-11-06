@@ -40,7 +40,7 @@ internal object PruebasMotorBenelli {
 
     fun minimoTerminado(eventoId: Long? = 22): EstadoPrueba.Terminada {
         val datos = minimo()
-        return EstadoPrueba.Terminada(AnalizadorMinimo.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorMinimo.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     // Paso 1 de 4 grabando, a 20 s de terminar, con el mínimo en 1 454 rpm y la banda típica sombreada.

@@ -36,7 +36,7 @@ internal const val TEXTO_REPETIR_PASO = "Repetir paso"
 
 @Composable
 internal fun ColumnScope.PasoPrueba(paso: PasoUi, estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
-    BarraPrueba(estado.titulo, estado.vehiculo, acciones.onPedirCancelar)
+    BarraPrueba(estado.titulo(), estado.vehiculo, acciones.onPedirCancelar)
     CuerpoDesplazable {
         IndicadorPasos(actual = paso.indice, total = paso.total, titulo = paso.titulo)
         Instruccion(paso)

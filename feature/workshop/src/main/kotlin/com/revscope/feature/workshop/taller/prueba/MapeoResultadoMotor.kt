@@ -5,6 +5,7 @@ import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
 import com.revscope.core.designsystem.SerieGrafica
 import com.revscope.core.designsystem.TramoGrafica
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.AnalisisArranqueFrio
 import com.revscope.core.obd.taller.pruebas.AnalisisMinimo
@@ -25,12 +26,12 @@ internal object MapeoResultadoMotor {
 
     private const val CODIGO_ECT_INTERMITENTE = "P0119"
 
-    fun minimo(base: ResultadoUi, a: AnalisisMinimo, datos: DatosPrueba?): ResultadoUi {
+    fun minimo(base: ResultadoUi, a: AnalisisMinimo, datos: DatosPrueba?, resolver: StringResolver): ResultadoUi {
         val banda = a.comprobacion(ClavesBanda.MINIMO_RPM)?.banda
         return base.copy(
             comprobaciones = a.comprobaciones.map(::comprobacion),
-            medidas = TextosMinimo.medidas(a),
-            graficas = listOfNotNull(datos?.let { grafica(it, AnalizadorMinimo.PID_RPM, TextosMinimo.TITULOS_PASO, banda) }),
+            medidas = TextosMinimo.medidas(a, resolver),
+            graficas = listOfNotNull(datos?.let { grafica(it, AnalizadorMinimo.PID_RPM, TextosMinimo.titulosPaso(resolver), banda) }),
         )
     }
 
