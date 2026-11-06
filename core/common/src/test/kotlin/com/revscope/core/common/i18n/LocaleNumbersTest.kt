@@ -24,6 +24,7 @@ class LocaleNumbersTest {
     fun `compact quita el decimal cuando es entero y si no usa la coma del idioma`() {
         assertEquals("6", LocaleNumbers.compact(6.0, Locale.forLanguageTag("es")))
         assertEquals("6,3", LocaleNumbers.compact(6.25, Locale.forLanguageTag("es")))
+        assertEquals("6,0", LocaleNumbers.compact(6.04, Locale.forLanguageTag("es")))
         assertEquals("6.3", LocaleNumbers.compact(6.25, Locale.US))
     }
 }
