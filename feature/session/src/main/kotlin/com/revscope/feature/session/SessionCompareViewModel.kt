@@ -3,6 +3,7 @@ package com.revscope.feature.session
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -26,6 +27,7 @@ private const val COMPARE_MAX_POINTS = 300
 
 @HiltViewModel
 class SessionCompareViewModel @Inject constructor(
+    private val stringResolver: StringResolver,
     private val sessionDao: SessionDao,
     private val telemetryDao: TelemetryDao,
     private val gpsDao: GpsDao,
@@ -66,13 +68,13 @@ class SessionCompareViewModel @Inject constructor(
                     val showLean = isMotorcycleForSession(a.session) || isMotorcycleForSession(b.session)
                     UiState.Ready(a, b, showLean)
                 } else {
-                    UiState.Error("Sesión no encontrada")
+                    UiState.Error(stringResolver.get(R.string.trips_session_error_not_found))
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "SessionCompare: load failed")
-                _state.value = UiState.Error("Error cargando la comparación")
+                _state.value = UiState.Error(stringResolver.get(R.string.trips_session_error))
             }
         }
     }
