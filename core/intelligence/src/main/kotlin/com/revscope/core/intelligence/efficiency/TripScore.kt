@@ -30,11 +30,11 @@ data class TripScore(
 }
 
 /** [labelRes] is a string resource id (R.string.ai_drive_style_*). */
-enum class DriveStyle(val labelRes: Int, val emoji: String) {
-    ECO(R.string.ai_drive_style_eco, "🌿"),
-    NORMAL(R.string.ai_drive_style_normal, "🚗"),
-    SPORT(R.string.ai_drive_style_sport, "🏎️"),
-    AGGRESSIVE(R.string.ai_drive_style_aggressive, "🔥");
+enum class DriveStyle(val labelRes: Int) {
+    ECO(R.string.ai_drive_style_eco),
+    NORMAL(R.string.ai_drive_style_normal),
+    SPORT(R.string.ai_drive_style_sport),
+    AGGRESSIVE(R.string.ai_drive_style_aggressive);
 
     companion object {
         fun fromScore(score: Int): DriveStyle = when {
