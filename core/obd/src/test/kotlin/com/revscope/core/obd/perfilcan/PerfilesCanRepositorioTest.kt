@@ -12,6 +12,11 @@ import java.io.File
 
 class PerfilesCanRepositorioTest {
 
+    private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
+
     @get:Rule
     val tmp = TemporaryFolder()
 
@@ -46,7 +51,7 @@ class PerfilesCanRepositorioTest {
         fun senal(clave: String) = perfil.senales.single { it.clave == clave }
         fun hex(t: String) = t.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
-        assertEquals("3", DecodificadorSenal.texto(senal(ClavesSenal.GEAR), hex("0000440003004B04")))
+        assertEquals("3", DecodificadorSenal.texto(senal(ClavesSenal.GEAR), hex("0000440003004B04"), resolver))
         assertEquals(3576.0, DecodificadorSenal.valor(senal(ClavesSenal.RPM), hex("0C0DF8000000D200"))!!, 0.0)
         assertEquals(1.0, DecodificadorSenal.valor(senal(ClavesSenal.PATA_LATERAL), hex("0000450000404604"))!!, 0.0)
         assertEquals(1.0, DecodificadorSenal.valor(senal(ClavesSenal.KILL_SWITCH), hex("0000450000004604"))!!, 0.0)

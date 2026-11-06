@@ -6,6 +6,11 @@ import org.junit.Test
 
 class DecodificadorSenalTest {
 
+    private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
+
     private fun hex(texto: String): ByteArray =
         texto.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
@@ -49,27 +54,27 @@ class DecodificadorSenalTest {
     @Test
     fun `marcha neutro`() {
         assertEquals(0.0, DecodificadorSenal.valor(marcha, hex("0000450000004604"))!!, 0.0)
-        assertEquals("N", DecodificadorSenal.texto(marcha, hex("0000450000004604")))
+        assertEquals("N", DecodificadorSenal.texto(marcha, hex("0000450000004604"), resolver))
     }
 
     @Test
     fun `marcha tercera`() {
         assertEquals(3.0, DecodificadorSenal.valor(marcha, hex("0000440003004B04"))!!, 0.0)
-        assertEquals("3", DecodificadorSenal.texto(marcha, hex("0000440003004B04")))
+        assertEquals("3", DecodificadorSenal.texto(marcha, hex("0000440003004B04"), resolver))
     }
 
     @Test
     fun `marcha 07 entre marchas da null`() {
         assertNull(DecodificadorSenal.valor(marcha, hex("0000440007004B04")))
-        assertNull(DecodificadorSenal.texto(marcha, hex("0000440007004B04")))
+        assertNull(DecodificadorSenal.texto(marcha, hex("0000440007004B04"), resolver))
     }
 
     @Test
     fun `pata lateral bit 46`() {
         assertEquals(1.0, DecodificadorSenal.valor(bandera(46), hex("0000450000404604"))!!, 0.0)
         assertEquals(0.0, DecodificadorSenal.valor(bandera(46), hex("0000450000004604"))!!, 0.0)
-        assertEquals("Sí", DecodificadorSenal.texto(bandera(46), hex("0000450000404604")))
-        assertEquals("No", DecodificadorSenal.texto(bandera(46), hex("0000450000004604")))
+        assertEquals("Sí", DecodificadorSenal.texto(bandera(46), hex("0000450000404604"), resolver))
+        assertEquals("No", DecodificadorSenal.texto(bandera(46), hex("0000450000004604"), resolver))
     }
 
     @Test
@@ -121,7 +126,7 @@ class DecodificadorSenalTest {
         val aire = senal(bitInicio = 48, offset = -40.0)
 
         assertNull(DecodificadorSenal.valor(aire, hex("00005C00")))
-        assertNull(DecodificadorSenal.texto(aire, hex("00005C00")))
+        assertNull(DecodificadorSenal.texto(aire, hex("00005C00"), resolver))
     }
 
     @Test

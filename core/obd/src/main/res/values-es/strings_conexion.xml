@@ -5,8 +5,14 @@
     <string name="obd_connection_missing_notify_characteristic">Falta la característica de notificación para %1$s</string>
     <string name="obd_connection_notifications_failed">No se pudieron habilitar las notificaciones para %1$s</string>
     <string name="obd_connection_failed">Falló la conexión BLE</string>
+    <string name="obd_connection_ble_failed">Falló la conexión BLE</string>
     <string name="obd_connection_not_connected">No conectado</string>
     <string name="obd_connection_not_connected_send">No conectado — no se puede enviar: %1$s</string>
+    <string name="obd_connection_cannot_send">No conectado — no se puede enviar: %1$s</string>
+    <string name="obd_connection_cannot_receive">No conectado — no se puede recibir</string>
+    <string name="obd_connection_cannot_monitor">No conectado — no se puede monitorear</string>
+    <string name="obd_connection_connect_timeout">Tiempo de espera de conexión agotado tras %1$d ms</string>
+    <string name="obd_connection_stream_closed">El dispositivo remoto cerró el flujo</string>
     <string name="obd_connection_read_timeout">Tiempo de espera de lectura tras %1$d ms sin indicador; parcial: \"%2$s\"</string>
     <string name="obd_connection_link_lost_receiving">Se perdió el enlace BLE al recibir</string>
     <string name="obd_connection_link_lost_monitoring">Se perdió el enlace BLE al monitorear</string>

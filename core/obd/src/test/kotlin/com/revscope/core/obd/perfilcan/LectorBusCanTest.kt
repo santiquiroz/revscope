@@ -25,6 +25,11 @@ import java.io.IOException
 @OptIn(ExperimentalCoroutinesApi::class)
 class LectorBusCanTest {
 
+    private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
+
     private val pata = senalDePrueba(
         clave = ClavesSenal.PATA_LATERAL,
         bitInicio = 46,
@@ -123,7 +128,7 @@ class LectorBusCanTest {
             bt, PollingGate(), perfil, ModoFuente.COMBINADO, resolutor(perfil), soloVerificadas = false,
         ) { testScheduler.currentTime }
 
-        assertEquals("3", lector.textos().first())
+        assertEquals("3", lector.textos(resolver).first())
     }
 
     @Test
