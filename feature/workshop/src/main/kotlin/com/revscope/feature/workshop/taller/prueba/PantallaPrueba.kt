@@ -9,7 +9,6 @@ import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.ResultadoPrecondicion
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.taller.referencia.BandaReferencia
-import com.revscope.core.common.i18n.StringResolver
 
 data class EntradaPantalla(
     val estado: EstadoPrueba,

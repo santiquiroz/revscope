@@ -91,11 +91,7 @@ object BandasPosicion {
     private fun rangoPct(min: Double, max: Double, resolver: StringResolver) =
         "${compacto(min, resolver)}–${compacto(max, resolver)}${NBSP}%"
 
-    private fun compacto(valor: Double, resolver: StringResolver): String {
-        val entero = valor.toLong()
-        return if (kotlin.math.abs(valor - entero) < 1e-9) entero.toString()
-        else LocaleNumbers.decimal(valor, 1, resolver.locale)
-    }
+    private fun compacto(valor: Double, resolver: StringResolver): String = LocaleNumbers.compact(valor, resolver.locale)
 
     private const val NBSP = ' '
 }

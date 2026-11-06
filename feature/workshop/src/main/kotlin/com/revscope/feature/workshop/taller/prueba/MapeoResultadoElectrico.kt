@@ -3,7 +3,6 @@ package com.revscope.feature.workshop.taller.prueba
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.BandaGrafica
 import com.revscope.core.common.i18n.LocaleNumbers
-import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.AnalisisBateria
 import com.revscope.core.obd.taller.pruebas.AnalisisMapBaro
@@ -68,7 +67,7 @@ internal object MapeoResultadoElectrico {
         else -> null
     }
 
-    private fun kpa(x: Double, resolver: StringResolver) = "${LocaleNumbers.decimal(x, 1, resolver.locale)} kPa"
+    private fun kpa(x: Double, resolver: StringResolver) = "${LocaleNumbers.compact(x, resolver.locale)} kPa"
 
     private const val CODIGO_MAP = "P0106"
 }

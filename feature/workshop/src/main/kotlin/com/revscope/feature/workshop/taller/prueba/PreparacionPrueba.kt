@@ -26,6 +26,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -98,7 +99,7 @@ internal fun ColumnScope.PreparacionPrueba(fase: FasePantalla.Preparacion, estad
             Text("${i + 1}. $paso", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
         }
         Seccion("Ajustes")
-        if (fase.usaVref) FilaVref(estado.vref, estado.locale, acciones.onPedirVref)
+        if (fase.usaVref) FilaVref(estado.vref, LocalConfiguration.current.locales[0], acciones.onPedirVref)
         if (fase.usaDesfase) FilaDesfase(estado.desfase, acciones.onPedirDesfase)
         FilaVoz(estado.voz, acciones.onVoz)
     }
@@ -172,7 +173,7 @@ internal fun FilaVoz(voz: Boolean, onVoz: (Boolean) -> Unit) {
 
 @Composable
 internal fun DialogoVref(estado: PruebaGuiadaUi, onGuardar: (Double?) -> Unit, onCerrar: () -> Unit) {
-    val medida = estado.referencia.medida?.let { "${LocaleNumbers.decimal(it.voltios, 2, estado.locale)} V" }
+    val medida = estado.referencia.medida?.let { "${LocaleNumbers.decimal(it.voltios, 2, LocalConfiguration.current.locales[0])} V" }
     val textoRestablecer = when {
         estado.referencia.editadaV == null -> null
         medida != null -> stringResource(ObdR.string.obd_vref_use_multimeter, medida)
