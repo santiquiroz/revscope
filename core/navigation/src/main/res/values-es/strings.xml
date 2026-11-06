@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_distance_now">Ahora</string>
+    <string name="nav_distance_meters">En %1$d metros</string>
+    <string name="nav_distance_one_kilometer">En 1 kilómetro</string>
+    <string name="nav_distance_kilometers">En %1$s kilómetros</string>
+    <string name="nav_spoken_with_distance">%1$s, %2$s</string>
+
+    <string name="nav_street_along">%1$s por %2$s</string>
+    <string name="nav_street_toward">%1$s hacia %2$s</string>
+    <string name="nav_street_merge">%1$s a %2$s</string>
+    <string name="nav_street_at">%1$s en %2$s</string>
+
+    <string name="nav_arrived">Llegó a su destino</string>
+    <string name="nav_depart">Comience</string>
+    <string name="nav_continue">continúe</string>
+    <string name="nav_take_exit">tome la salida</string>
+    <string name="nav_take_exit_side">tome la salida %1$s</string>
+    <string name="nav_take_ramp">tome la rampa</string>
+    <string name="nav_take_ramp_side">tome la rampa %1$s</string>
+    <string name="nav_merge">incorpórese</string>
+    <string name="nav_merge_side">incorpórese %1$s</string>
+    <string name="nav_end_of_road">al final de la vía %1$s</string>
+    <string name="nav_enter_roundabout">entre a la glorieta</string>
+    <string name="nav_exit_roundabout">salga de la glorieta</string>
+
+    <string name="nav_side_right">a la derecha</string>
+    <string name="nav_side_left">a la izquierda</string>
+    <string name="nav_side_slight_right">levemente a la derecha</string>
+    <string name="nav_side_slight_left">levemente a la izquierda</string>
+    <string name="nav_side_sharp_right">cerrado a la derecha</string>
+    <string name="nav_side_sharp_left">cerrado a la izquierda</string>
+    <string name="nav_side_uturn">en U</string>
+
+    <string name="nav_turn_right">gire a la derecha</string>
+    <string name="nav_turn_left">gire a la izquierda</string>
+    <string name="nav_turn_slight_right">gire levemente a la derecha</string>
+    <string name="nav_turn_slight_left">gire levemente a la izquierda</string>
+    <string name="nav_turn_sharp_right">gire cerrado a la derecha</string>
+    <string name="nav_turn_sharp_left">gire cerrado a la izquierda</string>
+    <string name="nav_turn_uturn">haga un giro en U</string>
+
+    <string name="nav_keep_right">manténgase a la derecha</string>
+    <string name="nav_keep_left">manténgase a la izquierda</string>
+    <string name="nav_keep_slight_right">manténgase levemente a la derecha</string>
+    <string name="nav_keep_slight_left">manténgase levemente a la izquierda</string>
+    <string name="nav_keep_sharp_right">manténgase bien a la derecha</string>
+    <string name="nav_keep_sharp_left">manténgase bien a la izquierda</string>
+    <string name="nav_keep_uturn">haga un giro en U</string>
+
+    <string name="nav_off_route">Se salió de la ruta, recalculando</string>
+
+    <string name="nav_route_fastest">Rápida</string>
+    <string name="nav_route_curvy">Curvas</string>
+    <string name="nav_route_alt">Alt</string>
+</resources>

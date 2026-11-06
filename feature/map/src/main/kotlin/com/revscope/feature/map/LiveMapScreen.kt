@@ -58,6 +58,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +80,7 @@ import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.navigation.LatLon
 import com.revscope.core.navigation.NavigationRoute
+import com.revscope.core.navigation.RouteLabel
 import com.revscope.core.navigation.RouteScoring
 import com.revscope.feature.map.location.InitialCentering
 import com.revscope.feature.map.navigation.NavCamera
@@ -1040,8 +1042,8 @@ private fun RouteInfoChip(
     }
 }
 
-/** Chips de selección entre rutas alternativas — etiquetadas por [RouteScoring.labelAlternatives]
- * (Rápida/Alt/Curvas). La activa se resalta comparando por igualdad estructural con [selected],
+/** Chips de selección entre rutas alternativas — etiquetadas por [RouteScoring.classifyAlternatives]
+ * (rápida/alt/curvas). La activa se resalta comparando por igualdad estructural con [selected],
  * no por índice: tras un reroute la elegida puede ya no pertenecer a este set. */
 @Composable
 private fun RouteAlternativeChips(
@@ -1050,16 +1052,22 @@ private fun RouteAlternativeChips(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val labels = remember(routes) { RouteScoring.labelAlternatives(routes) }
+    val kinds = remember(routes) { RouteScoring.classifyAlternatives(routes) }
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         routes.forEachIndexed { index, route ->
             RouteAlternativeChip(
-                label = labels[index],
+                label = routeLabelText(kinds[index]),
                 isSelected = route == selected,
                 onClick = { onSelect(index) },
             )
         }
     }
+}
+
+@Composable
+private fun routeLabelText(kind: RouteLabel): String {
+    val text = stringResource(kind.textRes)
+    return if (kind == RouteLabel.CURVY) "$text 🏍️" else text
 }
 
 @Composable
@@ -1070,7 +1078,7 @@ private fun RouteAlternativeChip(label: String, isSelected: Boolean, onClick: ()
         modifier = Modifier.clickable(onClick = onClick),
     ) {
         Text(
-            if (label == "Curvas") "Curvas 🏍️" else label,
+            label,
             color = if (isSelected) Color(0xFF0A0A0F) else Color(0xFFB0B0C0),
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
