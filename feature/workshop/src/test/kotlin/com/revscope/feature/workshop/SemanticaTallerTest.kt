@@ -26,8 +26,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], qualifiers = "es")
 class SemanticaTallerTest {
     private val resolverEs = XmlStringResolver.es(
+        R::class.java,
         DesignSystemR::class.java,
-        resDirs = listOf("../../core/designsystem/src/main/res"),
+        resDirs = listOf("src/main/res", "../../core/designsystem/src/main/res"),
     )
 
     @get:Rule
@@ -35,9 +36,26 @@ class SemanticaTallerTest {
 
     @Test
     fun `cada nivel de documento tiene texto propio ademas del color`() {
-        assertEquals(NivelConTexto(NivelEstado.FALLA, "Vencido"), nivelDocumento(DocumentStatusCalculator.Nivel.VENCIDO))
-        assertEquals("Sin configurar", nivelDocumento(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR).texto)
+        val vencido = nivelDocumento(DocumentStatusCalculator.Nivel.VENCIDO)
+        assertEquals(NivelEstado.FALLA, vencido.nivel)
+        assertEquals("Vencido", resolverEs.get(vencido.textoRes))
+        val sinConfigurar = nivelDocumento(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR)
+        assertEquals("Sin configurar", resolverEs.get(sinConfigurar.textoRes))
         assertEquals(NivelEstado.ATENCION, nivelDiagnostico(DiagnosticRules.Nivel.ATENCION))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun `el chequeo muestra su introduccion en ingles`() {
+        compose.setContent {
+            RevScopeTheme {
+                HealthCheckContent(HealthCheckViewModel.UiState.Idle, AccionesChequeo())
+            }
+        }
+
+        compose.onNodeWithText(
+            "One tap and RevScope checks trouble codes, readiness monitors for your safety inspection, fuel mixture, O2 sensor, battery, and temperature.",
+        ).assertIsDisplayed()
     }
 
     @Test
@@ -70,7 +88,7 @@ class SemanticaTallerTest {
 
         compose.onNodeWithText("Sensor O2 B1S1").assertIsDisplayed()
         compose.onNodeWithText(resolverEs.get(DesignSystemR.string.ds_state_no_data)).assertIsDisplayed()
-        compose.onNodeWithText("No disponible en esta ECU").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(R.string.workshop_health_check_unavailable_ecu)).assertIsDisplayed()
     }
 
     @Test
