@@ -18,12 +18,19 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import timber.log.Timber
 
 private const val DB_FILE_NAME = "revscope.db"
 private const val DB_ENTRY_NAME = "revscope.db"
 private const val PREFS_ENTRY_NAME = "preferences.json"
 private const val IMPORT_TEMP_DIR_PREFIX = "backup_import_"
+
+// ALL_MIGRATIONS inicia en 9 y Room no tiene fallback destructivo: versiones < 9 crashean al iniciar.
+internal const val MIN_RESTORABLE_DB_VERSION = 9
+
+internal fun isRestorableVersion(imported: Int, current: Int): Boolean =
+    imported in MIN_RESTORABLE_DB_VERSION..current
 
 /**
  * Copia de seguridad completa: base de datos Room (checkpoint WAL → un solo archivo)
@@ -63,8 +70,9 @@ class BackupManager @Inject constructor(
             val dbFile = entryFileIn(tempDir, DB_ENTRY_NAME)
             require(dbFile.exists()) { "El archivo no contiene una base de datos válida" }
             validateImportedVersion(dbFile, currentVersion)
+            val decodedPrefs = decodePreferencesIfPresent(tempDir)
             replaceDatabaseFile(dbFile)
-            restorePreferencesIfPresent(tempDir)
+            applyPreferencesIfPresent(decodedPrefs)
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -144,7 +152,10 @@ class BackupManager @Inject constructor(
             null,
             SQLiteDatabase.OPEN_READONLY,
         ).use { it.version }
-        require(importedVersion in 1..currentVersion) {
+        require(importedVersion >= MIN_RESTORABLE_DB_VERSION) {
+            "Copia de seguridad demasiado antigua (versión $importedVersion): no se puede restaurar en esta versión de RevScope"
+        }
+        require(isRestorableVersion(importedVersion, currentVersion)) {
             "Versión de base de datos incompatible ($importedVersion) — actualiza RevScope antes de importar"
         }
     }
@@ -171,10 +182,23 @@ class BackupManager @Inject constructor(
         if (file.exists()) file.delete()
     }
 
-    private suspend fun restorePreferencesIfPresent(tempDir: File) {
+    private fun decodePreferencesIfPresent(tempDir: File): Map<String, JSONObject>? {
         val prefsFile = entryFileIn(tempDir, PREFS_ENTRY_NAME)
-        if (prefsFile.exists()) {
-            PreferencesBackupCodec.restore(prefsFile.readText(Charsets.UTF_8), settings)
+        return if (prefsFile.exists()) {
+            PreferencesBackupCodec.decode(prefsFile.readText(Charsets.UTF_8))
+        } else {
+            null
+        }
+    }
+
+    private suspend fun applyPreferencesIfPresent(decodedPrefs: Map<String, JSONObject>?) {
+        if (decodedPrefs == null) return
+        try {
+            PreferencesBackupCodec.apply(decodedPrefs, settings)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "BackupManager: error al aplicar preferencias tras restaurar base de datos")
         }
     }
 }

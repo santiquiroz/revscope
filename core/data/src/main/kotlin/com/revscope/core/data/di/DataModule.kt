@@ -2,7 +2,9 @@ package com.revscope.core.data.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.revscope.core.data.db.AppDatabase
@@ -25,11 +27,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import timber.log.Timber
 import javax.inject.Singleton
 
 // Single process-wide DataStore — a second instance on the same file throws at runtime
 private val Context.settingsDataStore: DataStore<Preferences>
-        by preferencesDataStore(name = "revscope_settings")
+        by preferencesDataStore(
+            name = "revscope_settings",
+            corruptionHandler = ReplaceFileCorruptionHandler {
+                Timber.e(it, "DataStore corrupto — recuperando con emptyPreferences()")
+                emptyPreferences()
+            },
+        )
 
 @Module
 @InstallIn(SingletonComponent::class)

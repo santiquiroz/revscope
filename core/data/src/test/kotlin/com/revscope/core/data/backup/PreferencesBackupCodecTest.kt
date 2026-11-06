@@ -161,4 +161,37 @@ class PreferencesBackupCodecTest {
         assertEquals(false, restored[PreferencesKeys.MCP_CONTROL_ENABLED])
         assertNull(restored[PreferencesKeys.MCP_CLEAR_DTC_ENABLED])
     }
+
+    @Test(expected = Exception::class)
+    fun `decode de JSON malformado lanza excepcion`() {
+        PreferencesBackupCodec.decode("{ no es json valido")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `decode con tipo desconocido lanza excepcion`() {
+        val json = JSONObject()
+            .put("clave", JSONObject().put("type", "tipo_invalido").put("value", "valor"))
+            .toString()
+        PreferencesBackupCodec.decode(json)
+    }
+
+    @Test
+    fun `decode y apply de un export valido hace ida y vuelta`() = runTest {
+        val original = preferencesOf(
+            booleanPreferencesKey("b") to true,
+            intPreferencesKey("i") to 42,
+            longPreferencesKey("l") to 9_000_000_000L,
+            floatPreferencesKey("f") to 0.1f,
+            doublePreferencesKey("d") to 3.141592653589793,
+            stringPreferencesKey("s") to "ñandú",
+        )
+        val settings = newDataStore()
+
+        val json = PreferencesBackupCodec.encode(original)
+        val decoded = PreferencesBackupCodec.decode(json)
+        PreferencesBackupCodec.apply(decoded, settings)
+
+        val restored = settings.data.first()
+        assertEquals(original.asMap(), restored.asMap())
+    }
 }
