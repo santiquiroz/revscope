@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a crash, wrong reading, or adapter/vehicle incompatibility.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: app_version
+    attributes:
+      label: App version
+      description: From Settings or the GitHub release tag (e.g. 1.24.0).
+      placeholder: "1.24.0"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone model + Android version
+      placeholder: "Pixel 7 · Android 15"
+    validations:
+      required: true
+  - type: input
+    id: adapter
+    attributes:
+      label: OBD2 adapter model
+      placeholder: "Vgate iCar Pro 2S"
+    validations:
+      required: false
+  - type: input
+    id: vehicle
+    attributes:
+      label: Vehicle make / model / year
+      placeholder: "Mazda CX-30 GT · 2022"
+    validations:
+      required: false
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: What went wrong? Include error messages if any.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps that reliably trigger the bug.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots_logs
+    attributes:
+      label: Screenshots / logs
+      description: Paste logcat snippets or attach screenshots.
+    validations:
+      required: false

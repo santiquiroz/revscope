@@ -1,0 +1,8 @@
+RevScope
+Copyright 2026 RevScope Contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party data:
+- core/obd/src/main/assets/catalogo_propietario.json is derived from OBDb
+  (https://github.com/OBDb) and is distributed under CC-BY-SA-4.0.

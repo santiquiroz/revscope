@@ -1,3 +1,5 @@
+> 🇬🇧 [Read in English](en/faq.md)
+
 # Preguntas frecuentes (FAQ)
 
 > Índice: [Adaptador](#adaptador-y-conexión) · [Uso diario](#uso-diario) · [Datos e IA](#datos-e-inteligencia-artificial) · [Otras plataformas](#otras-plataformas) · [Proyecto](#el-proyecto)

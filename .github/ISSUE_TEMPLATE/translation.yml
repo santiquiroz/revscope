@@ -1,0 +1,29 @@
+name: Translation
+description: Offer to translate or review a language. Each module has src/main/res/values/strings.xml (English source); add src/main/res/values-<lang>/strings.xml, plus core/obd/src/main/assets/taller/dtc_guide_<lang>.json.
+title: "[Translation]: "
+labels: ["translation"]
+body:
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: Language name and region if relevant.
+      placeholder: "Português (Brasil)"
+    validations:
+      required: true
+  - type: checkboxes
+    id: role
+    attributes:
+      label: I can…
+      options:
+        - label: I can translate
+        - label: I can review
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Prior translation experience, preferred modules, or anything else.
+    validations:
+      required: false

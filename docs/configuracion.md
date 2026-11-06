@@ -1,3 +1,5 @@
+> 🇬🇧 [Read in English](en/configuration.md)
+
 # Configuración
 
 > Índice: [Vehículo](#vehículo) · [Alertas de audio y vibración](#alertas-de-audio-y-vibración) · [Alertas de voz por categoría](#alertas-de-voz-por-categoría) · [Alertas personalizadas por PID](#alertas-personalizadas-por-pid) · [Radares](#radares-de-velocidad) · [Combustible](#combustible) · [Inteligencia artificial](#inteligencia-artificial) · [Detección de caída](#detección-de-caída) · [Mapa](#mapa) · [Avisos en segundo plano](#avisos-en-segundo-plano) · [Muestreo OBD](#muestreo-obd) · [Servidor MCP](#servidor-mcp-red-local) · [Copia de seguridad](#copia-de-seguridad) · [PIDs personalizados](#pids-personalizados) · [Pico y placa](#pico-y-placa)

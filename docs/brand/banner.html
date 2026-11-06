@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1280" />
+  <title>RevScope — Banner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 1280px;
+      height: 640px;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    body {
+      position: relative;
+      background-color: #0A0A0F;
+      background-image:
+        radial-gradient(ellipse 95% 90% at 50% 50%, transparent 42%, rgba(0, 0, 0, 0.72) 100%),
+        radial-gradient(circle 420px at 880px 320px, rgba(232, 255, 0, 0.10), transparent 100%),
+        linear-gradient(rgba(232, 255, 0, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232, 255, 0, 0.045) 1px, transparent 1px);
+      background-size: auto, auto, 32px 32px, 32px 32px;
+      background-repeat: no-repeat, no-repeat, repeat, repeat;
+      font-family: "Space Grotesk", sans-serif;
+      color: #F0F0F8;
+    }
+
+    .copy {
+      position: absolute;
+      left: 72px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 560px;
+      max-width: calc(640px - 72px);
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .eyebrow {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 14px;
+      letter-spacing: 0.22em;
+      color: #9097B0;
+      text-transform: uppercase;
+    }
+
+    .wordmark {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 104px;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .wordmark .rev { color: #F0F0F8; }
+
+    .wordmark .scope {
+      color: #E8FF00;
+      text-shadow: 0 0 24px rgba(232, 255, 0, 0.35);
+    }
+
+    .tagline {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 500;
+      font-size: 30px;
+      line-height: 1.25;
+      color: #F0F0F8;
+      max-width: 540px;
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 540px;
+    }
+
+    .pill {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 14px;
+      color: #F0F0F8;
+      padding: 8px 14px;
+      border: 1px solid rgba(232, 255, 0, 0.35);
+      border-radius: 999px;
+      background: rgba(28, 28, 40, 0.7);
+      white-space: nowrap;
+    }
+
+    .footer-line {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      font-size: 18px;
+      color: #E8FF00;
+      margin-top: 6px;
+    }
+
+    .tach {
+      position: absolute;
+      left: 620px;
+      top: 40px;
+      width: 520px;
+      height: 520px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .phones {
+      position: absolute;
+      left: 880px;
+      top: 64px;
+      width: 0;
+      height: 0;
+      z-index: 1;
+    }
+
+    .phone {
+      position: absolute;
+      left: 0;
+      top: 0;
+      box-sizing: content-box;
+      width: 236px;
+      height: 511px;
+      margin-left: -124px; /* center framed phone (236 + 2×6 border) on 880 */
+      border-radius: 34px;
+      border: 6px solid #1C1C28;
+      box-shadow:
+        0 30px 60px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(232, 255, 0, 0.12);
+      overflow: hidden;
+      background: #1C1C28;
+    }
+
+    .phone img {
+      display: block;
+      width: 236px;
+      height: 511px;
+      object-fit: cover;
+      border-radius: 28px;
+    }
+
+    .phone-center {
+      z-index: 3;
+      transform: none;
+    }
+
+    .phone-left {
+      z-index: 2;
+      transform: translate(-150px, 40px) rotate(-8deg) scale(0.86);
+      filter: brightness(0.75);
+    }
+
+    .phone-right {
+      z-index: 1;
+      transform: translate(150px, 40px) rotate(8deg) scale(0.86);
+      filter: brightness(0.75);
+    }
+  </style>
+</head>
+<body>
+  <div class="copy">
+    <div class="eyebrow">OPEN SOURCE · ANDROID · OBD2</div>
+    <div class="wordmark"><span class="rev">Rev</span><span class="scope">Scope</span></div>
+    <p class="tagline">Turn your phone into your motorcycle's or car's trip computer.</p>
+    <div class="pills">
+      <span class="pill">Live telemetry</span>
+      <span class="pill">Workshop diagnostics</span>
+      <span class="pill">Track mode</span>
+      <span class="pill">Crash detection</span>
+      <span class="pill">AI optional</span>
+    </div>
+    <div class="footer-line">Free  ·  No ads  ·  No account  ·  English / Español</div>
+  </div>
+
+  <svg class="tach" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path
+      d="M 78.13 385.00 A 210 210 0 1 0 441.87 385.00"
+      fill="none"
+      stroke="rgba(232,255,0,0.22)"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+    <g stroke="rgba(240,240,248,0.18)" stroke-width="2" stroke-linecap="round">
+      <line x1="78.13" y1="385.00" x2="88.53" y2="379.00" />
+      <line x1="64.91" y1="357.73" x2="76.06" y2="353.29" />
+      <line x1="55.76" y1="328.84" x2="67.43" y2="326.05" />
+      <line x1="50.86" y1="298.93" x2="62.81" y2="297.85" />
+      <line x1="50.31" y1="268.63" x2="62.29" y2="269.28" />
+      <line x1="54.13" y1="238.57" x2="65.89" y2="240.93" />
+      <line x1="62.24" y1="209.36" x2="73.54" y2="213.40" />
+      <line x1="74.46" y1="181.63" x2="85.06" y2="187.26" />
+      <line x1="90.55" y1="155.95" x2="100.24" y2="163.04" />
+      <line x1="110.17" y1="132.85" x2="118.73" y2="141.26" />
+      <line x1="132.91" y1="112.82" x2="140.18" y2="122.37" />
+      <line x1="158.30" y1="96.27" x2="164.11" y2="106.77" />
+      <line x1="185.81" y1="83.54" x2="190.05" y2="94.77" />
+      <line x1="214.86" y1="74.91" x2="217.44" y2="86.63" />
+      <line x1="244.85" y1="70.55" x2="245.71" y2="82.52" />
+      <line x1="275.15" y1="70.55" x2="274.29" y2="82.52" />
+      <line x1="305.14" y1="74.91" x2="302.56" y2="86.63" />
+      <line x1="334.19" y1="83.54" x2="329.95" y2="94.77" />
+      <line x1="361.70" y1="96.27" x2="355.89" y2="106.77" />
+      <line x1="387.09" y1="112.82" x2="379.82" y2="122.37" />
+      <line x1="409.83" y1="132.85" x2="401.27" y2="141.26" />
+      <line x1="429.45" y1="155.95" x2="419.76" y2="163.04" />
+      <line x1="445.54" y1="181.63" x2="434.94" y2="187.26" />
+      <line x1="457.76" y1="209.36" x2="446.46" y2="213.40" />
+      <line x1="465.87" y1="238.57" x2="454.11" y2="240.93" />
+    </g>
+    <g stroke="rgba(255,48,64,0.55)" stroke-width="2" stroke-linecap="round">
+      <line x1="469.69" y1="268.63" x2="457.71" y2="269.28" />
+      <line x1="469.14" y1="298.93" x2="457.19" y2="297.85" />
+      <line x1="464.24" y1="328.84" x2="452.57" y2="326.05" />
+      <line x1="455.09" y1="357.73" x2="443.94" y2="353.29" />
+      <line x1="441.87" y1="385.00" x2="431.47" y2="379.00" />
+    </g>
+  </svg>
+
+  <div class="phones">
+    <div class="phone phone-left">
+      <img src="../screenshots/taller.png" alt="Workshop diagnostics" width="236" height="511" />
+    </div>
+    <div class="phone phone-right">
+      <img src="../screenshots/mapa.png" alt="Live map" width="236" height="511" />
+    </div>
+    <div class="phone phone-center">
+      <img src="../screenshots/conducir.png" alt="Drive mode" width="236" height="511" />
+    </div>
+  </div>
+</body>
+</html>

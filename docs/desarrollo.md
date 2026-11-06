@@ -1,3 +1,5 @@
+> 🇬🇧 [Read in English](en/development.md)
+
 # Desarrollo
 
 > Índice: [Módulos](#módulos) · [Stack](#stack) · [Compilar](#compilar) · [Tests](#tests) · [Pipeline OBD](#pipeline-obd) · [Room y migraciones](#room-y-migraciones) · [Guías de extensión](#guías-de-extensión) · [docs/superpowers](#docssuperpowers)

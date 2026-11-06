@@ -1,3 +1,5 @@
+> 🇬🇧 [Read in English](en/installation.md)
+
 # Instalación
 
 > Índice: [Requisitos](#requisitos) · [Instalar el APK](#instalar-el-apk) · [Primer arranque y permisos](#primer-arranque-y-permisos) · [Emparejar y conectar el adaptador](#emparejar-y-conectar-el-adaptador-obd2) · [Galaxy Watch](#reloj-galaxy-watch-opcional) · [Android Auto](#android-auto-opcional)
