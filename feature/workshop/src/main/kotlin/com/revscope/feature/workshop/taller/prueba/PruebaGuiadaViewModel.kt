@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
-import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.grafica.FuenteVref
 import com.revscope.core.obd.taller.pruebas.AnalizadorBateria
