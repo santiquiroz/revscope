@@ -1,0 +1,5 @@
+<resources>
+    <string name="data_invalid_database_file">The file does not contain a valid database</string>
+    <string name="data_invalid_zip_entry">Invalid ZIP entry: %1$s</string>
+    <string name="data_incompatible_database_version">Incompatible database version (%1$d). Update RevScope before importing</string>
+</resources>

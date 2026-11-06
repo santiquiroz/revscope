@@ -1,0 +1,7 @@
+<resources>
+    <string name="common_csv_export_failed">Could not export the CSV file</string>
+    <string name="common_csv_export_title">Export CSV</string>
+    <string name="common_share_file_title">Share file</string>
+    <string name="common_file_share_failed">Could not share the file</string>
+    <string name="common_cleartext_blocked">Android blocks http:// outside this phone: use https (for example, a proxy with a certificate) or a tunnel</string>
+</resources>

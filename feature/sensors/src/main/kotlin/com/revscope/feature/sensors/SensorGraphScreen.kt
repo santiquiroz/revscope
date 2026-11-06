@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.Context
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.designsystem.CapacidadesEcuCard
 import com.revscope.core.obd.model.ObdReading
@@ -83,6 +85,7 @@ fun SensorGraphScreen(
     val capacidades by connectionVm.capacidadesEcu.collectAsState()
     val currentDef = vm.availablePids.find { it.pid == selectedPid }
     val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     val scope = rememberCoroutineScope()
     // Fresh producer per PID: cancelling a runTransaction mid-flight (old code keyed
     // the effect on `history`) leaves Vico with an empty partial → crash on next update.
@@ -128,7 +131,7 @@ fun SensorGraphScreen(
                 }
                 if (!modoCaptura) {
                     IconButton(
-                        onClick = { scope.launch { exportSensorHistory(context, currentDef, history) } },
+                        onClick = { scope.launch { exportSensorHistory(context, currentDef, history, resolver) } },
                         enabled = currentDef != null && history.isNotEmpty(),
                     ) {
                         Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = RevScopeColors.Accent)
@@ -245,6 +248,7 @@ private suspend fun exportSensorHistory(
     context: Context,
     def: PidDefinition?,
     history: List<ObdReading>,
+    resolver: StringResolver,
 ) {
     if (def == null || history.isEmpty()) return
     CsvShare.shareCsv(
@@ -261,5 +265,6 @@ private suspend fun exportSensorHistory(
                 def.unit,
             )
         },
+        resolver = resolver,
     )
 }

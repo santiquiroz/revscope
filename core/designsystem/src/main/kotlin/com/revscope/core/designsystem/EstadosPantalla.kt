@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 
 data class AccionEstado(val texto: String, val onClick: () -> Unit)
 
@@ -54,8 +55,9 @@ fun ErrorState(
     mensaje: String,
     onReintentar: () -> Unit,
     modifier: Modifier = Modifier,
-    textoReintentar: String = "Reintentar",
+    textoReintentar: String? = null,
 ) {
+    val etiquetaReintentar = textoReintentar ?: stringResource(R.string.ds_retry)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -72,7 +74,7 @@ fun ErrorState(
         OutlinedButton(onClick = onReintentar, modifier = Modifier.heightIn(min = 48.dp)) {
             Icon(Icons.Filled.Refresh, contentDescription = null, tint = RevScopeColors.Accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(textoReintentar, color = RevScopeColors.Accent, style = RevScopeType.label)
+            Text(etiquetaReintentar, color = RevScopeColors.Accent, style = RevScopeType.label)
         }
     }
 }

@@ -114,9 +114,9 @@ class AutoBackupWorker @AssistedInject constructor(
     private fun staleMediaStoreBackupIds(): List<Long> {
         val resolver = applicationContext.contentResolver
         val projection = arrayOf(MediaStore.Downloads._ID, MediaStore.Downloads.DISPLAY_NAME)
-        val selection = "${MediaStore.Downloads.RELATIVE_PATH} = ? AND ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
+        val selection = "${MediaStore.Downloads.RELATIVE_PATH} = ? AND ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?" // i18n-ignore
         val args = arrayOf("$BACKUP_RELATIVE_PATH/", "$BACKUP_FILE_PREFIX%")
-        val sortOrder = "${MediaStore.Downloads.DISPLAY_NAME} DESC"
+        val sortOrder = "${MediaStore.Downloads.DISPLAY_NAME} DESC" // i18n-ignore
         return resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, args, sortOrder)
             ?.use { cursor ->
                 val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)

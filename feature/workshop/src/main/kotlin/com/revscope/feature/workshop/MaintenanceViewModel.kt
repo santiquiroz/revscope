@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -45,6 +46,7 @@ class MaintenanceViewModel @Inject constructor(
     private val maintenanceDao: MaintenanceDao,
     private val sessionDao: SessionDao,
     private val vehicleProfileDao: VehicleProfileDao,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -111,6 +113,7 @@ class MaintenanceViewModel @Inject constructor(
                         odometro,
                     )
                 },
+                resolver = resolver,
             )
         }
     }

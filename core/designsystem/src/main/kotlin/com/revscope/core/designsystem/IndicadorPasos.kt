@@ -16,10 +16,12 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.revscope.core.common.i18n.StringResolver
 
-fun textoPaso(actual: Int, total: Int, titulo: String? = null): String {
-    val paso = "Paso ${actual.coerceIn(1, total)} de $total"
-    return titulo?.let { "$paso: $it" } ?: paso
+fun textoPaso(actual: Int, total: Int, resolver: StringResolver, titulo: String? = null): String {
+    val paso = resolver.get(R.string.ds_step_of_total, actual.coerceIn(1, total), total)
+    return titulo?.let { resolver.get(R.string.ds_step_with_title, paso, it) } ?: paso
 }
 
 /** Progreso de un flujo guiado: «Paso 2 de 4» en texto y en segmentos, no solo con la barra. */
@@ -30,7 +32,8 @@ fun IndicadorPasos(
     modifier: Modifier = Modifier,
     titulo: String? = null,
 ) {
-    val texto = textoPaso(actual, total, titulo)
+    val paso = stringResource(R.string.ds_step_of_total, actual.coerceIn(1, total), total)
+    val texto = titulo?.let { stringResource(R.string.ds_step_with_title, paso, it) } ?: paso
     Column(
         verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier.fillMaxWidth().clearAndSetSemantics {

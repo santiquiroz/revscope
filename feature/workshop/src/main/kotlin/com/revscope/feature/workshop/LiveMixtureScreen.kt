@@ -37,6 +37,8 @@ import com.revscope.core.designsystem.FilaEtiquetaValor
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -92,6 +94,7 @@ fun LiveMixtureScreen(
         readings[row.pid] != null && disponibilidadActual(row.pid, row.label).estado != EstadoSoporte.NoSoportado
     }
     val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     val scope = rememberCoroutineScope()
 
     LiveMixtureContent(
@@ -99,7 +102,7 @@ fun LiveMixtureScreen(
         definition = viewModel::definition,
         disponibilidad = disponibilidadActual,
         onNavigateBack = onNavigateBack,
-        onExport = { scope.launch { exportMixtureSnapshot(context, exportables, readings) } },
+        onExport = { scope.launch { exportMixtureSnapshot(context, resolver, exportables, readings) } },
     )
 }
 
@@ -224,6 +227,7 @@ internal fun DiagnosisChip(diagnosis: DiagnosticRules.Diagnosis) {
 
 private suspend fun exportMixtureSnapshot(
     context: Context,
+    resolver: StringResolver,
     visibleRows: List<MixtureRow>,
     readings: Map<String, ObdReading>,
 ) {
@@ -233,6 +237,7 @@ private suspend fun exportMixtureSnapshot(
         tipo = "mezcla-snapshot",
         header = listOf("pid", "nombre", "valor", "unidad", "diagnostico"),
         rows = visibleRows.asSequence().mapNotNull { row -> mixtureSnapshotRow(row, readings) },
+        resolver = resolver,
     )
 }
 

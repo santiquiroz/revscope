@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.FuelPricePrefs
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.common.i18n.StringResolver
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -73,6 +74,7 @@ class SettingsViewModel @Inject constructor(
     private val mcpServerController: McpServerController,
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
     private val mapDownloadService: MapDownloadService,
+    private val stringResolver: StringResolver,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -598,7 +600,7 @@ class SettingsViewModel @Inject constructor(
                 }
                 result.fold(
                     onSuccess = { SaveResult(true, "Conexión OK — ${provider.displayName}") },
-                    onFailure = ::aiConnectionFailure,
+                    onFailure = { error -> aiConnectionFailure(error, stringResolver) },
                 )
             }
             _aiTesting.value = false

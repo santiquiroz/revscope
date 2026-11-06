@@ -19,6 +19,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.obd.taller.pruebas.CatalogoPruebas
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
 import com.revscope.core.obd.taller.pruebas.FasePaso
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
@@ -36,7 +38,11 @@ class SemanticaPruebaGuiadaTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(
+        CatalogoPruebas::definicion,
+        CatalogoPruebas.disponibles,
+        XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res")),
+    )
 
     private fun ui(estado: EstadoPrueba, dialogo: DialogoPrueba? = null) = PruebaGuiadaUi(
         fase = pantalla.fase(EntradaPantalla(estado, serieVivo = BarridoBenelli.serieMedio(), bandas = BarridoBenelli.bandas)),

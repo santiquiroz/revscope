@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.EstadoSoporte
@@ -60,6 +61,7 @@ class FastCaptureViewModel @Inject constructor(
     private val fuenteVref: FuenteVref,
     private val repositorio: TallerRepository,
     private val vehiculo: VehiculoActivo,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val captura = manager.captura
@@ -207,7 +209,7 @@ class FastCaptureViewModel @Inject constructor(
 
     suspend fun exportarLargo(context: Context) {
         val ruta = ultimoResumen.value?.rutaCsv ?: return
-        CsvShare.shareFile(context, File(ruta))
+        CsvShare.shareFile(context, File(ruta), resolver)
     }
 
     suspend fun exportarAncho(context: Context) {
@@ -221,6 +223,7 @@ class FastCaptureViewModel @Inject constructor(
             header = CapturaCsv.cabeceraAncha(inicio.pidsAceptados),
             rows = CapturaCsv.filasAnchas(muestras, inicio.pidsAceptados, inicioEpochMs).asSequence(),
             comment = "revscope-captura v1 (ancho); pids=${inicio.pidsAceptados.joinToString(",")}",
+            resolver = resolver,
         )
     }
 

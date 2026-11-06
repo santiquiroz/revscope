@@ -24,16 +24,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.AndroidStringResolver
 
 @Composable
 fun InformeScreen(onVolver: () -> Unit, viewModel: InformeViewModel = hiltViewModel()) {
     val estado by viewModel.estado.collectAsState()
     val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     val snackbar = remember { SnackbarHostState() }
     val webView = remember { mutableStateOf<WebView?>(null) }
 
     LaunchedEffect(viewModel) {
-        viewModel.archivoCompartir.collect { archivo -> CsvShare.shareFile(context, archivo, MIME_HTML) }
+        viewModel.archivoCompartir.collect { archivo -> CsvShare.shareFile(context, archivo, resolver, MIME_HTML) }
     }
     LaunchedEffect(estado.mensaje) {
         estado.mensaje?.let {

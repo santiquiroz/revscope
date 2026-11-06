@@ -1,5 +1,6 @@
 package com.revscope.core.maps
 
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -64,6 +65,21 @@ class MapDownloadServiceTest {
 
         assertTrue(state.message.isNotBlank())
         assertFalse(partFile(dir).exists())
+    }
+
+    @Test
+    fun `error de red sin mensaje usa el texto por defecto en ingles cuando el idioma es ingles`() = runBlocking {
+        val dir = tempMapsDir()
+        val service = service(
+            dir,
+            bytesSource = FakeMapBytesSource(totalBytes = 100L, failWith = IOException()),
+            resolver = XmlStringResolver.en(R::class.java),
+        )
+
+        service.download(allowCellular = true)
+        val state = awaitState<MapDownloadState.Error>(service)
+
+        assertEquals("Network error while downloading the offline map", state.message)
     }
 
     @Test
@@ -193,7 +209,8 @@ class MapDownloadServiceTest {
         isOnWifi: () -> Boolean = { true },
         bytesSource: MapBytesSource,
         usableSpaceBytes: () -> Long = { Long.MAX_VALUE / 2 },
-    ) = MapDownloadService(dir, isOnWifi, bytesSource, usableSpaceBytes)
+        resolver: com.revscope.core.common.i18n.StringResolver = XmlStringResolver.es(R::class.java),
+    ) = MapDownloadService(dir, isOnWifi, bytesSource, usableSpaceBytes, resolver)
 
     private fun tempMapsDir(): File =
         File.createTempFile("maps-test", "").apply {

@@ -20,6 +20,7 @@ android {
 roborazzi { outputDir.set(file("src/test/screenshots")) }
 
 dependencies {
+    implementation(project(":core:common"))
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
     api(libs.compose.material3)

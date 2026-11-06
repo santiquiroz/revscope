@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.session.ObdSessionManager
@@ -48,6 +49,7 @@ internal val O2_SENSOR_PIDS = listOf("14", "15", "18", "19")
 class O2WaveViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val registry: PidRegistry,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val _selectedPid = MutableStateFlow(DEFAULT_O2_PID)
@@ -106,6 +108,7 @@ class O2WaveViewModel @Inject constructor(
                     listOf(sample.timestamp, (sample.timestamp - startMs) / 1000.0, sample.value)
                 },
                 comment = "cruces_por_minuto=%.0f".format(crossings),
+                resolver = resolver,
             )
         }
     }

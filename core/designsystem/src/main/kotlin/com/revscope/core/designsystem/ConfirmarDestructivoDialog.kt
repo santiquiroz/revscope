@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 
 /**
  * Confirmación antes de una acción que no se puede deshacer. [avisos] dice qué se pierde y qué se
@@ -37,9 +38,10 @@ fun ConfirmarDestructivoDialog(
     avisos: List<String> = emptyList(),
     mensaje: String? = null,
     confirmarHabilitado: Boolean = true,
-    textoCancelar: String = "Cancelar",
+    textoCancelar: String? = null,
     contenidoExtra: @Composable () -> Unit = {},
 ) {
+    val etiquetaCancelar = textoCancelar ?: stringResource(R.string.ds_cancel)
     AlertDialog(
         onDismissRequest = onCancelar,
         containerColor = RevScopeColors.SurfaceHigh,
@@ -61,7 +63,7 @@ fun ConfirmarDestructivoDialog(
         },
         dismissButton = {
             TextButton(onClick = onCancelar, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(textoCancelar, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                Text(etiquetaCancelar, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
             }
         },
     )

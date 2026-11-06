@@ -62,9 +62,9 @@ class OkHttpMapBytesSource(
     ) {
         call.execute().use { response ->
             if (!response.isSuccessful) {
-                throw IOException("HTTP ${response.code} descargando el mapa offline")
+                throw IOException("HTTP ${response.code} descargando el mapa offline") // i18n-ignore
             }
-            val body = response.body ?: throw IOException("Respuesta sin cuerpo descargando el mapa offline")
+            val body = response.body ?: throw IOException("Respuesta sin cuerpo descargando el mapa offline") // i18n-ignore
             val totalBytes = body.contentLength().coerceAtLeast(0L)
             body.byteStream().use { input ->
                 FileOutputStream(destination).use { output ->
@@ -86,7 +86,7 @@ class OkHttpMapBytesSource(
         val buffer = ByteArray(CHUNK_SIZE_BYTES)
         var bytesDownloaded = 0L
         while (true) {
-            if (!isActive()) throw IOException("Descarga cancelada")
+            if (!isActive()) throw IOException("Descarga cancelada") // i18n-ignore
             val read = input.read(buffer)
             if (read == -1) break
             output.write(buffer, 0, read)

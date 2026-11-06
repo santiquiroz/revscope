@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Genera core/maps/src/main/assets/map-layers-{light,dark}.json a partir de
+// Genera los assets de capas de mapa en español o inglés a partir de
 // @protomaps/basemaps (paquete npm oficial de Protomaps para MapLibre GL).
 //
 // La app NO depende de Node: este script corre one-shot en dev, sus salidas
@@ -7,6 +7,7 @@
 //
 // Re-ejecutar:
 //   node scripts/gen-map-layers.mjs
+//   node scripts/gen-map-layers.mjs --lang en
 //
 // El paquete se instala en un directorio temporal FUERA del árbol del repo
 // (os.tmpdir()), nunca como package.json/node_modules commiteado. Si ya está
@@ -22,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PACKAGE_NAME = "@protomaps/basemaps";
 const PACKAGE_VERSION = "5.7.2";
-const LANGUAGE = "es";
+const LANGUAGES = ["en", "es"];
 const TILES_SOURCE_NAME = "protomaps";
 const THEMES = ["light", "dark"];
 
@@ -72,11 +73,17 @@ function flavorFor(themeName, flavors) {
 }
 
 async function main() {
+  const langFlag = process.argv.indexOf("--lang");
+  const language = langFlag === -1 ? "es" : process.argv[langFlag + 1];
+  if (!LANGUAGES.includes(language)) {
+    throw new Error(`Unsupported language: ${language ?? "(missing)"}`);
+  }
   const basemaps = await loadBasemaps();
   for (const themeName of THEMES) {
     const flavor = flavorFor(themeName, basemaps);
-    const layerSpecs = basemaps.layers(TILES_SOURCE_NAME, flavor, { lang: LANGUAGE });
-    const target = writeLayersAsset(`map-layers-${themeName}.json`, layerSpecs);
+    const layerSpecs = basemaps.layers(TILES_SOURCE_NAME, flavor, { lang: language });
+    const suffix = language === "en" ? "-en" : "";
+    const target = writeLayersAsset(`map-layers-${themeName}${suffix}.json`, layerSpecs);
     console.log(`${themeName}: ${layerSpecs.length} capas -> ${target}`);
   }
 }

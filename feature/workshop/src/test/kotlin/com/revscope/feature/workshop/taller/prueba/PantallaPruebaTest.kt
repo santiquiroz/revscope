@@ -1,6 +1,8 @@
 package com.revscope.feature.workshop.taller.prueba
 
 import com.revscope.core.obd.taller.pruebas.CatalogoPruebas
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
 import com.revscope.core.obd.taller.pruebas.FasePaso
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
@@ -13,7 +15,8 @@ import org.junit.Test
 
 class PantallaPruebaTest {
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val resolverEs = XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res"))
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverEs)
 
     private fun paso(indice: Int, fase: FasePaso, restanteMs: Long?) =
         (pantalla.fase(EntradaPantalla(BarridoBenelli.enPaso(indice, fase, restanteMs), serieVivo = BarridoBenelli.serieMedio(), bandas = BarridoBenelli.bandas)) as FasePantalla.Paso).paso
@@ -28,7 +31,7 @@ class PantallaPruebaTest {
 
     @Test
     fun `solo las pruebas del catálogo disponible se pueden abrir`() {
-        val parcial = PantallaPrueba(CatalogoPruebas::definicion, listOf(TipoPrueba.TPS_BARRIDO))
+        val parcial = PantallaPrueba(CatalogoPruebas::definicion, listOf(TipoPrueba.TPS_BARRIDO), resolverEs)
 
         val fase = parcial.fase(EntradaPantalla(EstadoPrueba.Inactiva)) as FasePantalla.Elegir
 

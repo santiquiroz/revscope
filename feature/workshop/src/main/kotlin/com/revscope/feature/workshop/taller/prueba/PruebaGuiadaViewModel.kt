@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.grafica.FuenteVref
 import com.revscope.core.obd.taller.pruebas.AnalizadorBateria
@@ -69,10 +70,11 @@ class PruebaGuiadaViewModel @Inject constructor(
     private val vehiculo: VehiculoActivo,
     private val registro: RegistroTaller,
     private val fuenteDesfase: FuenteDesfase,
+    resolver: StringResolver,
 ) : ViewModel() {
 
     private val tipoDeArgumento = guardado.get<String>(ARG_TIPO)?.let { nombre -> TipoPrueba.entries.firstOrNull { it.name == nombre } }
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolver)
     private val local = MutableStateFlow(LocalPrueba(tipo = tipoDeArgumento))
     private val salidas = Channel<Unit>(Channel.BUFFERED)
     val salir: Flow<Unit> = salidas.receiveAsFlow()

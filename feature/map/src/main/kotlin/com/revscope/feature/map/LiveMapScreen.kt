@@ -73,6 +73,8 @@ import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
 import com.revscope.core.maps.peekMapLayersAsset
 import com.revscope.core.maps.readMapLayersAsset
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.AppLanguage
 import com.revscope.core.obd.cameras.SpeedCameraAlerter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.social.RoomClient
@@ -180,6 +182,8 @@ fun LiveMapScreen(
     // del provider duplicaría los re-writes del dataset completo sin cambio visual (T4 lo enmascara).
     val standaloneFix = if (route.isEmpty()) liveFix else null
     val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
+    val language = AppLanguage.current(context).language
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
@@ -273,7 +277,7 @@ fun LiveMapScreen(
     // estilo final en el mismo frame. NO usar produceState acá: su remember interno no tiene
     // keys, así que al cambiar darkTiles conservaría el JSON del tema viejo para siempre (el
     // guard de null nunca dispararía) — remember(darkTiles) sí resetea el state por tema.
-    var layersJson by remember(darkTiles) { mutableStateOf(peekMapLayersAsset(darkTiles)) }
+    var layersJson by remember(darkTiles, language) { mutableStateOf(peekMapLayersAsset(darkTiles, language)) }
     if (layersJson == null) {
         LaunchedEffect(darkTiles) {
             layersJson = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = darkTiles) }
@@ -285,7 +289,7 @@ fun LiveMapScreen(
             serverBaseUrl = null,
             remoteUrl = if (remoteTilesFailed) null else MapStyleProvider.REMOTE_PMTILES_URL,
         )
-        MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = darkTiles, layersJson = layersJson)
+        MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = darkTiles, layersJson = layersJson, resolver = resolver)
     }
     // Datos móviles (fix W1): streamear el tier remoto consume por-tile (~50-200 KB/tile), a
     // diferencia de los ~913 MB de la descarga completa — se acepta sin gate de WiFi, a

@@ -1,6 +1,8 @@
 package com.revscope.feature.workshop.taller.prueba
 
 import com.revscope.core.obd.taller.pruebas.CatalogoPruebas
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.taller.sesion.Veredicto
@@ -12,7 +14,11 @@ import org.junit.Test
 
 class PantallaPruebasMotorTest {
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(
+        CatalogoPruebas::definicion,
+        CatalogoPruebas.disponibles,
+        XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res")),
+    )
 
     private fun paso(e: EstadoPrueba.EnPaso, serie: SerieVivo) =
         (pantalla.fase(EntradaPantalla(e, serieVivo = serie, bandas = PruebasMotorBenelli.bandas)) as FasePantalla.Paso).paso

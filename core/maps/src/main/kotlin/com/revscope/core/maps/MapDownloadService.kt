@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.revscope.core.common.i18n.StringResolver
 import java.io.File
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -31,6 +32,7 @@ class MapDownloadService(
     private val isOnWifi: () -> Boolean,
     private val bytesSource: MapBytesSource = OkHttpMapBytesSource(),
     private val usableSpaceBytes: () -> Long = { mapsDir.usableSpace },
+    private val resolver: StringResolver,
 ) {
 
     companion object {
@@ -104,12 +106,12 @@ class MapDownloadService(
         if (MapDownloadDecider.shouldBlockOnCellular(allowCellular, isOnWifi())) {
             publishState(
                 myJob,
-                MapDownloadState.Error("Descarga bloqueada: conectate a WiFi o permití datos móviles en Ajustes"),
+                MapDownloadState.Error(resolver.get(R.string.maps_download_blocked)),
             )
             return
         }
         if (!MapDownloadDecider.canStart(usableSpaceBytes(), EXPECTED_SIZE_BYTES)) {
-            publishState(myJob, MapDownloadState.Error("Espacio insuficiente para descargar el mapa offline"))
+            publishState(myJob, MapDownloadState.Error(resolver.get(R.string.maps_insufficient_space)))
             return
         }
         lastEmittedPercent = -1
@@ -124,7 +126,7 @@ class MapDownloadService(
             partFile.delete()
             publishState(
                 myJob,
-                MapDownloadState.Error(e.message?.takeIf { it.isNotBlank() } ?: "Error de red descargando el mapa offline"),
+                MapDownloadState.Error(e.message?.takeIf { it.isNotBlank() } ?: resolver.get(R.string.maps_download_network_error)),
             )
         }
     }
@@ -143,7 +145,7 @@ class MapDownloadService(
             MapDownloadPromoteOutcome.PROMOTED -> publishState(myJob, idleStateFromDisk())
             MapDownloadPromoteOutcome.RENAME_FAILED -> {
                 partFile.delete()
-                publishState(myJob, MapDownloadState.Error("No se pudo finalizar la descarga del mapa offline"))
+                publishState(myJob, MapDownloadState.Error(resolver.get(R.string.maps_download_finalize_failed)))
             }
         }
     }

@@ -5,6 +5,7 @@ import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
 import com.revscope.core.designsystem.SerieGrafica
 import com.revscope.core.designsystem.textoPaso
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.grafica.BandaEnEscala
 import com.revscope.core.obd.taller.grafica.BandasPosicion
 import com.revscope.core.obd.taller.grafica.FormatoPosicion
@@ -36,12 +37,26 @@ internal object MapeoPaso {
         Pasos.BARRIDO_LENTO to setOf(ClavesBanda.TPS_CERRADO_V, ClavesBanda.TPS_FONDO_V),
     )
 
-    fun de(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, vref: ReferenciaVoltaje, bandas: Map<String, BandaReferencia>): PasoUi =
-        if (PidsPosicion.es(pid)) dePosicion(e, pid, serie, vref, bandas) else deMagnitud(e, pid, serie, bandas)
+    fun de(
+        e: EstadoPrueba.EnPaso,
+        pid: String,
+        serie: SerieVivo,
+        vref: ReferenciaVoltaje,
+        bandas: Map<String, BandaReferencia>,
+        resolver: StringResolver,
+    ): PasoUi =
+        if (PidsPosicion.es(pid)) dePosicion(e, pid, serie, vref, bandas, resolver) else deMagnitud(e, pid, serie, bandas, resolver)
 
-    private fun dePosicion(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, vref: ReferenciaVoltaje, bandas: Map<String, BandaReferencia>): PasoUi {
+    private fun dePosicion(
+        e: EstadoPrueba.EnPaso,
+        pid: String,
+        serie: SerieVivo,
+        vref: ReferenciaVoltaje,
+        bandas: Map<String, BandaReferencia>,
+        resolver: StringResolver,
+    ): PasoUi {
         val objetivo = BandasPosicion.tps(bandas, UnidadPosicion.VOLTIOS, vref).filter { it.clave in BANDAS_POR_PASO[e.paso.clave].orEmpty() }
-        return base(e).copy(
+        return base(e, resolver).copy(
             vivo = serie.lastOrNull()?.let { valorVivo(pid, it.second, vref) },
             grafica = grafica(pid, serie, vref, objetivo),
             tituloGrafica = "Últimos 10 s, en voltios",
@@ -50,9 +65,15 @@ internal object MapeoPaso {
     }
 
     // RPM y temperaturas: el valor tal cual, en su unidad, y la banda del paso si la tiene (el mínimo).
-    private fun deMagnitud(e: EstadoPrueba.EnPaso, pid: String, serie: SerieVivo, bandas: Map<String, BandaReferencia>): PasoUi {
+    private fun deMagnitud(
+        e: EstadoPrueba.EnPaso,
+        pid: String,
+        serie: SerieVivo,
+        bandas: Map<String, BandaReferencia>,
+        resolver: StringResolver,
+    ): PasoUi {
         val banda = MapeoMagnitud.banda(pid, e.paso.clave, bandas)
-        return base(e).copy(
+        return base(e, resolver).copy(
             vivo = serie.lastOrNull()?.let { MapeoMagnitud.valorVivo(pid, it.second) },
             grafica = MapeoMagnitud.grafica(pid, serie, VENTANA_MS, banda),
             tituloGrafica = "Últimos 10 s, en ${MapeoMagnitud.de(pid).unidad.ifEmpty { "unidades del PID" }}",
@@ -60,7 +81,7 @@ internal object MapeoPaso {
         )
     }
 
-    private fun base(e: EstadoPrueba.EnPaso): PasoUi {
+    private fun base(e: EstadoPrueba.EnPaso, resolver: StringResolver): PasoUi {
         val restanteS = e.restanteMs?.let { ceil(it / 1_000.0).toInt() }
         return PasoUi(
             tipo = e.tipo,
@@ -77,16 +98,16 @@ internal object MapeoPaso {
             grafica = ModeloGrafica(emptyList(), ""),
             tituloGrafica = "",
             leyendaGrafica = emptyList(),
-            anuncio = anuncio(e, restanteS),
+            anuncio = anuncio(e, restanteS, resolver),
             accionPrincipal = TextosPrueba.accionPrincipal(e.fase, e.paso.modo),
             grabados = e.indice,
         )
     }
 
     // Lo que lee TalkBack solo cambia al cambiar de paso o de fase y en los últimos 3 s, no con cada décima.
-    fun anuncio(e: EstadoPrueba.EnPaso, restanteS: Int?): String {
+    fun anuncio(e: EstadoPrueba.EnPaso, restanteS: Int?, resolver: StringResolver): String {
         if (e.fase != FasePaso.POSICIONANDO && restanteS != null && restanteS in 1..SEGUNDOS_ANUNCIADOS) return "$restanteS"
-        return "${textoPaso(e.indice + 1, e.total, e.paso.titulo)}. ${TextosPrueba.estadoFase(e.fase)}"
+        return "${textoPaso(e.indice + 1, e.total, resolver, e.paso.titulo)}. ${TextosPrueba.estadoFase(e.fase)}"
     }
 
     private fun valorVivo(pid: String, porcentaje: Double, vref: ReferenciaVoltaje) = ValorVivoUi(

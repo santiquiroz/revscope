@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.HrDao
@@ -55,6 +56,7 @@ class SessionDetailViewModel @Inject constructor(
     private val imuDao: ImuDao,
     private val hrDao: HrDao,
     private val profileDao: VehicleProfileDao,
+    private val resolver: StringResolver,
     sessionManager: ObdSessionManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -364,6 +366,7 @@ class SessionDetailViewModel @Inject constructor(
             tipo = metric.tipo,
             header = listOf("timestamp_iso", "epoch_ms", valueColumn),
             rows = points.asSequence().map { p -> listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.value) },
+            resolver = resolver,
         )
     }
 
@@ -375,6 +378,7 @@ class SessionDetailViewModel @Inject constructor(
             tipo = metric.tipo,
             header = listOf("timestamp_iso", "epoch_ms", "bpm"),
             rows = points.asSequence().map { p -> listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.bpm) },
+            resolver = resolver,
         )
     }
 
@@ -388,6 +392,7 @@ class SessionDetailViewModel @Inject constructor(
             rows = points.asSequence().map { p ->
                 listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.gLat, p.gLong, p.leanDeg)
             },
+            resolver = resolver,
         )
     }
 
@@ -401,6 +406,7 @@ class SessionDetailViewModel @Inject constructor(
             rows = points.asSequence().map { p ->
                 listOf(CsvShare.isoTimestamp(p.timestamp), p.timestamp, p.latitude, p.longitude, p.speedKmh)
             },
+            resolver = resolver,
         )
     }
 

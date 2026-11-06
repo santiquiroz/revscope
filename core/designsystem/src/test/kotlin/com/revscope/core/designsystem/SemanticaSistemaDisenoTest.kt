@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.revscope.core.uitesting.XmlStringResolver
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -13,19 +15,27 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SemanticaSistemaDisenoTest {
 
+    private val es = XmlStringResolver.es(R::class.java)
+
     @get:Rule
     val compose = createComposeRule()
+
+    @Before
+    fun setSpanishLocale() {
+        RuntimeEnvironment.setQualifiers("es")
+    }
 
     @Test
     fun `NivelBadge expone su texto y no depende del color`() {
         compose.setContent { RevScopeTheme { NivelBadge(NivelEstado.FALLA) } }
 
-        compose.onNodeWithText("Falla").assertIsDisplayed()
+        compose.onNodeWithText(es.get(R.string.ds_state_failure)).assertIsDisplayed()
     }
 
     @Test
@@ -40,7 +50,7 @@ class SemanticaSistemaDisenoTest {
         var reintentos = 0
         compose.setContent { RevScopeTheme { ErrorState("Sin respuesta", onReintentar = { reintentos++ }) } }
 
-        compose.onNodeWithText("Reintentar").performClick()
+        compose.onNodeWithText(es.get(R.string.ds_retry)).performClick()
 
         assertEquals(1, reintentos)
     }
@@ -63,7 +73,7 @@ class SemanticaSistemaDisenoTest {
         var volvio = false
         compose.setContent { RevScopeTheme { BarraConVolver("Códigos DTC", onVolver = { volvio = true }) } }
 
-        compose.onNodeWithContentDescription(DESCRIPCION_VOLVER).performClick()
+        compose.onNodeWithContentDescription(es.get(R.string.ds_back)).performClick()
 
         assertTrue(volvio)
     }
@@ -83,7 +93,7 @@ class SemanticaSistemaDisenoTest {
             }
         }
 
-        compose.onNodeWithText("Cancelar").performClick()
+        compose.onNodeWithText(es.get(R.string.ds_cancel)).performClick()
 
         assertTrue(cancelado)
         assertFalse(confirmado)
@@ -91,7 +101,16 @@ class SemanticaSistemaDisenoTest {
 
     @Test
     fun `el texto del paso dice cual de cuantos`() {
-        assertEquals("Paso 2 de 4", textoPaso(2, 4))
-        assertEquals("Paso 4 de 4: A fondo", textoPaso(9, 4, "A fondo"))
+        val resolverEs = XmlStringResolver.es(R::class.java)
+        assertEquals("Paso 2 de 4", textoPaso(2, 4, resolverEs))
+        assertEquals("Paso 4 de 4: A fondo", textoPaso(9, 4, resolverEs, "A fondo"))
+    }
+
+    @Test
+    fun `NivelBadge usa el recurso ingles`() {
+        RuntimeEnvironment.setQualifiers("en")
+        compose.setContent { RevScopeTheme { NivelBadge(NivelEstado.FALLA) } }
+
+        compose.onNodeWithText(XmlStringResolver.en(R::class.java).get(R.string.ds_state_failure)).assertIsDisplayed()
     }
 }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.data.R
 import com.revscope.core.data.db.AppDatabase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -40,6 +42,7 @@ class BackupManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val db: AppDatabase,
     private val settings: DataStore<Preferences>,
+    private val resolver: StringResolver,
 ) {
 
     suspend fun export(target: OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
@@ -61,7 +64,7 @@ class BackupManager @Inject constructor(
             val currentVersion = db.openHelper.readableDatabase.version
             extractZip(source, tempDir)
             val dbFile = entryFileIn(tempDir, DB_ENTRY_NAME)
-            require(dbFile.exists()) { "El archivo no contiene una base de datos válida" }
+            require(dbFile.exists()) { resolver.get(R.string.data_invalid_database_file) }
             validateImportedVersion(dbFile, currentVersion)
             replaceDatabaseFile(dbFile)
             restorePreferencesIfPresent(tempDir)
@@ -80,7 +83,7 @@ class BackupManager @Inject constructor(
 
     /** Fuerza el contenido del WAL de vuelta al archivo principal para que el zip lo capture entero. */
     private fun checkpointDatabase() {
-        db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
+        db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() } // i18n-ignore
     }
 
     private suspend fun writeZip(target: OutputStream) {
@@ -134,7 +137,9 @@ class BackupManager @Inject constructor(
     private fun entryFileIn(targetDir: File, entryName: String): File {
         val outFile = File(targetDir, entryName)
         val boundary = targetDir.canonicalPath + File.separator
-        require(outFile.canonicalPath.startsWith(boundary)) { "Entrada de zip inválida: $entryName" }
+        require(outFile.canonicalPath.startsWith(boundary)) {
+            resolver.get(R.string.data_invalid_zip_entry, entryName)
+        }
         return outFile
     }
 
@@ -145,7 +150,7 @@ class BackupManager @Inject constructor(
             SQLiteDatabase.OPEN_READONLY,
         ).use { it.version }
         require(importedVersion in 1..currentVersion) {
-            "Versión de base de datos incompatible ($importedVersion) — actualiza RevScope antes de importar"
+            resolver.get(R.string.data_incompatible_database_version, importedVersion)
         }
     }
 

@@ -1,0 +1,5 @@
+<resources>
+    <string name="data_invalid_database_file">El archivo no contiene una base de datos válida</string>
+    <string name="data_invalid_zip_entry">Entrada de zip inválida: %1$s</string>
+    <string name="data_incompatible_database_version">Versión de base de datos incompatible (%1$d) — actualiza RevScope antes de importar</string>
+</resources>

@@ -2,14 +2,20 @@ package com.revscope.app.navigation
 
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.designsystem.descripcionSelectorVehiculo
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VehiculoEnEncabezadoTest {
+    private val resolverEs = XmlStringResolver.es(
+        DesignSystemR::class.java,
+        resDirs = listOf("../core/designsystem/src/main/res"),
+    )
 
     private fun perfil(nombre: String, tipo: String) = VehicleProfileEntity(
         name = nombre,
@@ -28,7 +34,7 @@ class VehiculoEnEncabezadoTest {
         assertEquals(RevScopeColors.Success, vehiculo.colorEstado)
         assertEquals(
             "Vehículo: Benelli TNT 150i. Adaptador: Android-Vlink conectado. Toca para cambiar de vehículo",
-            descripcionSelectorVehiculo(vehiculo),
+            descripcionSelectorVehiculo(vehiculo, resolverEs),
         )
     }
 
@@ -39,7 +45,7 @@ class VehiculoEnEncabezadoTest {
         assertFalse(vehiculo.esMoto)
         assertEquals(
             "Vehículo: sin vehículo. Adaptador: Sin conexión. Toca para cambiar de vehículo",
-            descripcionSelectorVehiculo(vehiculo),
+            descripcionSelectorVehiculo(vehiculo, resolverEs),
         )
     }
 }
