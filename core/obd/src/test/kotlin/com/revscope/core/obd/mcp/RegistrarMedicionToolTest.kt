@@ -40,7 +40,9 @@ class RegistrarMedicionToolTest {
     private val registro by lazy {
         RegistroTaller(
             repositorio, { vehiculo }, HistorialChequeosEnMemoria(), AdjuntosTaller(File(carpeta.root, "taller")),
-            PidRegistry(TestPids.load()), { ahora++ },
+            PidRegistry(TestPids.load()),
+            com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+            { ahora++ },
         )
     }
     private val tool by lazy { RegistrarMedicionTool(AsistenteMultimetro(repositorio, { vehiculo }, registro)) }

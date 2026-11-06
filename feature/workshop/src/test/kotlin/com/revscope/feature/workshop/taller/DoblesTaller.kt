@@ -160,8 +160,14 @@ class TallerDePrueba(carpeta: File, chequeos: List<ChequeoRegistrado> = emptyLis
         historial = historial,
         adjuntos = AdjuntosTaller(File(carpeta, "taller")),
         registry = PidRegistry("[]"),
+        resolver = com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = listOf("../../core/obd/src/main/res")),
         reloj = { entorno.reloj },
     )
 
-    val analizador = AnalizadorSesion(repositorio, historial, SugeridorPruebas { emptyList() })
+    val analizador = AnalizadorSesion(
+        repositorio,
+        historial,
+        SugeridorPruebas { emptyList() },
+        com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = listOf("../../core/obd/src/main/res")),
+    )
 }

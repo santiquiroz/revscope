@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.workshop.HealthReportFormato
 import com.revscope.core.obd.workshop.MetricasChequeo
@@ -19,6 +20,7 @@ class AnalizadorSesion @Inject constructor(
     private val repositorio: TallerRepository,
     private val historial: HistorialChequeos,
     private val sugeridor: SugeridorPruebas,
+    private val resolver: StringResolver,
 ) {
     suspend fun analizar(sesion: SesionTaller, eventos: List<EventoTaller>, tipo: VehicleType): AnalisisSesion {
         val codigos = EstadoSesion.codigosActuales(eventos)
@@ -27,11 +29,11 @@ class AnalizadorSesion @Inject constructor(
         val baseMetricas = base?.metricas
         val comparacion = if (baseMetricas != null && ahora != null) {
             val umbrales = UmbralesComparacion.desde(repositorio.bandasResueltas(sesion.claveModelo, tipo))
-            ComparadorChequeo.comparar(baseMetricas, ahora, umbrales)
+            ComparadorChequeo.comparar(baseMetricas, ahora, umbrales, resolver)
         } else {
             emptyList()
         }
-        return AnalisisSesion(codigos, base, ahora, comparacion, sugeridor.sugerir(sesion.sintomas, codigos))
+        return AnalisisSesion(codigos, base, ahora, comparacion, sugeridor.sugerir(sesion.sintomas, codigos, resolver))
     }
 }
 

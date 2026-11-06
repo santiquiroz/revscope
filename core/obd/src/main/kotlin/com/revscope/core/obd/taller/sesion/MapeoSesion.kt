@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.data.db.entities.DiagEventEntity
 import com.revscope.core.data.db.entities.DiagSessionEntity
 
@@ -21,20 +23,20 @@ fun DiagSessionEntity.aSesion() = SesionTaller(
     pasosMarcados = leerLista(checkedSteps).toSet(),
 )
 
-fun SesionTaller.aEntidad() = DiagSessionEntity(
+fun SesionTaller.aEntidad(resolver: StringResolver) = DiagSessionEntity(
     id = id,
     vehicleProfileId = vehiculoId,
     knowledgeKey = claveModelo,
     startedAt = inicio,
     closedAt = cierre,
     title = titulo,
-    symptomTags = escribirLista(sintomas.map { it.name }),
+    symptomTags = escribirLista(sintomas.map { it.name }, resolver),
     symptomsText = sintomasTexto,
     notes = notas,
     odometerKm = odometroKm,
     baselineHealthReportId = chequeoBaseId,
     interpretation = interpretacion,
-    checkedSteps = escribirLista(pasosMarcados),
+    checkedSteps = escribirLista(pasosMarcados, resolver),
 )
 
 fun DiagEventEntity.aEvento() = EventoTaller(
@@ -69,9 +71,11 @@ private fun leerLista(texto: String): List<String> =
     texto.split(SEPARADOR).map { it.trim() }.filter { it.isNotEmpty() }
 
 // Orden estable: guardar dos veces el mismo conjunto produce el mismo texto.
-private fun escribirLista(valores: Iterable<String>): String {
+private fun escribirLista(valores: Iterable<String>, resolver: StringResolver): String {
     val limpios = valores.map { it.trim() }.filter { it.isNotEmpty() }
-    require(limpios.none { it.contains(SEPARADOR) }) { "Las claves no pueden contener «$SEPARADOR»" }
+    require(limpios.none { it.contains(SEPARADOR) }) {
+        resolver.get(R.string.obd_session_key_separator_error, SEPARADOR)
+    }
     return limpios.sorted().joinToString(SEPARADOR)
 }
 

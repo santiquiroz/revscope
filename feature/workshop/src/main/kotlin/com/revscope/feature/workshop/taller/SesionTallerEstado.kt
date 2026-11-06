@@ -8,6 +8,7 @@ import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.Veredicto
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
+import com.revscope.core.obd.taller.sesion.etiqueta
 import java.io.File
 import java.time.ZoneId
 

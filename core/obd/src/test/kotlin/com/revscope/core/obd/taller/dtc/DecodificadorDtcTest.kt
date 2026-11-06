@@ -1,13 +1,16 @@
 package com.revscope.core.obd.taller.dtc
 
+import com.revscope.core.obd.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.revscope.core.uitesting.XmlStringResolver
 
 class DecodificadorDtcTest {
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     private fun decodificar(codigo: String) = checkNotNull(DecodificadorDtc.decodificar(codigo)) { codigo }
 
     @Test
@@ -39,10 +42,13 @@ class DecodificadorDtcTest {
         assertEquals(
             "Código genérico definido por SAE · tren motriz (motor y transmisión) · " +
                 "subsistema: medición de aire y combustible (circuito de inyectores)",
-            e.explicacion,
+            e.explicacion(resolver),
         )
-        assertEquals("subsistema: computadora (ECU) y circuitos de salida", decodificar("P0620").explicacion.substringAfterLast(" · "))
-        assertTrue(DecodificadorDtc.mensajeSinGuia(e).contains("SAE J2012"))
+        assertEquals(
+            "subsistema: computadora (ECU) y circuitos de salida",
+            decodificar("P0620").explicacion(resolver).substringAfterLast(" · "),
+        )
+        assertTrue(DecodificadorDtc.mensajeSinGuia(e, resolver).contains("SAE J2012"))
     }
 
     @Test
@@ -51,8 +57,8 @@ class DecodificadorDtcTest {
             val e = decodificar(codigo)
             assertEquals(codigo, AmbitoDtc.FABRICANTE, e.ambito)
             assertNull(codigo, e.subsistema)
-            assertEquals("Código del fabricante: consulta el manual del modelo", e.explicacion)
-            assertTrue(DecodificadorDtc.mensajeSinGuia(e).contains("no inventa"))
+            assertEquals("Código del fabricante: consulta el manual del modelo", e.explicacion(resolver))
+            assertTrue(DecodificadorDtc.mensajeSinGuia(e, resolver).contains("no inventa"))
         }
     }
 
@@ -84,7 +90,10 @@ class DecodificadorDtcTest {
             assertEquals(codigo, ambito, e.ambito)
             assertNull(codigo, e.subsistema)
         }
-        assertEquals("Código genérico definido por SAE · red de comunicación entre módulos", decodificar("U0100").explicacion)
+        assertEquals(
+            "Código genérico definido por SAE · red de comunicación entre módulos",
+            decodificar("U0100").explicacion(resolver),
+        )
     }
 
     @Test
@@ -102,6 +111,6 @@ class DecodificadorDtcTest {
 
         assertEquals(AmbitoDtc.GENERICO, e.ambito)
         assertNull(e.subsistema)
-        assertFalse(e.explicacion.contains("subsistema"))
+        assertFalse(e.explicacion(resolver).contains("subsistema"))
     }
 }

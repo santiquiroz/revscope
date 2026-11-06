@@ -28,7 +28,10 @@ class CapturasDtcTest {
     )
 
     // La guía real del asset: la captura muestra el texto que verá la persona, no un texto de relleno.
-    private val guias = BaseConocimientoDtc { File(RUTA_GUIA_REAL).readText() }
+    private val guias = BaseConocimientoDtc(
+        { File(RUTA_GUIA_REAL).readText() },
+        com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = listOf("../../core/obd/src/main/res")),
+    )
 
     private fun codigos(vararg codes: DtcCode) = agruparPorCodigo(codes.toList(), guias::guia)
 

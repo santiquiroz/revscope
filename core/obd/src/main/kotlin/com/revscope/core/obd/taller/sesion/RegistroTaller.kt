@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.model.ObdReading
@@ -40,6 +42,7 @@ class RegistroTaller(
     private val historial: HistorialChequeos,
     private val adjuntos: AdjuntosTaller,
     private val registry: PidRegistry,
+    private val resolver: StringResolver,
     private val reloj: () -> Long,
 ) {
 
@@ -50,19 +53,20 @@ class RegistroTaller(
         historial: HistorialChequeos,
         adjuntos: AdjuntosTaller,
         registry: PidRegistry,
-    ) : this(repositorio, vehiculo, historial, adjuntos, registry, System::currentTimeMillis)
+        resolver: StringResolver,
+    ) : this(repositorio, vehiculo, historial, adjuntos, registry, resolver, System::currentTimeMillis)
 
     suspend fun sesionAbierta(): SesionTaller? = vehiculo.actual()?.let { repositorio.sesionAbierta(it.id) }
 
     suspend fun abrirSesion(solicitud: SolicitudSesion): Result<SesionTaller> {
         val actual = vehiculo.actual()
-            ?: return Result.failure(IllegalStateException("Elige el vehículo activo antes de abrir una sesión"))
+            ?: return Result.failure(IllegalStateException(resolver.get(R.string.obd_session_no_active_vehicle)))
         val ahora = reloj()
         val sesion = SesionTaller(
             vehiculoId = actual.id,
             claveModelo = actual.claveModelo,
             inicio = ahora,
-            titulo = TituloSesion.de(solicitud),
+            titulo = TituloSesion.de(solicitud, resolver),
             sintomas = solicitud.sintomas,
             sintomasTexto = solicitud.sintomasTexto.trim(),
             notas = solicitud.notas.trim(),
@@ -72,7 +76,7 @@ class RegistroTaller(
         val id = repositorio.abrirSesion(sesion)
         val abierta = sesion.copy(id = id)
         if (sesion.sintomas.isNotEmpty() || sesion.sintomasTexto.isNotEmpty()) {
-            guardar(abierta, EventosTaller.sintomas(sesion.sintomas, sesion.sintomasTexto, solicitud.origen))
+            guardar(abierta, EventosTaller.sintomas(sesion.sintomas, sesion.sintomasTexto, solicitud.origen, resolver))
         }
         return Result.success(abierta)
     }
@@ -91,28 +95,28 @@ class RegistroTaller(
     }
 
     suspend fun anotarLecturaDtc(scan: DtcScan, origen: OrigenEvento = OrigenEvento.APP): Long? =
-        anotar(EventosTaller.lecturaDtc(scan, origen, ::nombrePid))
+        anotar(EventosTaller.lecturaDtc(scan, origen, ::nombrePid, resolver))
 
     suspend fun anotarBorradoDtc(borrado: BorradoDtc, origen: OrigenEvento = OrigenEvento.APP): Long? =
-        anotar(EventosTaller.borradoDtc(borrado, origen, ::nombrePid))
+        anotar(EventosTaller.borradoDtc(borrado, origen, ::nombrePid, resolver))
 
     suspend fun anotarChequeo(
         chequeoId: Long?,
         items: List<DiagnosticRules.Diagnosis>,
         metricas: MetricasChequeo,
         dtc: DtcScan?,
-    ): Long? = anotar(EventosTaller.chequeo(chequeoId, items, metricas, dtc, ::nombrePid))
+    ): Long? = anotar(EventosTaller.chequeo(chequeoId, items, metricas, dtc, ::nombrePid, resolver))
 
     suspend fun anotarCaptura(resumen: ResumenCaptura, muestras: List<MuestraCaptura>): Long? =
-        anotar(EventoCaptura.de(resumen, muestras, registry::getDefinition))
+        anotar(EventoCaptura.de(resumen, muestras, registry::getDefinition, resolver))
 
     suspend fun anotarNota(texto: String, origen: OrigenEvento = OrigenEvento.APP): Long? {
         if (texto.isBlank()) return null
-        return anotar(EventosTaller.nota(texto, origen))
+        return anotar(EventosTaller.nota(texto, origen, resolver))
     }
 
     suspend fun anotarInstantanea(lecturas: Map<String, ObdReading>): Long? =
-        anotar(EventosTaller.instantanea(lecturas, reloj(), ::nombrePid))
+        anotar(EventosTaller.instantanea(lecturas, reloj(), ::nombrePid, resolver))
 
     suspend fun marcarPaso(clave: String, marcado: Boolean): SesionTaller? = seguro {
         val sesion = sesionAbierta() ?: return@seguro null
