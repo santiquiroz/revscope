@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/santiquiroz/revscope/discussions
+    about: Ask questions, share ideas, or discuss RevScope without filing a bug or feature issue.
