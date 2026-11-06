@@ -1,0 +1,88 @@
+<resources>
+    <string name="workshop_health_check_title">Chequeo de salud</string>
+    <string name="workshop_health_check_export">Exportar CSV</string>
+    <string name="workshop_health_check_share">Compartir informe</string>
+    <string name="workshop_health_check_scanning">Escaneando…</string>
+    <string name="workshop_health_check_scan_now">Escanear ahora</string>
+    <string name="workshop_health_check_intro">Un toque y RevScope revisa códigos de falla, readiness para la tecnomecánica, mezcla, sensor O2, batería y temperatura.</string>
+    <string name="workshop_health_check_last">Último chequeo: %1$s</string>
+    <string name="workshop_health_check_unavailable_ecu">No disponible en esta ECU</string>
+
+    <string name="workshop_health_check_connect_adapter">Conecta el adaptador primero</string>
+    <string name="workshop_health_check_stage_dtcs">Leyendo códigos de falla…</string>
+    <string name="workshop_health_check_stage_readiness">Consultando monitores de readiness…</string>
+    <string name="workshop_health_check_stage_mixture">Muestreando mezcla y sensores (%1$d s)…</string>
+    <string name="workshop_health_check_stage_odometer">Verificando odómetro…</string>
+    <string name="workshop_health_check_stage_battery">Analizando tendencia de batería…</string>
+    <string name="workshop_health_check_failed">Falló el chequeo: %1$s</string>
+    <string name="workshop_health_check_vehicle_fallback">Mi vehículo</string>
+
+    <string name="workshop_health_report_title">Chequeo de salud</string>
+    <string name="workshop_health_report_vehicle_date">%1$s · %2$s</string>
+    <string name="workshop_health_report_summary">%1$s · %2$s · %3$s</string>
+    <plurals name="workshop_health_report_ok_count">
+        <item quantity="one">%1$d OK</item>
+        <item quantity="other">%1$d OK</item>
+    </plurals>
+    <plurals name="workshop_health_report_attention_count">
+        <item quantity="one">%1$d atención</item>
+        <item quantity="other">%1$d atención</item>
+    </plurals>
+    <plurals name="workshop_health_report_fault_count">
+        <item quantity="one">%1$d fallas</item>
+        <item quantity="other">%1$d fallas</item>
+    </plurals>
+    <plurals name="workshop_health_report_more_items">
+        <item quantity="one">… y %1$d más</item>
+        <item quantity="other">… y %1$d más</item>
+    </plurals>
+
+    <string name="workshop_health_level_ok">OK</string>
+    <string name="workshop_health_level_attention">Atención</string>
+    <string name="workshop_health_level_expired">Vencido</string>
+    <string name="workshop_health_level_not_configured">Sin configurar</string>
+
+    <string name="workshop_health_dtc_area">DTC</string>
+    <string name="workshop_health_dtc_read_incomplete">Lectura de códigos incompleta</string>
+    <plurals name="workshop_health_dtc_codes_found">
+        <item quantity="one">%1$d códigos: %2$s</item>
+        <item quantity="other">%1$d códigos: %2$s</item>
+    </plurals>
+    <string name="workshop_health_dtc_open_for_ai">Ábrelos en Códigos de falla para explicación con IA</string>
+    <string name="workshop_health_dtc_link_lost">Se perdió el enlace durante el escaneo — repite el chequeo</string>
+    <string name="workshop_health_dtc_none">Sin códigos de falla</string>
+    <string name="workshop_health_dtc_memory_clear">Memoria de fallas limpia</string>
+    <string name="workshop_health_dtc_pending_suffix">%1$s (pendiente)</string>
+    <string name="workshop_health_dtc_permanent_suffix">%1$s (permanente)</string>
+
+    <string name="workshop_health_odometer_area">Odómetro</string>
+    <string name="workshop_health_odometer_read_unavailable">Lectura no disponible</string>
+    <string name="workshop_health_odometer_read_failed">No se pudo leer el odómetro — repite el chequeo</string>
+    <string name="workshop_health_readiness_area">Readiness</string>
+    <string name="workshop_health_readiness_unavailable">Readiness no disponible</string>
+
+    <string name="workshop_health_battery_trend_area">Batería (tendencia)</string>
+    <string name="workshop_health_battery_trend_stable">Carga estable entre viajes</string>
+    <string name="workshop_health_battery_trend_declining">Voltaje de carga en descenso</string>
+    <string name="workshop_health_battery_trend_weak">Carga débil sostenida</string>
+
+    <string name="workshop_health_parameter_readiness">Monitores de readiness</string>
+    <string name="workshop_health_parameter_coolant_temperature">Temperatura del motor</string>
+    <string name="workshop_health_parameter_short_trim_b1">Ajuste corto de combustible B1</string>
+    <string name="workshop_health_parameter_long_trim_b1">Ajuste largo de combustible B1</string>
+    <string name="workshop_health_parameter_long_trim_b2">Ajuste largo de combustible B2</string>
+    <string name="workshop_health_parameter_engine_rpm">RPM del motor</string>
+    <string name="workshop_health_parameter_o2_b1s1">Sensor O2 B1S1</string>
+
+    <string name="workshop_mechanic_chat_back">Volver</string>
+    <string name="workshop_mechanic_chat_title">Mecánico IA</string>
+    <string name="workshop_mechanic_chat_provider_required">Para hablar con el Mecánico IA, configura un proveedor en Ajustes → Inteligencia artificial.</string>
+    <string name="workshop_mechanic_chat_go_to_settings">Ir a Ajustes</string>
+    <string name="workshop_mechanic_chat_configure_ai">Configurar IA</string>
+    <string name="workshop_mechanic_chat_empty_hint">Preguntale al mecánico sobre tu vehículo — ya tiene tus datos actuales a mano.</string>
+    <string name="workshop_mechanic_chat_thinking">Pensando…</string>
+    <string name="workshop_mechanic_chat_question_hint">Escribe tu pregunta…</string>
+    <string name="workshop_mechanic_chat_send">Enviar</string>
+    <string name="workshop_mechanic_chat_error">No se pudo consultar — revisa tu proveedor de IA en Ajustes</string>
+    <string name="workshop_health_level_not_checked">Sin consultar</string>
+</resources>
