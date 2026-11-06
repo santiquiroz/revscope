@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.db.entities.VehicleType
@@ -44,6 +45,7 @@ class DashboardViewModel @Inject constructor(
     private val aiRulesSource: RestrictionRulesSource,
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
     private val registry: PidRegistry,
+    internal val resolver: StringResolver,
 ) : ViewModel() {
 
     /** Nueva versión disponible en GitHub — null si estás al día o sin red. */
@@ -105,7 +107,7 @@ class DashboardViewModel @Inject constructor(
 
     /**
      * D2: hero mode del dashboard (viaje GPS + mapa por delante de los gauges) cuando el
-     * usuario eligió "sin adaptador" en el wizard O nunca vinculó uno — inferencia por
+     * usuario eligió «sin adaptador» en el wizard O nunca vinculó uno — inferencia por
      * ausencia de [PreferencesKeys.ADAPTER_ADDRESS] — y no hay conexión OBD activa.
      */
     val gpsHeroMode: StateFlow<Boolean> = combine(
@@ -133,7 +135,7 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    /** Thin contextual banner ("⚠ SOAT vencido · Pico y placa hasta las 20:00"); null when all clear. */
+    /** Thin contextual banner (p. ej. «⚠ SOAT vencido · Pico y placa hasta las 20:00»); null when all clear. */
     val alDiaBanner: StateFlow<String?> = combine(
         sessionManager.activeProfile,
         settings.data.map { it[PreferencesKeys.LICENSE_EXPIRES_AT] },

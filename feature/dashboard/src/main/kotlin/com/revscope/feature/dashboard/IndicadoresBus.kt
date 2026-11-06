@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.revscope.core.designsystem.RevScopeColors
@@ -60,16 +61,28 @@ internal fun FilaIndicadoresBus(indicadores: IndicadoresBus) {
     ) {
         indicadores.pataAbajo?.let { abajo ->
             when {
-                indicadores.alerta -> Indicador("¡Pata abajo!", RevScopeColors.Background, RevScopeColors.Danger)
-                abajo -> Indicador("Pata abajo", RevScopeColors.Warning)
-                else -> Indicador("Pata arriba")
+                indicadores.alerta -> Indicador(
+                    stringResource(R.string.drive_bus_stand_down_alert),
+                    RevScopeColors.Background,
+                    RevScopeColors.Danger,
+                )
+                abajo -> Indicador(stringResource(R.string.drive_bus_stand_down), RevScopeColors.Warning)
+                else -> Indicador(stringResource(R.string.drive_bus_stand_up))
             }
         }
         indicadores.embrague?.let { apretado ->
-            if (apretado) Indicador("Embrague", RevScopeColors.Accent) else Indicador("Embrague suelto")
+            if (apretado) {
+                Indicador(stringResource(R.string.drive_bus_clutch_in), RevScopeColors.Accent)
+            } else {
+                Indicador(stringResource(R.string.drive_bus_clutch_released))
+            }
         }
         indicadores.killOff?.let { off ->
-            if (off) Indicador("Kill OFF", RevScopeColors.Warning) else Indicador("Kill RUN")
+            if (off) {
+                Indicador(stringResource(R.string.drive_bus_kill_off), RevScopeColors.Warning)
+            } else {
+                Indicador(stringResource(R.string.drive_bus_kill_run))
+            }
         }
     }
 }

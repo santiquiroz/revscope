@@ -1,6 +1,7 @@
 package com.revscope.feature.dashboard
 
 import com.revscope.core.designsystem.RevScopeType
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.motion.MotionMetricsHub
@@ -72,7 +76,7 @@ class TrackModeViewModel @Inject constructor(
     sealed interface GhostAction {
         data object Idle : GhostAction
         data object Working : GhostAction
-        data class Message(val text: String) : GhostAction
+        data class Message(@StringRes val text: Int) : GhostAction
     }
 
     private val _ghostAction = kotlinx.coroutines.flow.MutableStateFlow<GhostAction>(GhostAction.Idle)
@@ -83,14 +87,14 @@ class TrackModeViewModel @Inject constructor(
 
     fun uploadBestLap() {
         val best = engine.bestLapForUpload() ?: run {
-            _ghostAction.value = GhostAction.Message("Aún no tienes una vuelta para subir")
+            _ghostAction.value = GhostAction.Message(R.string.drive_ghost_no_lap)
             return
         }
         viewModelScope.launch {
             _ghostAction.value = GhostAction.Working
             val id = ghostClient.upload(best.finishLat, best.finishLon, best.timeMs, best.points)
             _ghostAction.value = GhostAction.Message(
-                if (id != null) "Fantasma subido ✓" else "No se pudo subir (¿servidor configurado?)"
+                if (id != null) R.string.drive_ghost_uploaded else R.string.drive_ghost_upload_failed
             )
         }
     }
@@ -101,7 +105,7 @@ class TrackModeViewModel @Inject constructor(
             _ghostAction.value = GhostAction.Working
             _nearbyGhosts.value = ghostClient.near(finish.first, finish.second)
             _ghostAction.value =
-                if (_nearbyGhosts.value.isEmpty()) GhostAction.Message("Sin fantasmas para esta pista")
+                if (_nearbyGhosts.value.isEmpty()) GhostAction.Message(R.string.drive_ghost_none_here)
                 else GhostAction.Idle
         }
     }
@@ -112,9 +116,9 @@ class TrackModeViewModel @Inject constructor(
             val points = ghostClient.download(id)
             if (points.size >= 2) {
                 engine.setRemoteGhost(points)
-                _ghostAction.value = GhostAction.Message("Corriendo contra el fantasma 👻")
+                _ghostAction.value = GhostAction.Message(R.string.drive_ghost_racing)
             } else {
-                _ghostAction.value = GhostAction.Message("No se pudo cargar el fantasma")
+                _ghostAction.value = GhostAction.Message(R.string.drive_ghost_load_failed)
             }
             _nearbyGhosts.value = emptyList()
         }
@@ -123,7 +127,7 @@ class TrackModeViewModel @Inject constructor(
     fun useSelfGhost() {
         engine.useSelfGhost()
         _nearbyGhosts.value = emptyList()
-        _ghostAction.value = GhostAction.Message("Fantasma remoto quitado")
+        _ghostAction.value = GhostAction.Message(R.string.drive_ghost_removed)
     }
 
     fun clearGhostMessage() { _ghostAction.value = GhostAction.Idle }
@@ -146,6 +150,7 @@ fun TrackModeScreen(
     val motion by vm.motionHub.snapshot.collectAsState()
     val ghostDeltaMs by vm.engine.ghostDeltaMs.collectAsState()
     val isMotorcycle by vm.isMotorcycle.collectAsState()
+    val locale = LocalConfiguration.current.locales[0]
 
     // Live current-lap clock, ticking locally at 5 Hz
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -159,10 +164,20 @@ fun TrackModeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Modo Pista", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        stringResource(R.string.drive_track_mode),
+                        color = RevScopeColors.TextPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = RevScopeColors.TextPrimary)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = stringResource(R.string.drive_back),
+                            tint = RevScopeColors.TextPrimary,
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = RevScopeColors.Surface),
@@ -179,7 +194,7 @@ fun TrackModeScreen(
         ) {
             if (!state.hasGpsFix) {
                 Text(
-                    "Esperando señal GPS… (conecta el adaptador y muévete un poco)",
+                    stringResource(R.string.drive_track_waiting_gps),
                     color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
@@ -188,8 +203,7 @@ fun TrackModeScreen(
 
             if (!state.finishLineSet) {
                 Text(
-                    "Rueda despacio SOBRE la línea de meta y pulsa el botón — " +
-                        "la línea queda perpendicular a tu dirección (30 m de ancho).",
+                    stringResource(R.string.drive_track_finish_hint),
                     color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
@@ -199,7 +213,11 @@ fun TrackModeScreen(
                     enabled = state.hasGpsFix,
                     colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
                 ) {
-                    Text("🏁 Marcar línea de meta aquí", color = RevScopeColors.Background, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.drive_track_set_finish),
+                        color = RevScopeColors.Background,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             } else {
                 // Current lap clock
@@ -212,15 +230,20 @@ fun TrackModeScreen(
                     fontFamily = FontFamily.Monospace,
                 )
                 Text(
-                    if (state.lapInProgress) "vuelta ${state.laps.size + 1} en curso"
-                    else "cruza la línea para iniciar la vuelta 1",
+                    if (state.lapInProgress) {
+                        stringResource(R.string.drive_track_lap_in_progress, state.laps.size + 1)
+                    } else {
+                        stringResource(R.string.drive_track_cross_to_start)
+                    },
                     color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
                 // Delta vs tu fantasma (mejor vuelta de la sesión): + rojo = perdiendo
                 ghostDeltaMs?.let { delta ->
+                    val signo = if (delta >= 0) "+" else "−"
+                    val segundos = LocaleNumbers.decimal(kotlin.math.abs(delta) / 1000.0, 1, locale)
                     Text(
-                        "${if (delta >= 0) "+" else "−"}%.1fs 👻".format(kotlin.math.abs(delta) / 1000.0),
+                        "$signo${segundos}s 👻",
                         color = if (delta >= 0) RevScopeColors.Danger else RevScopeColors.Success,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
@@ -233,21 +256,39 @@ fun TrackModeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    TrackStat("Última", state.laps.lastOrNull()?.let { formatLap(it.timeMs) } ?: "—", Modifier.weight(1f))
-                    TrackStat("Mejor", state.bestLapMs?.let { formatLap(it) } ?: "—", Modifier.weight(1f))
-                    TrackStat("Vueltas", state.laps.size.toString(), Modifier.weight(1f))
+                    TrackStat(
+                        stringResource(R.string.drive_track_last),
+                        state.laps.lastOrNull()?.let { formatLap(it.timeMs) } ?: "—",
+                        Modifier.weight(1f),
+                    )
+                    TrackStat(
+                        stringResource(R.string.drive_track_best),
+                        state.bestLapMs?.let { formatLap(it) } ?: "—",
+                        Modifier.weight(1f),
+                    )
+                    TrackStat(stringResource(R.string.drive_track_laps), state.laps.size.toString(), Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    TrackStat("G lat", "%.2f".format(motion.gLat), Modifier.weight(1f))
-                    TrackStat("G long", "%.2f".format(motion.gLong), Modifier.weight(1f))
+                    TrackStat(
+                        stringResource(R.string.drive_track_g_lat),
+                        LocaleNumbers.decimal(motion.gLat.toDouble(), 2, locale),
+                        Modifier.weight(1f),
+                    )
+                    TrackStat(
+                        stringResource(R.string.drive_track_g_long),
+                        LocaleNumbers.decimal(motion.gLong.toDouble(), 2, locale),
+                        Modifier.weight(1f),
+                    )
                     if (isMotorcycle) {
                         TrackStat(
-                            if (motion.calibrated) "Lean" else "Lean (calibrando…)",
-                            "%.0f°".format(motion.leanDeg),
+                            stringResource(
+                                if (motion.calibrated) R.string.drive_track_lean else R.string.drive_track_lean_calibrating,
+                            ),
+                            LocaleNumbers.decimal(motion.leanDeg.toDouble(), 0, locale) + "°",
                             Modifier.weight(1f),
                         )
                     }
@@ -267,7 +308,7 @@ fun TrackModeScreen(
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                         ) {
                             Text(
-                                "Vuelta ${lap.number}",
+                                stringResource(R.string.drive_track_lap_n, lap.number),
                                 color = RevScopeColors.TextPrimary,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
@@ -290,7 +331,7 @@ fun TrackModeScreen(
                     onClick = { vm.engine.clear() },
                     colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
                 ) {
-                    Text("Quitar línea y reiniciar", color = RevScopeColors.TextPrimary)
+                    Text(stringResource(R.string.drive_track_clear), color = RevScopeColors.TextPrimary)
                 }
             }
         }
@@ -314,7 +355,7 @@ private fun GhostSection(vm: TrackModeViewModel, hasBestLap: Boolean) {
             colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Surface),
             modifier = Modifier.weight(1f),
         ) {
-            Text("👻 Subir vuelta", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+            Text(stringResource(R.string.drive_ghost_upload_lap), color = RevScopeColors.TextPrimary, fontSize = 13.sp)
         }
         Button(
             onClick = { vm.loadNearbyGhosts() },
@@ -322,11 +363,11 @@ private fun GhostSection(vm: TrackModeViewModel, hasBestLap: Boolean) {
             colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Surface),
             modifier = Modifier.weight(1f),
         ) {
-            Text("Retar fantasma", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+            Text(stringResource(R.string.drive_ghost_challenge), color = RevScopeColors.TextPrimary, fontSize = 13.sp)
         }
     }
     (action as? TrackModeViewModel.GhostAction.Message)?.let {
-        Text(it.text, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall, modifier = Modifier.padding(top = 4.dp))
+        Text(stringResource(it.text), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall, modifier = Modifier.padding(top = 4.dp))
     }
     nearby.forEach { ghost ->
         Row(

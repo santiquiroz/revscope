@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.designsystem.RevScopeColors
@@ -61,7 +63,7 @@ fun DashboardScreen(
     val speedSourceGps by dashboardVm.speedSourceGps.collectAsState()
     val estadoViaje by connectionVm.estadoViaje.collectAsState()
     val avisoViaje = rememberAvisoTemporal(connectionVm)
-    val activeAlert = rememberAlertaActiva(connectionVm)
+    val activeAlert = rememberAlertaActiva(connectionVm, dashboardVm.resolver)
 
     // D2: elegido en el wizard o inferido por ausencia de adaptador configurado (VM) — sin
     // conexión OBD activa: invertir jerarquía — viaje GPS + mapa arriba, gauges (sin datos
@@ -134,7 +136,7 @@ fun DashboardScreen(
         versionNueva = update?.version,
         avisoAlDia = alDiaBanner,
         alertaActiva = activeAlert,
-        // "Viaje sin adaptador": only offered while there's no live/incoming BT link, so it
+        // «Viaje sin adaptador»: only offered while there's no live/incoming BT link, so it
         // can never race connectToDevice()'s own GPS-session handover.
         ofrecerViajeGps = connectionState is ConnectionState.Disconnected || connectionState is ConnectionState.Error,
         viajeGpsActivo = isGpsTrip,
@@ -152,6 +154,7 @@ fun DashboardScreen(
             boost = boost,
             marcha = gear,
             disponibilidad = resolverDisponibilidad,
+            resolver = dashboardVm.resolver,
         ),
         escalas = EscalasConducir(
             maxRpm = activeProfile?.maxRpm ?: 8000,
@@ -216,36 +219,38 @@ internal fun lecturasConMotivos(
     boost: Float?,
     marcha: Int?,
     disponibilidad: (String, String) -> DisponibilidadPid,
+    resolver: StringResolver,
 ): LecturasConducir {
-    val sinAdaptador = "Sin adaptador"
+    val sinAdaptador = resolver.get(R.string.drive_reason_no_adapter)
     val rpmVisible = rpm.takeIf { conectado }
     val velocidadVisible = velocidad.takeIf { conectado || velocidadGps }
     val temperaturaVisible = temperatura.takeIf { conectado }
     val boostVisible = boost.takeIf { conectado }
     val marchaVisible = marcha.takeIf { conectado }
+    val motivoDePid = { pid: String, nombre: Int ->
+        motivoPid(conectado, pid, resolver.get(nombre), disponibilidad, resolver)
+    }
     return LecturasConducir(
         rpm = rpmVisible,
         velocidad = velocidadVisible,
         temperatura = temperaturaVisible,
         boost = boostVisible,
         marcha = marchaVisible,
-        motivoRpm = rpmVisible.motivoSiFalta(motivoPid(conectado, "0C", "las RPM", disponibilidad)),
-        motivoVelocidad = velocidadVisible.motivoSiFalta(
+        motivoRpm = rpmVisible.motivoSiFalta { motivoDePid("0C", R.string.drive_pid_name_rpm) },
+        motivoVelocidad = velocidadVisible.motivoSiFalta {
             when {
                 !conectado && !velocidadGps -> sinAdaptador
-                velocidadGps -> "Sin señal de velocidad del GPS"
-                else -> motivoPid(true, "0D", "la velocidad", disponibilidad)
-            },
-        ),
-        motivoTemperatura = temperaturaVisible.motivoSiFalta(
-            motivoPid(conectado, "05", "la temperatura del motor", disponibilidad),
-        ),
-        motivoBoost = boostVisible.motivoSiFalta(
-            if (conectado) "El boost necesita MAP y presión barométrica" else sinAdaptador,
-        ),
-        motivoMarcha = marchaVisible.motivoSiFalta(
-            if (conectado) "La marcha necesita RPM y velocidad" else sinAdaptador,
-        ),
+                velocidadGps -> resolver.get(R.string.drive_reason_no_gps_speed)
+                else -> motivoDePid("0D", R.string.drive_pid_name_speed)
+            }
+        },
+        motivoTemperatura = temperaturaVisible.motivoSiFalta { motivoDePid("05", R.string.drive_pid_name_coolant) },
+        motivoBoost = boostVisible.motivoSiFalta {
+            if (conectado) resolver.get(R.string.drive_reason_boost) else sinAdaptador
+        },
+        motivoMarcha = marchaVisible.motivoSiFalta {
+            if (conectado) resolver.get(R.string.drive_reason_gear) else sinAdaptador
+        },
     )
 }
 
@@ -254,12 +259,13 @@ private fun motivoPid(
     pid: String,
     nombre: String,
     disponibilidad: (String, String) -> DisponibilidadPid,
+    resolver: StringResolver,
 ): String {
-    if (!conectado) return "Sin adaptador"
-    return disponibilidad(pid, nombre).motivo ?: "Esperando lectura de $nombre (PID $pid)"
+    if (!conectado) return resolver.get(R.string.drive_reason_no_adapter)
+    return disponibilidad(pid, nombre).motivo ?: resolver.get(R.string.drive_reason_waiting_pid, nombre, pid)
 }
 
-private fun Any?.motivoSiFalta(motivo: String): String? = if (this == null) motivo else null
+private inline fun Any?.motivoSiFalta(motivo: () -> String): String? = if (this == null) motivo() else null
 
 private fun abrirEnNavegador(context: Context, url: String) {
     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
@@ -279,14 +285,14 @@ private fun rememberAvisoTemporal(connectionVm: ConnectionViewModel): String? {
 }
 
 @Composable
-private fun rememberAlertaActiva(connectionVm: ConnectionViewModel): String? {
+private fun rememberAlertaActiva(connectionVm: ConnectionViewModel, resolver: StringResolver): String? {
     var alerta by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         connectionVm.alerts.collect { alert -> alerta = alert.message }
     }
     LaunchedEffect(Unit) {
         connectionVm.launchResults.collect { result ->
-            alerta = textoArrancada(result.to60Ms, result.to100Ms) ?: alerta
+            alerta = textoArrancada(result.to60Ms, result.to100Ms, resolver) ?: alerta
         }
     }
     LaunchedEffect(alerta) {
@@ -298,9 +304,13 @@ private fun rememberAlertaActiva(connectionVm: ConnectionViewModel): String? {
     return alerta
 }
 
-internal fun textoArrancada(to60Ms: Long?, to100Ms: Long?): String? = when {
-    to100Ms != null -> "🏁 0-100 en %.2fs".format(to100Ms / 1000.0) +
-        (to60Ms?.let { "  (0-60: %.2fs)".format(it / 1000.0) } ?: "")
-    to60Ms != null -> "🏁 0-60 en %.2fs".format(to60Ms / 1000.0)
-    else -> null
+internal fun textoArrancada(to60Ms: Long?, to100Ms: Long?, resolver: StringResolver): String? {
+    fun segundos(ms: Long) = LocaleNumbers.decimal(ms / 1000.0, 2, resolver.locale)
+    return when {
+        to100Ms != null && to60Ms != null ->
+            resolver.get(R.string.drive_launch_0_100_with_0_60, segundos(to100Ms), segundos(to60Ms))
+        to100Ms != null -> resolver.get(R.string.drive_launch_0_100, segundos(to100Ms))
+        to60Ms != null -> resolver.get(R.string.drive_launch_0_60, segundos(to60Ms))
+        else -> null
+    }
 }

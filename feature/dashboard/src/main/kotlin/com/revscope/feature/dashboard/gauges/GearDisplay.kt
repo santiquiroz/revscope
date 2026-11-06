@@ -11,12 +11,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
+import com.revscope.feature.dashboard.R
 
 private val ALTO_MARCHA = 104.dp
 
@@ -52,7 +54,9 @@ fun GearDisplay(
         Spacer(modifier = Modifier.height(4.dp))
         Icon(
             imageVector = if (isCalibrated) Icons.Default.LockOpen else Icons.Default.Lock,
-            contentDescription = if (isCalibrated) "Marchas calibradas" else "Calibrando marchas",
+            contentDescription = stringResource(
+                if (isCalibrated) R.string.drive_gears_calibrated else R.string.drive_gears_calibrating,
+            ),
             tint = if (isCalibrated) RevScopeColors.Success else RevScopeColors.TextMuted,
         )
     }

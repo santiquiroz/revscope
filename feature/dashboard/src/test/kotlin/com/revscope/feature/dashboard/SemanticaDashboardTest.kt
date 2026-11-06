@@ -16,8 +16,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+// Los textos que se afirman son los de values-es: la prueba corre con el calificador "es".
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaDashboardTest {
 
     @get:Rule

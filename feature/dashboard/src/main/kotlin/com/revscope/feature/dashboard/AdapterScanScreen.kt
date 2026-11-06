@@ -51,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -135,7 +136,7 @@ fun AdapterScanScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Adapter",
+                        stringResource(R.string.drive_scan_title),
                         color = RevScopeColors.TextPrimary,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -144,7 +145,7 @@ fun AdapterScanScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Volver",
+                            contentDescription = stringResource(R.string.drive_back),
                             tint = RevScopeColors.TextPrimary,
                         )
                     }
@@ -236,7 +237,7 @@ private fun DisconnectedContent(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Bluetooth permission required",
+                stringResource(R.string.drive_scan_bt_permission_required),
                 color = RevScopeColors.TextSecondary,
                 fontSize = 14.sp,
             )
@@ -245,7 +246,7 @@ private fun DisconnectedContent(
                 onClick = onRequestPermission,
                 colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
             ) {
-                Text("Grant Permission", color = RevScopeColors.Background)
+                Text(stringResource(R.string.drive_scan_grant_permission), color = RevScopeColors.Background)
             }
         }
         return
@@ -255,7 +256,7 @@ private fun DisconnectedContent(
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Text(
-                "Paired devices",
+                stringResource(R.string.drive_scan_paired_devices),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = RevScopeColors.TextSecondary,
@@ -264,7 +265,7 @@ private fun DisconnectedContent(
         if (sortedDevices.isEmpty()) {
             item {
                 Text(
-                    "No paired Bluetooth devices found.\nPair your OBD2 adapter in Android Settings first.",
+                    stringResource(R.string.drive_scan_no_paired),
                     color = RevScopeColors.TextSecondary,
                     fontSize = 13.sp,
                 )
@@ -286,7 +287,7 @@ private fun DisconnectedContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Adaptadores BLE",
+                    stringResource(R.string.drive_scan_ble_adapters),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = RevScopeColors.TextSecondary,
@@ -303,12 +304,12 @@ private fun DisconnectedContent(
                         onClick = onStartBleScan,
                         colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
                     ) {
-                        Text("Buscar", color = RevScopeColors.TextPrimary, fontSize = 12.sp)
+                        Text(stringResource(R.string.drive_scan_search), color = RevScopeColors.TextPrimary, fontSize = 12.sp)
                     }
                 }
             }
             Text(
-                "Los adaptadores BLE (Vgate 4.0, VLink…) no aparecen en emparejados — búscalos aquí.",
+                stringResource(R.string.drive_scan_ble_hint),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
@@ -316,7 +317,7 @@ private fun DisconnectedContent(
         if (bleDevices.isEmpty() && !bleScanning) {
             item {
                 Text(
-                    "Sin resultados aún.",
+                    stringResource(R.string.drive_scan_no_results),
                     color = RevScopeColors.TextSecondary,
                     style = RevScopeType.bodySmall,
                 )
@@ -347,11 +348,11 @@ private fun BleDeviceItem(device: BleScanner.Device, isLastUsed: Boolean, onClic
         Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RevScopeColors.Accent)
         Column(modifier = Modifier.weight(1f)) {
             Text(device.name, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text("${device.address}  ·  ${device.rssi} dBm  ·  BLE", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+            Text(stringResource(R.string.drive_scan_ble_device_detail, device.address, device.rssi), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
         if (isLastUsed) {
             Text(
-                "Último usado",
+                stringResource(R.string.drive_scan_last_used),
                 color = RevScopeColors.Accent,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -383,7 +384,7 @@ private fun DeviceItem(device: BluetoothDevice, isLastUsed: Boolean, onClick: ()
         }
         if (isLastUsed) {
             Text(
-                "Último usado",
+                stringResource(R.string.drive_scan_last_used),
                 color = RevScopeColors.Accent,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -404,7 +405,7 @@ private fun ConnectingContent() {
     ) {
         CircularProgressIndicator(color = RevScopeColors.Accent)
         Spacer(Modifier.height(16.dp))
-        Text("Conectando…", color = RevScopeColors.TextPrimary, fontSize = 16.sp)
+        Text(stringResource(R.string.drive_scan_connecting), color = RevScopeColors.TextPrimary, fontSize = 16.sp)
     }
 }
 
@@ -428,11 +429,13 @@ private fun ConnectedContent(
             modifier = Modifier.size(48.dp),
         )
         Spacer(Modifier.height(12.dp))
-        Text("Conectado ●", color = RevScopeColors.Success, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.drive_scan_connected), color = RevScopeColors.Success, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(deviceName, color = RevScopeColors.TextPrimary, fontSize = 14.sp)
         Text(
-            if (estadoViaje is EstadoViaje.Grabando) "Grabando viaje" else "Sin viaje · lecturas en vivo",
+            stringResource(
+                if (estadoViaje is EstadoViaje.Grabando) R.string.drive_scan_recording_trip else R.string.drive_scan_no_trip_live,
+            ),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
@@ -465,7 +468,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit, onChooseAnother: 
         Text(message, color = RevScopeColors.Danger, fontSize = 14.sp)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Reintentando en segundo plano…",
+            stringResource(R.string.drive_scan_retrying),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
@@ -474,14 +477,14 @@ private fun ErrorContent(message: String, onRetry: () -> Unit, onChooseAnother: 
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
         ) {
-            Text("Reintentar ahora", color = RevScopeColors.Background)
+            Text(stringResource(R.string.drive_scan_retry_now), color = RevScopeColors.Background)
         }
         Spacer(Modifier.height(8.dp))
         Button(
             onClick = onChooseAnother,
             colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
         ) {
-            Text("Elegir otro dispositivo", color = RevScopeColors.TextPrimary)
+            Text(stringResource(R.string.drive_scan_choose_another), color = RevScopeColors.TextPrimary)
         }
     }
 }

@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common -->
+    <string name="drive_back">Back</string>
+    <string name="drive_cancel">Cancel</string>
+
+    <!-- Adapter scanner -->
+    <string name="drive_scan_title">Adapter</string>
+    <string name="drive_scan_bt_permission_required">Bluetooth permission required</string>
+    <string name="drive_scan_grant_permission">Grant permission</string>
+    <string name="drive_scan_paired_devices">Paired devices</string>
+    <string name="drive_scan_no_paired">No paired Bluetooth devices found.\nPair your OBD2 adapter in Android Settings first.</string>
+    <string name="drive_scan_ble_adapters">BLE adapters</string>
+    <string name="drive_scan_search">Scan</string>
+    <string name="drive_scan_ble_hint">BLE adapters (Vgate 4.0, VLink…) don\'t show up under paired devices — scan for them here.</string>
+    <string name="drive_scan_no_results">No results yet.</string>
+    <string name="drive_scan_ble_device_detail">"%1$s  ·  %2$d dBm  ·  BLE"</string>
+    <string name="drive_scan_last_used">Last used</string>
+    <string name="drive_scan_connecting">Connecting…</string>
+    <string name="drive_scan_connected">Connected ●</string>
+    <string name="drive_scan_recording_trip">Recording trip</string>
+    <string name="drive_scan_no_trip_live">No trip · live readings</string>
+    <string name="drive_scan_retrying">Retrying in the background…</string>
+    <string name="drive_scan_retry_now">Retry now</string>
+    <string name="drive_scan_choose_another">Choose another device</string>
+
+    <!-- Drive -->
+    <string name="drive_needs_adapter">RPM, temperature, gear, and boost need an OBD2 adapter</string>
+    <string name="drive_needs_adapter_sentence">RPM, temperature, gear, and boost need an OBD2 adapter.</string>
+    <string name="drive_gps_trip_end">End GPS trip</string>
+    <string name="drive_gps_trip_start">Start GPS trip</string>
+    <string name="drive_confirm_end_title">End the trip?</string>
+    <string name="drive_confirm_end_gps_text">The GPS trip is saved to your history.</string>
+    <string name="drive_confirm_end_action">End trip</string>
+    <string name="drive_keep_recording">Keep recording</string>
+    <string name="drive_view_map">View map</string>
+    <string name="drive_configure_adapter">Configure adapter</string>
+    <string name="drive_update_available">New version %1$s available</string>
+    <string name="drive_update_download_hint">Download it to update</string>
+    <string name="drive_update_dismiss">Dismiss notice</string>
+    <string name="drive_update_download">Download</string>
+    <string name="drive_score">Score: %1$d/100</string>
+    <string name="drive_speed_source">Speed source</string>
+    <string name="drive_speed_source_gps">Phone GPS</string>
+    <string name="drive_speed_source_obd">ECU via OBD</string>
+
+    <!-- Reasons for gauges without data -->
+    <string name="drive_reason_no_adapter">No adapter</string>
+    <string name="drive_reason_no_gps_speed">No GPS speed signal</string>
+    <string name="drive_reason_boost">Boost needs MAP and barometric pressure</string>
+    <string name="drive_reason_gear">Gear needs RPM and speed</string>
+    <string name="drive_reason_waiting_pid">Waiting for %1$s reading (PID %2$s)</string>
+    <string name="drive_pid_name_rpm">RPM</string>
+    <string name="drive_pid_name_speed">speed</string>
+    <string name="drive_pid_name_coolant">engine temperature</string>
+
+    <!-- Launch timing -->
+    <string name="drive_launch_0_100_with_0_60">"🏁 0-100 in %1$ss  (0-60: %2$ss)"</string>
+    <string name="drive_launch_0_100">🏁 0-100 in %1$ss</string>
+    <string name="drive_launch_0_60">🏁 0-60 in %1$ss</string>
+
+    <!-- Top bar -->
+    <string name="drive_link_connected">Adapter connected</string>
+    <string name="drive_link_connecting">Connecting to adapter</string>
+    <string name="drive_link_error">Adapter link error</string>
+    <string name="drive_link_none">No adapter connected</string>
+    <string name="drive_track_mode">Track mode</string>
+    <string name="drive_settings">Settings</string>
+
+    <!-- CAN bus indicators -->
+    <string name="drive_bus_stand_down_alert">Stand down!</string>
+    <string name="drive_bus_stand_down">Stand down</string>
+    <string name="drive_bus_stand_up">Stand up</string>
+    <string name="drive_bus_clutch_in">Clutch in</string>
+    <string name="drive_bus_clutch_released">Clutch released</string>
+    <string name="drive_bus_kill_off">Kill OFF</string>
+    <string name="drive_bus_kill_run">Kill RUN</string>
+
+    <!-- Track mode -->
+    <string name="drive_track_waiting_gps">Waiting for GPS signal… (connect the adapter and move a little)</string>
+    <string name="drive_track_finish_hint">Ride slowly OVER the finish line and press the button — the line is set perpendicular to your heading (30 m wide).</string>
+    <string name="drive_track_set_finish">🏁 Set finish line here</string>
+    <string name="drive_track_lap_in_progress">lap %1$d in progress</string>
+    <string name="drive_track_cross_to_start">cross the line to start lap 1</string>
+    <string name="drive_track_last">Last</string>
+    <string name="drive_track_best">Best</string>
+    <string name="drive_track_laps">Laps</string>
+    <string name="drive_track_g_lat">G lat</string>
+    <string name="drive_track_g_long">G long</string>
+    <string name="drive_track_lean">Lean</string>
+    <string name="drive_track_lean_calibrating">Lean (calibrating…)</string>
+    <string name="drive_track_lap_n">Lap %1$d</string>
+    <string name="drive_track_clear">Remove line and restart</string>
+    <string name="drive_ghost_upload_lap">👻 Upload lap</string>
+    <string name="drive_ghost_challenge">Race a ghost</string>
+    <string name="drive_ghost_no_lap">You don\'t have a lap to upload yet</string>
+    <string name="drive_ghost_uploaded">Ghost uploaded ✓</string>
+    <string name="drive_ghost_upload_failed">Couldn\'t upload (is the server configured?)</string>
+    <string name="drive_ghost_none_here">No ghosts for this track</string>
+    <string name="drive_ghost_racing">Racing the ghost 👻</string>
+    <string name="drive_ghost_load_failed">Couldn\'t load the ghost</string>
+    <string name="drive_ghost_removed">Remote ghost removed</string>
+
+    <!-- OBD trip controls -->
+    <string name="drive_trip_actions_expanded">actions expanded</string>
+    <string name="drive_trip_actions_collapsed">actions collapsed</string>
+    <string name="drive_trip_pill_recording">● Recording trip</string>
+    <string name="drive_trip_pill_connected">● Connected · no trip</string>
+    <string name="drive_trip_start">Start trip</string>
+    <string name="drive_trip_end_stay_connected">End trip (stay connected)</string>
+    <string name="drive_disconnect_adapter">Disconnect adapter</string>
+    <string name="drive_confirm_end_obd_text">The trip is saved and the adapter stays connected: you can read trouble codes or start another trip without reconnecting.</string>
+    <string name="drive_confirm_disconnect_title">Disconnect the adapter?</string>
+    <string name="drive_confirm_disconnect_text">The current trip also ends; it\'s saved to your history.</string>
+    <string name="drive_disconnect">Disconnect</string>
+
+    <!-- Gauges -->
+    <string name="drive_gauge_boost">BOOST</string>
+    <string name="drive_gauge_temp">TEMP</string>
+    <string name="drive_gears_calibrated">Gears calibrated</string>
+    <string name="drive_gears_calibrating">Calibrating gears</string>
+</resources>
