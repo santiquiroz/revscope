@@ -22,9 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.maps.MapDownloadState
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,8 +41,6 @@ private val TextPrimaryColor = Color(0xFFF0F0F8)
 private val TextMutedColor = Color(0xFF6B7089)
 private val DangerColor = Color(0xFFFF3D5A)
 
-private const val OFFLINE_MAP_SIZE_LABEL = "~913 MB"
-
 /**
  * Card "Mapa offline de Colombia" en Ajustes → Mapa: estado desde [SettingsViewModel.mapDownloadState],
  * descarga/cancela/borra a través del ViewModel. Muestra el snackbar "Mapa offline listo" al
@@ -49,11 +50,12 @@ private const val OFFLINE_MAP_SIZE_LABEL = "~913 MB"
 fun OfflineMapSection(vm: SettingsViewModel, snackbarHostState: SnackbarHostState) {
     val downloadState by vm.mapDownloadState.collectAsState()
     var wasDownloading by remember { mutableStateOf(false) }
+    val readyMessage = stringResource(R.string.settings_offline_map_ready)
 
     LaunchedEffect(downloadState) {
         val current = downloadState
         if (wasDownloading && current is MapDownloadState.Idle && current.exists) {
-            snackbarHostState.showSnackbar("Mapa offline listo")
+            snackbarHostState.showSnackbar(readyMessage)
         }
         wasDownloading = current is MapDownloadState.Downloading
     }
@@ -77,6 +79,7 @@ private fun OfflineMapCard(
 ) {
     var showDownloadConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    val mapSizeLabel = stringResource(R.string.settings_offline_map_size)
 
     Column(
         modifier = Modifier
@@ -86,7 +89,7 @@ private fun OfflineMapCard(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            "Mapa offline de Colombia ($OFFLINE_MAP_SIZE_LABEL)",
+            stringResource(R.string.settings_offline_map_title, mapSizeLabel),
             color = TextPrimaryColor,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
@@ -137,22 +140,34 @@ private fun OfflineMapStateContent(
 
 @Composable
 private fun IdleContent(state: MapDownloadState.Idle, onDownloadClick: () -> Unit, onDeleteClick: () -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
     if (state.exists) {
         Text(
-            "Descargado · ${formatGigabytes(state.sizeBytes)} · ${formatDownloadedAt(state.downloadedAtMs)}",
+            stringResource(
+                R.string.settings_offline_map_downloaded,
+                stringResource(
+                    R.string.settings_offline_map_gigabytes,
+                    LocaleNumbers.decimal(state.sizeBytes / 1_000_000_000.0, 1, locale),
+                ),
+                formatDownloadedAt(
+                    state.downloadedAtMs,
+                    locale,
+                    stringResource(R.string.settings_offline_map_unknown_date),
+                ),
+            ),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         Button(
             onClick = onDeleteClick,
             colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-        ) { Text("Borrar", color = TextPrimaryColor) }
+        ) { Text(stringResource(R.string.settings_offline_map_delete), color = TextPrimaryColor) }
     } else {
-        Text("No descargado", color = TextMutedColor, fontSize = 12.sp)
+        Text(stringResource(R.string.settings_offline_map_not_downloaded), color = TextMutedColor, fontSize = 12.sp)
         Button(
             onClick = onDownloadClick,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Descargar", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_offline_map_download), color = BgColor) }
     }
 }
 
@@ -165,11 +180,11 @@ private fun DownloadingContent(state: MapDownloadState.Downloading, onCancelClic
         color = AccentColor,
         trackColor = SurfaceHighColor,
     )
-    Text("Descargando… $percent%", color = TextMutedColor, fontSize = 12.sp)
+    Text(stringResource(R.string.settings_offline_map_downloading, percent), color = TextMutedColor, fontSize = 12.sp)
     Button(
         onClick = onCancelClick,
         colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-    ) { Text("Cancelar", color = TextPrimaryColor) }
+    ) { Text(stringResource(R.string.settings_offline_map_cancel), color = TextPrimaryColor) }
 }
 
 @Composable
@@ -178,7 +193,7 @@ private fun ErrorContent(state: MapDownloadState.Error, onRetryClick: () -> Unit
     Button(
         onClick = onRetryClick,
         colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-    ) { Text("Reintentar", color = BgColor) }
+    ) { Text(stringResource(R.string.settings_offline_map_retry), color = BgColor) }
 }
 
 @Composable
@@ -187,12 +202,16 @@ private fun DownloadConfirmDialog(
     onConfirm: (allowCellular: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val mapSizeLabel = stringResource(R.string.settings_offline_map_size)
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = SurfaceColor,
         title = {
             Text(
-                if (isOnWifi) "Descargar mapa offline" else "Sin WiFi",
+                stringResource(
+                    if (isOnWifi) R.string.settings_offline_map_download_title
+                    else R.string.settings_offline_map_no_wifi,
+                ),
                 color = TextPrimaryColor,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -200,9 +219,9 @@ private fun DownloadConfirmDialog(
         text = {
             Text(
                 if (isOnWifi) {
-                    "Se descargará el mapa offline de Colombia ($OFFLINE_MAP_SIZE_LABEL)."
+                    stringResource(R.string.settings_offline_map_download_wifi_message, mapSizeLabel)
                 } else {
-                    "Sin WiFi — ¿usar datos móviles? ($OFFLINE_MAP_SIZE_LABEL)"
+                    stringResource(R.string.settings_offline_map_download_mobile_message, mapSizeLabel)
                 },
                 color = TextMutedColor,
                 fontSize = 13.sp,
@@ -210,11 +229,19 @@ private fun DownloadConfirmDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(!isOnWifi) }) {
-                Text(if (isOnWifi) "Descargar" else "Usar datos móviles", color = AccentColor)
+                Text(
+                    stringResource(
+                        if (isOnWifi) R.string.settings_offline_map_download
+                        else R.string.settings_offline_map_use_mobile_data,
+                    ),
+                    color = AccentColor,
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMutedColor) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_common_cancel), color = TextMutedColor)
+            }
         },
     )
 }
@@ -224,27 +251,33 @@ private fun DeleteConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = SurfaceColor,
-        title = { Text("Borrar mapa offline", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+        title = {
+            Text(
+                stringResource(R.string.settings_offline_map_delete_title),
+                color = TextPrimaryColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
         text = {
             Text(
-                "Se eliminará el mapa descargado. Podrás volver a descargarlo cuando quieras.",
+                stringResource(R.string.settings_offline_map_delete_message),
                 color = TextMutedColor,
                 fontSize = 13.sp,
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Borrar", color = AccentColor) }
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.settings_offline_map_delete), color = AccentColor)
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMutedColor) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_common_cancel), color = TextMutedColor)
+            }
         },
     )
 }
 
-private fun formatGigabytes(sizeBytes: Long): String =
-    String.format(Locale.US, "%.1f GB", sizeBytes / 1_000_000_000.0)
-
-private val downloadedAtFormat = SimpleDateFormat("dd MMM yyyy", Locale("es"))
-
-private fun formatDownloadedAt(downloadedAtMs: Long?): String =
-    downloadedAtMs?.let { downloadedAtFormat.format(Date(it)) } ?: "fecha desconocida"
+private fun formatDownloadedAt(downloadedAtMs: Long?, locale: Locale, unknownDate: String): String =
+    downloadedAtMs?.let { SimpleDateFormat("dd MMM yyyy", locale).format(Date(it)) } // i18n-ignore
+        ?: unknownDate
