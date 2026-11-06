@@ -89,7 +89,12 @@ class GetGuiaDtcToolTest {
 
     @Test
     fun `sin guía local cargable sigue decodificando la estructura`() = runTest {
-        val sinGuia = GetGuiaDtcTool(BaseConocimientoDtc { "{ dañado" })
+        val sinGuia = GetGuiaDtcTool(
+            BaseConocimientoDtc(
+                { "{ dañado" },
+                com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+            ),
+        )
 
         val r = llamar("P0122", sinGuia)
 

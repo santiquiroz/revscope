@@ -47,10 +47,19 @@ class SesionTallerToolsTest {
     private val registro by lazy {
         RegistroTaller(
             repositorio, { vehiculo }, historial, AdjuntosTaller(File(carpeta.root, "taller")),
-            PidRegistry(TestPids.load()), { ahora },
+            PidRegistry(TestPids.load()),
+            com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+            { ahora },
         )
     }
-    private val analizador by lazy { AnalizadorSesion(repositorio, historial, SugeridorPruebas.desde(GuiaDePrueba.baseReal())) }
+    private val analizador by lazy {
+        AnalizadorSesion(
+            repositorio,
+            historial,
+            SugeridorPruebas.desde(GuiaDePrueba.baseReal()),
+            com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+        )
+    }
 
     private val iniciar by lazy { IniciarSesionTallerTool(registro, repositorio, { vehiculo }, analizador) }
     private val getSesion by lazy { GetSesionTallerTool(repositorio, { vehiculo }, analizador) }

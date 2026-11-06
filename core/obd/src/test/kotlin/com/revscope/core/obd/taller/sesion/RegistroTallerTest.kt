@@ -50,6 +50,7 @@ class RegistroTallerTest {
             historial = HistorialChequeosEnMemoria(listOf(chequeo11Julio)),
             adjuntos = AdjuntosTaller(File(carpeta.root, "taller")),
             registry = registry,
+            resolver = com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
             reloj = { ahora },
         )
     }

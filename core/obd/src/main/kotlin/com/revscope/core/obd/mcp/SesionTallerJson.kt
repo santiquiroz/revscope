@@ -5,6 +5,7 @@ import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.FilaComparacion
 import com.revscope.core.obd.taller.sesion.PruebaSugerida
 import com.revscope.core.obd.taller.sesion.SesionTaller
+import com.revscope.core.obd.taller.sesion.etiqueta
 import com.revscope.core.obd.taller.sesion.Sintoma
 import org.json.JSONArray
 import org.json.JSONObject

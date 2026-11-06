@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.dao.DiagSessionDao
 import com.revscope.core.data.db.dao.VehicleKnowledgeDao
 import com.revscope.core.data.db.entities.VehicleType
@@ -25,6 +26,7 @@ import javax.inject.Singleton
 class TallerRepositoryRoom @Inject constructor(
     private val sesiones: DiagSessionDao,
     private val conocimientos: VehicleKnowledgeDao,
+    private val resolver: StringResolver,
 ) : TallerRepository {
 
     override fun observarSesionAbierta(vehiculoId: Long): Flow<SesionTaller?> =
@@ -39,9 +41,9 @@ class TallerRepositoryRoom @Inject constructor(
         sesiones.observeSessions(vehiculoId).map { lista -> lista.map { it.aSesion() } }
 
     override suspend fun abrirSesion(sesion: SesionTaller): Long =
-        sesiones.openClosingPrevious(sesion.copy(id = 0, cierre = null).aEntidad())
+        sesiones.openClosingPrevious(sesion.copy(id = 0, cierre = null).aEntidad(resolver))
 
-    override suspend fun actualizarSesion(sesion: SesionTaller) = sesiones.updateSession(sesion.aEntidad())
+    override suspend fun actualizarSesion(sesion: SesionTaller) = sesiones.updateSession(sesion.aEntidad(resolver))
 
     override suspend fun cerrarSesion(id: Long, instante: Long): Boolean = sesiones.closeSession(id, instante) > 0
 

@@ -13,6 +13,15 @@ class BaseConocimientoDtcTest {
     private val base = GuiaDePrueba.baseReal()
 
     @Test
+    fun `elige la guía del idioma y cae al inglés`() {
+        val disponibles = setOf("taller/dtc_guide_en.json")
+
+        assertEquals("taller/dtc_guide_en.json", dtcGuideAsset("en", disponibles::contains))
+        assertEquals("taller/dtc_guia_es.json", dtcGuideAsset("es", disponibles::contains))
+        assertEquals("taller/dtc_guide_en.json", dtcGuideAsset("fr", disponibles::contains))
+    }
+
+    @Test
     fun `el json real carga sin problemas con la cabecera y la etiqueta de orientación general`() {
         assertEquals(emptyList<String>(), base.problemas)
         assertEquals(1, base.catalogo.version)
@@ -113,10 +122,10 @@ class BaseConocimientoDtcTest {
     @Test
     fun `la carga es perezosa y lee el json una sola vez`() {
         var lecturas = 0
-        val perezosa = BaseConocimientoDtc {
+        val perezosa = BaseConocimientoDtc({
             lecturas++
             GuiaDePrueba.textoReal()
-        }
+        }, com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java))
 
         assertEquals(0, lecturas)
         perezosa.guia("P0122")
@@ -126,7 +135,10 @@ class BaseConocimientoDtcTest {
 
     @Test
     fun `un json dañado deja la base vacía con el problema y sin romper`() {
-        val rota = BaseConocimientoDtc { "{ no es json" }
+        val rota = BaseConocimientoDtc(
+            { "{ no es json" },
+            com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+        )
 
         assertNull(rota.guia("P0122"))
         assertTrue(rota.catalogo.guias.isEmpty())
@@ -143,7 +155,10 @@ class BaseConocimientoDtcTest {
             GuiaDePrueba.entrada("P0121", relacionados = "[\"X9\"]"),
         )
 
-        val conInvalidas = BaseConocimientoDtc { json }
+        val conInvalidas = BaseConocimientoDtc(
+            { json },
+            com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+        )
 
         assertEquals(listOf("P0122"), conInvalidas.catalogo.guias.map { it.codigo })
         val problemas = conInvalidas.problemas.joinToString("\n")
@@ -157,7 +172,10 @@ class BaseConocimientoDtcTest {
     fun `un código repetido se descarta en todas sus entradas`() {
         val json = GuiaDePrueba.conEntradas(GuiaDePrueba.entrada("P0122"), GuiaDePrueba.entrada("P0122"))
 
-        val repetida = BaseConocimientoDtc { json }
+        val repetida = BaseConocimientoDtc(
+            { json },
+            com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+        )
 
         assertNull(repetida.guia("P0122"))
         assertEquals(listOf("P0122: código repetido"), repetida.problemas)

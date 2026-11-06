@@ -1,6 +1,7 @@
 package com.revscope.core.obd.taller.sesion
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.BandasTipicas
 import com.revscope.core.obd.taller.referencia.ClavesBanda
@@ -11,9 +12,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.revscope.core.uitesting.XmlStringResolver
 
 class ComparadorChequeoTest {
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     private val umbralesTipicos = UmbralesComparacion.desde(BandasTipicas.para(VehicleType.MOTORCYCLE))
 
     // Chequeo del 11-jul de la Benelli TNT 150i: sin códigos, monitores completos, LTFT +2,3 %, corrección −3,9 %.
@@ -40,7 +43,7 @@ class ComparadorChequeoTest {
     )
 
     private fun comparar(base: MetricasChequeo = base11Julio, ahora: MetricasChequeo = ahoraConP0122) =
-        ComparadorChequeo.comparar(base, ahora, umbralesTipicos).associateBy { it.metrica }
+        ComparadorChequeo.comparar(base, ahora, umbralesTipicos, resolver).associateBy { it.metrica }
 
     @Test
     fun `un código que no estaba en la base es una FALLA y lo nombra`() {
@@ -90,7 +93,7 @@ class ComparadorChequeoTest {
             BandasTipicas.para(VehicleType.MOTORCYCLE) + (ClavesBanda.CHEQUEO_VOLTAJE_DELTA_V to usuario),
         )
 
-        val voltaje = ComparadorChequeo.comparar(base11Julio, ahoraConP0122, umbrales)
+        val voltaje = ComparadorChequeo.comparar(base11Julio, ahoraConP0122, umbrales, resolver)
             .first { it.metrica == MetricaComparada.VOLTAJE }
 
         assertEquals(Veredicto.ATENCION, voltaje.veredicto)
@@ -165,7 +168,21 @@ class ComparadorChequeoTest {
                 MetricaComparada.CODIGOS, MetricaComparada.AJUSTE_LARGO, MetricaComparada.CORRECCION_TOTAL,
                 MetricaComparada.VOLTAJE, MetricaComparada.MOTOR, MetricaComparada.MONITORES,
             ),
-            ComparadorChequeo.comparar(base11Julio, ahoraConP0122, umbralesTipicos).map { it.metrica },
+            ComparadorChequeo.comparar(base11Julio, ahoraConP0122, umbralesTipicos, resolver).map { it.metrica },
         )
+    }
+
+    @Test
+    fun `traduce al inglés la advertencia de monitores incompletos`() {
+        val english = XmlStringResolver.en(R::class.java)
+
+        val monitor = ComparadorChequeo.comparar(
+            base11Julio,
+            ahoraConP0122.copy(monitoresCompletos = 1),
+            umbralesTipicos,
+            english,
+        ).first { it.metrica == MetricaComparada.MONITORES }
+
+        assertEquals("Fewer monitors complete: were codes cleared or was the battery disconnected?", monitor.cambio)
     }
 }

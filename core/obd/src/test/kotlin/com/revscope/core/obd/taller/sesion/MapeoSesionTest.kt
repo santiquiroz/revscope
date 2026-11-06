@@ -1,12 +1,15 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.obd.R
 import com.revscope.core.data.db.entities.DiagEventEntity
 import com.revscope.core.data.db.entities.DiagSessionEntity
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import com.revscope.core.uitesting.XmlStringResolver
 
 class MapeoSesionTest {
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     @Test
     fun `síntomas desconocidos de otra versión se ignoran sin perder los conocidos`() {
         val entidad = DiagSessionEntity(startedAt = 1, title = "t", symptomTags = "SE_APAGA_AL_SOLTAR,FUTURO, ")
@@ -35,7 +38,7 @@ class MapeoSesionTest {
             pasosMarcados = setOf("P0122#3", "P0122#1"),
         )
 
-        val entidad = sesion.aEntidad()
+        val entidad = sesion.aEntidad(resolver)
 
         assertEquals("MIL_ENCENDIDA,TIRONES", entidad.symptomTags)
         assertEquals("P0122#1,P0122#3", entidad.checkedSteps)
@@ -44,6 +47,6 @@ class MapeoSesionTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `una clave de paso con coma se rechaza en vez de partirse en dos`() {
-        SesionTaller(vehiculoId = 1, inicio = 1, titulo = "t", pasosMarcados = setOf("P0122,2")).aEntidad()
+        SesionTaller(vehiculoId = 1, inicio = 1, titulo = "t", pasosMarcados = setOf("P0122,2")).aEntidad(resolver)
     }
 }

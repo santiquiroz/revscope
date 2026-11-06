@@ -39,6 +39,7 @@ import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.obd.taller.sesion.Sintoma
+import com.revscope.core.obd.taller.sesion.etiqueta
 
 data class AccionesNuevaSesion(
     val onVolver: () -> Unit = {},

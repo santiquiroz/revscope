@@ -114,7 +114,9 @@ class MontajePrueba(
     var vehiculo: VehiculoTaller? = BENELLI
     val registro = RegistroTaller(
         repositorio, { vehiculo }, HistorialChequeosEnMemoria(), AdjuntosTaller(File(carpeta, "taller")),
-        PidRegistry(TestPids.load()), reloj,
+        PidRegistry(TestPids.load()),
+        com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java),
+        reloj,
     )
     val controlador = ControladorPruebaGuiada(
         captura, enlace, registro, repositorio, { vehiculo }, voz, scope.backgroundScope, reloj,

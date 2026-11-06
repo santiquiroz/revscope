@@ -87,7 +87,10 @@ class SemanticaDtcTest {
             mockk<IntelligenceOrchestrator>(relaxed = true),
             mockk<PidRegistry>(relaxed = true),
             registro,
-            BaseConocimientoDtc { GUIA_JSON },
+            BaseConocimientoDtc(
+                { GUIA_JSON },
+                com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = listOf("../../core/obd/src/main/res")),
+            ),
         )
         compose.setContent {
             RevScopeTheme { DtcScreen(onNavigateBack = onVolver, connectionVm = connectionVm, vm = vm) }

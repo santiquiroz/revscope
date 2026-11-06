@@ -69,7 +69,10 @@ class DtcViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private val guias = BaseConocimientoDtc { GUIA_JSON }
+    private val guias = BaseConocimientoDtc(
+        { GUIA_JSON },
+        com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = listOf("../../core/obd/src/main/res")),
+    )
 
     private fun nuevoVm(): DtcViewModel = DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true), registro, guias)
 

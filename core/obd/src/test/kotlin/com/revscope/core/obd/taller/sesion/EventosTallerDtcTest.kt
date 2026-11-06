@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.obd.R
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.model.DtcCode
@@ -9,9 +10,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.revscope.core.uitesting.XmlStringResolver
 
 class EventosTallerDtcTest {
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     private val sinNombre: (String) -> String? = { null }
 
     private fun scan(fallidos: Set<DtcServicio> = emptySet(), activos: List<String> = emptyList()) = DtcScan(
@@ -28,7 +31,7 @@ class EventosTallerDtcTest {
 
     @Test
     fun `una lectura sin respuesta al 03 no se anota como sin codigos ni OK`() {
-        val evento = EventosTaller.lecturaDtc(scan(setOf(DtcServicio.ACTIVOS)), OrigenEvento.APP, sinNombre)
+        val evento = EventosTaller.lecturaDtc(scan(setOf(DtcServicio.ACTIVOS)), OrigenEvento.APP, sinNombre, resolver)
 
         assertEquals(Veredicto.ATENCION, evento.veredicto)
         assertTrue(evento.resumen.contains("la ECU no respondió a los códigos activos"))
@@ -37,7 +40,7 @@ class EventosTallerDtcTest {
 
     @Test
     fun `una lectura sin respuesta al 0A queda OK y dice lo que si leyo`() {
-        val evento = EventosTaller.lecturaDtc(scan(setOf(DtcServicio.PERMANENTES)), OrigenEvento.APP, sinNombre)
+        val evento = EventosTaller.lecturaDtc(scan(setOf(DtcServicio.PERMANENTES)), OrigenEvento.APP, sinNombre, resolver)
 
         assertEquals(Veredicto.OK, evento.veredicto)
         assertEquals("Sin códigos activos ni pendientes · sin respuesta a permanentes", evento.resumen)
@@ -45,7 +48,7 @@ class EventosTallerDtcTest {
 
     @Test
     fun `una lectura completa sin codigos conserva su resumen`() {
-        val evento = EventosTaller.lecturaDtc(scan(), OrigenEvento.APP, sinNombre)
+        val evento = EventosTaller.lecturaDtc(scan(), OrigenEvento.APP, sinNombre, resolver)
 
         assertEquals(Veredicto.OK, evento.veredicto)
         assertEquals("Sin códigos", evento.resumen)
@@ -55,7 +58,7 @@ class EventosTallerDtcTest {
     fun `el borrado sin relectura valida no se anota como exitoso`() {
         val borrado = BorradoDtc("44", false, antes = scan(activos = listOf("P0122")), despues = scan(setOf(DtcServicio.ACTIVOS)))
 
-        val evento = EventosTaller.borradoDtc(borrado, OrigenEvento.APP, sinNombre)
+        val evento = EventosTaller.borradoDtc(borrado, OrigenEvento.APP, sinNombre, resolver)
 
         assertEquals(Veredicto.ATENCION, evento.veredicto)
         assertEquals("Antes: P0122 · se envió el borrado, pero no se pudo releer la ECU para confirmarlo", evento.resumen)
@@ -65,7 +68,7 @@ class EventosTallerDtcTest {
     fun `el borrado que no llego a enviarse lo dice`() {
         val borrado = BorradoDtc(null, false, antes = scan(activos = listOf("P0122")), despues = scan(setOf(DtcServicio.ACTIVOS)))
 
-        val evento = EventosTaller.borradoDtc(borrado, OrigenEvento.APP, sinNombre)
+        val evento = EventosTaller.borradoDtc(borrado, OrigenEvento.APP, sinNombre, resolver)
 
         assertEquals(Veredicto.ATENCION, evento.veredicto)
         assertEquals("No se pudo enviar el borrado: el adaptador no respondió", evento.resumen)

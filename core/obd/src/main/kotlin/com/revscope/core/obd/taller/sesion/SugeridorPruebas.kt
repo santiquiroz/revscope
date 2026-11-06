@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.dtc.AccionGuia
 import com.revscope.core.obd.taller.dtc.BaseConocimientoDtc
 import com.revscope.core.obd.taller.multimetro.SensorMultimetro
@@ -7,10 +9,19 @@ import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import javax.inject.Inject
 
 data class PruebaSugerida(val accion: AccionGuia, val motivos: List<String>) {
-    val motivo: String get() = "por ${unirMotivos(motivos)}"
+    val motivo: String get() = "por ${unirMotivosEspanol(motivos)}" // i18n-ignore
 
-    private fun unirMotivos(lista: List<String>): String =
-        if (lista.size <= 1) lista.joinToString() else "${lista.dropLast(1).joinToString()} y ${lista.last()}"
+    fun motivo(resolver: StringResolver): String = resolver.get(R.string.obd_session_suggested_reason, unirMotivos(motivos, resolver))
+
+    private fun unirMotivos(lista: List<String>, resolver: StringResolver): String =
+        if (lista.size <= 1) lista.joinToString() else resolver.get(
+            R.string.obd_session_join_reasons,
+            lista.dropLast(1).joinToString(),
+            lista.last(),
+        )
+
+    private fun unirMotivosEspanol(lista: List<String>): String =
+        if (lista.size <= 1) lista.joinToString() else "${lista.dropLast(1).joinToString()} y ${lista.last()}" // i18n-ignore
 }
 
 // Los códigos van primero (su guía dice qué medir); los síntomas suman motivos. Gana la prueba con más motivos.
@@ -19,11 +30,17 @@ class SugeridorPruebas(private val accionesDeCodigo: (String) -> List<AccionGuia
     @Inject
     constructor(base: BaseConocimientoDtc) : this(accionesDeGuia(base))
 
-    fun sugerir(sintomas: Set<Sintoma>, codigos: List<String>, maximo: Int = Int.MAX_VALUE): List<PruebaSugerida> {
+    fun sugerir(
+        sintomas: Set<Sintoma>,
+        codigos: List<String>,
+        resolver: StringResolver,
+        maximo: Int = Int.MAX_VALUE,
+    ): List<PruebaSugerida> {
         val motivos = LinkedHashMap<AccionGuia, MutableList<String>>()
         codigos.distinct().forEach { codigo -> accionesDeCodigo(codigo).forEach { motivos.agregar(it, codigo) } }
         sintomas.sortedBy { it.ordinal }.forEach { sintoma ->
-            accionesDeSintoma(sintoma).forEach { motivos.agregar(it, "«${sintoma.etiqueta}»") }
+            val motivo = resolver.get(R.string.obd_session_symptom_quote, sintoma.etiqueta(resolver))
+            accionesDeSintoma(sintoma).forEach { motivos.agregar(it, motivo) }
         }
         return motivos.entries
             .map { (accion, porQue) -> PruebaSugerida(accion, porQue.toList()) }

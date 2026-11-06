@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.dtc
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.multimetro.SensorMultimetro
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 
@@ -23,29 +25,50 @@ data class GuiaDtc(
 
 data class VerificacionDtc(val paso: String, val detalle: String, val accion: AccionGuia?)
 
-enum class UrgenciaDtc(val etiqueta: String) {
-    DETENERSE("Detente y revisa antes de seguir rodando"),
-    REVISAR_PRONTO("Revisa pronto"),
-    PUEDE_ESPERAR("Puede esperar al próximo mantenimiento"),
+enum class UrgenciaDtc {
+    DETENERSE,
+    REVISAR_PRONTO,
+    PUEDE_ESPERAR,
+    ;
+
+    fun etiqueta(resolver: StringResolver): String = resolver.get(
+        when (this) {
+            DETENERSE -> R.string.obd_dtc_urgency_stop
+            REVISAR_PRONTO -> R.string.obd_dtc_urgency_soon
+            PUEDE_ESPERAR -> R.string.obd_dtc_urgency_later
+        },
+    )
+
+    val etiqueta: String get() = when (this) { // i18n-ignore
+        DETENERSE -> "Detente y revisa antes de seguir rodando" // i18n-ignore
+        REVISAR_PRONTO -> "Revisa pronto" // i18n-ignore
+        PUEDE_ESPERAR -> "Puede esperar al próximo mantenimiento" // i18n-ignore
+    }
 }
 
 sealed interface AccionGuia {
     val clave: String
     val etiqueta: String
+    fun etiqueta(resolver: StringResolver): String
 
     data class Prueba(val tipo: TipoPrueba) : AccionGuia {
         override val clave get() = "$PREFIJO_PRUEBA${tipo.name}"
-        override val etiqueta get() = "Prueba guiada: ${tipo.titulo}"
+        override val etiqueta get() = "Prueba guiada: ${tipo.titulo}" // i18n-ignore
+        override fun etiqueta(resolver: StringResolver) =
+            resolver.get(R.string.obd_dtc_action_guided_test, tipo.titulo)
     }
 
     data class Multimetro(val sensor: SensorMultimetro) : AccionGuia {
         override val clave get() = "$PREFIJO_MULTIMETRO${sensor.name}"
-        override val etiqueta get() = "Medir con multímetro: ${sensor.titulo}"
+        override val etiqueta get() = "Medir con multímetro: ${sensor.titulo}" // i18n-ignore
+        override fun etiqueta(resolver: StringResolver) =
+            resolver.get(R.string.obd_dtc_action_multimeter, sensor.titulo)
     }
 
     data object BorrarCodigos : AccionGuia {
         override val clave = "DTC:BORRAR"
-        override val etiqueta = "Borrar códigos"
+        override val etiqueta = "Borrar códigos" // i18n-ignore
+        override fun etiqueta(resolver: StringResolver) = resolver.get(R.string.obd_dtc_action_clear_codes)
     }
 
     companion object {

@@ -9,6 +9,7 @@ import com.revscope.core.obd.taller.sesion.AnalisisSesion
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.FilaComparacion
 import com.revscope.core.obd.taller.sesion.SesionTaller
+import com.revscope.core.obd.taller.sesion.etiqueta
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
 import com.revscope.core.obd.taller.sesion.Veredicto

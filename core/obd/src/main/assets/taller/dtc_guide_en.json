@@ -1,0 +1,1910 @@
+{
+  "version": 1,
+  "fuenteDescripciones": "SAE J2012 (generic descriptions for P0xxx codes)",
+  "aviso": "General guidance, not the manufacturer's procedure",
+  "codigos": [
+    {
+      "codigo": "P0105",
+      "titulo": "Manifold absolute pressure (MAP) / barometric pressure sensor circuit: circuit malfunction",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Loose or corroded MAP connector",
+        "Open signal, reference or ground wire",
+        "Faulty MAP sensor",
+        "Fault in the 5 V reference shared with other sensors (TPS)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector",
+          "detalle": "Check for corrosion and loose or bent pins; clean with electrical contact cleaner and measure again."
+        },
+        {
+          "paso": "Measure reference, ground and signal at the connector",
+          "detalle": "With the ignition on, expect ≈5 V at the reference and ≈0 V at ground (typical). With the engine off, the signal should be proportional to barometric pressure.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Compare MAP with barometric pressure",
+          "detalle": "With the engine off and ignition on, MAP should read close to the local atmospheric pressure.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On single-cylinder engines, manifold vacuum pulses strongly: MAP readings fluctuate more while running than in a car, which is normal."
+      ],
+      "relacionados": [
+        "P0106",
+        "P0107",
+        "P0108",
+        "P0109"
+      ]
+    },
+    {
+      "codigo": "P0106",
+      "titulo": "Manifold absolute pressure (MAP) / barometric pressure sensor circuit: range or performance",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Split, loose or blocked vacuum hose",
+        "Air leak at the manifold or throttle body",
+        "Miscalibrated or faulty MAP sensor",
+        "Mechanical issue affecting vacuum (valves or compression)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Compare MAP with barometric pressure",
+          "detalle": "With the engine off and ignition on, MAP should read close to the local atmospheric pressure.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Inspect the vacuum connection",
+          "detalle": "If the sensor uses a hose, check that it is not split, kinked or loose, and contains no water or oil."
+        },
+        {
+          "paso": "Measure reference, ground and signal at the connector",
+          "detalle": "With the ignition on, expect ≈5 V at the reference and ≈0 V at ground (typical). With the engine off, the signal should be proportional to barometric pressure.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Check for air leaks",
+          "detalle": "With the engine idling, check the clamps and throttle-body connection to the manifold."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "The ECU compares MAP with throttle position and RPM. A sustained mismatch can trigger this code even when the circuit is intact."
+      ],
+      "relacionados": [
+        "P0105",
+        "P0107",
+        "P0108",
+        "P0109"
+      ]
+    },
+    {
+      "codigo": "P0107",
+      "titulo": "Manifold absolute pressure (MAP) / barometric pressure sensor circuit: low input",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Signal wire shorted to ground or broken",
+        "Missing or low 5 V reference",
+        "MAP connector unplugged or corroded",
+        "Faulty MAP sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector",
+          "detalle": "Check for corrosion and loose or bent pins; clean with electrical contact cleaner and measure again."
+        },
+        {
+          "paso": "Measure reference, ground and signal at the connector",
+          "detalle": "With the ignition on, expect ≈5 V at the reference and ≈0 V at ground (typical). With the engine off, the signal should be proportional to barometric pressure.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Check whether the TPS is also faulty",
+          "detalle": "If a TPS code is also present, suspect the shared 5 V reference or sensor ground."
+        },
+        {
+          "paso": "Compare MAP with barometric pressure",
+          "detalle": "With the engine off and ignition on, MAP should read close to the local atmospheric pressure.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "The MAP and TPS often share the 5 V reference: a short in one sensor can affect the other."
+      ],
+      "relacionados": [
+        "P0105",
+        "P0106",
+        "P0108",
+        "P0109",
+        "P0122"
+      ]
+    },
+    {
+      "codigo": "P0108",
+      "titulo": "Manifold absolute pressure (MAP) / barometric pressure sensor circuit: high input",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Open or resistive sensor ground",
+        "Signal shorted to the 5 V reference or 12 V",
+        "Vacuum hose disconnected (the sensor always sees atmospheric pressure)",
+        "Faulty MAP sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the vacuum connection",
+          "detalle": "If the sensor uses a hose, check that it is not split, kinked or loose, and contains no water or oil."
+        },
+        {
+          "paso": "Measure reference, ground and signal at the connector",
+          "detalle": "With the ignition on, expect ≈5 V at the reference and ≈0 V at ground (typical). With the engine off, the signal should be proportional to barometric pressure.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Measure ground against battery negative",
+          "detalle": "With the ignition on, expect ≈0 V (typical); a higher reading indicates resistance in the ground connection.",
+          "accion": "MULTIMETRO:MAP"
+        },
+        {
+          "paso": "Compare MAP with barometric pressure",
+          "detalle": "With the engine off and ignition on, MAP should read close to the local atmospheric pressure.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0105",
+        "P0106",
+        "P0107",
+        "P0109",
+        "P0123"
+      ]
+    },
+    {
+      "codigo": "P0109",
+      "titulo": "Manifold absolute pressure (MAP) / barometric pressure sensor circuit: intermittent",
+      "sistema": "MAP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Poor contact at the connector or terminals",
+        "Chafed wiring shorting when the handlebars move or under vibration",
+        "Intermittently faulty MAP sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector",
+          "detalle": "Check for corrosion and loose or bent pins; clean with electrical contact cleaner and measure again."
+        },
+        {
+          "paso": "Move the wiring loom while watching the reading",
+          "detalle": "With the engine off and ignition on, gently move the wiring and handlebars: the MAP reading should remain steady."
+        },
+        {
+          "paso": "Compare MAP with barometric pressure",
+          "detalle": "With the engine off and ignition on, MAP should read close to the local atmospheric pressure.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On a motorcycle, the loom runs close to the steering and engine: vibration and heat can loosen terminals over time."
+      ],
+      "relacionados": [
+        "P0105",
+        "P0106",
+        "P0107",
+        "P0108"
+      ]
+    },
+    {
+      "codigo": "P0110",
+      "titulo": "Intake air temperature (IAT) sensor 1 circuit malfunction",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "IAT connector loose or corroded",
+        "Open or shorted wire",
+        "Faulty IAT sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or chafed wires near the air-filter box."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Compare IAT with ambient temperature when cold",
+          "detalle": "After the motorcycle has been off for several hours, IAT should be close to ambient and engine temperature.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On some motorcycles, the IAT and MAP are combined in one sensor: check the model parts catalogue before buying a replacement."
+      ],
+      "relacionados": [
+        "P0111",
+        "P0112",
+        "P0113",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0111",
+      "titulo": "Intake air temperature (IAT) sensor 1 circuit range or performance",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "IAT sensor out of calibration",
+        "Sensor positioned near a heat source (engine or exhaust)",
+        "Poor connection affecting resistance"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Compare IAT with ambient temperature when cold",
+          "detalle": "After the motorcycle has been off for several hours, IAT should be close to ambient and engine temperature.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or chafed wires near the air-filter box."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Air under the tank heats up significantly when a stationary motorcycle is warm: make this comparison with the engine cold."
+      ],
+      "relacionados": [
+        "P0110",
+        "P0112",
+        "P0113",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0112",
+      "titulo": "Intake air temperature (IAT) sensor 1 circuit: low input",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Signal wire shorted to ground",
+        "IAT sensor shorted internally",
+        "Moisture in the connector"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or chafed wires near the air-filter box."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Compare IAT with ambient temperature when cold",
+          "detalle": "After the motorcycle has been off for several hours, IAT should be close to ambient and engine temperature.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "A low signal from an NTC temperature sensor is interpreted as a very high temperature."
+      ],
+      "relacionados": [
+        "P0110",
+        "P0111",
+        "P0113",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0113",
+      "titulo": "Intake air temperature (IAT) sensor 1 circuit: high input",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "IAT sensor disconnected",
+        "Open signal or ground wire",
+        "Faulty IAT sensor (open circuit)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or chafed wires near the air-filter box."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Compare IAT with ambient temperature when cold",
+          "detalle": "After the motorcycle has been off for several hours, IAT should be close to ambient and engine temperature.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "A high signal from an NTC sensor is interpreted as a very low temperature (for example, −40 °C), usually indicating an open circuit."
+      ],
+      "relacionados": [
+        "P0110",
+        "P0111",
+        "P0112",
+        "P0114"
+      ]
+    },
+    {
+      "codigo": "P0114",
+      "titulo": "Intake air temperature (IAT) sensor 1 circuit: intermittent",
+      "sistema": "IAT",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Poor contact at the connector",
+        "Chafed wire shorting under vibration",
+        "Intermittently faulty IAT sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or chafed wires near the air-filter box."
+        },
+        {
+          "paso": "Move the wiring loom while watching the reading",
+          "detalle": "With the ignition on, move the sensor wiring: the temperature reading should remain steady."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:IAT"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0110",
+        "P0111",
+        "P0112",
+        "P0113"
+      ]
+    },
+    {
+      "codigo": "P0115",
+      "titulo": "Engine coolant temperature (ECT) sensor 1 circuit malfunction",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor connector loose or corroded",
+        "Open or shorted wire",
+        "Faulty temperature sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or wires damaged by engine heat."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Compare engine and intake-air temperatures when cold",
+          "detalle": "After the motorcycle has been off for several hours, ECT and IAT should be close. A difference greater than ≈5 °C (typical) points to a sensor fault.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On air-cooled motorcycles, this sensor usually measures cylinder-head or oil temperature, not coolant temperature.",
+        "Without a reliable temperature reading, the ECU enriches the mixture and cold starting becomes difficult."
+      ],
+      "relacionados": [
+        "P0116",
+        "P0117",
+        "P0118",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0116",
+      "titulo": "Engine coolant temperature (ECT) sensor 1 circuit range or performance",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor out of calibration (reading differs from the actual temperature)",
+        "Thermostat stuck open or missing on liquid-cooled motorcycles",
+        "Poor connection affecting resistance"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Compare engine and intake-air temperatures when cold",
+          "detalle": "After the motorcycle has been off for several hours, ECT and IAT should be close. A difference greater than ≈5 °C (typical) points to a sensor fault.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Watch the temperature rise during warm-up",
+          "detalle": "Engine temperature should rise steadily during the first few minutes at idle, without spikes."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On air-cooled motorcycles, this sensor usually measures cylinder-head or oil temperature, not coolant temperature."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0117",
+        "P0118",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0117",
+      "titulo": "Engine coolant temperature (ECT) sensor 1 circuit: low input",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Signal wire shorted to ground",
+        "Sensor shorted internally",
+        "Moisture or corrosion in the connector"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or wires damaged by engine heat."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Compare engine and intake-air temperatures when cold",
+          "detalle": "After the motorcycle has been off for several hours, ECT and IAT should be close. A difference greater than ≈5 °C (typical) points to a sensor fault.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "A low signal from an NTC sensor is interpreted as an overheated engine: the ECU may lean the mixture when cold."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0116",
+        "P0118",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0118",
+      "titulo": "Engine coolant temperature (ECT) sensor 1 circuit: high input",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor disconnected",
+        "Open signal or ground wire",
+        "Faulty sensor (open circuit)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or wires damaged by engine heat."
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Compare engine and intake-air temperatures when cold",
+          "detalle": "After the motorcycle has been off for several hours, ECT and IAT should be close. A difference greater than ≈5 °C (typical) points to a sensor fault.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "A high signal from an NTC sensor is interpreted as an extremely cold engine (for example, −40 °C): the ECU over-enriches the mixture and the motorcycle may flood."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0116",
+        "P0117",
+        "P0119"
+      ]
+    },
+    {
+      "codigo": "P0119",
+      "titulo": "Engine coolant temperature (ECT) sensor 1 circuit: intermittent or erratic",
+      "sistema": "ECT",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Poor contact at the connector",
+        "Chafed or heat-damaged wire failing under vibration or heat",
+        "Intermittently faulty sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or wires damaged by engine heat."
+        },
+        {
+          "paso": "Move the wiring loom while watching the reading",
+          "detalle": "With the ignition on, move the sensor wiring: the temperature reading should remain steady."
+        },
+        {
+          "paso": "Track warm-up with the guided test",
+          "detalle": "The cold-start test records temperature from ignition-on until the engine warms up and flags jumps greater than 5 °C in under 1 s (typical threshold).",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Measure the sensor with a multimeter",
+          "detalle": "For a two-wire sensor, the signal depends on temperature; compare it with the model's service-manual table.",
+          "accion": "MULTIMETRO:ECT"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On air-cooled motorcycles, this sensor usually measures cylinder-head or oil temperature, not coolant temperature."
+      ],
+      "relacionados": [
+        "P0115",
+        "P0116",
+        "P0117",
+        "P0118"
+      ]
+    },
+    {
+      "codigo": "P0120",
+      "titulo": "Throttle/pedal position sensor/switch 'A' circuit malfunction",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "TPS connector loose or corroded",
+        "Open signal, reference or ground wire",
+        "Faulty sensor or one that is not equivalent to the original",
+        "Fault in the 5 V reference shared with other sensors (MAP)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the connector",
+          "detalle": "Check for corrosion and bent or loose pins; clean with electrical contact cleaner."
+        },
+        {
+          "paso": "Measure the connector with a multimeter",
+          "detalle": "Expect ≈5 V reference, ≈0 V ground and a steadily rising signal (typical).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Run the guided TPS sweep",
+          "detalle": "Move through closed, half, fully open and closed positions with the engine off and ignition on.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Confirm the installed TPS is the correct original part",
+          "detalle": "Compare its part number with the one for this model (Model information)."
+        },
+        {
+          "paso": "Clear the code and relearn idle",
+          "detalle": "Follow the procedure in the model's service manual.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with ECUs exposing few PIDs (K-line, for example Delphi MT05), position is shown as a percentage of the 5 V reference: ≈10% closed and ≈90% fully open are typical for a healthy TPS.",
+        "A generic TPS may fit the throttle body without being equivalent to the original."
+      ],
+      "relacionados": [
+        "P0121",
+        "P0122",
+        "P0123",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0121",
+      "titulo": "Throttle/pedal position sensor/switch 'A' circuit range or performance",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Worn sensor track (dead spots or spikes through its travel)",
+        "Sensor not equivalent to the original (different response curve)",
+        "Throttle stop or idle incorrectly adjusted",
+        "Poor connection affecting the signal"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the guided TPS sweep",
+          "detalle": "Move through closed, half, fully open and closed positions with the engine off and ignition on.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Confirm the installed TPS is the correct original part",
+          "detalle": "Compare its part number with the one for this model (Model information)."
+        },
+        {
+          "paso": "Measure the connector with a multimeter",
+          "detalle": "Expect ≈5 V reference, ≈0 V ground and a steadily rising signal (typical).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Inspect the throttle stop and cable",
+          "detalle": "The throttle plate should close fully and the cable should have a small amount of free play."
+        },
+        {
+          "paso": "Clear the code and relearn idle",
+          "detalle": "Follow the procedure in the model's service manual.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with ECUs exposing few PIDs (K-line, for example Delphi MT05), position is shown as a percentage of the 5 V reference: ≈10% closed and ≈90% fully open are typical for a healthy TPS.",
+        "The ECU compares throttle position with RPM and MAP: a signal inconsistent with engine load can trigger this code."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0122",
+        "P0123",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0122",
+      "titulo": "Throttle/pedal position sensor/switch 'A' circuit: low input",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Faulty sensor or one that is not equivalent to the original (for example, a generic part with a different response curve)",
+        "Poor contact at the connector or terminals (corrosion or loose pins)",
+        "Low 5 V reference or resistive ground (shared with other sensors such as MAP)",
+        "Signal wire shorted to ground or broken",
+        "Incorrect pinout on a non-original sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Confirm the installed TPS is the correct original part",
+          "detalle": "Compare its part number with the one for this model (Model information)."
+        },
+        {
+          "paso": "Run the guided TPS sweep",
+          "detalle": "Move through closed, half, fully open and closed positions with the engine off and ignition on.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Measure the connector with a multimeter",
+          "detalle": "Expect ≈5 V reference, ≈0 V ground and a steadily rising signal (typical).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Inspect the connector",
+          "detalle": "Check for corrosion and bent or loose pins; clean with electrical contact cleaner."
+        },
+        {
+          "paso": "If it is not original, check the pinout with an ohmmeter",
+          "detalle": "The wiper (variable resistance) must connect to the signal wire."
+        },
+        {
+          "paso": "Measure again after correcting the fault",
+          "detalle": "Repeat the sweep: the signal should cover almost the full range (typically ≈10% to ≈90%).",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Clear the code and relearn idle",
+          "detalle": "Follow the procedure in the model's service manual.",
+          "accion": "DTC:BORRAR"
+        },
+        {
+          "paso": "Test when cold",
+          "detalle": "Run the guided cold-start test the following day.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with ECUs exposing few PIDs (K-line, for example Delphi MT05), position is shown as a percentage of the 5 V reference: ≈10% closed and ≈90% fully open are typical for a healthy TPS.",
+        "A generic TPS may fit the throttle body without being equivalent to the original.",
+        "If reference and ground are correct but the signal remains low throughout its travel while rising steadily, suspect the sensor or its connector."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0121",
+        "P0123",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0123",
+      "titulo": "Throttle/pedal position sensor/switch 'A' circuit: high input",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Open or resistive sensor ground",
+        "Signal shorted to the 5 V reference",
+        "Faulty sensor or one that is not equivalent to the original",
+        "Incorrect pinout on a non-original sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the guided TPS sweep",
+          "detalle": "Move through closed, half, fully open and closed positions with the engine off and ignition on.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Measure the connector with a multimeter",
+          "detalle": "Expect ≈5 V reference, ≈0 V ground and a steadily rising signal (typical).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Inspect the connector",
+          "detalle": "Check for corrosion and bent or loose pins; clean with electrical contact cleaner."
+        },
+        {
+          "paso": "If it is not original, check the pinout with an ohmmeter",
+          "detalle": "The wiper (variable resistance) must connect to the signal wire."
+        },
+        {
+          "paso": "Clear the code and relearn idle",
+          "detalle": "Follow the procedure in the model's service manual.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with ECUs exposing few PIDs (K-line, for example Delphi MT05), position is shown as a percentage of the 5 V reference: ≈10% closed and ≈90% fully open are typical for a healthy TPS.",
+        "A generic TPS may fit the throttle body without being equivalent to the original."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0121",
+        "P0122",
+        "P0124"
+      ]
+    },
+    {
+      "codigo": "P0124",
+      "titulo": "Throttle/pedal position sensor/switch 'A' circuit: intermittent",
+      "sistema": "TPS",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor track worn in one area",
+        "Poor contact at the connector under vibration",
+        "Chafed wire near the steering or engine"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the guided TPS sweep",
+          "detalle": "Move through closed, half, fully open and closed positions with the engine off and ignition on.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Inspect the connector",
+          "detalle": "Check for corrosion and bent or loose pins; clean with electrical contact cleaner."
+        },
+        {
+          "paso": "Move the wiring loom while watching the signal",
+          "detalle": "With the engine off and ignition on, gently move the TPS wiring: the signal should remain steady."
+        },
+        {
+          "paso": "Measure the connector with a multimeter",
+          "detalle": "Expect ≈5 V reference, ≈0 V ground and a steadily rising signal (typical).",
+          "accion": "MULTIMETRO:TPS"
+        },
+        {
+          "paso": "Clear the code and relearn idle",
+          "detalle": "Follow the procedure in the model's service manual.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with ECUs exposing few PIDs (K-line, for example Delphi MT05), position is shown as a percentage of the 5 V reference: ≈10% closed and ≈90% fully open are typical for a healthy TPS."
+      ],
+      "relacionados": [
+        "P0120",
+        "P0121",
+        "P0122",
+        "P0123"
+      ]
+    },
+    {
+      "codigo": "P0130",
+      "titulo": "Oxygen sensor circuit (bank 1, sensor 1): malfunction",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Damaged sensor connector or wiring",
+        "Worn or contaminated oxygen sensor",
+        "Exhaust leak upstream of the sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the sensor connector and wiring",
+          "detalle": "The wire runs near the exhaust: check for melted insulation, corroded pins or a loose connector."
+        },
+        {
+          "paso": "Check for exhaust leaks upstream of the sensor",
+          "detalle": "A leak lets air in and can make the sensor report a lean mixture when it is not actually lean."
+        },
+        {
+          "paso": "Check the signal with the engine warm",
+          "detalle": "In closed loop, a healthy zirconia sensor typically switches between ≈0.1 and ≈0.9 V; in Sensors, check whether the O2 PID changes."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Many small motorcycles do not have an oxygen sensor or have an unheated one: if yours does not have one, this code does not apply and the reading should be checked."
+      ],
+      "relacionados": [
+        "P0131",
+        "P0132",
+        "P0133",
+        "P0134",
+        "P0135"
+      ]
+    },
+    {
+      "codigo": "P0131",
+      "titulo": "Oxygen sensor circuit (bank 1, sensor 1): low voltage",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Exhaust leak upstream of the sensor",
+        "Genuinely lean mixture (air leak, dirty injector or low fuel pressure)",
+        "Signal wire shorted to ground",
+        "Worn oxygen sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Check for exhaust leaks upstream of the sensor",
+          "detalle": "A leak lets air in and can make the sensor report a lean mixture when it is not actually lean."
+        },
+        {
+          "paso": "Inspect the sensor connector and wiring",
+          "detalle": "The wire runs near the exhaust: check for melted insulation, corroded pins or a loose connector."
+        },
+        {
+          "paso": "Check the signal with the engine warm",
+          "detalle": "In closed loop, a healthy zirconia sensor typically switches between ≈0.1 and ≈0.9 V; in Sensors, check whether the O2 PID changes."
+        },
+        {
+          "paso": "Check the fuel trims",
+          "detalle": "If short- and long-term trims are strongly positive, the mixture really is lean: follow the P0171 guide."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0132",
+        "P0133",
+        "P0134",
+        "P0135",
+        "P0171"
+      ]
+    },
+    {
+      "codigo": "P0132",
+      "titulo": "Oxygen sensor circuit (bank 1, sensor 1): high voltage",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Genuinely rich mixture (leaking injector or faulty temperature sensor)",
+        "Signal wire shorted to the heater circuit or a voltage supply",
+        "Sensor contaminated by oil, silicone or fuel"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the sensor connector and wiring",
+          "detalle": "The wire runs near the exhaust: check for melted insulation, corroded pins or a loose connector."
+        },
+        {
+          "paso": "Check the signal with the engine warm",
+          "detalle": "In closed loop, a healthy zirconia sensor typically switches between ≈0.1 and ≈0.9 V; in Sensors, check whether the O2 PID changes."
+        },
+        {
+          "paso": "Check the fuel trims",
+          "detalle": "If fuel trims are strongly negative, the mixture really is rich: follow the P0172 guide."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0133",
+        "P0134",
+        "P0135",
+        "P0172"
+      ]
+    },
+    {
+      "codigo": "P0133",
+      "titulo": "Oxygen sensor circuit (bank 1, sensor 1): slow response",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Ageing oxygen sensor",
+        "Sensor contaminated by oil or fuel",
+        "Exhaust leak upstream of the sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Check the signal with the engine warm",
+          "detalle": "In closed loop, a healthy zirconia sensor typically switches between ≈0.1 and ≈0.9 V; in Sensors, check whether the O2 PID changes."
+        },
+        {
+          "paso": "Check for exhaust leaks upstream of the sensor",
+          "detalle": "A leak lets air in and can make the sensor report a lean mixture when it is not actually lean."
+        },
+        {
+          "paso": "Inspect the sensor connector and wiring",
+          "detalle": "The wire runs near the exhaust: check for melted insulation, corroded pins or a loose connector."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0132",
+        "P0134",
+        "P0135"
+      ]
+    },
+    {
+      "codigo": "P0134",
+      "titulo": "Oxygen sensor circuit (bank 1, sensor 1): no activity detected",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor not warmed up (faulty heater)",
+        "Open signal wire",
+        "Worn oxygen sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the sensor connector and wiring",
+          "detalle": "The wire runs near the exhaust: check for melted insulation, corroded pins or a loose connector."
+        },
+        {
+          "paso": "Check the signal with the engine warm",
+          "detalle": "In closed loop, a healthy zirconia sensor typically switches between ≈0.1 and ≈0.9 V; in Sensors, check whether the O2 PID changes."
+        },
+        {
+          "paso": "Check whether P0135 is also present",
+          "detalle": "Without a heater, the sensor takes longer to activate and the ECU may not detect activity."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles that spend a long time idling, the exhaust cools and an unheated sensor may become inactive."
+      ],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0132",
+        "P0133",
+        "P0135"
+      ]
+    },
+    {
+      "codigo": "P0135",
+      "titulo": "Oxygen sensor circuit (bank 1, sensor 1): heater circuit malfunction",
+      "sistema": "O2",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor heater open circuit",
+        "Heater fuse blown or power supply interrupted",
+        "Connector or wiring damaged by exhaust heat"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the sensor connector and wiring",
+          "detalle": "The wire runs near the exhaust: check for melted insulation, corroded pins or a loose connector."
+        },
+        {
+          "paso": "Check the heater fuse",
+          "detalle": "Consult the model wiring diagram to identify its fuse."
+        },
+        {
+          "paso": "Measure heater resistance",
+          "detalle": "With the sensor disconnected, measure between the two heater wires and compare with the model's service-manual value."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0130",
+        "P0131",
+        "P0132",
+        "P0133",
+        "P0134"
+      ]
+    },
+    {
+      "codigo": "P0171",
+      "titulo": "System too lean (bank 1)",
+      "sistema": "Fuel mixture",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Air leak (manifold, throttle-body joint or vacuum hose)",
+        "Dirty or partially blocked injector",
+        "Low fuel pressure (filter or pump)",
+        "Incorrect reading from the MAP, IAT or engine-temperature sensor",
+        "Exhaust leak upstream of the oxygen sensor"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Check for air leaks",
+          "detalle": "With the engine idling, check the clamps, throttle-body joint and hoses."
+        },
+        {
+          "paso": "Compare MAP with barometric pressure",
+          "detalle": "With the engine off, MAP should read close to atmospheric pressure.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Check idle and fuel trims",
+          "detalle": "Trims that fall sharply when revving point to an air leak; trims that rise under load point to a fuel-supply issue.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Check the fuel filter and pressure",
+          "detalle": "Follow the model's service manual."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with few PIDs, the ECU may not report fuel trims: MAP and temperature readings are then the best clues."
+      ],
+      "relacionados": [
+        "P0172",
+        "P0131",
+        "P0106",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0172",
+      "titulo": "System too rich (bank 1)",
+      "sistema": "Fuel mixture",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Leaking or poorly atomising injector",
+        "Engine-temperature sensor reading cold",
+        "Blocked air filter",
+        "High fuel pressure (regulator)",
+        "MAP sensor reading high pressure"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the air filter",
+          "detalle": "A dirty or soaked filter restricts airflow and enriches the mixture."
+        },
+        {
+          "paso": "Compare engine and intake-air temperatures when cold",
+          "detalle": "A temperature sensor that reads cold when the engine is warm will enrich the mixture.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Compare MAP with barometric pressure",
+          "detalle": "With the engine off, MAP should read close to atmospheric pressure.",
+          "accion": "PRUEBA:MAP_BARO"
+        },
+        {
+          "paso": "Inspect the injector",
+          "detalle": "Check for dribbling or an uneven spray pattern; use ultrasonic cleaning if needed."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0171",
+        "P0132",
+        "P0118",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0201",
+      "titulo": "Cylinder 1 injector circuit: open or malfunction",
+      "sistema": "Injector",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Injector connector loose or corroded",
+        "Injector coil open circuit",
+        "Control or power-supply wire broken",
+        "Faulty ECU driver"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the injector connector",
+          "detalle": "Check for corrosion, loose pins or a broken locking tab."
+        },
+        {
+          "paso": "Measure injector resistance",
+          "detalle": "With the injector disconnected, high-impedance types typically measure 10–16 Ω; compare with the service manual.",
+          "accion": "MULTIMETRO:INYECTOR"
+        },
+        {
+          "paso": "Check the power supply with the ignition on",
+          "detalle": "One pin should have battery voltage with the ignition on.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On a single-cylinder engine, this is the only injector: if it fails, the motorcycle will not start or will stall."
+      ],
+      "relacionados": [
+        "P0300",
+        "P0301",
+        "P0171"
+      ]
+    },
+    {
+      "codigo": "P0230",
+      "titulo": "Fuel pump primary circuit malfunction",
+      "sistema": "Fuel",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Faulty fuel-pump relay",
+        "Blown fuse",
+        "Fuel-pump connector loose or corroded",
+        "Faulty fuel pump"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Listen for the pump when switching on the ignition",
+          "detalle": "It should run for a few seconds; if it does not, check the fuse and relay."
+        },
+        {
+          "paso": "Check the fuse and relay",
+          "detalle": "Consult the model wiring diagram."
+        },
+        {
+          "paso": "Measure battery voltage",
+          "detalle": "Low voltage can affect the pump and relay.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On many motorcycles the pump is inside the tank with the fuel-level sender: check the tank connector."
+      ],
+      "relacionados": [
+        "P0171",
+        "P0562"
+      ]
+    },
+    {
+      "codigo": "P0300",
+      "titulo": "Random or multiple-cylinder misfire detected",
+      "sistema": "Ignition",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Worn, dirty or incorrectly gapped spark plug",
+        "Damaged spark-plug cap or lead",
+        "Lean mixture (air leak or injector issue)",
+        "Weak ignition coil",
+        "Contaminated or waterlogged fuel"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the spark plug and cap",
+          "detalle": "Check the color, wear and gap against the model's service manual."
+        },
+        {
+          "paso": "Check idle stability",
+          "detalle": "An unstable or unexpectedly falling idle can accompany misfires.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Check for air leaks and fuel-supply problems",
+          "detalle": "A lean mixture can also cause misfires."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "If the warning light flashes, reduce engine load and investigate promptly: misfires can damage the catalytic converter.",
+        "On a single-cylinder engine, P0300 and P0301 often indicate the same issue."
+      ],
+      "relacionados": [
+        "P0301",
+        "P0351",
+        "P0171",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0301",
+      "titulo": "Cylinder 1 misfire detected",
+      "sistema": "Ignition",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Worn, dirty or incorrectly gapped spark plug",
+        "Damaged spark-plug cap or lead",
+        "Weak ignition coil",
+        "Cylinder 1 injector dirty",
+        "Low compression (valves or rings)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the spark plug and cap",
+          "detalle": "Check the color, wear and gap against the model's service manual."
+        },
+        {
+          "paso": "Check idle stability",
+          "detalle": "An unstable or unexpectedly falling idle can accompany misfires.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Measure injector resistance",
+          "detalle": "Compare with the model's service manual.",
+          "accion": "MULTIMETRO:INYECTOR"
+        },
+        {
+          "paso": "Measure compression",
+          "detalle": "Use a compression tester and follow the model's service manual."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "If the warning light flashes, reduce engine load and investigate promptly: misfires can damage the catalytic converter."
+      ],
+      "relacionados": [
+        "P0300",
+        "P0351",
+        "P0201"
+      ]
+    },
+    {
+      "codigo": "P0335",
+      "titulo": "Crankshaft position (CKP) sensor 'A' circuit malfunction",
+      "sistema": "CKP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor connector loose or corroded",
+        "Open or shorted wire (routed near the engine)",
+        "Faulty CKP sensor",
+        "Damaged or dirty reluctor wheel (flywheel teeth)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the CKP connector and wiring",
+          "detalle": "Check for corrosion, loose pins or a wire chafed against the flywheel cover."
+        },
+        {
+          "paso": "Check for RPM while cranking",
+          "detalle": "If the ECU does not detect RPM while cranking, it will not inject fuel or provide a spark."
+        },
+        {
+          "paso": "Measure sensor resistance",
+          "detalle": "With the inductive sensor disconnected, compare the reading with the model's service manual."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Without a CKP signal, the motorcycle will not start or may stall while riding."
+      ],
+      "relacionados": [
+        "P0336",
+        "P0300"
+      ]
+    },
+    {
+      "codigo": "P0336",
+      "titulo": "Crankshaft position (CKP) sensor 'A' circuit range or performance",
+      "sistema": "CKP",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Sensor dirty with metal filings or incorrectly spaced from the reluctor wheel",
+        "Reluctor wheel teeth damaged",
+        "Interference from spark-plug or regulator wiring near the CKP lead",
+        "Intermittent poor contact"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the CKP connector and wiring",
+          "detalle": "Check for corrosion, loose pins or chafed wiring."
+        },
+        {
+          "paso": "Check the cable routing",
+          "detalle": "It should not run alongside the spark-plug lead or regulator wiring."
+        },
+        {
+          "paso": "Inspect the sensor and reluctor wheel",
+          "detalle": "With the cover removed, check the magnet for filings and confirm the teeth are intact."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0335"
+      ]
+    },
+    {
+      "codigo": "P0351",
+      "titulo": "Ignition coil 'A' primary/secondary circuit malfunction",
+      "sistema": "Ignition",
+      "urgencia": "DETENERSE",
+      "causas": [
+        "Ignition-coil connector loose or corroded",
+        "Faulty coil (primary open circuit or shorted)",
+        "Control wire from the ECU broken",
+        "Ignition-coil power-supply fault"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect the ignition-coil connector",
+          "detalle": "Check for corrosion, loose pins or a broken locking tab."
+        },
+        {
+          "paso": "Check the power supply with the ignition on",
+          "detalle": "One coil pin should have battery voltage.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Measure primary and secondary resistance",
+          "detalle": "With the coil disconnected, compare the readings with the model's service manual."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles, the coil is often under the tank where it is exposed to heat and water: check the connector first."
+      ],
+      "relacionados": [
+        "P0300",
+        "P0301"
+      ]
+    },
+    {
+      "codigo": "P0500",
+      "titulo": "Vehicle speed sensor (VSS) 'A' malfunction",
+      "sistema": "Speed",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Speed sensor connector loose or corroded",
+        "Open or shorted wire",
+        "Faulty speed sensor",
+        "Sensor magnet or toothed wheel damaged"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Compare ECU speed with GPS speed",
+          "detalle": "In Drive, while riding: if the ECU reads 0 but GPS does not, the sensor is not reporting."
+        },
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion, loose pins or a wire chafed by the chain."
+        },
+        {
+          "paso": "Inspect the sensor and its mount",
+          "detalle": "Check for filings on the magnet or a loose sensor."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On many motorcycles, the speed sensor reads the gearbox output or rear wheel: also check the chain on its mount."
+      ],
+      "relacionados": [
+        "P0501"
+      ]
+    },
+    {
+      "codigo": "P0501",
+      "titulo": "Vehicle speed sensor (VSS) 'A' range or performance",
+      "sistema": "Speed",
+      "urgencia": "PUEDE_ESPERAR",
+      "causas": [
+        "Sensor dirty or incorrectly spaced",
+        "tire or sprocket size differs from the expected ratio",
+        "Intermittent poor contact"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Compare ECU speed with GPS speed",
+          "detalle": "In Drive, a consistent difference may indicate a different tire or sprocket size."
+        },
+        {
+          "paso": "Inspect the sensor and its mount",
+          "detalle": "Check for filings on the magnet or a loose sensor."
+        },
+        {
+          "paso": "Inspect the connector and wiring",
+          "detalle": "Check for corrosion or loose pins."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On many motorcycles, the speed sensor reads the gearbox output or rear wheel: also check the chain on its mount."
+      ],
+      "relacionados": [
+        "P0500"
+      ]
+    },
+    {
+      "codigo": "P0505",
+      "titulo": "Idle air control (IAC) system malfunction",
+      "sistema": "Idle",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Idle air control valve dirty or sticking",
+        "Valve connector loose or corroded",
+        "Faulty valve",
+        "Throttle-body air passages blocked"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the idle and return test",
+          "detalle": "Check that warm idle is stable and does not drop when the throttle is released.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Clean the throttle body and air passages",
+          "detalle": "Use throttle-body cleaner without forcing the plate; then relearn idle as described in the manual."
+        },
+        {
+          "paso": "Inspect the valve connector",
+          "detalle": "Check for corrosion or loose pins."
+        },
+        {
+          "paso": "Check that the TPS reads closed",
+          "detalle": "If the TPS does not report closed throttle, the ECU will not enter idle mode.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with an idle air control valve (IAC/ISC), that valve regulates idle; on others, idle is set by a screw on the throttle body."
+      ],
+      "relacionados": [
+        "P0506",
+        "P0507"
+      ]
+    },
+    {
+      "codigo": "P0506",
+      "titulo": "Idle air control system: RPM lower than expected",
+      "sistema": "Idle",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Throttle body or air passages dirty",
+        "Idle air control valve sticking or slow",
+        "TPS not reporting closed or not equivalent to the original",
+        "High electrical load with a weak battery"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the idle and return test",
+          "detalle": "Check that warm idle is stable and does not drop when the throttle is released.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Check that the TPS reads closed",
+          "detalle": "If the TPS does not report closed throttle, the ECU will not enter idle mode.",
+          "accion": "PRUEBA:TPS_BARRIDO"
+        },
+        {
+          "paso": "Clean the throttle body and air passages",
+          "detalle": "Use throttle-body cleaner without forcing the plate; then relearn idle as described in the manual."
+        },
+        {
+          "paso": "Check the battery and charging system",
+          "detalle": "Low voltage can cause idle speed to drop when the lights are switched on.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with an idle air control valve (IAC/ISC), that valve regulates idle; on others, idle is set by a screw on the throttle body.",
+        "If idle drops only when cold, also run the cold-start test."
+      ],
+      "relacionados": [
+        "P0505",
+        "P0507",
+        "P0122"
+      ]
+    },
+    {
+      "codigo": "P0507",
+      "titulo": "Idle air control system: RPM higher than expected",
+      "sistema": "Idle",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Air leak downstream of the throttle plate",
+        "Throttle cable has no free play (plate does not close)",
+        "Idle air control valve stuck open",
+        "Temperature sensor reading cold"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the idle and return test",
+          "detalle": "Check that warm idle is stable and does not drop when the throttle is released.",
+          "accion": "PRUEBA:MINIMO_RETORNO"
+        },
+        {
+          "paso": "Check throttle-cable free play",
+          "detalle": "The throttle plate should close fully when released."
+        },
+        {
+          "paso": "Check for air leaks",
+          "detalle": "Inspect the clamps and throttle-body joint."
+        },
+        {
+          "paso": "Compare engine and intake-air temperatures when cold",
+          "detalle": "A temperature sensor reading cold can raise idle speed.",
+          "accion": "PRUEBA:ARRANQUE_FRIO"
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles with an idle air control valve (IAC/ISC), that valve regulates idle; on others, idle is set by a screw on the throttle body."
+      ],
+      "relacionados": [
+        "P0505",
+        "P0506"
+      ]
+    },
+    {
+      "codigo": "P0560",
+      "titulo": "System voltage malfunction",
+      "sistema": "Electrical",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Weak or faulty battery",
+        "Loose or corroded terminals or earths",
+        "Faulty regulator/rectifier",
+        "Faulty stator (alternator)"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the guided battery and charging test",
+          "detalle": "Check ignition-on voltage, the drop while starting and charging with the engine running.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Measure the battery with a multimeter",
+          "detalle": "Typical values: ≥ ≈12.4 V at rest and ≈13.5–14.5 V while charging.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Inspect terminals and ground connections",
+          "detalle": "Check for corroded or loose terminals and the chassis-to-engine ground."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "On motorcycles, the headlamp often stays on with the ignition: the battery can discharge quickly if the ignition is left on with the engine off."
+      ],
+      "relacionados": [
+        "P0561",
+        "P0562",
+        "P0563"
+      ]
+    },
+    {
+      "codigo": "P0561",
+      "titulo": "System voltage unstable",
+      "sistema": "Electrical",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Loose terminals or earths",
+        "Regulator/rectifier beginning to fail",
+        "Stator connector burnt or loose"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Inspect terminals and ground connections",
+          "detalle": "Check for corroded or loose terminals and the chassis-to-engine ground."
+        },
+        {
+          "paso": "Run the guided battery and charging test",
+          "detalle": "Check ignition-on voltage, the drop while starting and charging with the engine running.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Inspect the stator-to-regulator connector",
+          "detalle": "It can overheat: check for burnt pins or melted plastic."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [],
+      "relacionados": [
+        "P0560",
+        "P0562",
+        "P0563"
+      ]
+    },
+    {
+      "codigo": "P0562",
+      "titulo": "System voltage low",
+      "sistema": "Electrical",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Battery discharged or faulty",
+        "Stator or regulator not charging",
+        "Parasitic drain (accessories or alarm)",
+        "Loose terminals or earths"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the guided battery and charging test",
+          "detalle": "Check ignition-on voltage, the drop while starting and charging with the engine running.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Measure the battery with a multimeter",
+          "detalle": "Typical values: ≥ ≈12.4 V at rest and ≈13.5–14.5 V while charging.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Inspect terminals and ground connections",
+          "detalle": "Check for corroded or loose terminals and the chassis-to-engine ground."
+        },
+        {
+          "paso": "Check installed accessories",
+          "detalle": "Alarms, USB chargers or extra lights may draw power while the motorcycle is off."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Low voltage can affect sensors and the fuel pump and trigger other codes: address this fault first."
+      ],
+      "relacionados": [
+        "P0560",
+        "P0561",
+        "P0563"
+      ]
+    },
+    {
+      "codigo": "P0563",
+      "titulo": "System voltage high",
+      "sistema": "Electrical",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Faulty regulator/rectifier (overcharging)",
+        "Regulator ground loose",
+        "Battery with a damaged cell"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Run the guided battery and charging test",
+          "detalle": "Check ignition-on voltage, the drop while starting and charging with the engine running.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Measure the battery with a multimeter",
+          "detalle": "Typical values: ≥ ≈12.4 V at rest and ≈13.5–14.5 V while charging.",
+          "accion": "MULTIMETRO:BATERIA"
+        },
+        {
+          "paso": "Inspect the regulator ground and connector",
+          "detalle": "A loose ground can prevent the regulator from limiting voltage."
+        },
+        {
+          "paso": "Clear the code and confirm",
+          "detalle": "Once the cause is fixed, clear the code while the motorcycle is stationary and read it again after riding. If the fault remains, the code will return.",
+          "accion": "DTC:BORRAR"
+        }
+      ],
+      "notasMoto": [
+        "Above ≈15 V (typical), bulbs can blow and the battery or ECU can be damaged: do not continue riding for long in this condition."
+      ],
+      "relacionados": [
+        "P0560",
+        "P0561",
+        "P0562"
+      ]
+    },
+    {
+      "codigo": "P0601",
+      "titulo": "Control module: internal memory checksum error",
+      "sistema": "ECU",
+      "urgencia": "REVISAR_PRONTO",
+      "causas": [
+        "Internal ECU fault",
+        "ECU programming interrupted or altered",
+        "Unstable voltage corrupting memory"
+      ],
+      "verificaciones": [
+        {
+          "paso": "Rule out low or unstable voltage",
+          "detalle": "A weak battery or poor charging can cause memory errors.",
+          "accion": "PRUEBA:BATERIA_CARGA"
+        },
+        {
+          "paso": "Inspect terminals and ground connections",
+          "detalle": "Check for corroded or loose terminals and the chassis-to-engine ground."
+        },
+        {
+          "paso": "Clear and read again",
+          "detalle": "If the code returns immediately, the ECU needs inspection at a specialist workshop.",
+          "accion": "DTC:BORRAR"
+        },
+        {
+          "paso": "Ask about reprogramming or replacement",
+          "detalle": "Only use the procedure and ECU specified by the vehicle manufacturer."
+        }
+      ],
+      "notasMoto": [
+        "If the ECU has been remapped, this may be the cause: mention it at the workshop."
+      ],
+      "relacionados": [
+        "P0560",
+        "P0562"
+      ]
+    }
+  ]
+}
