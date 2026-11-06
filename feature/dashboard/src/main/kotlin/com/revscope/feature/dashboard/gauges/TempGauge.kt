@@ -19,9 +19,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.feature.dashboard.R
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
 import com.revscope.core.designsystem.conCifrasTabulares
@@ -83,7 +85,7 @@ fun TempGauge(
         }
         Spacer(modifier = Modifier.height(4.dp))
         TextoAjustable(
-            texto = "TEMP",
+            texto = stringResource(R.string.drive_gauge_temp),
             estilo = RevScopeType.bodySmall,
             color = RevScopeColors.TextSecondary,
             modifier = Modifier.fillMaxWidth(),

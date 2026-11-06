@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.dp
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.feature.dashboard.gauges.ladoAcotado
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -13,6 +14,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ConducirUiTest {
+
+    private val es = XmlStringResolver.es(R::class.java)
+    private val en = XmlStringResolver.en(R::class.java)
 
     @Test
     fun `el gauge se achica a la columna que le toca`() {
@@ -26,7 +30,8 @@ class ConducirUiTest {
         assertEquals(EnlaceAdaptador.CONECTADO, enlaceAdaptador(ConnectionState.Connected("Android-Vlink")))
         assertEquals(EnlaceAdaptador.CONECTANDO, enlaceAdaptador(ConnectionState.Connecting))
         assertEquals(EnlaceAdaptador.SIN_ADAPTADOR, enlaceAdaptador(ConnectionState.Disconnected))
-        assertEquals("Sin adaptador conectado", EnlaceAdaptador.SIN_ADAPTADOR.descripcion)
+        assertEquals("Sin adaptador conectado", es.get(EnlaceAdaptador.SIN_ADAPTADOR.descripcion))
+        assertEquals("No adapter connected", en.get(EnlaceAdaptador.SIN_ADAPTADOR.descripcion))
     }
 
     @Test
@@ -42,9 +47,36 @@ class ConducirUiTest {
 
     @Test
     fun `el aviso de arrancada muestra 0-100 con el 0-60 entre parentesis`() {
-        assertEquals("🏁 0-100 en 8.40s  (0-60: 4.10s)", textoArrancada(to60Ms = 4_100, to100Ms = 8_400)?.replace(',', '.'))
-        assertEquals("🏁 0-60 en 4.10s", textoArrancada(to60Ms = 4_100, to100Ms = null)?.replace(',', '.'))
-        assertNull(textoArrancada(to60Ms = null, to100Ms = null))
+        assertEquals(
+            "🏁 0-100 en 8.40s  (0-60: 4.10s)",
+            textoArrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = es)?.replace(',', '.'),
+        )
+        assertEquals("🏁 0-60 en 4.10s", textoArrancada(to60Ms = 4_100, to100Ms = null, resolver = es)?.replace(',', '.'))
+        assertNull(textoArrancada(to60Ms = null, to100Ms = null, resolver = es))
+    }
+
+    @Test
+    fun `en espanol el aviso de arrancada usa coma decimal y en ingles punto`() {
+        assertEquals("🏁 0-100 en 8,40s  (0-60: 4,10s)", textoArrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = es))
+        assertEquals("🏁 0-100 in 8.40s  (0-60: 4.10s)", textoArrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = en))
+    }
+
+    @Test
+    fun `sin lectura de un PID soportado el motivo nombra la medida en cada idioma`() {
+        fun motivoTemperatura(resolver: XmlStringResolver) = lecturasConMotivos(
+            conectado = true,
+            velocidadGps = false,
+            rpm = 900f,
+            velocidad = 0f,
+            temperatura = null,
+            boost = 0f,
+            marcha = 0,
+            disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, EstadoSoporte.Soportado) },
+            resolver = resolver,
+        ).motivoTemperatura
+
+        assertEquals("Esperando lectura de la temperatura del motor (PID 05)", motivoTemperatura(es))
+        assertEquals("Waiting for engine temperature reading (PID 05)", motivoTemperatura(en))
     }
 
     @Test
@@ -60,6 +92,7 @@ class ConducirUiTest {
             disponibilidad = { pid, nombre ->
                 DisponibilidadPid.resolver(pid, nombre, EstadoSoporte.Soportado)
             },
+            resolver = es,
         )
 
         assertNull(lecturas.rpm)

@@ -18,15 +18,20 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.feature.dashboard.R
+import java.util.Locale
 import kotlin.math.abs
 
 private const val BOOST_MIN = -30f
 private const val BOOST_MAX = 30f
+private const val KPA = "kPa"
 
 @Composable
 fun BoostBar(
@@ -42,16 +47,19 @@ fun BoostBar(
         label = "boost_bar"
     )
 
+    // Locale por defecto, como el String.format de antes: kPa se convierte en la tarea de unidades
+    // y las capturas en español se grabaron con punto decimal.
+    val locale = Locale.getDefault()
     val label = when {
         boostKpa == null -> "—"
-        boostKpa > 0f -> "+%.1f kPa".format(boostKpa)
-        boostKpa < 0f -> "%.1f kPa".format(boostKpa)
-        else -> "0 kPa"
+        boostKpa > 0f -> "+${LocaleNumbers.decimal(boostKpa.toDouble(), 1, locale)} $KPA"
+        boostKpa < 0f -> "-${LocaleNumbers.decimal(-boostKpa.toDouble(), 1, locale)} $KPA"
+        else -> "0 $KPA"
     }
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "BOOST",
+            text = stringResource(R.string.drive_gauge_boost),
             fontSize = 12.sp,
             color = RevScopeColors.TextSecondary,
         )

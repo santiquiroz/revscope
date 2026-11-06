@@ -218,7 +218,7 @@ internal fun DashboardGaugesContent(estado: EstadoConducirUi, onAlternarFuenteVe
         MotivoGauge(lecturas.motivoRpm)
         if (estado.avisarSinAdaptador) {
             Text(
-                "RPM, temperatura, marcha y boost necesitan un adaptador OBD2",
+                stringResource(R.string.drive_needs_adapter),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
                 textAlign = TextAlign.Center,
@@ -311,7 +311,7 @@ private fun GpsTripButton(isActive: Boolean, onStart: () -> Unit, onStop: () -> 
         ),
     ) {
         Text(
-            text = if (isActive) "Finalizar viaje GPS" else "Iniciar viaje GPS",
+            text = stringResource(if (isActive) R.string.drive_gps_trip_end else R.string.drive_gps_trip_start),
             color = RevScopeColors.Background,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -319,10 +319,10 @@ private fun GpsTripButton(isActive: Boolean, onStart: () -> Unit, onStop: () -> 
     }
     if (confirmarFin) {
         ConfirmarAccionViajeDialog(
-            titulo = "¿Finalizar el viaje?",
-            texto = "El viaje GPS se guarda en el historial.",
-            confirmar = "Finalizar viaje",
-            descartar = "Seguir grabando",
+            titulo = stringResource(R.string.drive_confirm_end_title),
+            texto = stringResource(R.string.drive_confirm_end_gps_text),
+            confirmar = stringResource(R.string.drive_confirm_end_action),
+            descartar = stringResource(R.string.drive_keep_recording),
             onConfirm = {
                 confirmarFin = false
                 onStop()
@@ -339,7 +339,7 @@ private fun OpenMapButton(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
     ) {
-        Text(text = "Ver mapa", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.Bold)
+        Text(text = stringResource(R.string.drive_view_map), color = RevScopeColors.TextPrimary, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -356,7 +356,7 @@ internal fun ConfigureAdapterCta(onClick: () -> Unit, modifier: Modifier = Modif
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RevScopeColors.Accent)
             Text(
-                "RPM, temperatura, marcha y boost necesitan un adaptador OBD2.",
+                stringResource(R.string.drive_needs_adapter_sentence),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.body,
                 modifier = Modifier.weight(1f),
@@ -368,7 +368,7 @@ internal fun ConfigureAdapterCta(onClick: () -> Unit, modifier: Modifier = Modif
         ) {
             // Con letra al 200 % en 360 dp no cabe entero: se achica un poco antes que partirse.
             TextoAjustable(
-                texto = "Configurar adaptador",
+                texto = stringResource(R.string.drive_configure_adapter),
                 estilo = RevScopeType.label,
                 color = RevScopeColors.Accent,
                 minimo = 10.sp,
@@ -396,19 +396,23 @@ internal fun UpdateBanner(version: String, onDownload: () -> Unit, onDismiss: ()
     ) {
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f).padding(top = 10.dp)) {
-                Text("Nueva versión $version disponible", color = RevScopeColors.Accent, style = RevScopeType.label)
                 Text(
-                    "Descárgala para actualizar",
+                    stringResource(R.string.drive_update_available, version),
+                    color = RevScopeColors.Accent,
+                    style = RevScopeType.label,
+                )
+                Text(
+                    stringResource(R.string.drive_update_download_hint),
                     color = RevScopeColors.TextSecondary,
                     style = RevScopeType.bodySmall,
                 )
             }
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Descartar aviso", tint = RevScopeColors.TextSecondary)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.drive_update_dismiss), tint = RevScopeColors.TextSecondary)
             }
         }
         TextButton(onClick = onDownload, modifier = Modifier.align(Alignment.End).padding(end = 4.dp)) {
-            Text("Descargar", color = RevScopeColors.Accent, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.drive_update_download), color = RevScopeColors.Accent, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -430,7 +434,7 @@ internal fun TripScoreBar(tripScore: TripScore) {
             color = RevScopeColors.TextPrimary,
         )
         Text(
-            text = "Puntaje: ${tripScore.overall}/100",
+            text = stringResource(R.string.drive_score, tripScore.overall),
             style = RevScopeType.label.conCifrasTabulares(),
             fontWeight = FontWeight.Bold,
             color = RevScopeColors.Accent,
@@ -441,13 +445,15 @@ internal fun TripScoreBar(tripScore: TripScore) {
 /** Fuente de la velocidad bajo el velocímetro: toca para alternar entre la ECU y el GPS. */
 @Composable
 private fun SpeedSourceChip(useGps: Boolean, onToggle: () -> Unit) {
+    val descripcion = stringResource(R.string.drive_speed_source)
+    val estado = stringResource(if (useGps) R.string.drive_speed_source_gps else R.string.drive_speed_source_obd)
     ChipSeleccion(
         texto = if (useGps) "GPS" else "OBD",
         seleccionado = useGps,
         onClick = onToggle,
         modifier = Modifier.semantics {
-            contentDescription = "Fuente de la velocidad"
-            stateDescription = if (useGps) "GPS del teléfono" else "ECU por OBD"
+            contentDescription = descripcion
+            stateDescription = estado
         },
     )
 }
