@@ -102,7 +102,7 @@ def main(argv: list[str]) -> int:
         root = Path(arg)
         if not root.exists():
             continue
-        for kt_file in root.rglob("*.kt"):
+        for kt_file in ([root] if root.is_file() else root.rglob("*.kt")):
             if not should_scan_file(kt_file):
                 continue
             findings = scan_file(kt_file)
