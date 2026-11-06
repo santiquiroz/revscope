@@ -1,5 +1,8 @@
 package com.revscope.core.obd.taller.multimetro
 
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.NuevoEvento
@@ -12,19 +15,30 @@ import org.json.JSONObject
 // El payload usa la forma {"lecturas":[{"funcion","condicion","valor","unidad"}]} que ya lee VrefSesion.
 object EventoMedicion {
 
-    fun tabla(plantilla: PlantillaCableado, veredicto: VeredictoCombinado, origen: OrigenEvento = OrigenEvento.APP) = NuevoEvento(
+    fun tabla(
+        plantilla: PlantillaCableado,
+        veredicto: VeredictoCombinado,
+        origen: OrigenEvento = OrigenEvento.APP,
+        resolver: StringResolver,
+    ) = NuevoEvento(
         tipo = TipoEvento.MEDICION_MULTIMETRO,
-        titulo = titulo(plantilla),
+        titulo = titulo(plantilla, resolver),
         resumen = listOfNotNull(veredicto.titulo, veredicto.ecu?.texto).joinToString(". "),
         veredicto = veredicto.veredicto,
         payload = base(plantilla, veredicto.celdas).put("veredicto", MedicionJson.veredicto(veredicto)),
         origen = origen,
     )
 
-    fun celda(plantilla: PlantillaCableado, celda: EvaluacionCelda, acumulado: VeredictoCombinado, origen: OrigenEvento) = NuevoEvento(
+    fun celda(
+        plantilla: PlantillaCableado,
+        celda: EvaluacionCelda,
+        acumulado: VeredictoCombinado,
+        origen: OrigenEvento,
+        resolver: StringResolver,
+    ) = NuevoEvento(
         tipo = TipoEvento.MEDICION_MULTIMETRO,
-        titulo = titulo(plantilla),
-        resumen = TextoCelda.completo(plantilla, celda),
+        titulo = titulo(plantilla, resolver),
+        resumen = TextoCelda.completo(plantilla, celda, resolver),
         veredicto = veredictoDe(celda.estado),
         payload = base(plantilla, listOf(celda)).put("veredictoAcumulado", MedicionJson.veredicto(acumulado)),
         origen = origen,
@@ -36,7 +50,8 @@ object EventoMedicion {
         EstadoCelda.SIN_REFERENCIA -> Veredicto.INFO
     }
 
-    private fun titulo(plantilla: PlantillaCableado) = "Multímetro · ${plantilla.titulo}"
+    private fun titulo(plantilla: PlantillaCableado, resolver: StringResolver) =
+        resolver.get(R.string.obd_multimeter_event_title, plantilla.titulo)
 
     private fun base(plantilla: PlantillaCableado, celdas: List<EvaluacionCelda>): JSONObject = JSONObject()
         .put("plantilla", plantilla.sensor.name)
@@ -48,25 +63,27 @@ object EventoMedicion {
 
 object TextoCelda {
 
-    fun valor(valor: Double, unidad: String): String =
-        "${FormatoTaller.numero(valor, if (unidad == "V") 2 else 1)} $unidad"
+    fun valor(valor: Double, unidad: String, resolver: StringResolver): String =
+        "${LocaleNumbers.decimal(valor, if (unidad == "V") 2 else 1, resolver.locale)} $unidad" // i18n-ignore
 
-    fun estado(estado: EstadoCelda): String = when (estado) {
-        EstadoCelda.DENTRO -> "dentro"
-        EstadoCelda.BAJO -> "bajo"
-        EstadoCelda.ALTO -> "alto"
-        EstadoCelda.SIN_REFERENCIA -> "sin referencia"
-    }
+    fun estado(estado: EstadoCelda, resolver: StringResolver): String = resolver.get(
+        when (estado) {
+            EstadoCelda.DENTRO -> R.string.obd_multimeter_state_in_range
+            EstadoCelda.BAJO -> R.string.obd_multimeter_state_low
+            EstadoCelda.ALTO -> R.string.obd_multimeter_state_high
+            EstadoCelda.SIN_REFERENCIA -> R.string.obd_multimeter_state_no_reference
+        },
+    )
 
-    fun cable(plantilla: PlantillaCableado, funcion: FuncionCable): String {
+    fun cable(plantilla: PlantillaCableado, funcion: FuncionCable, resolver: StringResolver): String {
         val cable = plantilla.cable(funcion)
-        val etiqueta = cable?.etiqueta ?: funcion.etiqueta
+        val etiqueta = cable?.etiqueta ?: funcion.etiqueta(resolver)
         return cable?.color?.let { "$etiqueta ($it)" } ?: etiqueta
     }
 
-    fun completo(plantilla: PlantillaCableado, c: EvaluacionCelda): String {
+    fun completo(plantilla: PlantillaCableado, c: EvaluacionCelda, resolver: StringResolver): String {
         val condicion = plantilla.condicion(c.condicion)?.etiqueta ?: c.condicion
-        return "${cable(plantilla, c.funcion)} · $condicion: ${valor(c.valor, c.unidad)}, ${estado(c.estado)} (${c.referencia})"
+        return "${cable(plantilla, c.funcion, resolver)} · $condicion: ${valor(c.valor, c.unidad, resolver)}, ${estado(c.estado, resolver)} (${c.referencia})"
     }
 }
 

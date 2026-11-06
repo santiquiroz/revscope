@@ -5,6 +5,7 @@ import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.pruebas.DesfaseVoltaje
 import com.revscope.core.obd.taller.pruebas.FasePaso
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
+import java.util.Locale
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.taller.sesion.Veredicto
 
@@ -18,6 +19,7 @@ data class PruebaGuiadaUi(
     val mensaje: String? = null,
     val desfase: DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR,
     val voltajeAdaptador: Double? = null,
+    val locale: Locale = Locale.getDefault(),
 ) {
     val titulo: String get() = fase.tipo?.titulo ?: "Pruebas guiadas"
     val vref: ReferenciaVoltaje get() = referencia.usada

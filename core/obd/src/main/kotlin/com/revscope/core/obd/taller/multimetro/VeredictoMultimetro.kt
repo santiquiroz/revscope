@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.multimetro
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.sesion.Veredicto
 
@@ -22,15 +23,16 @@ object VeredictoMultimetro {
         lecturas: List<LecturaMultimetro>,
         bandas: Map<String, BandaReferencia>,
         ecu: LecturasEcu? = null,
+        resolver: StringResolver,
     ): VeredictoCombinado {
-        val celdas = EvaluadorCelda.evaluarTodas(plantilla, lecturas, bandas)
+        val celdas = EvaluadorCelda.evaluarTodas(plantilla, lecturas, bandas, resolver)
         val sensor = plantilla.cable(FuncionCable.SENAL) != null
         return VeredictoCombinado(
             veredicto = veredicto(celdas),
-            titulo = if (sensor) TextosMultimetro.tituloSensor(plantilla, celdas) else TextosMultimetro.tituloGeneral(plantilla, celdas),
-            interpretacion = if (sensor) TextosMultimetro.interpretacionSensor(celdas) else TextosMultimetro.interpretacionGeneral(plantilla, celdas),
+            titulo = if (sensor) TextosMultimetro.tituloSensor(plantilla, celdas, resolver) else TextosMultimetro.tituloGeneral(plantilla, celdas, resolver),
+            interpretacion = if (sensor) TextosMultimetro.interpretacionSensor(celdas, resolver) else TextosMultimetro.interpretacionGeneral(plantilla, celdas, resolver),
             celdas = celdas,
-            ecu = ComparadorEcu.comparar(plantilla, EvaluadorCelda.filaDe(lecturas, FuncionCable.SENAL), ecu),
+            ecu = ComparadorEcu.comparar(plantilla, EvaluadorCelda.filaDe(lecturas, FuncionCable.SENAL), ecu, resolver),
         )
     }
 

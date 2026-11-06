@@ -2,6 +2,7 @@ package com.revscope.feature.sensors
 
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.designsystem.EstiloLinea
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
@@ -16,7 +17,11 @@ import org.junit.Test
 class MapeoGraficaCapturaTest {
 
     private val tipica = EstadoVref(ReferenciaVoltaje.TIPICA, null, null)
-    private val resolver = XmlStringResolver.es(R::class.java)
+    private val resolver = XmlStringResolver.es(
+        R::class.java,
+        ObdR::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
 
     private fun entrada(
         unidad: UnidadPosicion = UnidadPosicion.PORCENTAJE,
@@ -170,7 +175,11 @@ class MapeoGraficaCapturaTest {
 
     @Test
     fun `the accessible summary is translated to English`() {
-        val english = XmlStringResolver.en(R::class.java)
+        val english = XmlStringResolver.en(
+            R::class.java,
+            ObdR::class.java,
+            resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+        )
         val data = entrada(series = mapOf("0C" to listOf(0L to 1_000.0, 1_000L to 2_000.0)))
             .copy(nombre = { "Engine speed" })
         val ui = MapeoGraficaCaptura.de(data, english)

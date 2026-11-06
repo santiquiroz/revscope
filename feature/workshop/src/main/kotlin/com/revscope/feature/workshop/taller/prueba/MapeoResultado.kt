@@ -1,11 +1,12 @@
 package com.revscope.feature.workshop.taller.prueba
 
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.BandaGrafica
 import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
 import com.revscope.core.designsystem.SerieGrafica
 import com.revscope.core.designsystem.TramoGrafica
-import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.grafica.BandasPosicion
 import com.revscope.core.obd.taller.grafica.FormatoPosicion
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
@@ -35,14 +36,14 @@ internal object MapeoResultado {
         Pasos.A_FONDO to ClavesBanda.TPS_FONDO_V,
     )
 
-    fun de(t: EstadoPrueba.Terminada): ResultadoUi {
+    fun de(t: EstadoPrueba.Terminada, resolver: StringResolver): ResultadoUi {
         val base = base(t)
         return when (val detalle = t.resultado.detalle) {
-            is AnalisisBarridoTps -> conBarrido(base, detalle, t.datos)
-            is AnalisisMinimo -> MapeoResultadoMotor.minimo(base, detalle, t.datos)
-            is AnalisisArranqueFrio -> MapeoResultadoMotor.arranque(base, detalle, t.datos)
-            is AnalisisBateria -> MapeoResultadoElectrico.bateria(base, detalle, t.datos)
-            is AnalisisMapBaro -> MapeoResultadoElectrico.mapBaro(base, detalle, t.datos)
+            is AnalisisBarridoTps -> conBarrido(base, detalle, t.datos, resolver)
+            is AnalisisMinimo -> MapeoResultadoMotor.minimo(base, detalle, t.datos, resolver)
+            is AnalisisArranqueFrio -> MapeoResultadoMotor.arranque(base, detalle, t.datos, resolver)
+            is AnalisisBateria -> MapeoResultadoElectrico.bateria(base, detalle, t.datos, resolver)
+            is AnalisisMapBaro -> MapeoResultadoElectrico.mapBaro(base, detalle, t.datos, resolver)
             else -> base
         }
     }
@@ -66,38 +67,44 @@ internal object MapeoResultado {
         )
     }
 
-    private fun conBarrido(base: ResultadoUi, a: AnalisisBarridoTps, datos: DatosPrueba?) = base.copy(
-        pesas = pesas(a),
-        comprobaciones = a.comprobaciones.map(::comprobacion),
+    private fun conBarrido(
+        base: ResultadoUi,
+        a: AnalisisBarridoTps,
+        datos: DatosPrueba?,
+        resolver: StringResolver,
+    ) = base.copy(
+        pesas = pesas(a, resolver),
+        comprobaciones = a.comprobaciones.map { comprobacion(it, resolver) },
         graficas = listOfNotNull(
-            datos?.let { GraficaResultadoUi("Toda la prueba, en voltios", serie(it, a), leyendaTramos(it) + leyendaBandas(a)) },
+            datos?.let { GraficaResultadoUi("Toda la prueba, en voltios", serie(it, a, resolver), leyendaTramos(it) + leyendaBandas(a, resolver)) },
         ),
-        referencia = referencia(a.vref),
+        referencia = referencia(a.vref, resolver),
         codigoGuia = TextosPrueba.codigoGuia(a.patron),
     )
 
-    fun referencia(vref: ReferenciaVoltaje): String = "Referencia ${FormatoPosicion.voltios(vref.voltios)} · ${vref.origen}"
+    fun referencia(vref: ReferenciaVoltaje, resolver: StringResolver): String =
+        "Referencia ${FormatoPosicion.voltios(vref.voltios, resolver)} · ${vref.origen}"
 
     // ── Pesas: lo medido en cada posición contra su banda ────────────────────
 
-    private fun pesas(a: AnalisisBarridoTps): List<PesaUi> =
-        Pasos.SOSTENIDOS.mapNotNull { clave -> a.paso(clave)?.let { pesa(it, a) } }
+    private fun pesas(a: AnalisisBarridoTps, resolver: StringResolver): List<PesaUi> =
+        Pasos.SOSTENIDOS.mapNotNull { clave -> a.paso(clave)?.let { pesa(it, a, resolver) } }
 
-    private fun pesa(p: EstadisticaPaso, a: AnalisisBarridoTps): PesaUi {
+    private fun pesa(p: EstadisticaPaso, a: AnalisisBarridoTps, resolver: StringResolver): PesaUi {
         val banda = BANDA_POR_PASO[p.clave]?.let { a.comprobacion(it)?.banda }
         val titulo = TextosBarridoTps.TITULOS_PASO[p.clave] ?: p.clave
         val bandaUi = banda?.let(::bandaPesa)
         return PesaUi(
             titulo = titulo,
-            valores = "${FormatoPosicion.porcentaje(p.mediaPct)} · ${FormatoPosicion.voltios(p.mediaV)} · " +
-                "de ${FormatoPosicion.voltios(p.minV)} a ${FormatoPosicion.voltios(p.maxV)} · ${p.n} muestras a ${TextosPrueba.hz(p.hz)}",
+            valores = "${FormatoPosicion.porcentaje(p.mediaPct, resolver)} · ${FormatoPosicion.voltios(p.mediaV, resolver)} · " +
+                "de ${FormatoPosicion.voltios(p.minV, resolver)} a ${FormatoPosicion.voltios(p.maxV, resolver)} · ${p.n} muestras a ${TextosPrueba.hz(p.hz)}",
             minV = p.minV,
             maxV = p.maxV,
             mediaV = p.mediaV,
             escalaV = a.vref.voltios,
             banda = bandaUi,
             nivel = nivel(p.mediaV, banda),
-            descripcion = "$titulo: media ${FormatoPosicion.voltios(p.mediaV)}, " +
+            descripcion = "$titulo: media ${FormatoPosicion.voltios(p.mediaV, resolver)}, " +
                 (bandaUi?.let { "banda ${it.texto}" } ?: "sin banda fija: debe quedar entre cerrado y fondo"),
         )
     }
@@ -114,24 +121,27 @@ internal object MapeoResultado {
         else -> Veredicto.FALLA
     }
 
-    private fun comprobacion(c: Comprobacion): ComprobacionUi {
-        val valor = c.valor?.let { v -> if (c.unidad.isEmpty()) FormatoTaller.numero(v, 2) else "${FormatoTaller.numero(v, 2)} ${c.unidad}" }
+    private fun comprobacion(c: Comprobacion, resolver: StringResolver): ComprobacionUi {
+        val valor = c.valor?.let { v ->
+            val formatted = LocaleNumbers.decimal(v, 2, resolver.locale)
+            if (c.unidad.isEmpty()) formatted else "$formatted ${c.unidad}"
+        }
         val texto = c.banda?.let { "${c.etiqueta}: ${valor ?: "—"} · banda ${TextosBarridoTps.banda(it)}" } ?: c.etiqueta
         return ComprobacionUi(texto, c.cumple)
     }
 
     // ── Serie completa con los pasos sombreados ─────────────────────────────
 
-    private fun serie(datos: DatosPrueba, a: AnalisisBarridoTps): ModeloGrafica {
+    private fun serie(datos: DatosPrueba, a: AnalisisBarridoTps, resolver: StringResolver): ModeloGrafica {
         val puntos = datos.muestras.filter { it.pid == AnalizadorBarridoTps.PID_TPS }
             .sortedBy { it.tMicros }
             .map { PuntoGrafica(it.tMicros / 1_000_000.0, datos.vref.aVoltios(it.valor)) }
         if (puntos.size < 2) return sinSerie()
-        val bandas = BandasPosicion.tps(bandasDe(a), UnidadPosicion.VOLTIOS, datos.vref)
+        val bandas = BandasPosicion.tps(bandasDe(a), UnidadPosicion.VOLTIOS, datos.vref, resolver)
         return ModeloGrafica(
             series = listOf(SerieGrafica("TPS", puntos)),
-            descripcion = "TPS en toda la prueba: de ${FormatoPosicion.voltios(puntos.minOf { it.y })} a " +
-                "${FormatoPosicion.voltios(puntos.maxOf { it.y })}, ${datos.segmentos.size} pasos sombreados. " +
+            descripcion = "TPS en toda la prueba: de ${FormatoPosicion.voltios(puntos.minOf { it.y }, resolver)} a " +
+                "${FormatoPosicion.voltios(puntos.maxOf { it.y }, resolver)}, ${datos.segmentos.size} pasos sombreados. " +
                 bandas.joinToString("; ") { it.descripcion },
             bandas = bandas.map { BandaGrafica(it.etiquetaCorta, it.min, it.max) },
             tramos = datos.segmentos.mapIndexed { i, s -> TramoGrafica("${i + 1}", s.inicioMs / 1_000.0, s.finMs / 1_000.0) },
@@ -148,6 +158,6 @@ internal object MapeoResultado {
         datos.segmentos.mapIndexed { i, s -> "${i + 1} ${TextosBarridoTps.TITULOS_PASO[s.clave] ?: s.clave}" }.joinToString(" · "),
     ).filter { it.isNotEmpty() }
 
-    private fun leyendaBandas(a: AnalisisBarridoTps): List<String> =
-        BandasPosicion.tps(bandasDe(a), UnidadPosicion.VOLTIOS, a.vref).map { it.descripcion }
+    private fun leyendaBandas(a: AnalisisBarridoTps, resolver: StringResolver): List<String> =
+        BandasPosicion.tps(bandasDe(a), UnidadPosicion.VOLTIOS, a.vref, resolver).map { it.descripcion }
 }

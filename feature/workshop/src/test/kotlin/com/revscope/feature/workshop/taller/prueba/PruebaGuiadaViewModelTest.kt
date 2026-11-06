@@ -46,6 +46,11 @@ class PruebaGuiadaViewModelTest {
     private val captura = CapturaQuieta { relojMs }
     private val enlace = EnlaceQuieto()
     private val preferencias = PreferenciasEnMemoria()
+    private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.designsystem.R::class.java,
+        resDirs = listOf("../../core/obd/src/main/res", "../../core/designsystem/src/main/res"),
+    )
     private val desfases = DesfasesEnMemoria()
     private lateinit var taller: TallerDePrueba
     private lateinit var controlador: ControladorPruebaGuiada
@@ -64,9 +69,9 @@ class PruebaGuiadaViewModelTest {
 
     private fun vm(tipo: TipoPrueba? = TipoPrueba.TPS_BARRIDO) = PruebaGuiadaViewModel(
         SavedStateHandle(tipo?.let { mapOf(PruebaGuiadaViewModel.ARG_TIPO to it.name) } ?: emptyMap()),
-        controlador, enlace, taller.entorno, FuenteVref(preferencias, taller.repositorio) { BENELLI }, { emptyList() },
+        controlador, enlace, taller.entorno, FuenteVref(preferencias, taller.repositorio, resolver) { BENELLI }, { emptyList() },
         taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI },
-        com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, com.revscope.core.designsystem.R::class.java, resDirs = listOf("../../core/obd/src/main/res", "../../core/designsystem/src/main/res")),
+        resolver,
     ).also { v -> CoroutineScope(despachador).launch { v.estado.collect { } } }
 
     @Test

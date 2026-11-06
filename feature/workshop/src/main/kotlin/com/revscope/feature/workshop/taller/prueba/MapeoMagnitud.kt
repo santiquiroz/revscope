@@ -1,10 +1,11 @@
 package com.revscope.feature.workshop.taller.prueba
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.designsystem.BandaGrafica
 import com.revscope.core.designsystem.ModeloGrafica
 import com.revscope.core.designsystem.PuntoGrafica
 import com.revscope.core.designsystem.SerieGrafica
-import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.grafica.Tendencia
 import com.revscope.core.obd.taller.pruebas.AnalizadorBateria
 import com.revscope.core.obd.taller.pruebas.AnalizadorMinimo
@@ -24,7 +25,9 @@ internal data class Magnitud(
     val spanMinimo: Double,
     val fuente: String? = null,
 ) {
-    fun texto(valor: Double): String = "${FormatoTaller.numero(valor, decimales)} $unidad".trim()
+    fun texto(valor: Double, resolver: StringResolver): String =
+        "${LocaleNumbers.decimal(valor, decimales, resolver.locale)} $unidad".trim()
+
 }
 
 internal object MapeoMagnitud {
@@ -59,9 +62,9 @@ internal object MapeoMagnitud {
         else -> Magnitud("PID $pid", "", 1, 0.0, 0.0)
     }
 
-    fun valorVivo(pid: String, valor: Double): ValorVivoUi {
+    fun valorVivo(pid: String, valor: Double, resolver: StringResolver): ValorVivoUi {
         val m = de(pid)
-        return ValorVivoUi(etiqueta = "${m.nombre} · ${m.fuente ?: "PID ${pid.uppercase()}"}", principal = m.texto(valor))
+        return ValorVivoUi(etiqueta = "${m.nombre} · ${m.fuente ?: "PID ${pid.uppercase()}"}", principal = m.texto(valor, resolver))
     }
 
     fun banda(pid: String, clavePaso: String, bandas: Map<String, BandaReferencia>): BandaReferencia? =
@@ -72,8 +75,8 @@ internal object MapeoMagnitud {
         return if (b.origen == OrigenBanda.TIPICO) n.tipico else n.nombre
     }
 
-    fun leyenda(b: BandaReferencia): String =
-        "${NOMBRES[b.clave]?.nombre ?: b.clave}: ${TextoBanda.rango(b, decimales(b))} · ${b.etiquetaOrigen}"
+    fun leyenda(b: BandaReferencia, resolver: StringResolver): String =
+        "${NOMBRES[b.clave]?.nombre ?: b.clave}: ${TextoBanda.rango(b, decimales(b), resolver)} · ${b.etiquetaOrigen(resolver)}"
 
     // Solo se sombrea una banda con los dos bordes; la de un solo lado (≥ 9,6 V) va en la leyenda.
     fun bandaGrafica(b: BandaReferencia): BandaGrafica? {
@@ -82,13 +85,13 @@ internal object MapeoMagnitud {
         return BandaGrafica(etiquetaCorta(b), desde, hasta)
     }
 
-    fun grafica(pid: String, serie: SerieVivo, ventanaMs: Long, banda: BandaReferencia?): ModeloGrafica {
+    fun grafica(pid: String, serie: SerieVivo, ventanaMs: Long, banda: BandaReferencia?, resolver: StringResolver): ModeloGrafica {
         val m = de(pid)
         val ultimo = serie.lastOrNull()?.first ?: 0L
         val puntos = serie.filter { ultimo - it.first <= ventanaMs }.map { (t, v) -> PuntoGrafica((t - ultimo) / 1_000.0, v) }
         return ModeloGrafica(
             series = listOf(SerieGrafica(m.nombre, puntos)),
-            descripcion = descripcion(pid, m, puntos.map { it.y }, banda),
+            descripcion = descripcion(pid, m, puntos.map { it.y }, banda, resolver),
             bandas = listOfNotNull(banda?.let(::bandaGrafica)),
             rangoX = -ventanaMs / 1_000.0..0.0,
             rangoY = rangoY(puntos.map { it.y } + listOfNotNull(banda?.min, banda?.max), m.spanMinimo),
@@ -105,11 +108,11 @@ internal object MapeoMagnitud {
 
     private fun decimales(b: BandaReferencia): Int = if (b.unidad == "V") 1 else 0
 
-    private fun descripcion(pid: String, m: Magnitud, valores: List<Double>, banda: BandaReferencia?): String {
-        val objetivo = banda?.let { ". Banda: ${leyenda(it)}" }.orEmpty()
+    private fun descripcion(pid: String, m: Magnitud, valores: List<Double>, banda: BandaReferencia?, resolver: StringResolver): String {
+        val objetivo = banda?.let { ". Banda: ${leyenda(it, resolver)}" }.orEmpty()
         val origen = m.fuente ?: "PID $pid"
         if (valores.isEmpty()) return "${m.nombre} ($origen) en los últimos 10 s: esperando muestras$objetivo"
-        return "${m.nombre} ($origen) en los últimos 10 s: de ${m.texto(valores.min())} a ${m.texto(valores.max())}, " +
-            "${Tendencia.de(valores, m.estableHasta)}$objetivo"
+        return "${m.nombre} ($origen) en los últimos 10 s: de ${m.texto(valores.min(), resolver)} a ${m.texto(valores.max(), resolver)}, " +
+            "${Tendencia.de(valores, m.estableHasta, resolver)}$objetivo"
     }
 }

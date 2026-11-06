@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.grafica
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.sesion.BENELLI
 import com.revscope.core.obd.taller.sesion.EventoTaller
@@ -13,6 +15,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class FuenteVrefTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private fun medicion(instante: Long, payload: String) = EventoTaller(
         sesionId = 0,
@@ -28,14 +31,14 @@ class FuenteVrefTest {
 
     @Test
     fun `sin mediciones de la referencia en la sesion no hay vref medida`() {
-        assertNull(VrefSesion.desde(emptyList()))
-        assertNull(VrefSesion.desde(listOf(medicion(1, """{"lecturas":[{"funcion":"SENAL","valor":0.1,"unidad":"V"}]}"""))))
-        assertNull(VrefSesion.desde(listOf(medicion(1, "no es json"))))
+        assertNull(VrefSesion.desde(emptyList(), resolver))
+        assertNull(VrefSesion.desde(listOf(medicion(1, """{"lecturas":[{"funcion":"SENAL","valor":0.1,"unidad":"V"}]}""")), resolver))
+        assertNull(VrefSesion.desde(listOf(medicion(1, "no es json")), resolver))
     }
 
     @Test
     fun `la referencia medida es el promedio de la ultima medicion y lo dice`() {
-        val vref = VrefSesion.desde(listOf(medicion(2, lecturas(5.02, 4.98, 5.0)), medicion(1, lecturas(4.5))))!!
+        val vref = VrefSesion.desde(listOf(medicion(2, lecturas(5.02, 4.98, 5.0)), medicion(1, lecturas(4.5))), resolver)!!
 
         assertEquals(5.0, vref.voltios, 1e-9)
         assertEquals(VrefSesion.ORIGEN, vref.origen)
@@ -45,7 +48,7 @@ class FuenteVrefTest {
     fun `una lectura fuera de rango o en otra unidad no cuenta como referencia`() {
         val fuera = """{"lecturas":[{"funcion":"REF_5V","valor":12.4,"unidad":"V"},{"funcion":"REF_5V","valor":4900,"unidad":"mV"}]}"""
 
-        assertNull(VrefSesion.desde(listOf(medicion(1, fuera))))
+        assertNull(VrefSesion.desde(listOf(medicion(1, fuera)), resolver))
     }
 
     @Test
@@ -61,9 +64,9 @@ class FuenteVrefTest {
     fun `restablecer solo se ofrece con un valor editado y dice a donde vuelve`() {
         val medida = ReferenciaVoltaje(4.96, VrefSesion.ORIGEN)
 
-        assertNull(ResolutorVref.textoRestablecer(EstadoVref(medida, medida, null)))
-        assertEquals("Usar la del multímetro (4,96 V)", ResolutorVref.textoRestablecer(EstadoVref(ReferenciaVoltaje.editada(4.9), medida, 4.9)))
-        assertEquals("Volver a 5,0 V típico", ResolutorVref.textoRestablecer(EstadoVref(ReferenciaVoltaje.editada(4.9), null, 4.9)))
+        assertNull(ResolutorVref.textoRestablecer(EstadoVref(medida, medida, null), resolver))
+        assertEquals("Usar la del multímetro (4,96 V)", ResolutorVref.textoRestablecer(EstadoVref(ReferenciaVoltaje.editada(4.9), medida, 4.9), resolver))
+        assertEquals("Volver a 5,0 V típico", ResolutorVref.textoRestablecer(EstadoVref(ReferenciaVoltaje.editada(4.9), null, 4.9), resolver))
     }
 
     @Test
@@ -80,7 +83,7 @@ class FuenteVrefTest {
         val repositorio = TallerRepositoryEnMemoria()
         val preferencias = PreferenciasVrefEnMemoria()
         var vehiculo: VehiculoTaller? = BENELLI
-        val fuente = FuenteVref(preferencias, repositorio) { vehiculo }
+        val fuente = FuenteVref(preferencias, repositorio, resolver) { vehiculo }
         val sesionId = repositorio.abrirSesion(SesionTaller(vehiculoId = BENELLI.id, inicio = 1, titulo = "TPS"))
         repositorio.agregarEvento(medicion(2, lecturas(4.96)).copy(sesionId = sesionId))
 

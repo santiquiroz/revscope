@@ -90,6 +90,7 @@ class PruebaGuiadaViewModel @Inject constructor(
             mensaje = l.mensaje,
             desfase = l.desfase,
             voltajeAdaptador = l.voltajeAdaptador,
+            locale = resolver.locale,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(DETENER_TRAS_MS), PruebaGuiadaUi(FasePantalla.Elegir(emptyList())))
 

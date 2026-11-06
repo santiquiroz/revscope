@@ -84,7 +84,7 @@ object MapeoGraficaCaptura {
     ): PanelGrafica {
         val vref = e.referencia.usada
         val posicion = grupo == GRUPO_POSICION
-        val bandas = if (PID_TPS in series) BandasPosicion.tps(e.bandas, e.unidad, vref) else emptyList()
+        val bandas = if (PID_TPS in series) BandasPosicion.tps(e.bandas, e.unidad, vref, resolver) else emptyList()
         val lineas = series.entries.mapIndexed { i, (pid, serie) -> serieGrafica(pid, serie, i, e.unidad, vref) }
         return PanelGrafica(
             titulo = if (posicion) tituloPosicion(e.unidad, resolver) else tituloPanel(series.keys, grupo, e, resolver),
@@ -186,11 +186,7 @@ object MapeoGraficaCaptura {
     private fun resumenPid(pid: String, serie: SerieCaptura, e: EntradaGraficaCaptura, resolver: StringResolver): String {
         val (principal, secundario) = textos(pid, serie.last().second, e, resolver)
         val valor = secundario?.let { "$principal ($it)" } ?: principal
-        val tendencia = when (Tendencia.de(serie.map { it.second }, umbralEstable(pid, serie, e.referencia.usada))) {
-            "estable" -> resolver.get(R.string.sensors_graph_trend_stable)
-            "subiendo" -> resolver.get(R.string.sensors_graph_trend_rising)
-            else -> resolver.get(R.string.sensors_graph_trend_falling)
-        }
+        val tendencia = Tendencia.de(serie.map { it.second }, umbralEstable(pid, serie, e.referencia.usada), resolver)
         return resolver.get(R.string.sensors_graph_pid_summary, pid, e.nombre(pid), valor, tendencia)
     }
 

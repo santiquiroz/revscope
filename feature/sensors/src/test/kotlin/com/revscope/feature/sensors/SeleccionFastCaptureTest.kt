@@ -1,12 +1,19 @@
 package com.revscope.feature.sensors
 
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SeleccionFastCaptureTest {
+    private val resolver = XmlStringResolver.es(
+        R::class.java,
+        ObdR::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
 
     @Test
     fun `retira los PIDs seleccionados cuando la ECU confirma que no los soporta`() {
@@ -95,5 +102,5 @@ class SeleccionFastCaptureTest {
     }
 
     private fun disponibilidad(pid: String, estado: EstadoSoporte) =
-        DisponibilidadPid.resolver(pid, "parámetro", estado)
+        DisponibilidadPid.resolver(pid, "parámetro", estado, resolver)
 }

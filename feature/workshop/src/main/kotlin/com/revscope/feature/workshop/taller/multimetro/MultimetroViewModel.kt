@@ -3,6 +3,7 @@ package com.revscope.feature.workshop.taller.multimetro
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.multimetro.AsistenteMultimetro
 import com.revscope.core.obd.taller.multimetro.FuncionCable
 import com.revscope.core.obd.taller.multimetro.SensorMultimetro
@@ -26,6 +27,7 @@ class MultimetroViewModel @Inject constructor(
     guardado: SavedStateHandle,
     private val asistente: AsistenteMultimetro,
     private val registro: RegistroTaller,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val inicial = guardado.get<String>(ARG_SENSOR)
@@ -33,8 +35,8 @@ class MultimetroViewModel @Inject constructor(
 
     private val local = MutableStateFlow(LocalMultimetro(sensor = inicial))
 
-    val estado: StateFlow<MultimetroUi> = local.map(MapeoMultimetro::ui)
-        .stateIn(viewModelScope, SharingStarted.Eagerly, MapeoMultimetro.ui(local.value))
+    val estado: StateFlow<MultimetroUi> = local.map { MapeoMultimetro.ui(it, resolver) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, MapeoMultimetro.ui(local.value, resolver))
 
     init {
         cargar(inicial)
@@ -77,7 +79,7 @@ class MultimetroViewModel @Inject constructor(
             registro.abrirSesion(SolicitudSesion(titulo = "Multímetro: ${plantilla.titulo}"))
                 .onFailure { return@trabajar avisar(it.message ?: "No se pudo abrir la sesión") }
         }
-        val id = asistente.guardarTabla(plantilla, VeredictoMultimetro.combinar(plantilla, lecturas, ctx.bandas, ctx.ecu))
+        val id = asistente.guardarTabla(plantilla, VeredictoMultimetro.combinar(plantilla, lecturas, ctx.bandas, ctx.ecu, resolver))
         avisar(if (id != null) "Medición guardada en la sesión" else "No se pudo guardar la medición")
         recargarContexto()
     }

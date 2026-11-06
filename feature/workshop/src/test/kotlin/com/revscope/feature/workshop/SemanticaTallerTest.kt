@@ -11,6 +11,7 @@ import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.legal.DocumentStatusCalculator
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -26,8 +27,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], qualifiers = "es")
 class SemanticaTallerTest {
     private val resolverEs = XmlStringResolver.es(
+        ObdR::class.java,
         DesignSystemR::class.java,
-        resDirs = listOf("../../core/designsystem/src/main/res"),
+        resDirs = listOf("../../core/obd/src/main/res", "../../core/designsystem/src/main/res"),
     )
 
     @get:Rule
@@ -81,7 +83,7 @@ class SemanticaTallerTest {
                 LiveMixtureContent(
                     readings = emptyMap(),
                     definition = registry::getDefinition,
-                    disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, registry) },
+                    disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, registry, resolverEs) },
                 )
             }
         }

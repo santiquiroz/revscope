@@ -140,7 +140,7 @@ class ObdSessionManager @Inject constructor(
     private val _readings = MutableStateFlow<Map<String, ObdReading>>(emptyMap())
     val readings: StateFlow<Map<String, ObdReading>> = _readings.asStateFlow()
 
-    private val _capacidadesEcu = MutableStateFlow(CapacidadesEcu.desde(null, emptySet()))
+    private val _capacidadesEcu = MutableStateFlow(CapacidadesEcu.desde(null, emptySet(), resolver))
     val capacidadesEcu: StateFlow<CapacidadesEcu> = _capacidadesEcu.asStateFlow()
 
     private val _lastAdapterAddress = MutableStateFlow<String?>(null)
@@ -323,7 +323,7 @@ class ObdSessionManager @Inject constructor(
             captura.estadisticas.collect { estadisticas ->
                 val tasa = estadisticas?.hzPorPid?.values?.takeIf { it.isNotEmpty() }?.average()
                 _capacidadesEcu.update { actual ->
-                    CapacidadesEcu.desde(protocoloDpn, actual.pidsAnunciados, tasa)
+                    CapacidadesEcu.desde(protocoloDpn, actual.pidsAnunciados, resolver, tasa)
                 }
             }
         }
@@ -995,7 +995,7 @@ class ObdSessionManager @Inject constructor(
         elmVersion = negotiationResult.elmVersion
         protocoloDpn = probe(bt, "AT DPN\r", DPN_TIMEOUT_MS)?.let(ResponseParser::cleanResponse) // i18n-ignore
         protocoloEsCan = ProtocolInfo.esCan(protocoloDpn)
-        _capacidadesEcu.value = CapacidadesEcu.desde(protocoloDpn, negotiationResult.supportedPids)
+        _capacidadesEcu.value = CapacidadesEcu.desde(protocoloDpn, negotiationResult.supportedPids, resolver)
         alertsEngine.reloadThresholds()
         resolveProfileByVin(bt)
         if (_activeProfile.value == null) activateProfileByAdapter()
@@ -1099,7 +1099,7 @@ class ObdSessionManager @Inject constructor(
         registry.limpiarSoporte()
         protocoloDpn = null
         protocoloEsCan = null
-        _capacidadesEcu.value = CapacidadesEcu.desde(null, emptySet())
+        _capacidadesEcu.value = CapacidadesEcu.desde(null, emptySet(), resolver)
     }
 
     private fun limpiarLecturasObd() {

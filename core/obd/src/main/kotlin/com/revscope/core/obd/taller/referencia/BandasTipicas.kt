@@ -44,13 +44,13 @@ object BandasTipicas {
         tipica(ClavesBanda.TPS_RECORRIDO_MIN_V, 3.0, null, "V"),
         tipica(ClavesBanda.TPS_RUIDO_MAX_V, null, 0.06, "V"),
         tipica(ClavesBanda.TPS_REPETIBILIDAD_V, null, 0.10, "V"),
-        tipica(ClavesBanda.TPS_LINEALIDAD, 0.2, 0.8, "proporción"),
+        tipica(ClavesBanda.TPS_LINEALIDAD, 0.2, 0.8, "proporción"), // i18n-ignore
         tipica(ClavesBanda.REF_5V_V, 4.8, 5.2, "V"),
         tipica(ClavesBanda.MASA_V, 0.0, 0.1, "V"),
         tipica(ClavesBanda.INYECTOR_OHM, 10.0, 16.0, "Ω"),
         tipica(ClavesBanda.MINIMO_DERIVA_MAX, null, 10.0, "rpm/s"),
         tipica(ClavesBanda.MINIMO_DESVIACION_MAX, null, 50.0, "rpm"),
-        tipica(ClavesBanda.RETORNO_VALLE_MIN, 70.0, null, "% del mínimo"),
+        tipica(ClavesBanda.RETORNO_VALLE_MIN, 70.0, null, "% del mínimo"), // i18n-ignore
         tipica(ClavesBanda.MOTOR_FRIO_ECT_IAT_DELTA_C, null, 5.0, "°C"),
         tipica(ClavesBanda.BATERIA_CONTACTO_V, 12.4, null, "V"),
         tipica(ClavesBanda.BATERIA_CONTACTO_CON_LUCES_V, 12.2, null, "V"),

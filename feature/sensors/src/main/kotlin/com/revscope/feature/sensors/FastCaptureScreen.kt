@@ -274,7 +274,7 @@ private fun GraficaCaptura(vm: FastCaptureViewModel) {
             onGuardar = vm::guardarVref,
             onCerrar = vm::cerrarVref,
             medida = ui.referencia.medida?.let { "${LocaleNumbers.decimal(it.voltios, 2, LocalConfiguration.current.locales[0])} V" },
-            textoRestablecer = ResolutorVref.textoRestablecer(ui.referencia),
+            textoRestablecer = vm.textoRestablecerVref(ui.referencia),
         )
     }
 }

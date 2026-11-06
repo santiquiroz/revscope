@@ -31,9 +31,9 @@ data class PlantillaCableado(
     val condicionesEcu: Set<String> = emptySet(),
 ) {
     init {
-        require(cables.isNotEmpty()) { "La plantilla de $sensor no tiene cables" }
-        require(cables.map { it.funcion }.toSet().size == cables.size) { "La plantilla de $sensor repite una función" }
-        require(condiciones.isNotEmpty()) { "La plantilla de $sensor no tiene condiciones" }
+        require(cables.isNotEmpty()) { "La plantilla de $sensor no tiene cables" } // i18n-ignore
+        require(cables.map { it.funcion }.toSet().size == cables.size) { "La plantilla de $sensor repite una función" } // i18n-ignore
+        require(condiciones.isNotEmpty()) { "La plantilla de $sensor no tiene condiciones" } // i18n-ignore
     }
 
     val conColores: Boolean get() = cables.any { it.color != null }

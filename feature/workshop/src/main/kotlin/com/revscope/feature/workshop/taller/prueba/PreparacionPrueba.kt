@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,9 +37,10 @@ import com.revscope.core.designsystem.BarraConVolver
 import com.revscope.core.designsystem.DialogoReferenciaVoltaje
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
-import com.revscope.core.obd.taller.FormatoTaller
-import com.revscope.core.obd.taller.grafica.FormatoPosicion
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.taller.grafica.ResolutorVref
+import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 
 // ── Elegir prueba ───────────────────────────────────────────────────────────
@@ -96,7 +98,7 @@ internal fun ColumnScope.PreparacionPrueba(fase: FasePantalla.Preparacion, estad
             Text("${i + 1}. $paso", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
         }
         Seccion("Ajustes")
-        if (fase.usaVref) FilaVref(estado.vref, acciones.onPedirVref)
+        if (fase.usaVref) FilaVref(estado.vref, estado.locale, acciones.onPedirVref)
         if (fase.usaDesfase) FilaDesfase(estado.desfase, acciones.onPedirDesfase)
         FilaVoz(estado.voz, acciones.onVoz)
     }
@@ -131,12 +133,12 @@ private fun marcaPrecondicion(item: ItemPrecondicion): Triple<ImageVector, Color
 }
 
 @Composable
-private fun FilaVref(vref: ReferenciaVoltaje, onCambiar: () -> Unit) {
+private fun FilaVref(vref: ReferenciaVoltaje, locale: java.util.Locale, onCambiar: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f)) {
             Text("Referencia para pasar % a V", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
             Text(
-                "${FormatoPosicion.voltios(vref.voltios)} · ${vref.origen}",
+                "${LocaleNumbers.decimal(vref.voltios, 2, locale)} V · ${vref.origen}",
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.body.copy(fontFeatureSettings = "tnum"),
             )
@@ -170,12 +172,18 @@ internal fun FilaVoz(voz: Boolean, onVoz: (Boolean) -> Unit) {
 
 @Composable
 internal fun DialogoVref(estado: PruebaGuiadaUi, onGuardar: (Double?) -> Unit, onCerrar: () -> Unit) {
+    val medida = estado.referencia.medida?.let { "${LocaleNumbers.decimal(it.voltios, 2, estado.locale)} V" }
+    val textoRestablecer = when {
+        estado.referencia.editadaV == null -> null
+        medida != null -> stringResource(ObdR.string.obd_vref_use_multimeter, medida)
+        else -> stringResource(ObdR.string.obd_vref_restore_typical)
+    }
     DialogoReferenciaVoltaje(
         valorInicial = FormatoTaller.numero(estado.vref.voltios, 2),
         leer = ResolutorVref::leer,
         onGuardar = onGuardar,
         onCerrar = onCerrar,
-        medida = estado.referencia.medida?.let { FormatoPosicion.voltios(it.voltios) },
-        textoRestablecer = ResolutorVref.textoRestablecer(estado.referencia),
+        medida = medida,
+        textoRestablecer = textoRestablecer,
     )
 }

@@ -77,7 +77,7 @@ class PerfilCanViewModelTest {
         every { repositorio.leer(PERFIL.id) } returns PERFIL
         every { repositorio.adoptar(PERFIL.id) } returns PERFIL
         every { sesion.connectionState } returns conexion
-        every { sesion.capacidadesEcu } returns MutableStateFlow(CapacidadesEcu.desde(null, emptySet()))
+        every { sesion.capacidadesEcu } returns MutableStateFlow(CapacidadesEcu.SIN_DATOS)
         every { sesion.puedeProbarBus() } returns true
         every { sesion.probarSenal(any()) } returns flowOf(null, "3")
     }

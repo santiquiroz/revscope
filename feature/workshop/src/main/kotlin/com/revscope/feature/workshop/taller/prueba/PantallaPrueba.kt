@@ -33,7 +33,7 @@ internal class PantallaPrueba(
             MapeoPaso.de(e, pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas, resolver),
         )
         is EstadoPrueba.Analizando -> FasePantalla.Analizando(e.tipo)
-        is EstadoPrueba.Terminada -> FasePantalla.Resultado(MapeoResultado.de(e))
+        is EstadoPrueba.Terminada -> FasePantalla.Resultado(MapeoResultado.de(e, resolver))
         is EstadoPrueba.Cancelada -> FasePantalla.Cancelada(e.tipo, e.motivo)
         is EstadoPrueba.Fallida -> FasePantalla.Fallida(e.tipo, e.motivo, e.reintentable)
     }

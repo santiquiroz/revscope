@@ -134,7 +134,7 @@ class EntornoDePrueba(
 ) : EntornoTaller {
     val vehiculoFlujo = MutableStateFlow(vehiculo)
     val conexionFlujo = MutableStateFlow(conexion)
-    val capacidadesFlujo = MutableStateFlow(CapacidadesEcu.desde(null, emptySet()))
+    val capacidadesFlujo = MutableStateFlow(CapacidadesEcu.SIN_DATOS)
 
     override val vehiculo: Flow<VehiculoTaller?> = vehiculoFlujo
     override val conexion: Flow<ConnectionState> = conexionFlujo
