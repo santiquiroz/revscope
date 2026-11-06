@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -47,6 +49,7 @@ private const val FUNCTIONAL_HEADER_11BIT = "7DF"
 class ClassicBtTransport(
     private val bluetoothAdapter: BluetoothAdapter,
     private val deviceAddress: String,
+    private val resolver: StringResolver,
 ) : Transport {
 
     private var socket: BluetoothSocket? = null
@@ -80,7 +83,7 @@ class ClassicBtTransport(
             _state.value = ConnectionState.Connected(name)
             Timber.i("ClassicBT connected to $name ($deviceAddress)")
         }.onFailure { e ->
-            _state.value = ConnectionState.Error(e.message ?: "Connection failed")
+            _state.value = ConnectionState.Error(e.message ?: resolver.get(R.string.obd_connection_failed))
             Timber.e(e, "ClassicBT connection failed for $deviceAddress")
             cleanupSocket()
         }
@@ -122,7 +125,7 @@ class ClassicBtTransport(
         try {
             withContext(Dispatchers.IO) { btSocket.connect() }
         } catch (e: IOException) {
-            if (!watchdog.isActive) throw IOException("Connect timeout after ${CONNECT_TIMEOUT_MS} ms", e)
+            if (!watchdog.isActive) throw IOException(resolver.get(R.string.obd_connection_connect_timeout, CONNECT_TIMEOUT_MS), e)
             throw e
         } finally {
             watchdog.cancel()
@@ -142,7 +145,7 @@ class ClassicBtTransport(
     }
 
     override suspend fun send(command: String) = withContext(Dispatchers.IO) {
-        val out = outputStream ?: throw IOException("Not connected — cannot send: $command")
+        val out = outputStream ?: throw IOException(resolver.get(R.string.obd_connection_cannot_send, command))
         out.write(command.toByteArray(Charsets.US_ASCII))
         out.flush()
         Timber.v("TX: ${command.trimEnd()}")
@@ -160,7 +163,7 @@ class ClassicBtTransport(
      * because the caller (ResponseParser) normalises whitespace.
      */
     override suspend fun receive(timeoutMs: Long): String = withContext(Dispatchers.IO) {
-        val input = inputStream ?: throw IOException("Not connected — cannot receive")
+        val input = inputStream ?: throw IOException(resolver.get(R.string.obd_connection_cannot_receive))
         val buffer = StringBuilder()
         val chunk = ByteArray(CHUNK_SIZE)
         val deadline = System.currentTimeMillis() + timeoutMs
@@ -170,7 +173,7 @@ class ClassicBtTransport(
             val available = input.available()
             if (available > 0) {
                 val read = input.read(chunk, 0, minOf(available, CHUNK_SIZE))
-                if (read == -1) throw IOException("Stream closed by remote device")
+                if (read == -1) throw IOException(resolver.get(R.string.obd_connection_stream_closed))
                 if (read > 0) {
                     buffer.append(String(chunk, 0, read, Charsets.US_ASCII))
                     if (buffer.contains(PROMPT_CHAR)) break
@@ -181,9 +184,7 @@ class ClassicBtTransport(
                 pollDelayMs = minOf(pollDelayMs * 2, readPollMaxMs)
             }
             if (System.currentTimeMillis() >= deadline) {
-                throw IOException(
-                    "Read timeout after ${timeoutMs} ms without prompt; partial: \"${buffer.trim()}\""
-                )
+                throw IOException(resolver.get(R.string.obd_connection_read_timeout, timeoutMs, buffer.trim()))
             }
         }
 
@@ -214,7 +215,7 @@ class ClassicBtTransport(
         detener: () -> Boolean,
         alLinea: (String) -> Unit,
     ): String {
-        val input = inputStream ?: throw IOException("Not connected — cannot monitor")
+        val input = inputStream ?: throw IOException(resolver.get(R.string.obd_connection_cannot_monitor))
         val total = StringBuilder()
         val pendiente = StringBuilder()
         val plazo = System.currentTimeMillis() + duracionMs
@@ -222,7 +223,8 @@ class ClassicBtTransport(
         while (System.currentTimeMillis() < plazo && !detener()) {
             val available = input.available()
             if (available > 0) {
-                val trozo = leerDisponible(input, available) ?: throw IOException("Stream closed by remote device")
+                val trozo = leerDisponible(input, available)
+                    ?: throw IOException(resolver.get(R.string.obd_connection_stream_closed))
                 total.append(trozo)
                 pendiente.append(trozo)
                 val prompt = pendiente.indexOf(PROMPT_CHAR.toString())
@@ -258,8 +260,8 @@ class ClassicBtTransport(
     ): String = ioMutex.withLock {
         withContext(Dispatchers.IO) { drainStaleInput() }
         try {
-            send("AT H1\r"); receive(AT_RESTORE_TIMEOUT_MS)
-            send("AT SH $requestHeader\r"); receive(AT_RESTORE_TIMEOUT_MS)
+            send("AT H1\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
+            send("AT SH $requestHeader\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
             val cmd = if (request.endsWith("\r")) request else "$request\r"
             send(cmd)
             receive(timeoutMs)
@@ -272,8 +274,8 @@ class ClassicBtTransport(
             withContext(NonCancellable + Dispatchers.IO) {
                 drainStaleInput()
                 runCatching {
-                    send("AT SH $FUNCTIONAL_HEADER_11BIT\r"); receive(AT_RESTORE_TIMEOUT_MS)
-                    send("AT H0\r"); receive(AT_RESTORE_TIMEOUT_MS)
+                    send("AT SH $FUNCTIONAL_HEADER_11BIT\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
+                    send("AT H0\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
                 }
             }
         }

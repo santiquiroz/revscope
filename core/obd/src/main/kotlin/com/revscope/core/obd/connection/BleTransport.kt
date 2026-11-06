@@ -1,6 +1,8 @@
 package com.revscope.core.obd.connection
 
 import android.content.Context
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.welie.blessed.BluetoothCentralManager
 import com.welie.blessed.BluetoothPeripheral
 import com.welie.blessed.ConnectionPriority
@@ -42,6 +44,7 @@ private const val RX_POLL_SLICE_MS = 50L
 class BleTransport(
     context: Context,
     private val deviceAddress: String,
+    private val resolver: StringResolver,
 ) : Transport {
 
     private val central = BluetoothCentralManager(context.applicationContext)
@@ -70,7 +73,7 @@ class BleTransport(
                     // Caída inesperada del enlace — el session manager reacciona igual que
                     // con Classic BT: circuit breaker + auto-reconexión.
                     connected = false
-                    _state.value = ConnectionState.Error("BLE link lost")
+                    _state.value = ConnectionState.Error(resolver.get(R.string.obd_connection_link_lost))
                 }
             }
             val p = central.getPeripheral(deviceAddress)
@@ -78,16 +81,18 @@ class BleTransport(
             peripheral = p
 
             val uuidSet = detectUuidSet(p)
-                ?: throw IOException("No ELM327 BLE service found on $deviceAddress (tried ${BleUuidSets.ALL.size} chip families)")
+                ?: throw IOException(
+                    resolver.get(R.string.obd_connection_no_elm_service, deviceAddress, BleUuidSets.ALL.size),
+                )
             Timber.i("BleTransport: detected chip family ${uuidSet.name}")
 
             runCatching { p.requestMtu(REQUESTED_MTU) }
                 .onFailure { Timber.w("BleTransport: MTU request failed, staying at default") }
 
             val writeChar = p.getCharacteristic(UUID.fromString(uuidSet.service), UUID.fromString(uuidSet.writeChar))
-                ?: throw IOException("Write characteristic missing for ${uuidSet.name}")
+                ?: throw IOException(resolver.get(R.string.obd_connection_missing_write_characteristic, uuidSet.name))
             val notifyChar = p.getCharacteristic(UUID.fromString(uuidSet.service), UUID.fromString(uuidSet.notifyChar))
-                ?: throw IOException("Notify characteristic missing for ${uuidSet.name}")
+                ?: throw IOException(resolver.get(R.string.obd_connection_missing_notify_characteristic, uuidSet.name))
             writeCharacteristic = writeChar
             notifyCharacteristic = notifyChar
             writeType = if (writeChar.properties and android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) {
@@ -97,7 +102,7 @@ class BleTransport(
             }
 
             val observing = p.observe(notifyChar) { value -> incoming.trySend(value) }
-            if (!observing) throw IOException("Could not enable notifications for ${uuidSet.name}")
+            if (!observing) throw IOException(resolver.get(R.string.obd_connection_notifications_failed, uuidSet.name))
 
             connected = true
             val name = p.name.ifBlank { deviceAddress }
@@ -105,7 +110,7 @@ class BleTransport(
             Timber.i("BleTransport connected to $name ($deviceAddress)")
         }.onFailure { e ->
             connected = false
-            _state.value = ConnectionState.Error(e.message ?: "BLE connection failed")
+            _state.value = ConnectionState.Error(e.message ?: resolver.get(R.string.obd_connection_ble_failed))
             Timber.e(e, "BleTransport connection failed for $deviceAddress")
             cleanup()
         }.map { }
@@ -135,8 +140,8 @@ class BleTransport(
     }
 
     override suspend fun send(command: String) {
-        val p = peripheral ?: throw IOException("Not connected — cannot send: $command")
-        val char = writeCharacteristic ?: throw IOException("Not connected — cannot send: $command")
+        val p = peripheral ?: throw IOException(resolver.get(R.string.obd_connection_cannot_send, command))
+        val char = writeCharacteristic ?: throw IOException(resolver.get(R.string.obd_connection_cannot_send, command))
         val payload = command.toByteArray(Charsets.US_ASCII)
         // Comandos ELM son cortos (<20 bytes) pero el MTU default es 23 — trocear por si acaso.
         val chunkSize = (peripheral?.currentMtu ?: 23) - 3
@@ -151,7 +156,7 @@ class BleTransport(
      * la coroutine queda suspendida en el canal — cero wakeups (mejor que RFCOMM).
      */
     override suspend fun receive(timeoutMs: Long): String {
-        if (!connected) throw IOException("Not connected — cannot receive")
+        if (!connected) throw IOException(resolver.get(R.string.obd_connection_cannot_receive))
         val deadline = System.currentTimeMillis() + timeoutMs
 
         while (true) {
@@ -164,16 +169,14 @@ class BleTransport(
             }
             val remaining = deadline - System.currentTimeMillis()
             if (remaining <= 0) {
-                throw IOException(
-                    "Read timeout after ${timeoutMs} ms without prompt; partial: \"${rxBuffer.trim()}\""
-                )
+                throw IOException(resolver.get(R.string.obd_connection_read_timeout, timeoutMs, rxBuffer.trim()))
             }
             // Slice corto para re-chequear connected sin quedar colgado si el enlace muere.
             val chunk = withTimeoutOrNull(minOf(remaining, RX_POLL_SLICE_MS * 10)) { incoming.receive() }
             if (chunk != null) {
                 rxBuffer.append(String(chunk, Charsets.US_ASCII))
             } else if (!connected) {
-                throw IOException("BLE link lost while receiving")
+                throw IOException(resolver.get(R.string.obd_connection_link_lost_receiving))
             }
         }
     }
@@ -220,7 +223,7 @@ class BleTransport(
                 }
                 CortadorLineasMonitor.drenarLineas(pendiente, alLinea)
             } else if (!connected) {
-                throw IOException("BLE link lost while monitoring")
+                throw IOException(resolver.get(R.string.obd_connection_link_lost_monitoring))
             }
         }
         send("\r")
@@ -236,8 +239,8 @@ class BleTransport(
     ): String = ioMutex.withLock {
         drainStaleInput()
         try {
-            send("AT H1\r"); receive(AT_RESTORE_TIMEOUT_MS)
-            send("AT SH $requestHeader\r"); receive(AT_RESTORE_TIMEOUT_MS)
+            send("AT H1\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
+            send("AT SH $requestHeader\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
             val cmd = if (request.endsWith("\r")) request else "$request\r"
             send(cmd)
             receive(timeoutMs)
@@ -247,8 +250,8 @@ class BleTransport(
             withContext(NonCancellable + Dispatchers.IO) {
                 drainStaleInput()
                 runCatching {
-                    send("AT SH $FUNCTIONAL_HEADER_11BIT\r"); receive(AT_RESTORE_TIMEOUT_MS)
-                    send("AT H0\r"); receive(AT_RESTORE_TIMEOUT_MS)
+                    send("AT SH $FUNCTIONAL_HEADER_11BIT\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
+                    send("AT H0\r"); receive(AT_RESTORE_TIMEOUT_MS) // i18n-ignore
                 }
             }
         }

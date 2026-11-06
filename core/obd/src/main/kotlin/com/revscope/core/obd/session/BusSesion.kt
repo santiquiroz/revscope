@@ -56,6 +56,7 @@ internal fun pruebaDeSenal(
     bt: Transport,
     gate: PollingGate,
     senal: SenalCan,
+    resolver: StringResolver,
     ahora: () -> Long = System::currentTimeMillis,
 ): Flow<String?> {
     val perfil = PerfilCan(
@@ -74,7 +75,7 @@ internal fun pruebaDeSenal(
     val lector = LectorBusCan(bt, gate, perfil, modo, res, soloVerificadas = false, ahora = ahora)
     return flow {
         emit(null)
-        emitAll(lector.textos())
+        emitAll(lector.textos(resolver))
     }
 }
 

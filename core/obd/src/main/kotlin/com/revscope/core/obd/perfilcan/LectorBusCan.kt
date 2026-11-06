@@ -1,5 +1,6 @@
 package com.revscope.core.obd.perfilcan
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.escucha.ComandosMonitor
 import com.revscope.core.obd.escucha.LineaMonitor
@@ -37,7 +38,8 @@ class LectorBusCan(
         DecodificadorSenal.valor(senal, datos)?.let { ObdReading(senal.clave, it, senal.unidad, ahora()) }
     }
 
-    fun textos(): Flow<String> = decodificadas(DecodificadorSenal::texto)
+    fun textos(resolver: StringResolver): Flow<String> =
+        decodificadas { senal, datos -> DecodificadorSenal.texto(senal, datos, resolver) }
 
     private fun <T : Any> decodificadas(decodificar: (SenalCan, ByteArray) -> T?): Flow<T> = channelFlow {
         if (senales.isEmpty() || modo == ModoFuente.ESTANDAR) return@channelFlow

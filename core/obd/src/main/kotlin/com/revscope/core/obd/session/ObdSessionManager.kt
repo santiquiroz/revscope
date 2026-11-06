@@ -176,8 +176,8 @@ class ObdSessionManager @Inject constructor(
     internal var transportFactory: (BluetoothAdapter, AdapterType, String) -> Transport =
         { adapter, type, address ->
             when (type) {
-                AdapterType.CLASSIC_BT -> ClassicBtTransport(adapter, address)
-                AdapterType.BLE -> BleTransport(appContext, address)
+                AdapterType.CLASSIC_BT -> ClassicBtTransport(adapter, address, resolver)
+                AdapterType.BLE -> BleTransport(appContext, address, resolver)
             }
         }
     private var telemetryJob: Job? = null
@@ -230,7 +230,7 @@ class ObdSessionManager @Inject constructor(
     fun probarSenal(senal: SenalCan): Flow<String?> {
         val bt = transport
         if (bt == null || !puedeProbarBus()) return flowOf(null)
-        return pruebaDeSenal(bt, pollingGate, senal)
+        return pruebaDeSenal(bt, pollingGate, senal, resolver)
     }
 
     private val lectorDispositivo = AndroidLectorDispositivo(appContext)

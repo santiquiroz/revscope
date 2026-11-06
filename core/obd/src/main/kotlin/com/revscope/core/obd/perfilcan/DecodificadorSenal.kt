@@ -1,5 +1,8 @@
 package com.revscope.core.obd.perfilcan
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
+
 object DecodificadorSenal {
 
     fun valor(senal: SenalCan, datos: ByteArray): Double? {
@@ -8,11 +11,11 @@ object DecodificadorSenal {
         return if (senal.tipo == TipoSenal.NUMERO) numero * senal.factor + senal.offset else numero
     }
 
-    fun texto(senal: SenalCan, datos: ByteArray): String? {
+    fun texto(senal: SenalCan, datos: ByteArray, resolver: StringResolver): String? {
         val crudo = crudoValido(senal, datos) ?: return null
         return when (senal.tipo) {
             TipoSenal.ENUM -> senal.valores[crudo] ?: crudo.toString()
-            TipoSenal.BANDERA -> if (crudo != 0L) "Sí" else "No"
+            TipoSenal.BANDERA -> resolver.get(if (crudo != 0L) R.string.obd_signal_flag_yes else R.string.obd_signal_flag_no)
             TipoSenal.NUMERO -> numeroConUnidad(valor(senal, datos)!!, senal.unidad)
         }
     }

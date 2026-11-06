@@ -146,7 +146,7 @@ class GuardService : Service() {
     private suspend fun classicProbeLoop(address: String) {
         val adapter = BluetoothAdapter.getDefaultAdapter() ?: run { stopSelf(); return }
         while (!triggered) {
-            val probe = ClassicBtTransport(adapter, address)
+            val probe = ClassicBtTransport(adapter, address, resolver)
             val connected = probe.connect().isSuccess && probe.isConnected
             runCatching { probe.disconnect() }
             if (connected) {
