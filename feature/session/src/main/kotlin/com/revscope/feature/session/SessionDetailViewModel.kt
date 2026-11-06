@@ -43,11 +43,14 @@ import timber.log.Timber
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
+internal fun csvLine(vararg columns: Any?): String = columns.joinToString(",") { it.toString() }
+
 private const val CHART_MAX_POINTS = 240
 
 @HiltViewModel
 class SessionDetailViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
+    private val stringResolver: StringResolver,
     private val sessionDao: SessionDao,
     private val debriefGenerator: TripDebriefGenerator,
     private val telemetryDao: TelemetryDao,
@@ -160,7 +163,7 @@ class SessionDetailViewModel @Inject constructor(
             val prevEco = previous.mapNotNull { it.ecoScore }
             val prevMaxSpeed = previous.map { it.maxSpeed }.filter { it > 0 }
             val digest = TripDebriefGenerator.TripDigest(
-                vehicleName = profile?.name ?: "Mi vehículo",
+                vehicleName = profile?.name ?: stringResolver.get(R.string.trips_my_vehicle),
                 // El debrief describe el vehículo de la sesión; sin perfil resoluble no se asume el activo.
                 isMotorcycle = profile?.vehicleType == VehicleType.MOTORCYCLE,
                 distanceKm = if (session.distanceKm > 0) session.distanceKm.toDouble() else report.gpsDistanceKm,
@@ -180,7 +183,7 @@ class SessionDetailViewModel @Inject constructor(
             )
             debriefGenerator.generate(digest).fold(
                 onSuccess = { _debrief.value = DebriefState.Ready(it.trim()) },
-                onFailure = { _debrief.value = DebriefState.Error(it.message?.take(160) ?: "Error generando el análisis") },
+                onFailure = { _debrief.value = DebriefState.Error(it.message?.take(160) ?: stringResolver.get(R.string.trips_debrief_error)) },
             )
         }
     }
@@ -192,7 +195,7 @@ class SessionDetailViewModel @Inject constructor(
     private suspend fun loadReport() {
         try {
             val session = sessionDao.getById(sessionId) ?: run {
-                _state.value = UiState.NotFound("Sesión no encontrada")
+                _state.value = UiState.NotFound(stringResolver.get(R.string.trips_session_error_not_found))
                 return
             }
             val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
@@ -266,7 +269,7 @@ class SessionDetailViewModel @Inject constructor(
             throw e
         } catch (e: Exception) {
             Timber.e(e, "SessionDetail: failed to load report for session $sessionId")
-            _state.value = UiState.NotFound("Error cargando el reporte")
+            _state.value = UiState.NotFound(stringResolver.get(R.string.trips_report_load_error))
         }
     }
 
@@ -318,18 +321,18 @@ class SessionDetailViewModel @Inject constructor(
             val exportDir = File(appContext.cacheDir, "exports").apply { mkdirs() }
             val file = File(exportDir, "revscope_trip_$sessionId.csv")
             file.bufferedWriter().use { out ->
-                out.appendLine("section,timestamp,key,value1,value2")
+                out.appendLine(csvLine("section", "timestamp", "key", "value1", "value2"))
                 telemetry.forEach { p ->
-                    out.appendLine("obd,${p.timestamp},${p.pid},${p.value},")
+                    out.appendLine(csvLine("obd", p.timestamp, p.pid, p.value, ""))
                 }
                 gps.forEach { p ->
-                    out.appendLine("gps,${p.timestamp},${p.latitude},${p.longitude},${p.speedKmh}")
+                    out.appendLine(csvLine("gps", p.timestamp, p.latitude, p.longitude, p.speedKmh))
                 }
                 imuDao.pointsForSession(sessionId).forEach { p ->
-                    out.appendLine("imu,${p.timestamp},${p.gLat},${p.gLong},${p.leanDeg}")
+                    out.appendLine(csvLine("imu", p.timestamp, p.gLat, p.gLong, p.leanDeg))
                 }
                 hrDao.pointsForSession(sessionId).forEach { p ->
-                    out.appendLine("hr,${p.timestamp},${p.bpm},,")
+                    out.appendLine(csvLine("hr", p.timestamp, p.bpm, "", ""))
                 }
             }
             FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
@@ -445,6 +448,7 @@ class SessionDetailViewModel @Inject constructor(
         val s = r.session
         TripShareCard.render(
             appContext,
+            stringResolver,
             TripShareCard.CardData(
                 startedAt = s.startedAt,
                 durationMs = (s.endedAt ?: s.startedAt) - s.startedAt,

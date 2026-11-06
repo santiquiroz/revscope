@@ -8,6 +8,8 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -51,9 +53,9 @@ object TripShareCard {
         val showLean: Boolean = true,
     )
 
-    fun render(context: Context, data: CardData): Uri? = runCatching {
+    fun render(context: Context, resolver: StringResolver, data: CardData): Uri? = runCatching {
         val bitmap = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)
-        draw(Canvas(bitmap), data)
+        draw(Canvas(bitmap), data, resolver)
         val dir = File(context.cacheDir, "exports").apply { mkdirs() }
         val file = File(dir, "revscope_trip_card.png")
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 95, it) }
@@ -61,15 +63,15 @@ object TripShareCard {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }.getOrNull()
 
-    private fun draw(canvas: Canvas, data: CardData) {
+    private fun draw(canvas: Canvas, data: CardData, resolver: StringResolver) {
         canvas.drawColor(BG)
         val title = paint(ACCENT, 64f, bold = true)
         val label = paint(MUTED, 34f)
         val value = paint(TEXT, 56f, bold = true)
 
         // Header
-        canvas.drawText("REVSCOPE", MARGIN, 140f, title)
-        val date = SimpleDateFormat("dd MMM yyyy · HH:mm", Locale("es")).format(Date(data.startedAt))
+        canvas.drawText(resolver.get(R.string.trips_card_brand), MARGIN, 140f, title)
+        val date = SimpleDateFormat("dd MMM yyyy · HH:mm", resolver.locale).format(Date(data.startedAt)) // i18n-ignore
         canvas.drawText(date, MARGIN, 200f, label)
 
         // Route panel
@@ -80,22 +82,35 @@ object TripShareCard {
         if (data.track.size >= 2) {
             drawTrack(canvas, data.track, MARGIN + 48f, mapTop + 48f, WIDTH - 2 * MARGIN - 96f, mapBottom - mapTop - 96f)
         } else {
-            canvas.drawText("Sin track GPS", WIDTH / 2f - 120f, (mapTop + mapBottom) / 2f, label)
+            canvas.drawText(resolver.get(R.string.trips_no_gps_track), WIDTH / 2f - 120f, (mapTop + mapBottom) / 2f, label)
         }
 
         // Stats grid: 2 columns
         val stats = buildList {
-            add("DISTANCIA" to "%.1f km".format(Locale("es"), data.distanceKm))
-            add("DURACIÓN" to formatDuration(data.durationMs))
-            add("VEL MÁX" to "${data.maxSpeed} km/h")
-            add("RPM MÁX" to "${data.maxRpm}")
-            data.best0to100Ms?.let { add("0-100" to "%.2fs".format(it / 1000.0)) }
-            data.maxLateralG?.let { add("G LATERAL" to "%.2f G".format(it)) }
-            if (data.showLean) data.maxLeanDeg?.let { add("LEAN MÁX" to "%.0f°".format(it)) }
-            data.maxBpm?.let { add("♥ MÁX" to "${it} bpm") }
+            add(resolver.get(R.string.trips_card_distance) to resolver.get(
+                R.string.trips_distance_value,
+                LocaleNumbers.decimal(data.distanceKm.toDouble(), 1, resolver.locale),
+            ))
+            add(resolver.get(R.string.trips_card_duration) to formatDuration(data.durationMs, resolver))
+            add(resolver.get(R.string.trips_card_max_speed) to resolver.get(R.string.trips_speed_value, data.maxSpeed))
+            add(resolver.get(R.string.trips_card_max_rpm) to data.maxRpm.toString())
+            data.best0to100Ms?.let { add(resolver.get(R.string.trips_card_0_100) to "%.2fs".format(Locale.ROOT, it / 1000.0)) }
+            data.maxLateralG?.let {
+                add(resolver.get(R.string.trips_card_g_lat) to resolver.get(
+                    R.string.trips_g_value,
+                    LocaleNumbers.decimal(it.toDouble(), 2, resolver.locale),
+                ))
+            }
+            if (data.showLean) data.maxLeanDeg?.let {
+                add(resolver.get(R.string.trips_card_lean_max) to resolver.get(
+                    R.string.trips_lean_value,
+                    LocaleNumbers.decimal(it.toDouble(), 0, resolver.locale),
+                ))
+            }
+            data.maxBpm?.let { add(resolver.get(R.string.trips_card_heart_max) to resolver.get(R.string.trips_card_bpm_value, it)) }
             if (data.lapCount > 0) {
-                add("VUELTAS" to "${data.lapCount}")
-                data.bestLapMs?.let { add("MEJOR VUELTA" to formatLapTime(it)) }
+                add(resolver.get(R.string.trips_card_laps) to data.lapCount.toString())
+                data.bestLapMs?.let { add(resolver.get(R.string.trips_card_best_lap) to formatLapTime(it)) }
             }
         }.take(8)
 
@@ -110,7 +125,7 @@ object TripShareCard {
         }
 
         // Footer
-        canvas.drawText("github.com/santiquiroz/revscope", MARGIN, HEIGHT - 60f, paint(MUTED, 30f))
+        canvas.drawText(resolver.get(R.string.trips_card_gps_footer), MARGIN, HEIGHT - 60f, paint(MUTED, 30f))
     }
 
     private fun drawTrack(canvas: Canvas, track: List<Pair<Double, Double>>, x: Float, y: Float, w: Float, h: Float) {
@@ -152,9 +167,13 @@ object TripShareCard {
         isFakeBoldText = bold
     }
 
-    private fun formatDuration(ms: Long): String =
-        "%dm %02ds".format(TimeUnit.MILLISECONDS.toMinutes(ms), TimeUnit.MILLISECONDS.toSeconds(ms) % 60)
+    private fun formatDuration(ms: Long, resolver: StringResolver): String =
+        resolver.get(
+            R.string.trips_duration_format,
+            TimeUnit.MILLISECONDS.toMinutes(ms),
+            TimeUnit.MILLISECONDS.toSeconds(ms) % 60,
+        )
 
     private fun formatLapTime(ms: Long): String =
-        "%d:%02d.%02d".format(ms / 60_000, (ms % 60_000) / 1000, (ms % 1000) / 10)
+        "%d:%02d.%02d".format(Locale.ROOT, ms / 60_000, (ms % 60_000) / 1000, (ms % 1000) / 10) // i18n-ignore
 }

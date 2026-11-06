@@ -93,7 +93,7 @@ class SessionViewModel @Inject constructor(
     }
 
     companion object {
-        /** [filter] sentinel meaning "sessions with no vehicle assigned" (vehicleProfileId == 0L). */
+        /** [filter] sentinel meaning "sessions with no vehicle assigned" (vehicleProfileId == 0L). */ // i18n-ignore
         const val NO_VEHICLE_FILTER = -1L
     }
 }
