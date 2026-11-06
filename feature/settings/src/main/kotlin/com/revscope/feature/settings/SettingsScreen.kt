@@ -33,10 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.i18n.AppLanguage
 import com.revscope.core.designsystem.FranjaSelectorVehiculo
 import kotlinx.coroutines.delay
 
@@ -98,9 +100,26 @@ fun SettingsScreen(
         onImportRequested = { uri -> pendingImportUri = uri },
     )
 
+    val tagActual = remember { AppLanguage.savedTag(context) }
+    val idiomaSectionEntry = SettingsEntry(
+        SettingsEntryMeta(
+            id = "idioma",
+            section = SettingsSectionId.IDIOMA_UNIDADES,
+            title = stringResource(R.string.settings_entry_language),
+            subtitle = "",
+            keywords = listOf("idioma", "language", "english", "español", "inglés"),
+        ),
+    ) {
+        IdiomaSection(tagActual = tagActual, onElegir = { tag ->
+            AppLanguage.persist(context, tag)
+            restartApp(context)
+        })
+    }
+
     val deepLinkSection = remember(initialExpandedSection) {
         settingsSectionFromDeepLinkKey(initialExpandedSection)
     }
+    val entriesWithLanguage = listOf(idiomaSectionEntry) + entries
     val sectionExpansion = SettingsSectionId.entries.associateWith { section ->
         rememberSaveable(key = section.name) {
             mutableStateOf(
@@ -143,13 +162,13 @@ fun SettingsScreen(
 
             val isSearching = SettingsSearch.isActive(searchQuery)
             val matchedIds = if (isSearching) {
-                SettingsSearch.filter(searchQuery, entries.map { it.meta }).map { it.id }.toSet()
+                SettingsSearch.filter(searchQuery, entriesWithLanguage.map { it.meta }).map { it.id }.toSet()
             } else {
                 null
             }
 
             SettingsSectionId.entries.forEach { section ->
-                val sectionEntries = entries.filter { it.meta.section == section }
+                val sectionEntries = entriesWithLanguage.filter { it.meta.section == section }
                 val visibleEntries = matchedIds?.let { ids -> sectionEntries.filter { it.meta.id in ids } }
                     ?: sectionEntries
                 if (isSearching && visibleEntries.isEmpty()) return@forEach
@@ -157,7 +176,11 @@ fun SettingsScreen(
                 val expandedState = sectionExpansion.getValue(section)
                 val expanded = isSearching || expandedState.value
                 SettingsSectionHeader(
-                    title = section.title,
+                    title = if (section == SettingsSectionId.IDIOMA_UNIDADES) {
+                        stringResource(R.string.settings_section_language)
+                    } else {
+                        section.title
+                    },
                     itemCount = visibleEntries.size,
                     expanded = expanded,
                     onToggle = {
