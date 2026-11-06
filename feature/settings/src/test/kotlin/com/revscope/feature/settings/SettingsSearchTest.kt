@@ -1,5 +1,6 @@
 package com.revscope.feature.settings
 
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -7,27 +8,29 @@ import org.junit.Test
 
 class SettingsSearchTest {
 
+    private val resolverEs = XmlStringResolver.es(R::class.java)
+
     private fun sampleEntries(): List<SettingsEntryMeta> = listOf(
         SettingsEntryMeta(
             id = "radares_velocidad",
             section = SettingsSectionId.RADARES_ALERTAS,
-            title = "Radares de velocidad",
-            subtitle = "Descarga y radio de aviso de radares",
-            keywords = listOf("radar", "camara", "cámara", "fotomulta"),
+            title = resolverEs.get(R.string.settings_entry_speed_cameras_title),
+            subtitle = resolverEs.get(R.string.settings_entry_speed_cameras_subtitle),
+            keywords = resolverEs.get(R.string.settings_search_keywords_speed_cameras).split('|'),
         ),
         SettingsEntryMeta(
             id = "servidor_mcp",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Servidor MCP (red local)",
+            title = resolverEs.get(R.string.settings_entry_mcp_server_title),
             subtitle = "",
-            keywords = listOf("mcp", "claude desktop", "token"),
+            keywords = resolverEs.get(R.string.settings_search_keywords_mcp_server).split('|'),
         ),
         SettingsEntryMeta(
             id = "combustible",
             section = SettingsSectionId.VEHICULO_GARAGE,
-            title = "Combustible",
-            subtitle = "Precios de gasolina, extra y diésel",
-            keywords = emptyList(),
+            title = resolverEs.get(R.string.settings_entry_fuel_title),
+            subtitle = resolverEs.get(R.string.settings_entry_fuel_subtitle),
+            keywords = resolverEs.get(R.string.settings_search_keywords_fuel).split('|'),
         ),
     )
 
@@ -115,6 +118,21 @@ class SettingsSearchTest {
         val entries = sampleEntries()
         val result = SettingsSearch.filter("gasolina", entries)
         assertEquals(listOf("combustible"), result.map { it.id })
+    }
+
+    @Test
+    fun `english crash search finds crash detection`() {
+        val resolverEn = XmlStringResolver.en(R::class.java)
+        val entry = SettingsEntryMeta(
+            id = "deteccion_caida",
+            section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
+            title = resolverEn.get(R.string.settings_entry_crash_detection_title),
+            subtitle = resolverEn.get(R.string.settings_entry_crash_detection_subtitle),
+            keywords = resolverEn.get(R.string.settings_search_keywords_crash_detection).split('|'),
+        )
+
+        assertEquals(listOf(entry), SettingsSearch.filter("crash", listOf(entry)))
+        assertEquals("Crash detection", entry.title)
     }
 
     @Test
