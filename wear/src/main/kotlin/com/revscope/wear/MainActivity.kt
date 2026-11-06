@@ -16,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,7 +88,7 @@ private fun WearApp(streamer: HrStreamer, onToggle: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 color = if (streaming) AccentColor else MutedColor,
             )
-            Text("♥ bpm", fontSize = 12.sp, color = MutedColor)
+            Text(stringResource(R.string.wear_bpm_label), fontSize = 12.sp, color = MutedColor)
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = onToggle,
@@ -102,8 +104,12 @@ private fun WearApp(streamer: HrStreamer, onToggle: () -> Unit) {
             }
             if (streaming) {
                 Spacer(Modifier.height(4.dp))
-                Text("$sent enviados", fontSize = 10.sp, color = MutedColor)
+                Text(sentCountText(sent), fontSize = 10.sp, color = MutedColor)
             }
         }
     }
 }
+
+@Composable
+private fun sentCountText(sent: Int): String =
+    LocalContext.current.resources.getQuantityString(R.plurals.wear_sent_count, sent, sent)

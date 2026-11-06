@@ -1,5 +1,6 @@
 package com.revscope.app.navigation
 
+import com.revscope.app.R
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.R as DesignSystemR
@@ -17,6 +18,9 @@ class VehiculoEnEncabezadoTest {
         resDirs = listOf("../core/designsystem/src/main/res"),
     )
 
+    private val es = XmlStringResolver.es(R::class.java)
+    private val en = XmlStringResolver.en(R::class.java)
+
     private fun perfil(nombre: String, tipo: String) = VehicleProfileEntity(
         name = nombre,
         type = tipo,
@@ -28,7 +32,11 @@ class VehiculoEnEncabezadoTest {
 
     @Test
     fun `una moto conectada muestra su nombre y el adaptador en la descripcion`() {
-        val vehiculo = vehiculoEnEncabezado(ConnectionState.Connected("Android-Vlink"), perfil("Benelli TNT 150i", "MOTORCYCLE"))
+        val vehiculo = vehiculoEnEncabezado(
+            ConnectionState.Connected("Android-Vlink"),
+            perfil("Benelli TNT 150i", "MOTORCYCLE"),
+            es,
+        )
 
         assertTrue(vehiculo.esMoto)
         assertEquals(RevScopeColors.Success, vehiculo.colorEstado)
@@ -40,12 +48,22 @@ class VehiculoEnEncabezadoTest {
 
     @Test
     fun `sin perfil activo el selector lo dice en vez de quedar vacio`() {
-        val vehiculo = vehiculoEnEncabezado(ConnectionState.Disconnected, null)
+        val vehiculo = vehiculoEnEncabezado(ConnectionState.Disconnected, null, es)
 
         assertFalse(vehiculo.esMoto)
         assertEquals(
             "Vehículo: sin vehículo. Adaptador: Sin conexión. Toca para cambiar de vehículo",
             descripcionSelectorVehiculo(vehiculo, resolverEs),
         )
+    }
+
+    @Test
+    fun `en ingles el estado del enlace sale traducido`() {
+        assertEquals(
+            "Android-Vlink connected",
+            vehiculoEnEncabezado(ConnectionState.Connected("Android-Vlink"), null, en).estadoEnlace,
+        )
+        assertEquals("Not connected", connectionStatusLabel(ConnectionState.Disconnected, en))
+        assertEquals("Connecting…", connectionStatusLabel(ConnectionState.Connecting, en))
     }
 }
