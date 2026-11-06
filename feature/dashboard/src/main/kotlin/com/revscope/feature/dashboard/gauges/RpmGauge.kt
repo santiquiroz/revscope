@@ -31,6 +31,7 @@ private const val ARC_START = 135f
 private const val ARC_SWEEP = 270f
 private const val FRACCION_TEXTO_ARCO = 0.5f
 private const val FRACCION_ALTO_NUMERO = 0.22f
+private const val NEEDLE_INNER_FRACTION = 0.62f
 
 @Composable
 fun RpmGauge(
@@ -105,21 +106,17 @@ fun RpmGauge(
             val needleAngleRad = Math.toRadians(needleAngleDeg.toDouble())
             val center = Offset(this.size.width / 2f, this.size.height / 2f)
             val radius = (this.size.minDimension / 2f - padding)
-            val needleLength = radius * 0.7f
+            val needleInnerEnd = polar(center, needleAngleRad, radius * NEEDLE_INNER_FRACTION)
 
             drawLine(
                 color = RevScopeColors.TextPrimary,
-                start = center,
-                end = Offset(
-                    x = center.x + cos(needleAngleRad).toFloat() * needleLength,
-                    y = center.y + sin(needleAngleRad).toFloat() * needleLength,
-                ),
-                strokeWidth = 3.dp.toPx(),
+                start = needleInnerEnd,
+                end = polar(center, needleAngleRad, radius + stroke / 2f),
+                strokeWidth = 4.dp.toPx(),
                 cap = StrokeCap.Round,
             )
 
-            // Center dot
-            drawCircle(color = RevScopeColors.Accent, radius = 6.dp.toPx(), center = center)
+            drawCircle(color = RevScopeColors.Accent, radius = 3.dp.toPx(), center = needleInnerEnd)
 
             // Redline tick at the real redline (start of danger zone)
             val redlineAngleDeg = ARC_START + redFrac * ARC_SWEEP
@@ -128,14 +125,8 @@ fun RpmGauge(
             val tickInner = radius - stroke / 2f
             drawLine(
                 color = RevScopeColors.Danger,
-                start = Offset(
-                    x = center.x + cos(redlineAngleRad).toFloat() * tickInner,
-                    y = center.y + sin(redlineAngleRad).toFloat() * tickInner,
-                ),
-                end = Offset(
-                    x = center.x + cos(redlineAngleRad).toFloat() * tickOuter,
-                    y = center.y + sin(redlineAngleRad).toFloat() * tickOuter,
-                ),
+                start = polar(center, redlineAngleRad, tickInner),
+                end = polar(center, redlineAngleRad, tickOuter),
                 strokeWidth = 3.dp.toPx(),
             )
         }
@@ -159,3 +150,9 @@ fun RpmGauge(
         }
     }
 }
+
+private fun polar(center: Offset, angleRad: Double, distance: Float): Offset =
+    Offset(
+        x = center.x + cos(angleRad).toFloat() * distance,
+        y = center.y + sin(angleRad).toFloat() * distance,
+    )
