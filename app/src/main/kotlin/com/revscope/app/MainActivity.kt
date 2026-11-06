@@ -7,9 +7,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.revscope.app.navigation.RevScopeNavGraph
+import com.revscope.core.common.units.AppUnits
+import com.revscope.core.designsystem.LocalUnitSystem
 import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.obd.legal.DailyStatusWorker
 import com.revscope.core.obd.service.TripSummaryNotifier
@@ -36,16 +39,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         pendingSessionId.value = consumeSessionId(intent)
         pendingOpenAlDia.value = consumeOpenAlDia(intent)
+        val unitSystem = AppUnits.current(this)
         setContent {
             val openSessionId by pendingSessionId.collectAsState()
             val openAlDia by pendingOpenAlDia.collectAsState()
             RevScopeTheme {
-                RevScopeNavGraph(
-                    initialSessionId = openSessionId,
-                    onInitialSessionConsumed = { pendingSessionId.value = null },
-                    initialOpenAlDia = openAlDia,
-                    onInitialOpenAlDiaConsumed = { pendingOpenAlDia.value = false },
-                )
+                CompositionLocalProvider(LocalUnitSystem provides unitSystem) {
+                    RevScopeNavGraph(
+                        initialSessionId = openSessionId,
+                        onInitialSessionConsumed = { pendingSessionId.value = null },
+                        initialOpenAlDia = openAlDia,
+                        onInitialOpenAlDiaConsumed = { pendingOpenAlDia.value = false },
+                    )
+                }
             }
         }
     }
