@@ -91,6 +91,7 @@ def check_module(module_dir: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")
     problems: list[str] = []
     for arg in argv:
         problems += check_module(Path(arg))

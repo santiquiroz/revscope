@@ -80,6 +80,7 @@ def should_scan_file(filepath: Path) -> bool:
 
 
 def main(argv: list[str]) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")
     total_findings = 0
     for arg in argv:
         root = Path(arg)
