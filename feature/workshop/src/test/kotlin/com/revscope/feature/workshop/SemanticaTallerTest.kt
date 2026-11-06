@@ -6,9 +6,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.revscope.core.designsystem.DESCRIPCION_VOLVER
+import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
@@ -22,8 +23,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaTallerTest {
+    private val resolverEs = XmlStringResolver.es(
+        DesignSystemR::class.java,
+        resDirs = listOf("../../core/designsystem/src/main/res"),
+    )
 
     @get:Rule
     val compose = createComposeRule()
@@ -44,7 +49,7 @@ class SemanticaTallerTest {
             }
         }
 
-        compose.onNodeWithText("Falla").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(DesignSystemR.string.ds_state_failure)).assertIsDisplayed()
     }
 
     @Test
@@ -64,7 +69,7 @@ class SemanticaTallerTest {
         }
 
         compose.onNodeWithText("Sensor O2 B1S1").assertIsDisplayed()
-        compose.onNodeWithText("Sin dato").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(DesignSystemR.string.ds_state_no_data)).assertIsDisplayed()
         compose.onNodeWithText("No disponible en esta ECU").assertIsDisplayed()
     }
 
@@ -98,7 +103,7 @@ class SemanticaTallerTest {
             }
         }
 
-        compose.onNodeWithText("Reintentar").performClick()
+        compose.onNodeWithText(resolverEs.get(DesignSystemR.string.ds_retry)).performClick()
 
         assertEquals(1, escaneos)
     }
@@ -121,7 +126,7 @@ class SemanticaTallerTest {
         }
 
         compose.onNodeWithText("Ir a perfiles").assertIsDisplayed()
-        compose.onNodeWithContentDescription(DESCRIPCION_VOLVER).performClick()
+        compose.onNodeWithContentDescription(resolverEs.get(DesignSystemR.string.ds_back)).performClick()
 
         assertTrue(volvio)
     }

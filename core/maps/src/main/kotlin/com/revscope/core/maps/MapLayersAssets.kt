@@ -1,16 +1,19 @@
 package com.revscope.core.maps
 
 import android.content.Context
+import com.revscope.core.common.i18n.AppLanguage
 
-private const val LAYERS_ASSET_LIGHT = "map-layers-light.json"
-private const val LAYERS_ASSET_DARK = "map-layers-dark.json"
-
-// Cache de proceso por tema (2 entradas): los assets son inmutables durante la vida de la app,
+// Cache de proceso por tema e idioma: los assets son inmutables durante la vida de la app,
 // así que una vez leídos no hay motivo para volver a tocar disco — LiveMapScreen los relee cada
 // vez que cambia darkTiles (modo nocturno auto/manual) vía produceState en IO. El lock solo
 // protege la escritura del resultado; la lectura del asset en sí corre fuera de él.
 private val cacheLock = Any()
-private val cache = HashMap<Boolean, String?>()
+private val cache = HashMap<Pair<Boolean, String>, String?>()
+
+internal fun mapLayersAssetName(dark: Boolean, language: String): String {
+    val theme = if (dark) "dark" else "light"
+    return if (language == "en") "map-layers-$theme-en.json" else "map-layers-$theme.json"
+}
 
 /**
  * Lee el array JSON de capas cartográficas de protomaps (T1: `scripts/gen-map-layers.mjs`,
@@ -23,14 +26,15 @@ private val cache = HashMap<Boolean, String?>()
  * (fondo + fuente, sin capas) en vez de crashear.
  */
 fun readMapLayersAsset(context: Context, dark: Boolean): String? {
+    val language = AppLanguage.current(context).language
+    val key = dark to language
     synchronized(cacheLock) {
-        if (cache.containsKey(dark)) return cache[dark]
+        if (cache.containsKey(key)) return cache[key]
     }
-    val name = if (dark) LAYERS_ASSET_DARK else LAYERS_ASSET_LIGHT
-    val result = runCatching {
-        context.assets.open(name).bufferedReader().use { it.readText() }
-    }.getOrNull()
-    synchronized(cacheLock) { cache[dark] = result }
+    val name = mapLayersAssetName(dark, language)
+    val result = readAsset(context, name)
+        ?: if (language == "en") readAsset(context, mapLayersAssetName(dark, "es")) else null
+    synchronized(cacheLock) { cache[key] = result }
     return result
 }
 
@@ -45,4 +49,9 @@ fun readMapLayersAsset(context: Context, dark: Boolean): String? {
  * (falla cacheada) — en ambos casos el caller debe resolverlo async con [readMapLayersAsset];
  * ahí un cache-miss real toca disco y una falla cacheada retorna null de inmediato sin IO.
  */
-fun peekMapLayersAsset(dark: Boolean): String? = synchronized(cacheLock) { cache[dark] }
+fun peekMapLayersAsset(dark: Boolean, language: String): String? =
+    synchronized(cacheLock) { cache[dark to language] }
+
+private fun readAsset(context: Context, name: String): String? = runCatching {
+    context.assets.open(name).bufferedReader().use { it.readText() }
+}.getOrNull()

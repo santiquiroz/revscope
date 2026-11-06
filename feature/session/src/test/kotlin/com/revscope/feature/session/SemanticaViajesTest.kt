@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.designsystem.RevScopeTheme
 import org.junit.Assert.assertEquals
@@ -16,7 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaViajesTest {
 
     @get:Rule
@@ -72,7 +74,10 @@ class SemanticaViajesTest {
         montar(listOf(viaje), borrados)
 
         compose.onNodeWithContentDescription("Borrar viaje").performClick()
-        compose.onNodeWithText("Cancelar").performClick()
+        compose.onNodeWithText(
+            XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res"))
+                .get(DesignSystemR.string.ds_cancel),
+        ).performClick()
 
         assertTrue(borrados.isEmpty())
     }

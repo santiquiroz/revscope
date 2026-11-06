@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.protocol.Mode06Parser
 import com.revscope.core.obd.session.ObdSessionManager
@@ -22,6 +23,7 @@ private const val MODE06_TIMEOUT_MS = 3_000L
 @HiltViewModel
 class Mode06ViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     data class MidGroup(
@@ -85,6 +87,7 @@ class Mode06ViewModel @Inject constructor(
                 rows = groups.asSequence().flatMap { group ->
                     group.results.asSequence().map { result -> mode06Row(group, result) }
                 },
+                resolver = resolver,
             )
         }
     }

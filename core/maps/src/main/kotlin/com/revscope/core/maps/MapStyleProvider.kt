@@ -1,5 +1,6 @@
 package com.revscope.core.maps
 
+import com.revscope.core.common.i18n.StringResolver
 import java.io.File
 
 /**
@@ -30,8 +31,6 @@ object MapStyleProvider {
 
     /** Mismo servidor de tiles que usa osmdroid hoy vía TileSourceFactory.MAPNIK. */
     private const val OSM_RASTER_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    private const val OSM_ATTRIBUTION = "© OpenStreetMap contributors"
-
     private const val BACKGROUND_LIGHT = "#f8f4f0"
     private const val BACKGROUND_DARK = "#1c1c28"
 
@@ -91,12 +90,13 @@ object MapStyleProvider {
         dark: Boolean,
         rasterFallback: Boolean = true,
         layersJson: String? = null,
+        resolver: StringResolver,
     ): String {
         val background = if (dark) BACKGROUND_DARK else BACKGROUND_LIGHT
         return when {
             tilesUrl != null && layersJson != null -> fullVectorStyle(tilesUrl, dark, layersJson)
             tilesUrl != null -> vectorStyle(tilesUrl, background)
-            rasterFallback -> rasterStyle(background, dark)
+            rasterFallback -> rasterStyle(background, dark, resolver.get(R.string.maps_osm_attribution))
             else -> backgroundOnlyStyle(background)
         }
     }
@@ -154,7 +154,7 @@ object MapStyleProvider {
      * oscuro solo puede aproximarse bajando brillo y saturación; el estilo oscuro de verdad
      * llega con el vectorial.
      */
-    private fun rasterStyle(background: String, dark: Boolean): String {
+    private fun rasterStyle(background: String, dark: Boolean, attribution: String): String {
         val paint = if (dark) {
             """, "raster-brightness-max": 0.45, "raster-saturation": -0.6, "raster-contrast": 0.15"""
         } else {
@@ -170,7 +170,7 @@ object MapStyleProvider {
                   "tiles": ["$OSM_RASTER_TILES"],
                   "tileSize": 256,
                   "maxzoom": 19,
-                  "attribution": "$OSM_ATTRIBUTION"
+                  "attribution": "$attribution"
                 }
               },
               "layers": [

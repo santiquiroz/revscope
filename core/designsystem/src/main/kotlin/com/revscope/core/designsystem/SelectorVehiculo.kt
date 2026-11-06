@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.revscope.core.common.i18n.StringResolver
 
 data class VehiculoEnEncabezado(
     val nombre: String?,
@@ -34,8 +36,12 @@ data class VehiculoEnEncabezado(
     val colorEstado: Color,
 )
 
-fun descripcionSelectorVehiculo(vehiculo: VehiculoEnEncabezado): String =
-    "Vehículo: ${vehiculo.nombre ?: "sin vehículo"}. Adaptador: ${vehiculo.estadoEnlace}. Toca para cambiar de vehículo"
+fun descripcionSelectorVehiculo(vehiculo: VehiculoEnEncabezado, resolver: StringResolver): String =
+    resolver.get(
+        R.string.ds_vehicle_selector_description,
+        vehiculo.nombre ?: resolver.get(R.string.ds_vehicle_description_fallback),
+        vehiculo.estadoEnlace,
+    )
 
 /**
  * Selector del vehículo activo para el encabezado de cada pestaña. Un nombre muy largo envuelve a
@@ -48,13 +54,19 @@ fun SelectorVehiculo(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val nombreVehiculo = vehiculo.nombre ?: stringResource(R.string.ds_vehicle_fallback)
+    val descripcion = stringResource(
+        R.string.ds_vehicle_selector_description,
+        vehiculo.nombre ?: stringResource(R.string.ds_vehicle_description_fallback),
+        vehiculo.estadoEnlace,
+    )
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = RevScopeColors.SurfaceHigh,
         modifier = modifier
             .heightIn(min = 48.dp)
-            .semantics { contentDescription = descripcionSelectorVehiculo(vehiculo) },
+            .semantics { contentDescription = descripcion },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -69,7 +81,7 @@ fun SelectorVehiculo(
                 modifier = Modifier.size(18.dp),
             )
             Text(
-                text = vehiculo.nombre ?: "Sin vehículo",
+                text = nombreVehiculo,
                 color = RevScopeColors.TextPrimary,
                 style = RevScopeType.label,
                 maxLines = 2,

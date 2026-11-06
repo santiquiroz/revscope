@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -27,7 +29,7 @@ class SemanticaMultimetroTest {
 
     @Before
     fun configurarPantallaAngostaConLetraGrande() {
-        RuntimeEnvironment.setQualifiers("w360dp-h5600dp-xhdpi")
+        RuntimeEnvironment.setQualifiers("es-w360dp-h5600dp-xhdpi")
         RuntimeEnvironment.setFontScale(2f)
     }
 
@@ -49,7 +51,10 @@ class SemanticaMultimetroTest {
         descripcionesCampos().forEach {
             compose.onNodeWithContentDescription(it).assertAreaMinima()
         }
-        compose.onNodeWithContentDescription("Volver").assertAreaMinima()
+        compose.onNodeWithContentDescription(
+            XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res"))
+                .get(DesignSystemR.string.ds_back),
+        ).assertAreaMinima()
         compose.onNodeWithContentDescription("Sensor de posición del acelerador (TPS)").assertAreaMinima()
         compose.onNodeWithContentDescription("Editar el color de Referencia 5\u00a0V").assertAreaMinima()
         compose.onNodeWithContentDescription("Editar el color de Masa").assertAreaMinima()

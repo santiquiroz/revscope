@@ -3,7 +3,7 @@ package com.revscope.core.data.secure
 import timber.log.Timber
 
 internal fun <T : Any> openWithRecovery(create: () -> T, wipe: () -> Unit): T? =
-    tryOpen(create, "first attempt")
+    tryOpen(create, "first attempt") // i18n-ignore
         ?: wipeAndRetry(create, wipe)
 
 private fun <T : Any> wipeAndRetry(create: () -> T, wipe: () -> Unit): T? {
@@ -14,7 +14,7 @@ private fun <T : Any> wipeAndRetry(create: () -> T, wipe: () -> Unit): T? {
         Timber.e(e, "SecureKeyStore: wipe of unreadable store failed")
         false
     }
-    return if (wiped) tryOpen(create, "retry after wipe") else null
+    return if (wiped) tryOpen(create, "retry after wipe") else null // i18n-ignore
 }
 
 private fun <T : Any> tryOpen(create: () -> T, attempt: String): T? = try {

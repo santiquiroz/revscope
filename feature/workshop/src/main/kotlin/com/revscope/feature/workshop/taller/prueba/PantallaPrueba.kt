@@ -8,6 +8,7 @@ import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.pruebas.ResultadoPrecondicion
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
 import com.revscope.core.obd.taller.referencia.BandaReferencia
+import com.revscope.core.common.i18n.StringResolver
 
 data class EntradaPantalla(
     val estado: EstadoPrueba,
@@ -22,12 +23,15 @@ data class EntradaPantalla(
 internal class PantallaPrueba(
     private val definicion: (TipoPrueba) -> DefinicionPrueba?,
     private val disponibles: List<TipoPrueba>,
+    private val resolver: StringResolver,
 ) {
 
     fun fase(entrada: EntradaPantalla): FasePantalla = when (val e = entrada.estado) {
         EstadoPrueba.Inactiva -> inactiva(entrada)
         is EstadoPrueba.Verificando -> preparacion(e.tipo, entrada.precondicionesVivas ?: e.precondiciones) ?: elegir()
-        is EstadoPrueba.EnPaso -> FasePantalla.Paso(MapeoPaso.de(e, pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas))
+        is EstadoPrueba.EnPaso -> FasePantalla.Paso(
+            MapeoPaso.de(e, pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas, resolver),
+        )
         is EstadoPrueba.Analizando -> FasePantalla.Analizando(e.tipo)
         is EstadoPrueba.Terminada -> FasePantalla.Resultado(MapeoResultado.de(e))
         is EstadoPrueba.Cancelada -> FasePantalla.Cancelada(e.tipo, e.motivo)

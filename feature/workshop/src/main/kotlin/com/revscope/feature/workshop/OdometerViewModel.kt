@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.workshop.OdometerChecker
@@ -25,6 +26,7 @@ private const val LECTURA_FALLIDA_MENSAJE = "No se pudo leer el odómetro — in
 @HiltViewModel
 class OdometerViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     val connectionState: StateFlow<ConnectionState> = sessionManager.connectionState
@@ -84,6 +86,7 @@ class OdometerViewModel @Inject constructor(
                 tipo = "odometro",
                 header = listOf("timestamp_iso", "epoch_ms", "km"),
                 rows = rows.asSequence().map { listOf(CsvShare.isoTimestamp(it.epochMs), it.epochMs, it.km) },
+                resolver = resolver,
             )
         }
     }

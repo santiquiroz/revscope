@@ -1,5 +1,6 @@
 package com.revscope.core.designsystem
 
+import com.revscope.core.common.i18n.LocaleNumbers
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -74,9 +75,9 @@ internal object EscalaGrafica {
         return redondo * magnitud
     }
 
-    fun texto(valor: Double, paso: Double): String {
+    fun texto(valor: Double, paso: Double, locale: Locale): String {
         val decimales = if (paso >= 1.0) 0 else ceil(-log10(paso)).toInt().coerceAtMost(3)
-        return String.format(Locale.ROOT, "%.${decimales}f", valor).replace('.', ',')
+        return LocaleNumbers.decimal(valor, decimales, locale)
     }
 
     private fun amplio(valores: List<Double>): ClosedFloatingPointRange<Double> {

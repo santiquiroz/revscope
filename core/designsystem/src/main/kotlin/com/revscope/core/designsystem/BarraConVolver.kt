@@ -21,9 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-
-const val DESCRIPCION_VOLVER = "Volver"
 
 /**
  * Barra de título de las pantallas secundarias con «Volver» visible. No usa TopAppBar porque su
@@ -37,6 +36,7 @@ fun BarraConVolver(
     subtitulo: String? = null,
     acciones: @Composable RowScope.() -> Unit = {},
 ) {
+    val descripcionVolver = stringResource(R.string.ds_back)
     Surface(color = RevScopeColors.Surface, modifier = modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -46,7 +46,7 @@ fun BarraConVolver(
                 .padding(end = 4.dp),
         ) {
             IconButton(onClick = onVolver, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, DESCRIPCION_VOLVER, tint = RevScopeColors.TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, descripcionVolver, tint = RevScopeColors.TextPrimary)
             }
             TituloBarra(titulo, subtitulo, Modifier.weight(1f).padding(vertical = 8.dp))
             acciones()

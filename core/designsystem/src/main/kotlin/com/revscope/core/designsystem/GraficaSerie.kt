@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 
 val ColoresSerie = listOf(RevScopeColors.Accent, Color(0xFF4FC3F7), RevScopeColors.Warning, Color(0xFFE59CFF))
 
@@ -41,13 +43,14 @@ private const val ESCALA_LETRA_MAXIMA_GRAFICA = 1.5f
 fun GraficaSerie(modelo: ModeloGrafica, modifier: Modifier = Modifier, alto: Dp = 200.dp) {
     val medidor = rememberTextMeasurer()
     val estiloTexto = estiloTextoGrafica()
+    val locale = LocalConfiguration.current.locales[0]
     Canvas(
         modifier
             .fillMaxWidth()
             .height(alto)
             .semantics { contentDescription = modelo.descripcion },
     ) {
-        dibujarGrafica(modelo, medidor, estiloTexto)
+        dibujarGrafica(modelo, medidor, estiloTexto, locale)
     }
 }
 
@@ -64,12 +67,14 @@ private class Lienzo(val area: Rect, val x: ClosedFloatingPointRange<Double>, va
     fun py(valor: Double): Float = area.bottom - ((valor - y.start) / (y.endInclusive - y.start)).toFloat() * area.height
 }
 
-private fun DrawScope.dibujarGrafica(m: ModeloGrafica, medidor: TextMeasurer, estilo: TextStyle) {
+private fun DrawScope.dibujarGrafica(m: ModeloGrafica, medidor: TextMeasurer, estilo: TextStyle, locale: Locale) {
     val rx = EscalaGrafica.rangoX(m)
     val ry = EscalaGrafica.rangoY(m)
     val marcasY = EscalaGrafica.marcas(ry)
     val pasoY = EscalaGrafica.paso(ry, 4)
-    val textosY = marcasY.map { medidor.measure(EscalaGrafica.texto(it, pasoY), estilo.copy(color = RevScopeColors.TextSecondary)) }
+    val textosY = marcasY.map {
+        medidor.measure(EscalaGrafica.texto(it, pasoY, locale), estilo.copy(color = RevScopeColors.TextSecondary))
+    }
     val altoTexto = medidor.measure("0", estilo).size.height.toFloat()
     val izquierda = (textosY.maxOfOrNull { it.size.width } ?: 0) + 6.dp.toPx()
     val arriba = if (m.tramos.isEmpty()) 4.dp.toPx() else altoTexto + 4.dp.toPx()
@@ -78,7 +83,7 @@ private fun DrawScope.dibujarGrafica(m: ModeloGrafica, medidor: TextMeasurer, es
     val lienzo = Lienzo(area, rx, ry)
     dibujarTramos(m.tramos, lienzo, medidor, estilo)
     dibujarRejilla(marcasY, textosY, lienzo)
-    dibujarEjeX(rx, m.unidadX, lienzo, medidor, estilo)
+    dibujarEjeX(rx, m.unidadX, lienzo, medidor, estilo, locale)
     clipRect(area.left, area.top, area.right, area.bottom) {
         dibujarBandas(m.bandas, lienzo)
         m.series.forEachIndexed { i, serie -> dibujarSerie(serie, ColoresSerie[i % ColoresSerie.size], lienzo) }
@@ -109,11 +114,18 @@ private fun DrawScope.dibujarRejilla(marcas: List<Double>, textos: List<TextLayo
     }
 }
 
-private fun DrawScope.dibujarEjeX(rango: ClosedFloatingPointRange<Double>, unidad: String, l: Lienzo, medidor: TextMeasurer, estilo: TextStyle) {
+private fun DrawScope.dibujarEjeX(
+    rango: ClosedFloatingPointRange<Double>,
+    unidad: String,
+    l: Lienzo,
+    medidor: TextMeasurer,
+    estilo: TextStyle,
+    locale: Locale,
+) {
     val paso = EscalaGrafica.paso(rango, 4)
     val marcas = EscalaGrafica.marcas(rango)
     marcas.forEachIndexed { i, valor ->
-        val etiqueta = EscalaGrafica.texto(valor, paso) + if (i == marcas.lastIndex) " $unidad" else ""
+        val etiqueta = EscalaGrafica.texto(valor, paso, locale) + if (i == marcas.lastIndex) " $unidad" else ""
         val texto = medidor.measure(etiqueta, estilo.copy(color = RevScopeColors.TextSecondary))
         val x = (l.px(valor) - texto.size.width / 2).coerceIn(l.area.left, size.width - texto.size.width)
         drawText(texto, topLeft = Offset(x, l.area.bottom + 4.dp.toPx()))

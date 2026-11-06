@@ -21,6 +21,8 @@ import com.revscope.core.maps.boundsOf
 import com.revscope.core.maps.physicalPxToDp
 import com.revscope.core.maps.peekMapLayersAsset
 import com.revscope.core.maps.readMapLayersAsset
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.AppLanguage
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
@@ -111,13 +113,15 @@ fun RealTrackMap(
     // en IO, igual que LiveMapScreen (dark fijo false acá, así que sin key adicional). Sembrado
     // desde el cache (peekMapLayersAsset, sin IO): si LiveMapScreen ya leyó el tema claro en
     // este proceso, esta pantalla arranca con el estilo final de una, sin frame de placeholder.
-    val layersJson by produceState<String?>(initialValue = peekMapLayersAsset(dark = false)) {
+    val language = AppLanguage.current(context).language
+    val resolver = remember(context) { AndroidStringResolver(context) }
+    val layersJson by produceState<String?>(initialValue = peekMapLayersAsset(dark = false, language = language)) {
         if (value == null) {
             value = withContext(Dispatchers.IO) { readMapLayersAsset(context, dark = false) }
         }
     }
     val styleJson = remember(tilesUrl, layersJson) {
-        MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = false, layersJson = layersJson)
+        MapStyleProvider.styleJson(tilesUrl = tilesUrl, dark = false, layersJson = layersJson, resolver = resolver)
     }
 
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }

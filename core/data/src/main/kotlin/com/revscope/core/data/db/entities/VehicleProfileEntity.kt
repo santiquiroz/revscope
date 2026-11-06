@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 data class VehicleProfileEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val name: String,           // "Mazda CX-30"
+    val name: String,           // "Mazda CX-30" // i18n-ignore
     val type: String,           // "CAR" | "MOTORCYCLE"
     val vin: String?,
     /** JSON array of active PID strings: ["0C","0D","05"] */

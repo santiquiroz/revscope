@@ -6,6 +6,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.obd.session.EstadoViaje
 import org.junit.Assert.assertFalse
@@ -127,7 +129,10 @@ class SemanticaDashboardTest {
         }
 
         compose.onNodeWithText("Desconectar adaptador").performClick()
-        compose.onNodeWithText("Cancelar").performClick()
+        compose.onNodeWithText(
+            XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res"))
+                .get(DesignSystemR.string.ds_cancel),
+        ).performClick()
 
         assertFalse(desconectado)
         compose.onNodeWithText("¿Desconectar el adaptador?").assertDoesNotExist()

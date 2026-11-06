@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.obd.connection.ConnectionState
@@ -39,6 +40,7 @@ class HealthCheckViewModel @Inject constructor(
     private val telemetryDao: com.revscope.core.data.db.dao.TelemetryDao,
     private val registro: RegistroTaller,
     private val registry: PidRegistry,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     sealed interface UiState {
@@ -136,6 +138,7 @@ class HealthCheckViewModel @Inject constructor(
                 rows = done.items.asSequence().map { item ->
                     listOf(item.area, item.nivel.name, item.titulo, item.causaProbable, timestampIso)
                 },
+                resolver = resolver,
             )
         }
     }
