@@ -26,7 +26,7 @@ interface AiProvider {
     /** Stable identifier persisted in settings — "anthropic" | "openai" | "gemini" | "custom". */
     val providerId: String
 
-    /** Human-readable name for the "Probar conexión" button and diagnostics. */
+    /** Human-readable name for the «Probar conexión» button and diagnostics. */
     val displayName: String
 
     /** Whether [complete] can honor [AiRequest.needsWebSearch]. */

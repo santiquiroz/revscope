@@ -1,7 +1,9 @@
 package com.revscope.core.intelligence.local
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.intelligence.provider.AiProvider
 import com.revscope.core.intelligence.provider.AiRequest
+import com.revscope.core.intelligence.provider.withResponseLanguage
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import java.time.LocalDate
@@ -23,10 +25,14 @@ private const val NO_INFO_MARKER = "NADA"
  * @param providerProvider Same shape as DtcExplainer's — a lambda instead of injecting
  *                          AiProviderFactory directly, since :core:intelligence doesn't
  *                          compile-depend on :core:data (see CityInfoAlerter's doc).
+ * @param resolver Resolves the prompt's response-language line.
  */
-class LocalInfoFetcher(private val providerProvider: suspend () -> AiProvider?) {
+class LocalInfoFetcher(
+    private val resolver: StringResolver,
+    private val providerProvider: suspend () -> AiProvider?,
+) {
 
-    /** Returns the one-sentence local-info phrase, or null on "nothing relevant"/error/no provider/no web search. */
+    /** Returns the one-sentence local-info phrase, or null on nothing-relevant/error/no provider/no web search. */
     suspend fun fetchLocalInfo(municipio: String, departamento: String?): String? {
         val provider = providerProvider() ?: return null
         if (!provider.supportsWebSearch) return null
@@ -39,7 +45,7 @@ class LocalInfoFetcher(private val providerProvider: suspend () -> AiProvider?) 
         departamento: String?,
     ): String? = try {
         val request = AiRequest(
-            user = buildPrompt(municipio, departamento),
+            user = buildPrompt(municipio, departamento).withResponseLanguage(resolver),
             maxTokens = MAX_TOKENS,
             needsWebSearch = true,
         )
@@ -59,15 +65,16 @@ class LocalInfoFetcher(private val providerProvider: suspend () -> AiProvider?) 
 
     private fun buildPrompt(municipio: String, departamento: String?): String {
         val lugar = if (departamento.isNullOrBlank()) municipio else "$municipio, $departamento"
-        return "Hoy es ${today()}. Acabo de llegar a $lugar, Colombia conduciendo. " +
-            "En UNA sola frase corta (máx 20 palabras) dime si hay hoy algún evento, festividad, " +
-            "cierre vial o alerta relevante en este municipio. Si no encuentras nada relevante y " +
-            "actual, responde exactamente: $NO_INFO_MARKER"
+        // Cuerpo del prompt: no es texto de interfaz, se queda en español.
+        return "Hoy es ${today()}. Acabo de llegar a $lugar, Colombia conduciendo. " + // i18n-ignore
+            "En UNA sola frase corta (máx 20 palabras) dime si hay hoy algún evento, festividad, " + // i18n-ignore
+            "cierre vial o alerta relevante en este municipio. Si no encuentras nada relevante y " + // i18n-ignore
+            "actual, responde exactamente: $NO_INFO_MARKER" // i18n-ignore
     }
 
     private fun today(): String =
         LocalDate.now(ZoneId.of("America/Bogota"))
-            .format(DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale("es", "CO")))
+            .format(DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", Locale("es", "CO"))) // i18n-ignore: fecha del cuerpo del prompt
 
     private fun parseLocalInfo(rawText: String): String? {
         val text = rawText.trim()

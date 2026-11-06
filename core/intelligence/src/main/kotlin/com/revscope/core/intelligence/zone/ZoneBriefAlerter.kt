@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
- * "Compañero de viaje": al llegar a un lugar nuevo entrega un brief de conducción
+ * «Compañero de viaje»: al llegar a un lugar nuevo entrega un brief de conducción
  * (combustible, peajes, restricciones, normas). SERVER-FIRST — pregunta al servidor
  * colaborativo primero (gratis, instantáneo); si no hay brief fresco para la zona y la
  * IA está disponible, la genera con web search y la CONTRIBUYE de vuelta al servidor

@@ -73,7 +73,7 @@ class OpenAiProvider(
         val conn = (URL(url).openConnection() as HttpsURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Authorization", "Bearer $apiKey")
+            setRequestProperty("Authorization", "Bearer $apiKey") // i18n-ignore
             setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
