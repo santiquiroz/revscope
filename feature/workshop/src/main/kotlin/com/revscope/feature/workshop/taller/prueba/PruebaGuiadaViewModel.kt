@@ -71,11 +71,7 @@ class PruebaGuiadaViewModel @Inject constructor(
     private val vehiculo: VehiculoActivo,
     private val registro: RegistroTaller,
     private val fuenteDesfase: FuenteDesfase,
-<<<<<<< HEAD
-    resolver: StringResolver,
-=======
     private val resolver: StringResolver,
->>>>>>> i18n/lane-g
 ) : ViewModel() {
 
     private val tipoDeArgumento = guardado.get<String>(ARG_TIPO)?.let { nombre -> TipoPrueba.entries.firstOrNull { it.name == nombre } }

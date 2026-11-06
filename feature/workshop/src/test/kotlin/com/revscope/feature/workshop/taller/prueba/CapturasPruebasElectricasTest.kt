@@ -2,8 +2,6 @@ package com.revscope.feature.workshop.taller.prueba
 
 import com.revscope.core.obd.taller.pruebas.CalibracionVoltaje
 import com.revscope.core.obd.taller.pruebas.CatalogoPruebas
-import com.revscope.core.designsystem.R as DesignSystemR
-import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.taller.pruebas.DesfaseVoltaje
 import com.revscope.core.obd.taller.pruebas.EstadoPrueba
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
@@ -19,15 +17,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 class CapturasPruebasElectricasTest {
 
-<<<<<<< HEAD
-    private val pantalla = PantallaPrueba(
-        CatalogoPruebas::definicion,
-        CatalogoPruebas.disponibles,
-        XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res")),
-    )
-=======
     private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
->>>>>>> i18n/lane-g
     private val calibrado = DesfaseVoltaje.medido(multimetroV = 12.58, adaptadorV = 12.4)
 
     private fun ui(entrada: EntradaPantalla, desfase: DesfaseVoltaje = DesfaseVoltaje.SIN_CALIBRAR) =

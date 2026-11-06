@@ -65,12 +65,7 @@ class PruebaGuiadaViewModelTest {
     private fun vm(tipo: TipoPrueba? = TipoPrueba.TPS_BARRIDO) = PruebaGuiadaViewModel(
         SavedStateHandle(tipo?.let { mapOf(PruebaGuiadaViewModel.ARG_TIPO to it.name) } ?: emptyMap()),
         controlador, enlace, taller.entorno, FuenteVref(preferencias, taller.repositorio) { BENELLI }, { emptyList() },
-<<<<<<< HEAD
-        taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI },
-        com.revscope.core.uitesting.XmlStringResolver.es(com.revscope.core.obd.R::class.java, com.revscope.core.designsystem.R::class.java, resDirs = listOf("../../core/obd/src/main/res", "../../core/designsystem/src/main/res")),
-=======
         taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI }, resolverPrueba(),
->>>>>>> i18n/lane-g
     ).also { v -> CoroutineScope(despachador).launch { v.estado.collect { } } }
 
     @Test

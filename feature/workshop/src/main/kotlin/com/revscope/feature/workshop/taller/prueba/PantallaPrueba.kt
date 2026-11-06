@@ -30,13 +30,9 @@ internal class PantallaPrueba(
     fun fase(entrada: EntradaPantalla): FasePantalla = when (val e = entrada.estado) {
         EstadoPrueba.Inactiva -> inactiva(entrada)
         is EstadoPrueba.Verificando -> preparacion(e.tipo, entrada.precondicionesVivas ?: e.precondiciones) ?: elegir()
-<<<<<<< HEAD
         is EstadoPrueba.EnPaso -> FasePantalla.Paso(
-            MapeoPaso.de(e, pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas, resolver),
+            MapeoPaso.de(conTituloResuelto(e), pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas, resolver),
         )
-=======
-        is EstadoPrueba.EnPaso -> FasePantalla.Paso(MapeoPaso.de(conTituloResuelto(e), pidVivo(e), entrada.serieVivo, entrada.vref, entrada.bandas))
->>>>>>> i18n/lane-g
         is EstadoPrueba.Analizando -> FasePantalla.Analizando(e.tipo)
         is EstadoPrueba.Terminada -> FasePantalla.Resultado(MapeoResultado.de(e, resolver))
         is EstadoPrueba.Cancelada -> FasePantalla.Cancelada(e.tipo, e.motivo)
