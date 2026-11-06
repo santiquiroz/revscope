@@ -4,14 +4,15 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -49,6 +50,7 @@ class ClassicBtTransport(
 ) : Transport {
 
     private var socket: BluetoothSocket? = null
+    @Volatile private var connectingSocket: BluetoothSocket? = null
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
 
@@ -70,6 +72,7 @@ class ClassicBtTransport(
             val btSocket = connectWithFallback(device)
 
             socket = btSocket
+            connectingSocket = null
             inputStream = btSocket.inputStream
             outputStream = btSocket.outputStream
 
@@ -86,15 +89,22 @@ class ClassicBtTransport(
     @SuppressLint("MissingPermission")
     private suspend fun connectWithFallback(device: BluetoothDevice): BluetoothSocket {
         val sppSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
-        val sppResult = runCatching { connectWithWatchdog(sppSocket) }
-        if (sppResult.isSuccess) return sppSocket
-
-        // Cheap ELM327 clones often have broken SDP records — retry on raw channel 1
-        Timber.w(sppResult.exceptionOrNull(), "SPP connect failed, retrying via reflection channel $FALLBACK_RFCOMM_CHANNEL")
-        val fallbackSocket = createFallbackSocket(device)
-            ?: throw sppResult.exceptionOrNull() ?: IOException("SPP connect failed")
-        connectWithWatchdog(fallbackSocket)
-        return fallbackSocket
+        connectingSocket = sppSocket
+        try {
+            connectWithWatchdog(sppSocket)
+            return sppSocket
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            connectingSocket = null
+            runCatching { sppSocket.close() }
+            Timber.w(e, "SPP connect failed, retrying via reflection channel $FALLBACK_RFCOMM_CHANNEL")
+            val fallbackSocket = createFallbackSocket(device)
+                ?: throw e
+            connectingSocket = fallbackSocket
+            connectWithWatchdog(fallbackSocket)
+            return fallbackSocket
+        }
     }
 
     /**
@@ -294,8 +304,10 @@ class ClassicBtTransport(
         runCatching { outputStream?.close() }.onFailure { Timber.w(it, "Error closing output") }
         runCatching { inputStream?.close() }.onFailure { Timber.w(it, "Error closing input") }
         runCatching { socket?.close() }.onFailure { Timber.w(it, "Error closing socket") }
+        runCatching { connectingSocket?.close() }.onFailure { Timber.w(it, "Error closing connecting socket") }
         outputStream = null
         inputStream = null
         socket = null
+        connectingSocket = null
     }
 }

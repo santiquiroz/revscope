@@ -27,6 +27,15 @@ object PreferencesBackupCodec {
     private const val TYPE_DOUBLE = "double"
     private const val TYPE_STRING = "string"
 
+    private val SUPPORTED_TYPES = setOf(
+        TYPE_BOOLEAN,
+        TYPE_INT,
+        TYPE_LONG,
+        TYPE_FLOAT,
+        TYPE_DOUBLE,
+        TYPE_STRING,
+    )
+
     // Secretos y permisos remotos propios de este dispositivo: no viajan en el zip y restore no los pisa.
     private val DEVICE_SECRET_KEYS: List<Preferences.Key<*>> = listOf(
         PreferencesKeys.CLAUDE_API_KEY,
@@ -47,18 +56,32 @@ object PreferencesBackupCodec {
         return root.toString()
     }
 
-    suspend fun restore(json: String, settings: DataStore<Preferences>) {
+    fun decode(json: String): Map<String, JSONObject> {
         val root = JSONObject(json)
+        val entries = mutableMapOf<String, JSONObject>()
+        root.keys().forEach { keyName ->
+            val entry = root.getJSONObject(keyName)
+            val type = entry.getString("type")
+            require(type in SUPPORTED_TYPES) { "Tipo de entrada no soportado: $type" }
+            entries[keyName] = entry
+        }
+        return entries
+    }
+
+    suspend fun apply(decoded: Map<String, JSONObject>, settings: DataStore<Preferences>) {
         settings.edit { mutablePrefs ->
             val localSecrets = deviceSecrets(mutablePrefs)
             mutablePrefs.clear()
-            root.keys().forEach { keyName ->
+            decoded.forEach { (keyName, entry) ->
                 if (keyName in DEVICE_SECRET_NAMES) return@forEach
-                applyEntry(mutablePrefs, keyName, root.getJSONObject(keyName))
+                applyEntry(mutablePrefs, keyName, entry)
             }
             mutablePrefs.putAll(*localSecrets.toTypedArray())
         }
     }
+
+    suspend fun restore(json: String, settings: DataStore<Preferences>) =
+        apply(decode(json), settings)
 
     private fun deviceSecrets(preferences: Preferences): List<Preferences.Pair<*>> =
         DEVICE_SECRET_KEYS.mapNotNull { key -> currentPair(preferences, key) }

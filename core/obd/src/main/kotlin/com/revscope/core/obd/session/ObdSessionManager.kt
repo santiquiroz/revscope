@@ -73,6 +73,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
@@ -97,10 +98,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * App-wide owner of the OBD connection and telemetry pipeline.
@@ -170,13 +173,23 @@ class ObdSessionManager @Inject constructor(
     val odometerSupported: StateFlow<Boolean?> = _odometerSupported.asStateFlow()
 
     private var transport: Transport? = null
+    internal var transportFactory: (BluetoothAdapter, AdapterType, String) -> Transport =
+        { adapter, type, address ->
+            when (type) {
+                AdapterType.CLASSIC_BT -> ClassicBtTransport(adapter, address)
+                AdapterType.BLE -> BleTransport(appContext, address)
+            }
+        }
     private var telemetryJob: Job? = null
+    private var connectJob: Job? = null
     private var stateJob: Job? = null
     private var reconnectJob: Job? = null
     private var gpsInactivityJob: Job? = null
     private var gpsSessionStartedAt: Long = 0L
     private var currentDeviceAddress: String? = null
     private var currentAdapterType: AdapterType = AdapterType.CLASSIC_BT
+    private val connectionLock = Any()
+    private val connectionGeneration = AtomicLong()
     @Volatile private var lastAdapterType: AdapterType = AdapterType.CLASSIC_BT
     private val derivedEngine = DerivedMetricsEngine()
     private val engineOffDetector = EngineOffDetector()
@@ -622,8 +635,17 @@ class ObdSessionManager @Inject constructor(
     }
 
     fun disconnect() {
+        synchronized(connectionLock) {
+            connectionGeneration.incrementAndGet()
+            _connectionState.value = ConnectionState.Disconnected
+            ObdForegroundService.stop(appContext)
+        }
         reconnectJob?.cancel()
-        ObdForegroundService.stop(appContext)
+        reconnectJob = null
+        connectJob?.cancel()
+        connectJob = null
+        stateJob?.cancel()
+        stateJob = null
         scope.launch {
             stopTelemetry(MotivoFin.USUARIO)
             transport?.disconnect()
@@ -769,9 +791,16 @@ class ObdSessionManager @Inject constructor(
     }
 
     private fun connect(deviceAddress: String, mode: ConnectMode, type: AdapterType = AdapterType.CLASSIC_BT) {
-        scope.launch {
+        val generation = synchronized(connectionLock) { connectionGeneration.incrementAndGet() }
+        connectJob?.cancel()
+        stateJob?.cancel()
+        stateJob = null
+        connectJob = scope.launch {
             stopTelemetry(MotivoFin.RECONEXION)
-            transport?.disconnect()
+            val previousTransport = transport
+            previousTransport?.disconnect()
+            if (transport === previousTransport) transport = null
+            if (generation != connectionGeneration.get()) return@launch
             limpiarLecturasObd()
             limpiarCapacidadesEcu()
             currentDeviceAddress = deviceAddress
@@ -784,41 +813,80 @@ class ObdSessionManager @Inject constructor(
                 return@launch
             }
 
-            val bt: Transport = when (type) {
-                AdapterType.CLASSIC_BT -> ClassicBtTransport(adapter, deviceAddress)
-                AdapterType.BLE -> BleTransport(appContext, deviceAddress)
+            val bt = transportFactory(adapter, type, deviceAddress)
+            if (generation != connectionGeneration.get()) {
+                closeStaleTransport(bt)
+                return@launch
             }
             transport = bt
 
             var connectedSeen = false
-            stateJob?.cancel()
             stateJob = bt.observeConnectionState()
                 .onEach { state ->
+                    val current = synchronized(connectionLock) {
+                        if (generation != connectionGeneration.get()) {
+                            false
+                        } else {
+                            when {
+                                state is ConnectionState.Connected -> {
+                                    connectedSeen = true
+                                    reconnectJob?.cancel()
+                                    _connectionState.value = state
+                                }
+                                mode == ConnectMode.BACKGROUND && !connectedSeen -> Unit
+                                mode == ConnectMode.STARTUP && state is ConnectionState.Error ->
+                                    _connectionState.value = ConnectionState.Disconnected
+                                else -> _connectionState.value = state
+                            }
+                            true
+                        }
+                    }
+                    if (!current) {
+                        if (state is ConnectionState.Connected) closeStaleTransport(bt)
+                        return@onEach
+                    }
                     if (state is ConnectionState.Connected) {
-                        connectedSeen = true
-                        reconnectJob?.cancel()
-                        _connectionState.value = state
                         saveLastAdapter(deviceAddress, state.deviceName)
+                        if (generation != connectionGeneration.get()) {
+                            closeStaleTransport(bt)
+                            return@onEach
+                        }
                         // Defense in depth: a background reconnect can still win the race
                         // against a user starting a GPS trip during the Error window
                         // (see startGpsSession) — never let an OBD session start on top
                         // of a live GPS one.
                         if (_gpsSessionActive.value) stopGpsSessionInternal(alsoStopService = false)
-                        // Keeps recording + GPS alive with the app backgrounded
-                        ObdForegroundService.start(appContext)
+                        val serviceStarted = synchronized(connectionLock) {
+                            if (generation != connectionGeneration.get()) {
+                                false
+                            } else {
+                                // Keeps recording + GPS alive with the app backgrounded
+                                ObdForegroundService.start(appContext)
+                                true
+                            }
+                        }
+                        if (!serviceStarted) {
+                            closeStaleTransport(bt)
+                            return@onEach
+                        }
                         startTelemetry(bt, state.deviceName)
-                        return@onEach
-                    }
-                    when {
-                        mode == ConnectMode.BACKGROUND && !connectedSeen -> Unit
-                        mode == ConnectMode.STARTUP && state is ConnectionState.Error ->
-                            _connectionState.value = ConnectionState.Disconnected
-                        else -> _connectionState.value = state
                     }
                 }
                 .launchIn(scope)
 
-            bt.connect()
+            try {
+                bt.connect()
+            } finally {
+                if (generation != connectionGeneration.get()) closeStaleTransport(bt)
+            }
+        }
+    }
+
+    private suspend fun closeStaleTransport(bt: Transport) {
+        withContext(NonCancellable) {
+            runCatching { bt.disconnect() }
+                .onFailure { Timber.w(it, "ObdSessionManager: failed to close stale transport") }
+            if (transport === bt) transport = null
         }
     }
 
@@ -888,6 +956,11 @@ class ObdSessionManager @Inject constructor(
 
     /** Stops everything battery-hungry and posts the trip summary. Terminal state. */
     private suspend fun finalShutdown(summarySessionId: Long?) {
+        synchronized(connectionLock) { connectionGeneration.incrementAndGet() }
+        connectJob?.cancel()
+        connectJob = null
+        stateJob?.cancel()
+        stateJob = null
         voltagePoller.stop()
         milWatcher.stop()
         runCatching { transport?.disconnect() }
