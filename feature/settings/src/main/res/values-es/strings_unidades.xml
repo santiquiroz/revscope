@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_units_title">Unidades</string>
+    <string name="settings_units_auto">Automático (según la región)</string>
+    <string name="settings_units_metric">Métrico (km/h, km, °C, kPa)</string>
+    <string name="settings_units_us">EE. UU. (mph, mi, °F, psi)</string>
+    <string name="settings_units_uk">Reino Unido (mph, mi, °C, psi)</string>
+</resources>

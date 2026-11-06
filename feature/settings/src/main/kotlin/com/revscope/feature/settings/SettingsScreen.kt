@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.common.i18n.AppLanguage
+import com.revscope.core.common.units.AppUnits
 import com.revscope.core.designsystem.FranjaSelectorVehiculo
 import kotlinx.coroutines.delay
 
@@ -101,6 +102,7 @@ fun SettingsScreen(
     )
 
     val tagActual = remember { AppLanguage.savedTag(context) }
+    val unidadesActual = remember { AppUnits.savedTag(context) }
     val idiomaSectionEntry = SettingsEntry(
         SettingsEntryMeta(
             id = "idioma",
@@ -112,6 +114,11 @@ fun SettingsScreen(
     ) {
         IdiomaSection(tagActual = tagActual, onElegir = { tag ->
             AppLanguage.persist(context, tag)
+            restartApp(context)
+        })
+        SectionTitle(stringResource(R.string.settings_units_title))
+        UnidadesSection(tagActual = unidadesActual, onElegir = { tag ->
+            AppUnits.persist(context, tag)
             restartApp(context)
         })
     }

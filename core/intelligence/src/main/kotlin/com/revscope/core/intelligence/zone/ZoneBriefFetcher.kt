@@ -76,7 +76,7 @@ class ZoneBriefFetcher(
         }
         return buildString {
             append("Hoy es ${today()}. $header ") // i18n-ignore
-            appendLine("Dame un brief CORTO y práctico de conducción para esta zona, en español, en viñetas de una línea, cubriendo SOLO lo que aplique y encuentres actual:") // i18n-ignore
+            appendLine("Dame un brief CORTO y práctico de conducción para esta zona, en viñetas de una línea, cubriendo SOLO lo que aplique y encuentres actual:") // i18n-ignore
             appendLine("- ⛽ Precio actual del combustible aquí (con la moneda local).") // i18n-ignore
             appendLine("- 🛣️ Peajes en las vías principales de la zona (valor aproximado si lo sabes).") // i18n-ignore
             appendLine("- 🚦 Restricción de circulación vigente hoy (pico y placa, zona de bajas emisiones, etc.).") // i18n-ignore

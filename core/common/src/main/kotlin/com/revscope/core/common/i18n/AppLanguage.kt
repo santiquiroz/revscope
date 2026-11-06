@@ -11,7 +11,7 @@ import java.util.Locale
 object AppLanguage {
     val SUPPORTED = listOf("en", "es")
 
-    private const val PREFS = "revscope_language"
+    internal const val PREFS = "revscope_language"
     private const val KEY_TAG = "tag"
 
     fun resolve(savedTag: String, systemLocale: Locale): Locale {

@@ -69,7 +69,7 @@ class TripDebriefGenerator @Inject constructor(
 
     private companion object {
         const val SYSTEM_PROMPT =
-            "Eres un coach de conducción conciso y directo, en español colombiano neutro. " + // i18n-ignore
+            "Eres un coach de conducción conciso y directo, de tono neutro. " + // i18n-ignore
                 "Con los datos del viaje: (1) resume el viaje en 2-3 frases con lo más notable, " + // i18n-ignore
                 "(2) compara contra el historial si existe (¿mejor o peor que de costumbre?), " + // i18n-ignore
                 "(3) da máximo 2 consejos accionables de manejo o mantenimiento. " + // i18n-ignore

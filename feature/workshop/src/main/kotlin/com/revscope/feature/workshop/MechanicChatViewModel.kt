@@ -75,7 +75,7 @@ class MechanicChatViewModel @Inject constructor(
             _state.value = _state.value.copy(hasProvider = false)
             return
         }
-        systemPrompt = MechanicChatContextBuilder.buildSystemPrompt(buildVehicleContext())
+        systemPrompt = MechanicChatContextBuilder.buildSystemPrompt(buildVehicleContext(), stringResolver)
         _state.value = _state.value.copy(hasProvider = true)
     }
 
@@ -113,7 +113,9 @@ class MechanicChatViewModel @Inject constructor(
 
     private fun appendSystemError() {
         _state.value = _state.value.copy(
-            messages = _state.value.messages + MechanicChatMessage.SystemError(ERROR_MESSAGE),
+            messages = _state.value.messages + MechanicChatMessage.SystemError(
+                stringResolver.get(R.string.workshop_mechanic_chat_error),
+            ),
             isSending = false,
         )
     }
@@ -189,6 +191,5 @@ class MechanicChatViewModel @Inject constructor(
     private companion object {
         const val MAX_TOKENS = 800
         const val RECENT_TRIPS_LIMIT = 3
-        const val ERROR_MESSAGE = "No se pudo consultar — revisa tu proveedor de IA en Ajustes"
     }
 }
