@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -258,7 +259,7 @@ private fun EngineSoundPackDropdown(selected: String, onSelected: (String) -> Un
         onExpandedChange = { expanded = it },
     ) {
         OutlinedTextField(
-            value = SoundPack.fromId(selected).displayName,
+            value = stringResource(SoundPack.fromId(selected).displayNameRes),
             onValueChange = {},
             readOnly = true,
             label = { Text("Pack de sonido", fontSize = 12.sp) },
@@ -274,7 +275,7 @@ private fun EngineSoundPackDropdown(selected: String, onSelected: (String) -> Un
         ) {
             SoundPack.entries.forEach { pack ->
                 DropdownMenuItem(
-                    text = { Text(pack.displayName + if (pack.funny) " 😜" else "") },
+                    text = { Text(stringResource(pack.displayNameRes) + if (pack.funny) " 😜" else "") },
                     onClick = {
                         onSelected(pack.id)
                         expanded = false

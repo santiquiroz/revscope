@@ -1,5 +1,7 @@
 package com.revscope.core.obd.telemetry.captura
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
@@ -21,6 +23,7 @@ import java.io.IOException
 class FastPoller(
     private val exchange: suspend (String) -> String,
     private val registry: PidRegistry,
+    private val resolver: StringResolver,
     private val relojNanos: () -> Long,
     private val relojEpochMs: () -> Long,
     esCan: Boolean?,
@@ -90,7 +93,7 @@ class FastPoller(
     private suspend fun intercambiarMedido(cmd: String): Intercambio {
         var medido: Intercambio? = null
         enCanal { medido = intercambiar(cmd) }
-        return checkNotNull(medido) { "enCanal no ejecutó el intercambio" }
+        return checkNotNull(medido) { "enCanal no ejecutó el intercambio" } // i18n-ignore
     }
 
     private suspend fun intercambiar(cmd: String): Intercambio {
@@ -142,7 +145,7 @@ class FastPoller(
     private fun registrarSalud(lote: LoteRapido) {
         when (lote.falla) {
             FallaLote.SIN_RESPUESTA -> if (++fallasSeguidas >= MAX_FALLAS_SEGUIDAS) {
-                throw IOException("Enlace perdido durante la captura rápida: $fallasSeguidas fallas seguidas")
+                throw IOException(resolver.get(R.string.obd_capture_link_lost, fallasSeguidas))
             }
             FallaLote.BUFFER_FULL -> pausaBufferFullMs = (pausaBufferFullMs * 2).coerceIn(PAUSA_MIN_MS, PAUSA_MAX_MS)
             else -> {

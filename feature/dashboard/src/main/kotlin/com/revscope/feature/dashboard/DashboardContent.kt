@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -424,7 +425,7 @@ internal fun TripScoreBar(tripScore: TripScore) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = "${tripScore.style.emoji} ${tripScore.style.label}",
+            text = "${tripScore.style.emoji} ${stringResource(tripScore.style.labelRes)}",
             style = RevScopeType.label,
             color = RevScopeColors.TextPrimary,
         )

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Final line of every prompt sent to the AI: fixes the answer language. -->
+    <string name="ai_response_language">Write your entire answer in English.</string>
+
+    <!-- DTC explanation fallbacks -->
+    <string name="ai_dtc_no_provider">To get AI explanations, set up a provider in Settings → Artificial intelligence.</string>
+    <string name="ai_dtc_offline">Code %1$s — offline. Connect to the internet to get the AI explanation.</string>
+    <string name="ai_dtc_fallback">Code %1$s — the AI explanation isn\'t available right now.</string>
+
+    <!-- Trip debrief -->
+    <string name="ai_debrief_no_provider">Set up an AI provider in Settings</string>
+
+    <!-- Anomaly alerts (spoken and shown) -->
+    <string name="ai_anomaly_high_temperature">Abnormal temperature on PID %1$s: %2$s</string>
+    <string name="ai_anomaly_fuel_trim">Abnormal fuel trim on PID %1$s: %2$s%%</string>
+    <string name="ai_anomaly_abnormal_reading">Abnormal reading on PID %1$s: %2$s</string>
+
+    <!-- Drive style -->
+    <string name="ai_drive_style_eco">Eco</string>
+    <string name="ai_drive_style_normal">Normal</string>
+    <string name="ai_drive_style_sport">Sport</string>
+    <string name="ai_drive_style_aggressive">Aggressive</string>
+
+    <!-- AI providers -->
+    <string name="ai_provider_openai_compatible">OpenAI-compatible</string>
+</resources>

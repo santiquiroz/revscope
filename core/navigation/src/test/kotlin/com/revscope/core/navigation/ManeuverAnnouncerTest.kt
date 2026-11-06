@@ -1,5 +1,6 @@
 package com.revscope.core.navigation
 
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -8,7 +9,7 @@ import org.junit.Test
 
 class ManeuverAnnouncerTest {
 
-    private val announcer = ManeuverAnnouncer()
+    private val announcer = ManeuverAnnouncer(XmlStringResolver.es(R::class.java))
 
     private fun state(
         distanceM: Int,
@@ -150,5 +151,12 @@ class ManeuverAnnouncerTest {
         announcer.reset()
 
         assertNotNull(announcer.next(state(390)))
+    }
+
+    @Test
+    fun `en ingles el desvio se avisa en ingles`() {
+        val english = ManeuverAnnouncer(XmlStringResolver.en(R::class.java))
+
+        assertEquals("Off route, recalculating", english.next(state(300, offRoute = true)))
     }
 }

@@ -24,8 +24,8 @@ class MatrizCapturaTest {
 
     @Test
     fun `el alto minimo alarga la ventana sin tocar ancho ni densidad`() {
-        assertEquals("w360dp-h640dp-xhdpi", DispositivoCaptura.PEQUENO.calificadores())
-        assertEquals("w412dp-h1800dp-xxhdpi", DispositivoCaptura.GRANDE.calificadores(altoMinimoDp = 1800))
-        assertEquals("w412dp-h915dp-xxhdpi", DispositivoCaptura.GRANDE.calificadores(altoMinimoDp = 500))
+        assertEquals("es-w360dp-h640dp-xhdpi", DispositivoCaptura.PEQUENO.calificadores())
+        assertEquals("es-w412dp-h1800dp-xxhdpi", DispositivoCaptura.GRANDE.calificadores(altoMinimoDp = 1800))
+        assertEquals("es-w412dp-h915dp-xxhdpi", DispositivoCaptura.GRANDE.calificadores(altoMinimoDp = 500))
     }
 }

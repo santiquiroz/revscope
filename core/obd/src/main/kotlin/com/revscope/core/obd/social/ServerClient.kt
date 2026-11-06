@@ -46,7 +46,7 @@ class ServerClient @Inject constructor(
 
     suspend fun getJsonArray(path: String): Result<JSONArray> = withContext(Dispatchers.IO) {
         runCatching {
-            val config = requireNotNull(config()) { "Servidor no configurado" }
+            val config = requireNotNull(config()) { "Servidor no configurado" } // i18n-ignore
             openAndRead(config, "GET", path, null).let(::JSONArray)
         }
     }
@@ -54,7 +54,7 @@ class ServerClient @Inject constructor(
     private suspend fun request(method: String, path: String, body: JSONObject?): Result<JSONObject> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val config = requireNotNull(config()) { "Servidor no configurado" }
+                val config = requireNotNull(config()) { "Servidor no configurado" } // i18n-ignore
                 openAndRead(config, method, path, body).let(::JSONObject)
             }
         }
@@ -66,7 +66,7 @@ class ServerClient @Inject constructor(
             connection.connectTimeout = TIMEOUT_MS
             connection.readTimeout = TIMEOUT_MS
             if (config.token.isNotBlank()) {
-                connection.setRequestProperty("Authorization", "Bearer ${config.token}")
+                connection.setRequestProperty("Authorization", "Bearer ${config.token}") // i18n-ignore
             }
             connection.setRequestProperty("X-Rider-Name", config.riderName)
             connection.setRequestProperty("User-Agent", RevScopeHttp.USER_AGENT)
@@ -76,7 +76,7 @@ class ServerClient @Inject constructor(
                 connection.outputStream.use { it.write(body.toString().toByteArray()) }
             }
             val code = connection.responseCode
-            check(code in 200..299) { "HTTP $code" }
+            check(code in 200..299) { "HTTP $code" } // i18n-ignore
             connection.inputStream.bufferedReader().readText()
         } finally {
             connection.disconnect()

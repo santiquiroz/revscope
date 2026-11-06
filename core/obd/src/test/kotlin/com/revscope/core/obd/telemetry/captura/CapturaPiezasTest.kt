@@ -1,7 +1,9 @@
 package com.revscope.core.obd.telemetry.captura
 
+import com.revscope.core.obd.R
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -55,10 +57,11 @@ class FastCaptureBufferTest {
 }
 
 class RateMeterTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     @Test
     fun `hz por pid y peticiones por segundo en la ventana`() {
-        val meter = RateMeter(esCan = true)
+        val meter = RateMeter(esCan = true, resolver = resolver)
         (0 until 60).forEach { i ->
             val t = i * 50L
             meter.registrarPeticion(t, 20.0, null)
@@ -73,7 +76,7 @@ class RateMeterTest {
 
     @Test
     fun `p50 y p95 de latencia`() {
-        val meter = RateMeter(esCan = true)
+        val meter = RateMeter(esCan = true, resolver = resolver)
         (1..100).forEach { meter.registrarPeticion(it.toLong(), it.toDouble(), null) }
 
         val stats = meter.estadisticas(100)
@@ -84,7 +87,7 @@ class RateMeterTest {
 
     @Test
     fun `ratio de errores acumulado y limitado por`() {
-        val meter = RateMeter(esCan = true)
+        val meter = RateMeter(esCan = true, resolver = resolver)
         repeat(7) { meter.registrarPeticion(it * 10L, 30.0, null) }
         repeat(3) { meter.registrarPeticion(100L + it, 30.0, FallaLote.BUFFER_FULL) }
 
@@ -97,9 +100,9 @@ class RateMeterTest {
 
     @Test
     fun `k-line y latencia alta explican el limite`() {
-        val kLine = RateMeter(esCan = false).apply { registrarPeticion(0, 30.0, null) }
-        val lento = RateMeter(esCan = true).apply { registrarPeticion(0, 120.0, null) }
-        val rapido = RateMeter(esCan = true).apply { registrarPeticion(0, 30.0, null) }
+        val kLine = RateMeter(esCan = false, resolver = resolver).apply { registrarPeticion(0, 30.0, null) }
+        val lento = RateMeter(esCan = true, resolver = resolver).apply { registrarPeticion(0, 120.0, null) }
+        val rapido = RateMeter(esCan = true, resolver = resolver).apply { registrarPeticion(0, 30.0, null) }
 
         assertEquals("protocolo lento", kLine.estadisticas(10).limitadoPor)
         assertEquals("adaptador/ECU", lento.estadisticas(10).limitadoPor)
@@ -108,6 +111,7 @@ class RateMeterTest {
 }
 
 class CaptureSafeguardsTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private fun estado(
         bateria: Int? = 80,
@@ -118,7 +122,8 @@ class CaptureSafeguardsTest {
         peticiones: Int = 100,
     ) = EstadoDispositivo(bateria, cargando, termico, transcurrido, ratio, peticiones)
 
-    private fun decidir(e: EstadoDispositivo) = CaptureSafeguards.decidir(e, maxDuracionMs = 300_000)
+    private fun decidir(e: EstadoDispositivo) =
+        CaptureSafeguards.decidir(e, maxDuracionMs = 300_000, resolver = resolver)
 
     @Test
     fun `sin problemas continua`() {

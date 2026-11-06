@@ -36,7 +36,7 @@ class VoltagePoller {
 
     private suspend fun leer(bt: Transport, onReading: (ObdReading) -> Unit) {
         try {
-            val raw = bt.exchange("AT RV\r", VOLTAGE_TIMEOUT_MS)
+            val raw = bt.exchange("AT RV\r", VOLTAGE_TIMEOUT_MS) // i18n-ignore
             parseVoltage(raw)?.let { volts ->
                 onReading(ObdReading(pid = ObdSessionManager.VBAT_PID, value = volts, unit = "V"))
             }

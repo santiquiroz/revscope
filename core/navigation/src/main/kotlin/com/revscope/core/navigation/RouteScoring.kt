@@ -1,5 +1,6 @@
 package com.revscope.core.navigation
 
+import com.revscope.core.common.i18n.StringResolver
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -7,9 +8,16 @@ import kotlin.math.sqrt
 
 private const val CURVY_SINUOSITY_THRESHOLD = 1.15
 private const val EARTH_RADIUS_M = 6_371_000.0
-private const val LABEL_FAST = "Rápida"
-private const val LABEL_CURVY = "Curvas"
-private const val LABEL_ALT = "Alt"
+
+/**
+ * Etiqueta de una ruta alternativa. La UI decide por el valor, no por el texto: el texto
+ * cambia con el idioma.
+ */
+enum class RouteLabel(val textRes: Int) {
+    FAST(R.string.nav_route_fastest),
+    CURVY(R.string.nav_route_curvy),
+    ALT(R.string.nav_route_alt),
+}
 
 /**
  * Puntaje puro de rutas alternativas de OSRM: cuánto se desvía cada una de la línea recta
@@ -31,26 +39,31 @@ object RouteScoring {
     }
 
     /**
-     * La de menor duración es "Rápida". Entre las demás, la más sinuosa por encima del umbral
-     * es "Curvas" — el resto queda "Alt". Con 0 o 1 rutas no hay nada que comparar.
+     * La de menor duración es [RouteLabel.FAST]. Entre las demás, la más sinuosa por encima del
+     * umbral es [RouteLabel.CURVY] — el resto queda [RouteLabel.ALT]. Con 0 o 1 rutas no hay
+     * nada que comparar.
      */
-    fun labelAlternatives(routes: List<NavigationRoute>): List<String> {
-        if (routes.size <= 1) return routes.map { LABEL_FAST }
+    fun classifyAlternatives(routes: List<NavigationRoute>): List<RouteLabel> {
+        if (routes.size <= 1) return routes.map { RouteLabel.FAST }
         val fastestIndex = routes.indices.minByOrNull { routes[it].durationS } ?: 0
         val sinuosities = routes.map(::routeSinuosity)
         val curvyIndex = curviestBeyondThreshold(routes.indices, fastestIndex, sinuosities)
         return routes.indices.map { index -> labelFor(index, fastestIndex, curvyIndex) }
     }
 
+    /** [classifyAlternatives] con el texto de cada etiqueta en el idioma de [resolver]. */
+    fun labelAlternatives(routes: List<NavigationRoute>, resolver: StringResolver): List<String> =
+        classifyAlternatives(routes).map { resolver.get(it.textRes) }
+
     private fun curviestBeyondThreshold(indices: IntRange, fastestIndex: Int, sinuosities: List<Double>): Int? =
         indices
             .filter { it != fastestIndex && sinuosities[it] > CURVY_SINUOSITY_THRESHOLD }
             .maxByOrNull { sinuosities[it] }
 
-    private fun labelFor(index: Int, fastestIndex: Int, curvyIndex: Int?): String {
-        if (index == fastestIndex) return LABEL_FAST
-        if (index == curvyIndex) return LABEL_CURVY
-        return LABEL_ALT
+    private fun labelFor(index: Int, fastestIndex: Int, curvyIndex: Int?): RouteLabel {
+        if (index == fastestIndex) return RouteLabel.FAST
+        if (index == curvyIndex) return RouteLabel.CURVY
+        return RouteLabel.ALT
     }
 
     private fun routeSinuosity(route: NavigationRoute): Double {

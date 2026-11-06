@@ -1,6 +1,7 @@
 package com.revscope.core.navigation
 
-import java.util.Locale
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import kotlin.math.roundToInt
 
 /**
@@ -14,12 +15,12 @@ data class Maneuver(
 )
 
 /**
- * Arma la instrucción hablada en español.
+ * Arma la instrucción hablada en el idioma de [StringResolver].
  *
  * Existe porque el OSRM público **no** devuelve `voiceInstructions` ni `bannerInstructions`
  * — son extensiones de Mapbox, verificado contra el servicio real. Y aunque las devolviera,
- * vendrían en inglés: la voz de esta app sale por AlertsEngine, en español, al
- * intercomunicador del casco.
+ * vendrían solo en inglés: la voz de esta app sale por AlertsEngine, en el idioma de la app,
+ * al intercomunicador del casco.
  *
  * Puro y determinístico: la frase depende solo de sus argumentos.
  */
@@ -28,80 +29,112 @@ object ManeuverSpeech {
     /** Debajo de esto ya no tiene sentido anunciar una distancia. */
     private const val IMMEDIATE_M = 30
 
-    /** Los metros se redondean a este múltiplo: "en 237 metros" no es una instrucción útil. */
+    /** Los metros se redondean a este múltiplo: 'en 237 metros' no es una instrucción útil. */
     private const val METERS_ROUNDING = 50
 
-    fun spoken(maneuver: Maneuver, distanceM: Int): String {
-        val action = action(maneuver)
+    fun spoken(maneuver: Maneuver, distanceM: Int, resolver: StringResolver): String {
+        val action = action(maneuver, resolver)
         if (maneuver.type == "arrive") return action
-        return "${distancePrefix(distanceM)}, $action"
+        return resolver.get(R.string.nav_spoken_with_distance, distancePrefix(distanceM, resolver), action)
     }
 
-    private fun distancePrefix(distanceM: Int): String = when {
-        distanceM < IMMEDIATE_M -> "Ahora"
+    private fun distancePrefix(distanceM: Int, resolver: StringResolver): String = when {
+        distanceM < IMMEDIATE_M -> resolver.get(R.string.nav_distance_now)
         distanceM < 1_000 -> {
             val rounded = ((distanceM.toDouble() / METERS_ROUNDING).roundToInt() * METERS_ROUNDING)
                 .coerceAtLeast(METERS_ROUNDING)
-            "En $rounded metros"
+            resolver.get(R.string.nav_distance_meters, rounded)
         }
         else -> {
             val km = distanceM / 1_000.0
-            // Coma decimal a propósito: lo lee un TTS en español.
+            // Separador decimal del idioma a propósito: en español lo lee un TTS que espera coma.
             val text = if (km % 1.0 == 0.0) {
                 km.toInt().toString()
             } else {
-                String.format(Locale("es"), "%.1f", km)
+                LocaleNumbers.decimal(km, 1, resolver.locale)
             }
-            val unit = if (text == "1") "kilómetro" else "kilómetros"
-            "En $text $unit"
+            if (text == "1") {
+                resolver.get(R.string.nav_distance_one_kilometer)
+            } else {
+                resolver.get(R.string.nav_distance_kilometers, text)
+            }
         }
     }
 
-    private fun action(maneuver: Maneuver): String {
+    private fun action(maneuver: Maneuver, resolver: StringResolver): String {
         val street = maneuver.streetName?.trim()?.takeIf { it.isNotEmpty() }
-        val side = side(maneuver.modifier)
+        val side = Side.of(maneuver.modifier)
+        val r = resolver
 
         return when (maneuver.type) {
-            "arrive" -> "Llegó a su destino"
-            "depart" -> withStreet("Comience", street, "por")
-            "off ramp" -> withStreet(joinSide("tome la salida", side), street, "hacia")
-            "on ramp" -> withStreet(joinSide("tome la rampa", side), street, "hacia")
-            "merge" -> withStreet(joinSide("incorpórese", side), street, "a")
-            "fork" -> withStreet(keepPhrase(side), street, "en")
-            "end of road" -> withStreet("al final de la vía ${turnPhrase(side)}", street, "en")
-            "roundabout", "rotary", "roundabout turn" -> withStreet("entre a la glorieta", street, "hacia")
-            "exit roundabout", "exit rotary" -> withStreet("salga de la glorieta", street, "hacia")
-            "turn" -> withStreet(turnPhrase(side), street, "en")
-            "new name", "continue", "notification" -> withStreet("continúe", street, "por")
-            // Un tipo que no conocemos es mejor anunciarlo como "continúe" que callarse.
-            else -> withStreet("continúe", street, "por")
+            "arrive" -> r.get(R.string.nav_arrived)
+            "depart" -> withStreet(r.get(R.string.nav_depart), street, R.string.nav_street_along, r)
+            "off ramp" -> withStreet( // i18n-ignore: tipo de OSRM
+                joinSide(R.string.nav_take_exit, R.string.nav_take_exit_side, side, r),
+                street, R.string.nav_street_toward, r,
+            )
+            "on ramp" -> withStreet( // i18n-ignore: tipo de OSRM
+                joinSide(R.string.nav_take_ramp, R.string.nav_take_ramp_side, side, r),
+                street, R.string.nav_street_toward, r,
+            )
+            "merge" -> withStreet(
+                joinSide(R.string.nav_merge, R.string.nav_merge_side, side, r),
+                street, R.string.nav_street_merge, r,
+            )
+            "fork" -> withStreet(keepPhrase(side, r), street, R.string.nav_street_at, r)
+            "end of road" -> withStreet( // i18n-ignore: tipo de OSRM
+                r.get(R.string.nav_end_of_road, turnPhrase(side, r)),
+                street, R.string.nav_street_at, r,
+            )
+            "roundabout", "rotary", "roundabout turn" -> // i18n-ignore: tipos de OSRM
+                withStreet(r.get(R.string.nav_enter_roundabout), street, R.string.nav_street_toward, r)
+            "exit roundabout", "exit rotary" -> // i18n-ignore: tipos de OSRM
+                withStreet(r.get(R.string.nav_exit_roundabout), street, R.string.nav_street_toward, r)
+            "turn" -> withStreet(turnPhrase(side, r), street, R.string.nav_street_at, r)
+            "new name", "continue", "notification" -> // i18n-ignore: tipos de OSRM
+                withStreet(r.get(R.string.nav_continue), street, R.string.nav_street_along, r)
+            // Un tipo que no conocemos es mejor anunciarlo como un seguir derecho que callarse.
+            else -> withStreet(r.get(R.string.nav_continue), street, R.string.nav_street_along, r)
         }
     }
 
-    private fun turnPhrase(side: String?): String = when (side) {
-        null -> "continúe"
-        "en U" -> "haga un giro en U"
-        else -> "gire $side"
-    }
+    private fun turnPhrase(side: Side?, resolver: StringResolver): String =
+        resolver.get(side?.turn ?: R.string.nav_continue)
 
-    private fun keepPhrase(side: String?): String =
-        if (side == null) "continúe" else "manténgase ${side.removePrefix("a la ").let { "a la $it" }}"
+    private fun keepPhrase(side: Side?, resolver: StringResolver): String =
+        resolver.get(side?.keep ?: R.string.nav_continue)
 
-    private fun joinSide(verb: String, side: String?): String =
-        if (side == null) verb else "$verb $side"
+    private fun joinSide(verb: Int, verbWithSide: Int, side: Side?, resolver: StringResolver): String =
+        if (side == null) resolver.get(verb) else resolver.get(verbWithSide, resolver.get(side.side))
 
-    private fun withStreet(action: String, street: String?, preposition: String): String =
-        if (street == null) action else "$action $preposition $street"
+    private fun withStreet(action: String, street: String?, template: Int, resolver: StringResolver): String =
+        if (street == null) action else resolver.get(template, action, street)
 
-    /** Traduce el `modifier` de OSRM. Devuelve null cuando no aporta dirección. */
-    private fun side(modifier: String?): String? = when (modifier) {
-        "right" -> "a la derecha"
-        "left" -> "a la izquierda"
-        "slight right" -> "levemente a la derecha"
-        "slight left" -> "levemente a la izquierda"
-        "sharp right" -> "cerrado a la derecha"
-        "sharp left" -> "cerrado a la izquierda"
-        "uturn" -> "en U"
-        else -> null
+    /**
+     * El `modifier` de OSRM en sus tres usos: lado de una salida, giro y bifurcación. Van como
+     * frases enteras porque el orden de las palabras cambia de un idioma a otro. Null cuando
+     * no aporta dirección.
+     */
+    private enum class Side(val side: Int, val turn: Int, val keep: Int) {
+        RIGHT(R.string.nav_side_right, R.string.nav_turn_right, R.string.nav_keep_right),
+        LEFT(R.string.nav_side_left, R.string.nav_turn_left, R.string.nav_keep_left),
+        SLIGHT_RIGHT(R.string.nav_side_slight_right, R.string.nav_turn_slight_right, R.string.nav_keep_slight_right),
+        SLIGHT_LEFT(R.string.nav_side_slight_left, R.string.nav_turn_slight_left, R.string.nav_keep_slight_left),
+        SHARP_RIGHT(R.string.nav_side_sharp_right, R.string.nav_turn_sharp_right, R.string.nav_keep_sharp_right),
+        SHARP_LEFT(R.string.nav_side_sharp_left, R.string.nav_turn_sharp_left, R.string.nav_keep_sharp_left),
+        UTURN(R.string.nav_side_uturn, R.string.nav_turn_uturn, R.string.nav_keep_uturn);
+
+        companion object {
+            fun of(modifier: String?): Side? = when (modifier) {
+                "right" -> RIGHT
+                "left" -> LEFT
+                "slight right" -> SLIGHT_RIGHT // i18n-ignore: modifier de OSRM
+                "slight left" -> SLIGHT_LEFT // i18n-ignore: modifier de OSRM
+                "sharp right" -> SHARP_RIGHT // i18n-ignore: modifier de OSRM
+                "sharp left" -> SHARP_LEFT // i18n-ignore: modifier de OSRM
+                "uturn" -> UTURN
+                else -> null
+            }
+        }
     }
 }

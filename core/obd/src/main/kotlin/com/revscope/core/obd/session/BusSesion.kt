@@ -1,5 +1,7 @@
 package com.revscope.core.obd.session
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.ObdReading
@@ -81,6 +83,7 @@ internal class BusSesion(
     private val bt: Transport,
     private val gate: PollingGate,
     private val scheduler: PidScheduler,
+    private val resolver: StringResolver,
     private val avisar: (String) -> Unit,
     private val ahora: () -> Long = System::currentTimeMillis,
 ) {
@@ -113,7 +116,7 @@ internal class BusSesion(
             lector.lecturas().collect { send(it) }
             if (lector.sinMonitor.value) {
                 desactivado = true
-                avisarUnaVez(AVISO_SIN_MONITOR)
+                avisarUnaVez(resolver.get(AVISO_SIN_MONITOR_ID))
             }
         } catch (e: CancellationException) {
             throw e
@@ -140,12 +143,16 @@ internal class BusSesion(
 
     private fun avisoCaducada(perfil: PerfilCan, clave: String): String {
         val nombre = perfil.senales.firstOrNull { it.clave == clave }?.nombre ?: clave
-        val respaldo = if (clave == ClavesSenal.GEAR) "la estimación" else "el OBD estándar"
-        return "No llegan datos del bus para $nombre; usando $respaldo"
+        val respaldo = if (clave == ClavesSenal.GEAR) {
+            resolver.get(R.string.obd_bus_source_estimate)
+        } else {
+            resolver.get(R.string.obd_bus_source_standard)
+        }
+        return resolver.get(R.string.obd_bus_missing_data, nombre, respaldo)
     }
 
     private companion object {
         const val VIGILANCIA_MS = 1_000L
-        const val AVISO_SIN_MONITOR = "Tu adaptador no permite escuchar el bus; usando el OBD estándar"
+        const val AVISO_SIN_MONITOR_ID = R.string.obd_bus_listening_unsupported
     }
 }

@@ -1,5 +1,7 @@
 package com.revscope.core.navigation
 
+import com.revscope.core.common.i18n.StringResolver
+
 /**
  * Decide **cuándo** hablar. [ManeuverSpeech] decide qué decir.
  *
@@ -10,7 +12,7 @@ package com.revscope.core.navigation
  * Guarda estado, pero es determinístico: la misma secuencia de estados produce la misma
  * secuencia de frases.
  */
-class ManeuverAnnouncer {
+class ManeuverAnnouncer(private val resolver: StringResolver) {
 
     private var currentManeuverIndex = -1
     private var closestTierAnnounced = Int.MAX_VALUE
@@ -38,13 +40,13 @@ class ManeuverAnnouncer {
     private fun arrivalAnnouncement(state: NavigationState): String? {
         if (announcedArrival) return null
         announcedArrival = true
-        return ManeuverSpeech.spoken(state.maneuver ?: ARRIVAL, 0)
+        return ManeuverSpeech.spoken(state.maneuver ?: ARRIVAL, 0, resolver)
     }
 
     private fun offRouteAnnouncement(): String? {
         if (announcedOffRoute) return null
         announcedOffRoute = true
-        return OFF_ROUTE_PHRASE
+        return resolver.get(R.string.nav_off_route)
     }
 
     private fun maneuverAnnouncement(state: NavigationState): String? {
@@ -54,7 +56,7 @@ class ManeuverAnnouncer {
         if (tier >= closestTierAnnounced) return null
         closestTierAnnounced = tier
         startedTalking = true
-        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM)
+        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM, resolver)
     }
 
     private fun rewindOnNewManeuver(index: Int) {
@@ -70,7 +72,7 @@ class ManeuverAnnouncer {
     private fun firstWordOfTheTrip(state: NavigationState, maneuver: Maneuver): String? {
         if (startedTalking) return null
         startedTalking = true
-        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM)
+        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM, resolver)
     }
 
     /** El umbral más cercano que la distancia ya cruzó; los más lejanos quedan saltados. */
@@ -80,8 +82,6 @@ class ManeuverAnnouncer {
     private companion object {
         /** Avisar, preparar, y ejecutar. Tres son suficientes para no volverse cansón. */
         val TIERS = listOf(400, 150, 30)
-
-        const val OFF_ROUTE_PHRASE = "Se salió de la ruta, recalculando"
 
         val ARRIVAL = Maneuver("arrive", null, null)
     }

@@ -1,7 +1,7 @@
 package com.revscope.core.navigation
 
 /**
- * Traduce "cuántos pasos faltan" —lo que reporta el motor de progreso— a "cuál es la maniobra
+ * Traduce 'cuántos pasos faltan' —lo que reporta el motor de progreso— a "cuál es la maniobra
  * que hay que anunciar".
  *
  * Está aparte y es puro porque es justo donde se desalinean las instrucciones, y un

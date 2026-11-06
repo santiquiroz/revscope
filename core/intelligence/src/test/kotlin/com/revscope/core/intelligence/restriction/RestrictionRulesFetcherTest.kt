@@ -1,7 +1,9 @@
 package com.revscope.core.intelligence.restriction
 
+import com.revscope.core.intelligence.R
 import com.revscope.core.intelligence.provider.AiProvider
 import com.revscope.core.intelligence.provider.AiRequest
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -31,7 +33,8 @@ class RestrictionRulesFetcherTest {
          "validFromMs":0,"validUntilMs":9999999999999,"timeZoneId":"America/Mexico_City"}
     """.trimIndent()
 
-    private fun fetcher(provider: AiProvider?) = RestrictionRulesFetcher { provider }
+    private fun fetcher(provider: AiProvider?) =
+        RestrictionRulesFetcher(XmlStringResolver.es(R::class.java)) { provider }
 
     @Test
     fun `respuesta NONE significa ciudad sin restriccion`() = runBlocking {

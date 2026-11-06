@@ -6,7 +6,7 @@ import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
-/** Handles the "ESTOY BIEN" action button on the crash-alarm notification. */
+/** Handles the "ESTOY BIEN" action button on the crash-alarm notification. */ // i18n-ignore
 @AndroidEntryPoint
 class CrashCancelReceiver : BroadcastReceiver() {
 

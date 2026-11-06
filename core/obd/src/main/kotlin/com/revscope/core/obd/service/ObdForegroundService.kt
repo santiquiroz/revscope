@@ -20,6 +20,8 @@ import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.cameras.CameraCoverageTracker
@@ -87,6 +89,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var navigationController: com.revscope.core.navigation.NavigationController
     @Inject lateinit var crashResponder: CrashResponder
     @Inject lateinit var engineSound: com.revscope.core.obd.sound.EngineSoundController
+    @Inject lateinit var resolver: StringResolver
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var gpsRecorder: GpsTrackRecorder? = null
@@ -168,7 +171,7 @@ class ObdForegroundService : Service() {
     }
 
     private fun startInForeground() {
-        val notification = buildNotification("Conectando…", null)
+        val notification = buildNotification(resolver.get(R.string.obd_service_connecting), null)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
             if (hasLocationPermission()) {
@@ -243,7 +246,7 @@ class ObdForegroundService : Service() {
             scope = scope,
             sessionManager = sessionManager,
             motionHub = motionHub,
-            vehicleName = sessionManager.activeProfile.value?.name ?: "tu vehículo",
+            vehicleName = sessionManager.activeProfile.value?.name ?: resolver.get(R.string.obd_vehicle_fallback),
             vehicleType = sessionVehicleType,
         )
         engineSound.start()
@@ -315,15 +318,17 @@ class ObdForegroundService : Service() {
         val state = sessionManager.connectionState.value
         val estadoViaje = sessionManager.estadoViaje.value
         val readings = sessionManager.readings.value
-        val title = TripServicePolicy.titulo(state, estadoViaje)
+        val title = TripServicePolicy.titulo(state, estadoViaje, resolver)
         val temp = readings["05"]?.value?.toInt()
         val speed = readings["0D"]?.value?.toInt()
         val volts = readings[ObdSessionManager.VBAT_PID]?.value
         val body = buildList {
-            speed?.let { add("$it km/h") }
-            temp?.let { add("$it°C") }
-            volts?.let { add("%.1fV".format(it)) }
-        }.joinToString("  ·  ").ifEmpty { TripServicePolicy.cuerpoSinLecturas(estadoViaje) }
+            speed?.let { add(resolver.get(R.string.obd_notification_speed, it)) }
+            temp?.let { add(resolver.get(R.string.obd_notification_temperature, it)) }
+            volts?.let {
+                add(resolver.get(R.string.obd_notification_voltage, LocaleNumbers.decimal(it, 1, resolver.locale)))
+            }
+        }.joinToString("  ·  ").ifEmpty { TripServicePolicy.cuerpoSinLecturas(estadoViaje, resolver) }
 
         val key: Pair<String, String?> = title to body
         if (!force && key == lastNotificationKey) return
@@ -350,8 +355,8 @@ class ObdForegroundService : Service() {
     }
 
     private fun textoAccion(accion: TripServicePolicy.AccionViaje): String = when (accion) {
-        TripServicePolicy.AccionViaje.FINALIZAR -> "Finalizar viaje"
-        TripServicePolicy.AccionViaje.INICIAR -> "Iniciar viaje"
+        TripServicePolicy.AccionViaje.FINALIZAR -> resolver.get(R.string.obd_service_end_trip)
+        TripServicePolicy.AccionViaje.INICIAR -> resolver.get(R.string.obd_service_start_trip)
     }
 
     private fun tripActionIntent(accion: TripServicePolicy.AccionViaje): android.app.PendingIntent {
@@ -378,7 +383,7 @@ class ObdForegroundService : Service() {
     private fun createChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Telemetría RevScope",
+            resolver.get(R.string.obd_service_channel),
             NotificationManager.IMPORTANCE_LOW, // silent — the alerts engine handles sounds
         )
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)

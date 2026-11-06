@@ -1,5 +1,7 @@
 package com.revscope.core.obd.telemetry.captura
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.ObdSessionManager
@@ -37,6 +39,7 @@ class MuestreadorVoltaje(
     private val gate: PollingGate,
     private val turno: TurnoCaptura,
     private val nuevoSumidero: () -> SumideroCaptura,
+    private val resolver: StringResolver,
     private val relojNanos: () -> Long = System::nanoTime,
     private val relojEpochMs: () -> Long = System::currentTimeMillis,
     private val io: CoroutineDispatcher = Dispatchers.IO,
@@ -66,11 +69,17 @@ class MuestreadorVoltaje(
     override val ultimoResumen: StateFlow<ResumenCaptura?> = _ultimoResumen.asStateFlow()
 
     override suspend fun iniciar(config: ConfigCaptura): Result<InicioCaptura> = arranque.withLock {
-        if (job?.isActive == true) return Result.failure(IllegalStateException("Ya hay una ráfaga de voltaje activa"))
+        if (job?.isActive == true) {
+            return Result.failure(IllegalStateException(resolver.get(R.string.obd_capture_voltage_active)))
+        }
         val bt = enlace.transporte()
         val scope = enlace.scopeEnlace()
-        if (bt == null || scope == null) return Result.failure(IllegalStateException("Sin adaptador conectado"))
-        if (!turno.tomar(TurnoCaptura.RAFAGA_VOLTAJE)) return Result.failure(IllegalStateException(TurnoCaptura.ocupado(turno.ocupadoPor)))
+        if (bt == null || scope == null) {
+            return Result.failure(IllegalStateException(resolver.get(R.string.obd_adapter_not_connected)))
+        }
+        if (!turno.tomar(TurnoCaptura.RAFAGA_VOLTAJE)) {
+            return Result.failure(IllegalStateException(TurnoCaptura.ocupado(turno.ocupadoPor, resolver)))
+        }
         val nueva = try {
             pausar(true)
             abrir(bt, config)
@@ -108,7 +117,7 @@ class MuestreadorVoltaje(
     // La primera lectura confirma que el adaptador responde a AT RV antes de dar la prueba por empezada.
     private suspend fun abrir(bt: Transport, config: ConfigCaptura): Sesion {
         val primera = gate.sondear { leer(bt, TIMEOUT_PRIMERA_MS) }
-            ?: throw IllegalStateException("El adaptador no responde a AT RV: sin voltaje no hay prueba de batería")
+            ?: throw IllegalStateException(resolver.get(R.string.obd_capture_voltage_no_response))
         val inicioEpochMs = relojEpochMs()
         val inicio = InicioCaptura(
             id = "rv-$inicioEpochMs",
@@ -156,7 +165,9 @@ class MuestreadorVoltaje(
         val latenciaMs = (relojNanos() - t0) / 1_000_000.0
         if (voltios != null) return registrar(s, voltios, latenciaMs)
         s.fallasSeguidas++
-        if (s.fallasSeguidas >= MAX_FALLAS_SEGUIDAS) throw DetencionMuestreo(MOTIVO_SIN_RESPUESTA)
+        if (s.fallasSeguidas >= MAX_FALLAS_SEGUIDAS) {
+            throw DetencionMuestreo(MOTIVO_SIN_RESPUESTA)
+        }
     }
 
     // null = sin respuesta útil (timeout o texto sin voltaje); un transporte cerrado sí corta la ráfaga.
@@ -182,7 +193,9 @@ class MuestreadorVoltaje(
         while (true) {
             delay(TICK_MS)
             withContext(io) { s.sumidero.volcar() }
-            if (transcurridoMs(s) >= s.inicio.duracionMaxMs) throw DetencionMuestreo(MOTIVO_DURACION)
+            if (transcurridoMs(s) >= s.inicio.duracionMaxMs) {
+                throw DetencionMuestreo(MOTIVO_DURACION)
+            }
         }
     }
 
@@ -229,9 +242,9 @@ class MuestreadorVoltaje(
         const val PID = ObdSessionManager.VBAT_PID
         const val TIMEOUT_MS = 300L
         const val MAX_FALLAS_SEGUIDAS = 10
-        const val MOTIVO_SIN_RESPUESTA = "${CapturaRapida.MOTIVO_ENLACE}: el adaptador dejó de responder a AT RV"
-        const val MOTIVO_DURACION = "duración máxima alcanzada"
-        private const val COMANDO = "AT RV\r"
+        const val MOTIVO_SIN_RESPUESTA = "${CapturaRapida.MOTIVO_ENLACE}: el adaptador dejó de responder a AT RV" // i18n-ignore
+        const val MOTIVO_DURACION = "duración máxima alcanzada" // i18n-ignore
+        private const val COMANDO = "AT RV\r" // i18n-ignore
         private const val UNIDAD = "V"
         private const val TIMEOUT_PRIMERA_MS = 1_000L
         private const val TICK_MS = 1_000L

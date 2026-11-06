@@ -91,7 +91,7 @@ class RainWatcher @Inject constructor(
         // Locale.US obligatorio: con locale es_CO "%.4f" produce comas y rompe la URL.
         val coords = String.format(java.util.Locale.US, "latitude=%.4f&longitude=%.4f", lat, lon)
         val url = "https://api.open-meteo.com/v1/forecast?$coords" +
-            "&current=precipitation&minutely_15=precipitation&forecast_minutely_15=${LOOKAHEAD_SLOTS + 1}"
+            "&current=precipitation&minutely_15=precipitation&forecast_minutely_15=${LOOKAHEAD_SLOTS + 1}" // i18n-ignore
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.connectTimeout = FETCH_TIMEOUT_MS

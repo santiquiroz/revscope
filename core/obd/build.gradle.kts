@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit)
+    testImplementation(project(":core:ui-testing"))
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockk)
     // org.json available on Android runtime; add for JVM unit tests

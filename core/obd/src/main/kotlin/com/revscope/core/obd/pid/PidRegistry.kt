@@ -23,7 +23,7 @@ class PidRegistry(pidsJson: String) {
     private val definitions: MutableMap<String, PidDefinition> =
         parseDefinitions(pidsJson).toMutableMap()
 
-    // Null means "not yet set" — all PIDs allowed. Set after ProtocolNegotiator runs.
+    // Null means "not yet set" — all PIDs allowed. Set after ProtocolNegotiator runs. // i18n-ignore
     private var supportedPidFilter: Set<String>? = null
 
     // ── Public API ────────────────────────────────────────────────────────────

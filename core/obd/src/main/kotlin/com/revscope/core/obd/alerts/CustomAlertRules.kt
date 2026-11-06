@@ -1,7 +1,10 @@
 package com.revscope.core.obd.alerts
 
 import com.revscope.core.obd.model.ObdReading
-import java.util.Locale
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
+import java.text.DecimalFormatSymbols
 import org.json.JSONArray
 import timber.log.Timber
 
@@ -50,18 +53,17 @@ object CustomAlertRules {
     fun isInvertedRange(min: Double?, max: Double?): Boolean =
         min != null && max != null && min > max
 
-    /** Returns the Spanish "out of range" message for [reading], or null if within range. */
-    fun evaluate(reading: ObdReading, rules: List<Rule>): String? {
+    fun evaluate(reading: ObdReading, rules: List<Rule>, resolver: StringResolver): String? {
         val rule = rules.find { it.pid == reading.pid.uppercase() } ?: return null
         val outOfRange = (rule.min != null && reading.value < rule.min) ||
             (rule.max != null && reading.value > rule.max)
         if (!outOfRange) return null
-        return "${rule.nombre} fuera de rango: ${formatValue(reading.value)} ${reading.unit}".trimEnd()
+        val value = formatValue(reading.value, resolver)
+        return resolver.get(R.string.obd_custom_alert_out_of_range, rule.nombre, value, reading.unit).trimEnd()
     }
 
-    // Locale.US pinned so the spoken/displayed number is deterministic regardless of device locale
-    private fun formatValue(value: Double): String {
-        val rounded = "%.1f".format(Locale.US, value)
-        return if (rounded.endsWith(".0")) rounded.dropLast(2) else rounded
+    private fun formatValue(value: Double, resolver: StringResolver): String {
+        val rounded = LocaleNumbers.decimal(value, 1, resolver.locale)
+        return rounded.removeSuffix("${DecimalFormatSymbols.getInstance(resolver.locale).decimalSeparator}0")
     }
 }

@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.R
@@ -54,7 +55,7 @@ private const val SPEED_PID = "0D"
 
 /**
  * Reacts to [CrashDetector] escalating to TRIGGERED: posts a full-screen alarm
- * notification with a 60s countdown to "ESTOY BIEN" and, if it expires unanswered,
+ * notification with a 60s countdown to "ESTOY BIEN" and, if it expires unanswered, // i18n-ignore
  * sends an emergency SMS with the last known location. Started/stopped alongside
  * the telemetry session by [com.revscope.core.obd.service.ObdForegroundService].
  *
@@ -66,6 +67,7 @@ class CrashResponder @Inject constructor(
     private val settings: DataStore<Preferences>,
     private val routeHolder: LiveRouteHolder,
     private val alertsEngine: AlertsEngine,
+    private val resolver: StringResolver,
 ) {
 
     data class AlarmState(val remainingMs: Long, val vehicleName: String)
@@ -82,7 +84,7 @@ class CrashResponder @Inject constructor(
     @Volatile private var countdownJob: Job? = null
     @Volatile private var enabled = false
     @Volatile private var emergencyPhone = ""
-    @Volatile private var vehicleName = "tu vehículo"
+    @Volatile private var vehicleName = ""
     @Volatile private var alarmPlayer: MediaPlayer? = null
 
     private val _alarmState = MutableStateFlow<AlarmState?>(null)
@@ -153,7 +155,7 @@ class CrashResponder @Inject constructor(
     fun hadRecentMotion(windowMs: Long): Boolean =
         detector.hadRecentMotion(windowMs, System.currentTimeMillis())
 
-    /** "ESTOY BIEN": cancels any active countdown/alarm and rearms the detector. */
+    /** "ESTOY BIEN": cancels any active countdown/alarm and rearms the detector. */ // i18n-ignore
     fun cancelAlarm() {
         countdownJob?.cancel()
         countdownJob = null
@@ -244,7 +246,7 @@ class CrashResponder @Inject constructor(
             player.setDataSource(context, uri)
             player.isLooping = true
             // NEW-4: prepareAsync() callback can land after cancelAlarm()/onDestroy() already
-            // released this player (e.g. "ESTOY BIEN" tapped during preparation) — starting a
+            // released this player (e.g. "ESTOY BIEN" tapped during preparation) — starting a // i18n-ignore
             // released MediaPlayer throws. Only start if this is still the live player, and
             // never let a stray IllegalStateException escape the callback.
             player.setOnPreparedListener { mp ->
@@ -305,8 +307,8 @@ class CrashResponder @Inject constructor(
         val location = routeHolder.lastPoint.value
         val locationText = location
             ?.let { "https://maps.google.com/?q=${it.lat},${it.lon}" }
-            ?: "ubicacion no disponible"
-        return "RevScope: posible caida detectada ($vehicleName). Ubicacion: $locationText"
+            ?: resolver.get(R.string.obd_crash_sms_location_unavailable)
+        return resolver.get(R.string.obd_crash_sms, vehicleName, locationText)
     }
 
     private fun hasSmsPermission(): Boolean =
@@ -322,24 +324,28 @@ class CrashResponder @Inject constructor(
         val seconds = remainingMs / 1000
         val builder = NotificationCompat.Builder(context, ALARM_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_revscope)
-            .setContentTitle("Posible caída detectada")
-            .setContentText("Si no respondes, se enviará un SMS de emergencia en ${seconds}s")
+            .setContentTitle(resolver.get(R.string.obd_crash_notification_title))
+            .setContentText(resolver.get(R.string.obd_crash_notification_countdown, seconds))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(0, "ESTOY BIEN", cancelPendingIntent())
+            .addAction(0, resolver.get(R.string.obd_crash_cancel), cancelPendingIntent())
         fullScreenPendingIntent()?.let { builder.setFullScreenIntent(it, true) }
         return builder.build()
     }
 
     private fun postFinalNotification(simulated: Boolean) {
-        val title = if (simulated) "Prueba completada" else "SMS de emergencia enviado"
-        val text = if (simulated) {
-            "Simulación sin envío real de SMS"
+        val title = if (simulated) {
+            resolver.get(R.string.obd_crash_test_complete)
         } else {
-            "Se avisó a tu contacto de emergencia con tu última ubicación"
+            resolver.get(R.string.obd_crash_sms_sent)
+        }
+        val text = if (simulated) {
+            resolver.get(R.string.obd_crash_simulation_complete)
+        } else {
+            resolver.get(R.string.obd_crash_contact_notified)
         }
         val notification = NotificationCompat.Builder(context, ALARM_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_revscope)
@@ -371,7 +377,7 @@ class CrashResponder @Inject constructor(
 
     private fun createAlarmChannel() {
         val channel = NotificationChannel(
-            ALARM_CHANNEL_ID, "Emergencia — detección de caída", NotificationManager.IMPORTANCE_HIGH,
+            ALARM_CHANNEL_ID, resolver.get(R.string.obd_crash_channel), NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             val audioAttributes = AudioAttributes.Builder()
