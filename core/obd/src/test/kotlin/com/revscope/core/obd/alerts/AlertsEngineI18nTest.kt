@@ -1,6 +1,8 @@
 package com.revscope.core.obd.alerts
 
 import android.speech.tts.TextToSpeech
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.obd.R
 import com.revscope.core.uitesting.XmlStringResolver
 import java.util.Locale
@@ -30,6 +32,43 @@ class AlertsEngineI18nTest {
         assertEquals("Cero a cien en 1,0 segundos", launchPhrase(spanish, null, 1_000))
         assertEquals("Cero a sesenta en 8,2 segundos", launchPhrase(spanish, 8_200, null))
         assertEquals(null, launchPhrase(english, null, null))
+    }
+
+    private val metric = UnitFormatter(UnitSystem.METRIC, Locale("es"))
+    private val us = UnitFormatter(UnitSystem.US, Locale.US)
+    private val uk = UnitFormatter(UnitSystem.UK, Locale.UK)
+
+    @Test
+    fun `overheat speaks degrees in the chosen temperature unit`() {
+        assertEquals("Temperatura de motor 105 grados", overheatPhrase(spanish, metric, 105.0))
+        assertEquals("Engine temperature 221 degrees", overheatPhrase(english, us, 105.0))
+        assertEquals("Engine temperature 105 degrees", overheatPhrase(english, uk, 105.0))
+    }
+
+    @Test
+    fun `speed camera speaks distance and limit as words`() {
+        assertEquals(
+            "Radar a 300 metros, límite 80 kilómetros por hora",
+            speedCameraPhrase(spanish, metric, 320, 80),
+        )
+        assertEquals(
+            "Speed camera in 0.2 miles, speed limit 50 miles per hour",
+            speedCameraPhrase(english, us, 320, 80),
+        )
+        assertEquals("Speed camera in 330 feet", speedCameraPhrase(english, uk, 140, null))
+    }
+
+    @Test
+    fun `pothole speaks meters or feet`() {
+        assertEquals("Hueco reportado a 187 metros", potholePhrase(spanish, metric, 187))
+        assertEquals("Reported pothole 390 feet ahead", potholePhrase(english, us, 120))
+    }
+
+    @Test
+    fun `whole miles keep singular wording`() {
+        assertEquals("1 mile", spokenDistance(english, us, 1_609))
+        assertEquals("1 kilómetro", spokenDistance(spanish, metric, 1_000))
+        assertEquals("1 mile per hour", spokenSpeed(english, us, 1.609344))
     }
 
     @Test

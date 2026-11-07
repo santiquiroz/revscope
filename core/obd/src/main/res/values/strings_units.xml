@@ -1,0 +1,30 @@
+<resources>
+    <plurals name="obd_units_spoken_kmh">
+        <item quantity="one">%1$d kilometer per hour</item>
+        <item quantity="other">%1$d kilometers per hour</item>
+    </plurals>
+    <plurals name="obd_units_spoken_mph">
+        <item quantity="one">%1$d mile per hour</item>
+        <item quantity="other">%1$d miles per hour</item>
+    </plurals>
+    <plurals name="obd_units_spoken_meters">
+        <item quantity="one">%1$d meter</item>
+        <item quantity="other">%1$d meters</item>
+    </plurals>
+    <plurals name="obd_units_spoken_feet">
+        <item quantity="one">%1$d foot</item>
+        <item quantity="other">%1$d feet</item>
+    </plurals>
+    <plurals name="obd_units_spoken_kilometers">
+        <item quantity="one">%1$s kilometer</item>
+        <item quantity="other">%1$s kilometers</item>
+    </plurals>
+    <plurals name="obd_units_spoken_miles">
+        <item quantity="one">%1$s mile</item>
+        <item quantity="other">%1$s miles</item>
+    </plurals>
+    <plurals name="obd_units_spoken_degrees">
+        <item quantity="one">%1$d degree</item>
+        <item quantity="other">%1$d degrees</item>
+    </plurals>
+</resources>

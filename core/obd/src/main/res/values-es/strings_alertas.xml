@@ -1,5 +1,5 @@
 <resources>
-    <string name="obd_alert_temperature">Temperatura de motor %1$d°C</string>
+    <string name="obd_alert_temperature">Temperatura de motor %1$s</string>
     <string name="obd_alert_redline">RPM en zona roja: %1$d</string>
     <string name="obd_alert_low_battery">Batería baja: %1$sV</string>
     <string name="obd_crash_countdown_start">Posible caída detectada. Si estás bien, toca estoy bien. %1$s</string>
@@ -8,11 +8,11 @@
         <item quantity="other">Mensaje de emergencia en %1$d segundos</item>
     </plurals>
     <string name="obd_crash_sending_message">Enviando mensaje de emergencia</string>
-    <string name="obd_speed_camera_distance">Radar a %1$d metros</string>
-    <string name="obd_speed_camera_limit">, límite %1$d</string>
+    <string name="obd_speed_camera_distance">Radar a %1$s</string>
+    <string name="obd_speed_camera_limit">, límite %1$s</string>
     <string name="obd_pico_placa_active">Atención: entraste a %1$s y hoy hay pico y placa para tu placa, hasta las %2$d:00</string>
     <string name="obd_pico_placa_today">Atención: en %1$s hoy aplica pico y placa para tu placa de %2$d:00 a %3$d:00</string>
-    <string name="obd_pothole_reported">Hueco reportado a %1$d metros</string>
+    <string name="obd_pothole_reported">Hueco reportado a %1$s</string>
     <string name="obd_rain_starting">Está empezando a llover. Los primeros minutos son los más resbalosos: suaviza frenos e inclinación.</string>
     <string name="obd_rain_forecast">Lluvia probable en %1$d minutos en tu zona.</string>
     <string name="obd_wet_lean_warning">Cuidado: %1$d grados de inclinación con lluvia activa</string>
@@ -45,7 +45,7 @@
     </plurals>
     <string name="obd_trip_saved">Viaje guardado</string>
     <string name="obd_trip_summary_channel">Resumen de viaje</string>
-    <string name="obd_trip_summary_format">%1$s km · %2$d km/h máx · %3$d min</string>
+    <string name="obd_trip_summary_format">%1$s · %2$s máx · %3$d min</string>
     <string name="obd_trip_summary_cost">$%1$s</string>
     <string name="obd_trip_summary_eco">Eco %1$d</string>
     <string name="obd_service_connecting">Conectando…</string>
@@ -58,8 +58,6 @@
     <string name="obd_service_end_trip">Finalizar viaje</string>
     <string name="obd_service_start_trip">Iniciar viaje</string>
     <string name="obd_service_channel">Telemetría RevScope</string>
-    <string name="obd_notification_speed">%1$d km/h</string>
-    <string name="obd_notification_temperature">%1$d°C</string>
     <string name="obd_notification_voltage">%1$sV</string>
     <string name="obd_vehicle_fallback">tu vehículo</string>
     <string name="obd_crash_sms_location_unavailable">ubicacion no disponible</string>

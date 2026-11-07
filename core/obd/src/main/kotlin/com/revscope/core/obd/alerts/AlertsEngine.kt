@@ -18,6 +18,9 @@ import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.DistanceUnit
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.obd.R
 import com.revscope.core.obd.legal.CityRulesFormatter
 import com.revscope.core.obd.legal.PicoYPlacaEngine
@@ -30,6 +33,7 @@ import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 private const val DEFAULT_TEMP_MAX_C = 105
 private const val DEFAULT_VOLTAGE_MIN = 11.8f
@@ -46,6 +50,7 @@ private const val AI_RULES_NOTIFICATION_ID = 2002
 private const val ZONE_BRIEF_NOTIFICATION_ID = 2003
 // Decimal seconds retain plural wording, including Spanish's existing "1,0 segundos". // i18n-ignore
 private const val DECIMAL_SECONDS_PLURAL_COUNT = 2
+private const val DECIMAL_DISTANCE_PLURAL_COUNT = 2
 
 internal fun chooseTtsLocale(requested: Locale, availability: Int, engineDefault: Locale): Locale =
     if (availability >= TextToSpeech.LANG_AVAILABLE) requested else engineDefault
@@ -83,6 +88,58 @@ internal fun launchPhrase(resolver: StringResolver, to60Ms: Long?, to100Ms: Long
     )
 }
 
+internal fun spokenSpeed(resolver: StringResolver, units: UnitFormatter, kmh: Double): String {
+    val value = units.speed(kmh).roundToInt()
+    val id = if (units.system == UnitSystem.METRIC) R.plurals.obd_units_spoken_kmh else R.plurals.obd_units_spoken_mph
+    return resolver.plural(id, value, value)
+}
+
+internal fun spokenTemperature(resolver: StringResolver, units: UnitFormatter, celsius: Double): String {
+    val value = units.temperature(celsius).toInt()
+    return resolver.plural(R.plurals.obd_units_spoken_degrees, value, value)
+}
+
+internal fun spokenDistance(resolver: StringResolver, units: UnitFormatter, meters: Int): String {
+    val measure = units.shortDistance(meters.toDouble())
+    return when (measure.unit) {
+        DistanceUnit.METERS -> resolver.plural(R.plurals.obd_units_spoken_meters, meters, meters)
+        DistanceUnit.FEET -> wholePlural(resolver, R.plurals.obd_units_spoken_feet, measure.value)
+        DistanceUnit.KILOMETERS -> longDistancePlural(resolver, R.plurals.obd_units_spoken_kilometers, measure.value)
+        DistanceUnit.MILES -> longDistancePlural(resolver, R.plurals.obd_units_spoken_miles, measure.value)
+    }
+}
+
+private fun wholePlural(resolver: StringResolver, id: Int, value: Double): String {
+    val whole = value.roundToInt()
+    return resolver.plural(id, whole, whole)
+}
+
+// A camera 300 m ahead is 0.2 mi: rounding to a whole mile would say "0 miles".
+private fun longDistancePlural(resolver: StringResolver, id: Int, value: Double): String {
+    val tenths = (value * 10).roundToInt()
+    if (tenths % 10 != 0) {
+        return resolver.plural(id, DECIMAL_DISTANCE_PLURAL_COUNT, LocaleNumbers.decimal(value, 1, resolver.locale))
+    }
+    val whole = tenths / 10
+    return resolver.plural(id, whole, LocaleNumbers.decimal(whole.toDouble(), 0, resolver.locale))
+}
+
+internal fun overheatPhrase(resolver: StringResolver, units: UnitFormatter, celsius: Double): String =
+    resolver.get(R.string.obd_alert_temperature, spokenTemperature(resolver, units, celsius))
+
+internal fun speedCameraPhrase(resolver: StringResolver, units: UnitFormatter, distanceM: Int, limitKmh: Int?): String {
+    val rounded = (distanceM / 50) * 50
+    return buildString {
+        append(resolver.get(R.string.obd_speed_camera_distance, spokenDistance(resolver, units, rounded)))
+        limitKmh?.let {
+            append(resolver.get(R.string.obd_speed_camera_limit, spokenSpeed(resolver, units, it.toDouble())))
+        }
+    }
+}
+
+internal fun potholePhrase(resolver: StringResolver, units: UnitFormatter, distanceM: Int): String =
+    resolver.get(R.string.obd_pothole_reported, spokenDistance(resolver, units, distanceM))
+
 // Un toque corto: marca el cambio de paso sin confundirse con el patrón largo de una alerta.
 private val VIBRACION_PASO_TALLER = longArrayOf(0, 120)
 
@@ -102,6 +159,7 @@ class AlertsEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: DataStore<Preferences>,
     private val resolver: StringResolver,
+    private val units: UnitFormatter,
 ) {
 
     enum class AlertType { OVERHEAT, LOW_VOLTAGE, REDLINE, SPEED_CAMERA, ANOMALY, MIL_ON, CUSTOM, PICO_Y_PLACA, LOCAL_INFO, SUNSET, POTHOLE, RAIN, FATIGUE, ZONE_BRIEF, CRASH_COUNTDOWN, NAVIGATION }
@@ -219,7 +277,7 @@ class AlertsEngine @Inject constructor(
                 if (reading.value >= tempMaxC) {
                     fire(
                         AlertType.OVERHEAT,
-                        resolver.get(R.string.obd_alert_temperature, reading.value.toInt()),
+                        overheatPhrase(resolver, units, reading.value),
                         reading.value,
                         tonePattern = ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK,
                         toneDurationMs = 800,
@@ -368,11 +426,7 @@ class AlertsEngine @Inject constructor(
     fun announceSpeedCamera(distanceM: Int, limitKmh: Int?) {
         if (!enabled) return
         if (!voiceSpeedCameras) return
-        val rounded = (distanceM / 50) * 50
-        val message = buildString {
-            append(resolver.get(R.string.obd_speed_camera_distance, rounded))
-            limitKmh?.let { append(resolver.get(R.string.obd_speed_camera_limit, it)) }
-        }
+        val message = speedCameraPhrase(resolver, units, distanceM, limitKmh)
         Timber.i("AlertsEngine: $message")
         _alerts.tryEmit(ObdAlert(AlertType.SPEED_CAMERA, message, distanceM.toDouble()))
         playTone(ToneGenerator.TONE_PROP_ACK, 300)
@@ -412,7 +466,7 @@ class AlertsEngine @Inject constructor(
     fun announcePothole(distanceM: Int) {
         if (!enabled) return
         if (!voicePotholes) return
-        val message = resolver.get(R.string.obd_pothole_reported, distanceM)
+        val message = potholePhrase(resolver, units, distanceM)
         Timber.i("AlertsEngine: $message")
         _alerts.tryEmit(ObdAlert(AlertType.POTHOLE, message, distanceM.toDouble()))
         playTone(ToneGenerator.TONE_PROP_BEEP, 150)

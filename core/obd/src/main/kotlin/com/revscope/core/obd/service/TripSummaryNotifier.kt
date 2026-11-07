@@ -6,8 +6,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
-import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.obd.R
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -20,6 +20,7 @@ import javax.inject.Singleton
 class TripSummaryNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
     private val resolver: StringResolver,
+    private val units: UnitFormatter,
 ) {
 
     fun post(session: SessionEntity) {
@@ -36,7 +37,7 @@ class TripSummaryNotifier @Inject constructor(
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_revscope)
             .setContentTitle(resolver.get(R.string.obd_trip_saved))
-            .setContentText(summaryText(session, resolver))
+            .setContentText(summaryText(session, resolver, units))
             .setContentIntent(pending)
             .setAutoCancel(true)
             .build()
@@ -59,12 +60,12 @@ class TripSummaryNotifier @Inject constructor(
         private const val CHANNEL_ID = "revscope_trip_summary"
         private const val NOTIFICATION_ID = 2001
         private const val MIN_NOTIFY_DISTANCE_KM = 0.2f
-        fun summaryText(session: SessionEntity, resolver: StringResolver): String {
+        fun summaryText(session: SessionEntity, resolver: StringResolver, units: UnitFormatter): String {
             val minutes = ((session.endedAt ?: session.startedAt) - session.startedAt) / 60_000
             val base = resolver.get(
                 R.string.obd_trip_summary_format,
-                LocaleNumbers.decimal(session.distanceKm.toDouble(), 1, resolver.locale),
-                session.maxSpeed,
+                units.formatDistance(session.distanceKm.toDouble()),
+                units.formatSpeed(session.maxSpeed.toDouble()),
                 minutes,
             )
             val extras = buildList {

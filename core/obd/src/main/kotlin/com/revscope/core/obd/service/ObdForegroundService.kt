@@ -22,6 +22,7 @@ import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.cameras.CameraCoverageTracker
@@ -60,6 +61,21 @@ private const val CRASH_GRACE_PERIOD_MS = 90_000L
 private const val CRASH_GRACE_MOTION_LOOKBACK_MS = 60_000L
 private const val ALARM_DRAIN_TIMEOUT_MS = 180_000L
 
+// OBD speed and coolant arrive as whole numbers; truncating keeps the metric text as before.
+internal fun liveReadingsText(
+    speedKmh: Double?,
+    coolantC: Double?,
+    volts: Double?,
+    resolver: StringResolver,
+    units: UnitFormatter,
+): String = buildList {
+    speedKmh?.let { add(units.formatSpeed(it.toInt().toDouble())) }
+    coolantC?.let { add(units.formatTemperature(it.toInt().toDouble())) }
+    volts?.let {
+        add(resolver.get(R.string.obd_notification_voltage, LocaleNumbers.decimal(it, 1, resolver.locale)))
+    }
+}.joinToString("  ·  ")
+
 /**
  * Keeps telemetry recording and the GPS track alive when the app is backgrounded
  * or the screen is off. Started by [ObdSessionManager] on connection, stopped on
@@ -90,6 +106,7 @@ class ObdForegroundService : Service() {
     @Inject lateinit var crashResponder: CrashResponder
     @Inject lateinit var engineSound: com.revscope.core.obd.sound.EngineSoundController
     @Inject lateinit var resolver: StringResolver
+    @Inject lateinit var units: UnitFormatter
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var gpsRecorder: GpsTrackRecorder? = null
@@ -319,16 +336,13 @@ class ObdForegroundService : Service() {
         val estadoViaje = sessionManager.estadoViaje.value
         val readings = sessionManager.readings.value
         val title = TripServicePolicy.titulo(state, estadoViaje, resolver)
-        val temp = readings["05"]?.value?.toInt()
-        val speed = readings["0D"]?.value?.toInt()
-        val volts = readings[ObdSessionManager.VBAT_PID]?.value
-        val body = buildList {
-            speed?.let { add(resolver.get(R.string.obd_notification_speed, it)) }
-            temp?.let { add(resolver.get(R.string.obd_notification_temperature, it)) }
-            volts?.let {
-                add(resolver.get(R.string.obd_notification_voltage, LocaleNumbers.decimal(it, 1, resolver.locale)))
-            }
-        }.joinToString("  ·  ").ifEmpty { TripServicePolicy.cuerpoSinLecturas(estadoViaje, resolver) }
+        val body = liveReadingsText(
+            speedKmh = readings["0D"]?.value,
+            coolantC = readings["05"]?.value,
+            volts = readings[ObdSessionManager.VBAT_PID]?.value,
+            resolver = resolver,
+            units = units,
+        ).ifEmpty { TripServicePolicy.cuerpoSinLecturas(estadoViaje, resolver) }
 
         val key: Pair<String, String?> = title to body
         if (!force && key == lastNotificationKey) return
