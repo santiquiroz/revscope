@@ -30,12 +30,17 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.fromMetric
+import com.revscope.core.common.units.labelForMetric
 import com.revscope.core.designsystem.FilaEtiquetaValor
 import com.revscope.core.designsystem.NivelBadge
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.feature.dtc.R
+import java.util.Locale
 
 @Composable
 internal fun TarjetaMil(mil: MilUi) {
@@ -146,6 +151,13 @@ internal fun FreezeFrameCard(freezeFrame: FreezeFrameUi, enSesion: Boolean) {
         )
     }
 }
+
+// La lectura guardada sigue en métrico; solo el texto de la tarjeta pasa al sistema elegido.
+internal fun valorFreezeFrame(valor: Double, unidad: String, units: UnitFormatter, locale: Locale): String =
+    "${numeroFreezeFrame(units.fromMetric(valor, unidad), locale)} ${units.labelForMetric(unidad)}"
+
+private fun numeroFreezeFrame(valor: Double, locale: Locale): String =
+    if (valor % 1.0 == 0.0) "${valor.toInt()}" else LocaleNumbers.decimal(valor, 1, locale)
 
 @Composable
 internal fun MotivoBorradoDeshabilitado(motivo: String) {

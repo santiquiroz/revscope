@@ -1,9 +1,11 @@
 package com.revscope.feature.dtc
 
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
 import com.revscope.feature.dtc.R
+import kotlin.math.roundToInt
 
 data class ConfirmacionBorradoDtc(
     val codigos: List<String>,
@@ -37,13 +39,17 @@ fun permiteBorrarDesdeUi(rechazo: RechazoBorradoDtc?, declaraDetenido: Boolean):
     RechazoBorradoDtc.SinConfirmar, is RechazoBorradoDtc.EnMovimiento -> false
 }
 
-fun textoRechazoUi(rechazo: RechazoBorradoDtc, resolver: StringResolver): String = when (rechazo) {
+fun textoRechazoUi(rechazo: RechazoBorradoDtc, resolver: StringResolver, units: UnitFormatter): String = when (rechazo) {
     RechazoBorradoDtc.SinConfirmar -> resolver.get(R.string.dtc_clear_confirmation_required)
     RechazoBorradoDtc.SinVelocidadReciente ->
         resolver.get(R.string.dtc_no_recent_speed)
     is RechazoBorradoDtc.EnMovimiento ->
-        resolver.get(R.string.dtc_vehicle_moving, rechazo.kmh)
+        resolver.get(R.string.dtc_vehicle_moving, textoVelocidad(rechazo.kmh, units))
 }
+
+// Espacio normal, no el duro del formatter: el texto en métrico queda idéntico al de antes.
+internal fun textoVelocidad(kmh: Int, units: UnitFormatter): String =
+    "${units.speed(kmh.toDouble()).roundToInt()} ${units.speedLabel()}"
 
 fun avisosBorradoDtc(freezeFrameEnSesion: Boolean, resolver: StringResolver): List<String> =
     listOf(

@@ -8,6 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.common.units.fromMetric
+import com.revscope.core.common.units.labelForMetric
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.EstadoSoporte
@@ -63,6 +67,7 @@ class FastCaptureViewModel @Inject constructor(
     private val repositorio: TallerRepository,
     private val vehiculo: VehiculoActivo,
     private val resolver: StringResolver,
+    private val units: UnitFormatter,
 ) : ViewModel() {
 
     private val captura = manager.captura
@@ -104,7 +109,7 @@ class FastCaptureViewModel @Inject constructor(
                 ventanaMs = o.ventanaMs,
                 pausada = o.congeladas != null,
                 bandas = o.bandas,
-            ),
+            ).enUnidades(units),
             resolver,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapeoGraficaCaptura.de(entradaVacia(), resolver))
@@ -317,6 +322,19 @@ internal data class OpcionesGrafica(
     val bandas: Map<String, BandaReferencia> = emptyMap(),
     val dialogoVref: Boolean = false,
 )
+
+// La captura guardada sigue en métrico; la gráfica recibe números y etiquetas ya en el sistema elegido.
+internal fun EntradaGraficaCaptura.enUnidades(units: UnitFormatter): EntradaGraficaCaptura {
+    if (units.system == UnitSystem.METRIC) return this
+    val metrica = unidadPid
+    return copy(
+        series = series.mapValues { (pid, serie) -> serieEnUnidades(serie, metrica(pid), units) },
+        unidadPid = { units.labelForMetric(metrica(it)) },
+    )
+}
+
+private fun serieEnUnidades(serie: SerieCaptura, unidad: String, units: UnitFormatter): SerieCaptura =
+    serie.map { (t, v) -> t to units.fromMetric(v, unidad) }
 
 internal data class ReconciliacionPids(
     val aceptados: List<String>,

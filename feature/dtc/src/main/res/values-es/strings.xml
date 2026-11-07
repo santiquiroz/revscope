@@ -78,7 +78,7 @@
     <string name="dtc_clear_error">Error borrando los códigos</string>
     <string name="dtc_clear_confirmation_required">Falta confirmar el borrado.</string>
     <string name="dtc_no_recent_speed">No hay una lectura reciente de velocidad para comprobar que el vehículo está detenido.</string>
-    <string name="dtc_vehicle_moving">El vehículo va a %1$s km/h. Detente antes de borrar los códigos.</string>
+    <string name="dtc_vehicle_moving">El vehículo va a %1$s. Detente antes de borrar los códigos.</string>
     <string name="dtc_readiness_warning">Los monitores de preparación (readiness) quedan incompletos: la revisión técnico-mecánica puede rechazar el vehículo hasta completar ciclos de manejo.</string>
     <string name="dtc_clear_does_not_repair">Borrar no repara nada: si la falla sigue, el código vuelve.</string>
     <string name="dtc_freeze_frame_clear_saved">El freeze frame (el estado del motor cuando se guardó la falla) se borra de la ECU; ya quedó guardado en la sesión.</string>

@@ -48,6 +48,9 @@ import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.designsystem.CapacidadesEcuCard
+import com.revscope.core.designsystem.rememberUnitFormatter
+import com.revscope.core.common.units.fromMetric
+import com.revscope.core.common.units.labelForMetric
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import kotlinx.coroutines.launch
@@ -90,6 +93,9 @@ fun SensorGraphScreen(
     val context = LocalContext.current
     val resolver = remember(context) { AndroidStringResolver(context) }
     val locale = LocalConfiguration.current.locales[0]
+    val units = rememberUnitFormatter()
+    val unidadMetrica = currentDef?.unit.orEmpty()
+    val unidadMostrada = units.labelForMetric(unidadMetrica)
     val scope = rememberCoroutineScope()
     // Fresh producer per PID: cancelling a runTransaction mid-flight (old code keyed
     // the effect on `history`) leaves Vico with an empty partial → crash on next update.
@@ -109,7 +115,7 @@ fun SensorGraphScreen(
                     lineSeries {
                         series(
                             x = points.map { (it.timestamp - startMs) / 1000.0 },
-                            y = points.map { it.value },
+                            y = points.map { units.fromMetric(it.value, unidadMetrica) },
                         )
                     }
                 }
@@ -209,14 +215,14 @@ fun SensorGraphScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = latestReading?.value?.let { LocaleNumbers.decimal(it, 1, locale) }
+                        text = latestReading?.value?.let { LocaleNumbers.decimal(units.fromMetric(it, unidadMetrica), 1, locale) }
                             ?: stringResource(R.string.sensors_no_sensor_reading),
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Bold,
                         color = RevScopeColors.Accent,
                     )
                     Text(
-                        text = currentDef.unit,
+                        text = unidadMostrada,
                         fontSize = 16.sp,
                         color = RevScopeColors.TextSecondary,
                         modifier = Modifier.padding(bottom = 6.dp),
@@ -230,7 +236,7 @@ fun SensorGraphScreen(
                 CartesianChartHost(
                     chart = rememberCartesianChart(
                         rememberLineCartesianLayer(),
-                        startAxis = VerticalAxis.rememberStart(title = currentDef?.unit),
+                        startAxis = VerticalAxis.rememberStart(title = currentDef?.let { unidadMostrada }),
                         bottomAxis = HorizontalAxis.rememberBottom(
                             valueFormatter = ElapsedTimeFormatter,
                             title = stringResource(R.string.sensors_time_axis),

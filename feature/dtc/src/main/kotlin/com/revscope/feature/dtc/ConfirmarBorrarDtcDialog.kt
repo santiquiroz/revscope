@@ -23,6 +23,7 @@ import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.designsystem.ConfirmarDestructivoDialog
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
 import com.revscope.feature.dtc.R
 
@@ -58,7 +59,7 @@ private fun CondicionVehiculoDetenido(
 ) {
     rechazo ?: return
     val color = if (rechazo is RechazoBorradoDtc.EnMovimiento) RevScopeColors.Danger else RevScopeColors.TextPrimary
-    Text(textoRechazoUi(rechazo, resolver), color = color, style = RevScopeType.body)
+    Text(textoRechazoUi(rechazo, resolver, rememberUnitFormatter()), color = color, style = RevScopeType.body)
     if (rechazo == RechazoBorradoDtc.SinVelocidadReciente) {
         DeclaracionDetenido(declaraDetenido, onDeclarar)
     }

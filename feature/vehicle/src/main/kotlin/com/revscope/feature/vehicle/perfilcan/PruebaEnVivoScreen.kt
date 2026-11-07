@@ -29,7 +29,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.designsystem.BarraConVolver
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.rememberUnitFormatter
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.common.units.formatMetric
 import com.revscope.feature.vehicle.R
+import java.text.NumberFormat
+import java.text.ParsePosition
+import java.util.Locale
 
 @Composable
 fun PruebaEnVivoScreen(
@@ -89,8 +96,22 @@ private fun TarjetaEnVivo(prueba: PruebaEnVivoUi) {
             fontSize = 11.sp,
             letterSpacing = 1.sp,
         )
-        ValorGrande(prueba.valor, prueba.disponible)
+        ValorGrande(prueba.valor?.let { valorEnUnidades(it, rememberUnitFormatter()) }, prueba.disponible)
     }
+}
+
+// El bus entrega "número unidad" en métrico; solo velocidad, temperatura, presión y distancia cambian de sistema.
+internal fun valorEnUnidades(valor: String, units: UnitFormatter): String {
+    if (units.system == UnitSystem.METRIC) return valor
+    val numero = numeroEnLocale(valor.substringBeforeLast(' ', ""), units.locale) ?: return valor
+    return units.formatMetric(numero, valor.substringAfterLast(' ')) ?: valor
+}
+
+// El bus formatea con el idioma de la app: NumberFormat entiende su separador de miles y de decimales.
+private fun numeroEnLocale(texto: String, locale: Locale): Double? {
+    val posicion = ParsePosition(0)
+    val numero = NumberFormat.getInstance(locale).parse(texto, posicion) ?: return null
+    return numero.toDouble().takeIf { posicion.index == texto.length }
 }
 
 @Composable

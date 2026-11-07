@@ -1,6 +1,7 @@
 package com.revscope.feature.dtc
 
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
@@ -133,9 +134,14 @@ private fun enumerar(partes: List<String>, conector: String): String =
     else partes.dropLast(1).joinToString(", ") + " $conector " + partes.last()
 
 // Solo el movimiento comprobado deshabilita el botón: sin velocidad reciente, el diálogo pide declarar que está detenido.
-fun motivoBorradoDeshabilitado(velocidad: ObdReading?, ahoraMs: Long, resolver: StringResolver): String? {
+fun motivoBorradoDeshabilitado(
+    velocidad: ObdReading?,
+    ahoraMs: Long,
+    resolver: StringResolver,
+    units: UnitFormatter,
+): String? {
     val rechazo = ReglasBorradoDtc.evaluar(confirmado = true, velocidad = velocidad, ahoraMs = ahoraMs)
-    return (rechazo as? RechazoBorradoDtc.EnMovimiento)?.let { textoRechazoUi(it, resolver) }
+    return (rechazo as? RechazoBorradoDtc.EnMovimiento)?.let { textoRechazoUi(it, resolver, units) }
 }
 
 fun solicitudDesdeLectura(scan: DtcScan, resolver: StringResolver): SolicitudSesion {
