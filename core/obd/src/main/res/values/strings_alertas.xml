@@ -1,5 +1,5 @@
 <resources>
-    <string name="obd_alert_temperature">Engine temperature %1$d°C</string>
+    <string name="obd_alert_temperature">Engine temperature %1$s</string>
     <string name="obd_alert_redline">RPM in redline: %1$d</string>
     <string name="obd_alert_low_battery">Low battery: %1$sV</string>
     <string name="obd_crash_countdown_start">Possible crash detected. If you are OK, tap I am OK. %1$s</string>
@@ -8,11 +8,11 @@
         <item quantity="other">Emergency message in %1$d seconds</item>
     </plurals>
     <string name="obd_crash_sending_message">Sending emergency message</string>
-    <string name="obd_speed_camera_distance">Speed camera in %1$d meters</string>
-    <string name="obd_speed_camera_limit">, speed limit %1$d</string>
+    <string name="obd_speed_camera_distance">Speed camera in %1$s</string>
+    <string name="obd_speed_camera_limit">, speed limit %1$s</string>
     <string name="obd_pico_placa_active">Warning: you entered %1$s and your license plate is restricted today until %2$d:00</string>
     <string name="obd_pico_placa_today">Warning: your license plate is restricted in %1$s today from %2$d:00 to %3$d:00</string>
-    <string name="obd_pothole_reported">Reported pothole %1$d meters ahead</string>
+    <string name="obd_pothole_reported">Reported pothole %1$s ahead</string>
     <string name="obd_rain_starting">Rain is starting. The first few minutes are the most slippery: ease off the brakes and lean angle.</string>
     <string name="obd_rain_forecast">Rain is likely in %1$d minutes in your area.</string>
     <string name="obd_wet_lean_warning">Caution: %1$d degrees of lean in active rain</string>
@@ -45,7 +45,7 @@
     </plurals>
     <string name="obd_trip_saved">Trip saved</string>
     <string name="obd_trip_summary_channel">Trip summary</string>
-    <string name="obd_trip_summary_format">%1$s km · %2$d km/h max · %3$d min</string>
+    <string name="obd_trip_summary_format">%1$s · %2$s max · %3$d min</string>
     <string name="obd_trip_summary_cost">$%1$s</string>
     <string name="obd_trip_summary_eco">Eco %1$d</string>
     <string name="obd_service_connecting">Connecting…</string>
@@ -58,8 +58,6 @@
     <string name="obd_service_end_trip">End trip</string>
     <string name="obd_service_start_trip">Start trip</string>
     <string name="obd_service_channel">RevScope telemetry</string>
-    <string name="obd_notification_speed">%1$d km/h</string>
-    <string name="obd_notification_temperature">%1$d°C</string>
     <string name="obd_notification_voltage">%1$sV</string>
     <string name="obd_vehicle_fallback">your vehicle</string>
     <string name="obd_crash_sms_location_unavailable">location unavailable</string>
