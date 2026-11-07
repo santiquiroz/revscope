@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.pruebas
 
-import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.PosicionEnBanda
@@ -19,7 +21,7 @@ object AnalizadorMapBaro {
         const val CONTACTO = "CONTACTO"
     }
 
-    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>): ResultadoPrueba {
+    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>, resolver: StringResolver): ResultadoPrueba {
         val map = medir(datos.serie(PID_MAP, Pasos.CONTACTO))
         val fuentes = FuenteBarometrica.disponibles(mediaEcu(datos), datos.contexto.ambiente)
         val base = AnalisisMapBaro(
@@ -30,8 +32,8 @@ object AnalizadorMapBaro {
             comprobaciones = emptyList(),
             patron = PatronMapBaro.NORMAL,
         )
-        val comprobado = base.copy(comprobaciones = listOfNotNull(comprobacion(base)))
-        return TextosMapBaro.resultado(comprobado.copy(patron = patron(comprobado)))
+        val comprobado = base.copy(comprobaciones = listOfNotNull(comprobacion(base, resolver)))
+        return TextosMapBaro.resultado(comprobado.copy(patron = patron(comprobado)), resolver)
     }
 
     // Fuera de la tolerancia (banda + incertidumbre): el lado dice si el MAP marca de menos o de más.
@@ -51,14 +53,14 @@ object AnalizadorMapBaro {
         datos.serie(PID_BARO, Pasos.CONTACTO).map { it.valor }.takeIf { it.isNotEmpty() }?.average()
 
     // La comprobación compara |Δ| con la banda publicada; que cumpla o no lo decide la tolerancia con la fuente.
-    private fun comprobacion(a: AnalisisMapBaro): Comprobacion? {
+    private fun comprobacion(a: AnalisisMapBaro, resolver: StringResolver): Comprobacion? {
         val delta = a.deltaKpa ?: return null
         val tolerancia = a.toleranciaKpa ?: return null
         val enTolerancia = abs(delta) <= tolerancia
-        val fuente = FormatoTaller.compacto(a.referencia?.incertidumbreKpa ?: 0.0)
+        val fuente = LocaleNumbers.compact(a.referencia?.incertidumbreKpa ?: 0.0, resolver.locale) + " kPa"
         return Comprobacion(
             clave = ClavesBanda.MAP_KOEO_VS_BARO_KPA,
-            etiqueta = "Diferencia entre el MAP y la barométrica (más ±$fuente kPa de la fuente)",
+            etiqueta = resolver.get(R.string.obd_mapbaro_comprobacion_diferencia, fuente),
             valor = abs(delta),
             unidad = "kPa",
             banda = a.banda,
