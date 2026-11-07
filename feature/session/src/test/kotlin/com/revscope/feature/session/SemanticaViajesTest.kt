@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.data.db.entities.SessionEntity
@@ -61,7 +63,8 @@ class SemanticaViajesTest {
         compose.onNodeWithContentDescription("Borrar viaje").performClick()
 
         compose.onNodeWithText("¿Borrar el viaje?").assertIsDisplayed()
-        compose.onNodeWithText(descripcionViaje(viaje, XmlStringResolver.es(R::class.java))).assertIsDisplayed()
+        val es = XmlStringResolver.es(R::class.java)
+        compose.onNodeWithText(descripcionViaje(viaje, es, UnitFormatter(UnitSystem.METRIC, es.locale))).assertIsDisplayed()
         assertTrue(borrados.isEmpty())
 
         compose.onNodeWithText("Borrar viaje").performClick()
@@ -102,7 +105,8 @@ class SemanticaViajesTest {
 
     @Test
     fun `trip description uses English resources`() {
-        val description = descripcionViaje(viaje, XmlStringResolver.en(R::class.java))
+        val en = XmlStringResolver.en(R::class.java)
+        val description = descripcionViaje(viaje, en, UnitFormatter(UnitSystem.METRIC, en.locale))
 
         assertTrue(description.startsWith("Trip on "))
         assertTrue(description.endsWith("12.3 km"))

@@ -13,6 +13,7 @@ import java.io.File
 import com.revscope.core.common.export.CsvShare
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -60,6 +61,7 @@ class SessionDetailViewModel @Inject constructor(
     private val hrDao: HrDao,
     private val profileDao: VehicleProfileDao,
     private val resolver: StringResolver,
+    private val units: UnitFormatter,
     sessionManager: ObdSessionManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -449,6 +451,7 @@ class SessionDetailViewModel @Inject constructor(
         TripShareCard.render(
             appContext,
             stringResolver,
+            units,
             TripShareCard.CardData(
                 startedAt = s.startedAt,
                 durationMs = (s.endedAt ?: s.startedAt) - s.startedAt,

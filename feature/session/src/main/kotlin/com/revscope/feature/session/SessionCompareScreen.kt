@@ -2,6 +2,7 @@ package com.revscope.feature.session
 
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
@@ -117,7 +118,7 @@ private fun lineasComparacion(): LineCartesianLayer.LineProvider = LineCartesian
 )
 
 @Composable
-private fun CompareContent(
+internal fun CompareContent(
     runA: SessionCompareViewModel.RunData,
     runB: SessionCompareViewModel.RunData,
     showLean: Boolean,
@@ -125,6 +126,7 @@ private fun CompareContent(
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val dateFormat = remember(locale) { SimpleDateFormat("dd MMM HH:mm", locale) } // i18n-ignore
+    val units = rememberUnitFormatter()
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -147,16 +149,20 @@ private fun CompareContent(
         CompareRow(stringResource(R.string.trips_duration), runA.durationLabel(), runB.durationLabel())
         CompareRow(
             stringResource(R.string.trips_distance),
-            stringResource(R.string.trips_distance_value, LocaleNumbers.decimal(runA.session.distanceKm.toDouble(), 1, locale)),
-            stringResource(R.string.trips_distance_value, LocaleNumbers.decimal(runB.session.distanceKm.toDouble(), 1, locale)),
+            units.formatDistance(runA.session.distanceKm.toDouble()),
+            units.formatDistance(runB.session.distanceKm.toDouble()),
             highlightMax = runA.session.distanceKm.compareTo(runB.session.distanceKm),
         )
         CompareRow(
-            stringResource(R.string.trips_max_speed), "${runA.session.maxSpeed}", "${runB.session.maxSpeed}",
+            stringResource(R.string.trips_max_speed),
+            units.formatSpeed(runA.session.maxSpeed.toDouble()),
+            units.formatSpeed(runB.session.maxSpeed.toDouble()),
             highlightMax = runA.session.maxSpeed.compareTo(runB.session.maxSpeed),
         )
         CompareRow(
-            stringResource(R.string.trips_avg_speed), "${runA.avgSpeedKmh}", "${runB.avgSpeedKmh}",
+            stringResource(R.string.trips_avg_speed),
+            units.formatSpeed(runA.avgSpeedKmh.toDouble()),
+            units.formatSpeed(runB.avgSpeedKmh.toDouble()),
             highlightMax = runA.avgSpeedKmh.compareTo(runB.avgSpeedKmh),
         )
         CompareRow(
@@ -164,7 +170,7 @@ private fun CompareContent(
             highlightMax = runA.session.maxRpm.compareTo(runB.session.maxRpm),
         )
         CompareRow(
-            stringResource(R.string.trips_0_60),
+            sprintLabel(R.string.trips_0_60, SPRINT_SHORT_KMH, units),
             runA.session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
             runB.session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
             // lower is better
@@ -196,8 +202,8 @@ private fun CompareContent(
             LaunchedEffect(runA, runB) {
                 producer.runTransaction {
                     lineSeries {
-                        series(y = runA.speedSeries.map { it })
-                        series(y = runB.speedSeries.map { it })
+                        series(y = speedSeriesIn(runA.speedSeries, units))
+                        series(y = speedSeriesIn(runB.speedSeries, units))
                     }
                 }
             }
@@ -206,7 +212,7 @@ private fun CompareContent(
             CartesianChartHost(
                 chart = rememberCartesianChart(
                     rememberLineCartesianLayer(lineProvider = lineasComparacion()),
-                    startAxis = VerticalAxis.rememberStart(title = "km/h"),
+                    startAxis = VerticalAxis.rememberStart(title = units.speedLabel()),
                     bottomAxis = HorizontalAxis.rememberBottom(
                         valueFormatter = elapsedFractionFormatter(sampleCount, referenceDurationMs),
                         title = stringResource(R.string.trips_time_axis),
