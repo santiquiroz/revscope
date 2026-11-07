@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -75,11 +77,11 @@ fun Mode22ScannerScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Escáner Modo 22", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.settings_diagnostico_mode22_title), color = TextPrimaryColor, fontWeight = FontWeight.SemiBold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = TextPrimaryColor)
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.settings_diagnostico_back), tint = TextPrimaryColor)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
@@ -104,7 +106,7 @@ fun Mode22ScannerScreen(
             item(key = "aviso") { AvisoSoloLectura() }
             if (!conectado) {
                 item(key = "sin_conexion") {
-                    Text("Conecta el adaptador primero (moto encendida).", color = DangerColor, fontSize = 13.sp)
+                    Text(stringResource(R.string.settings_diagnostico_no_connection), color = DangerColor, fontSize = 13.sp)
                 }
             }
             item(key = "pasos") { PasosEscaneo() }
@@ -123,9 +125,7 @@ fun Mode22ScannerScreen(
                 item(key = "objetivo") { FilaObjetivo(header, onVolverAEcu = { vm.selectTarget(null) }) }
             }
             item(key = "rangos") {
-                SelectorRangos(vm.presetRanges.map { it.label }, selectedRange.label) { etiqueta ->
-                    selectedRange = vm.presetRanges.first { it.label == etiqueta }
-                }
+                SelectorRangos(vm.presetRanges, selectedRange) { selectedRange = it }
             }
             item(key = "acciones") {
                 Mode22Acciones(
@@ -160,9 +160,7 @@ private fun AvisoSoloLectura() {
     ) {
         Text("🛈", fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
         Text(
-            "Este escaneo es de SOLO LECTURA: envía peticiones de diagnóstico " +
-                "estándar para leer datos. No escribe, no borra códigos ni modifica " +
-                "nada del vehículo — es seguro. Hazlo con el vehículo detenido.",
+            stringResource(R.string.settings_diagnostico_scan_read_only),
             color = TextMutedColor,
             fontSize = 12.sp,
             modifier = Modifier.weight(1f),
@@ -173,11 +171,7 @@ private fun AvisoSoloLectura() {
 @Composable
 private fun PasosEscaneo() {
     Text(
-        "1. Escanea un rango con el vehículo encendido.\n" +
-            "2. Pulsa Vigilar y cambia el modo de manejo: el identificador que " +
-            "cambie de valor en ese momento es el del modo.\n" +
-            "También puedes descubrir módulos y dirigir el escaneo a uno (p. ej. " +
-            "buscar un DID de un subsistema de carrocería).",
+        stringResource(R.string.settings_diagnostico_scan_steps),
         color = TextMutedColor,
         fontSize = 12.sp,
     )
@@ -200,19 +194,17 @@ private fun ModulosDescubiertos(
             enabled = puedeDescubrir,
             colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
         ) {
-            Text(if (discovering) "Buscando módulos…" else "Descubrir módulos", color = TextPrimaryColor)
+            Text(if (discovering) stringResource(R.string.settings_diagnostico_discovering_modules) else stringResource(R.string.settings_diagnostico_discover_modules), color = TextPrimaryColor)
         }
         if (noSoportado) {
             Text(
-                "Tu vehículo no usa CAN de 11 bits con este adaptador, así que el " +
-                    "descubrimiento de módulos de carrocería no está disponible. El escaneo " +
-                    "de la ECU de motor sí funciona.",
+                stringResource(R.string.settings_diagnostico_no_support),
                 color = DangerColor,
                 fontSize = 12.sp,
             )
         }
         if (modules.isNotEmpty()) {
-            Text("Módulos que respondieron — toca uno para dirigir el escaneo:", color = TextMutedColor, fontSize = 12.sp)
+            Text(stringResource(R.string.settings_diagnostico_modules_responded), color = TextMutedColor, fontSize = 12.sp)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 modules.forEach { m ->
                     val selected = targetHeader == m.requestHeader
@@ -239,7 +231,7 @@ internal fun FilaObjetivo(header: String, onVolverAEcu: () -> Unit) {
     ) {
         Text(
             buildAnnotatedString {
-                append("Objetivo del escaneo: ")
+                append(stringResource(R.string.settings_diagnostico_target_scan, ""))
                 withStyle(SpanStyle(color = AccentColor, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)) {
                     append(header)
                 }
@@ -248,20 +240,28 @@ internal fun FilaObjetivo(header: String, onVolverAEcu: () -> Unit) {
             fontSize = 12.sp,
         )
         TextButton(onClick = onVolverAEcu) {
-            Text("Volver a la ECU", color = AccentColor, fontSize = 13.sp)
+            Text(stringResource(R.string.settings_diagnostico_back_to_ecu), color = AccentColor, fontSize = 13.sp)
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SelectorRangos(etiquetas: List<String>, seleccionada: String, onElegir: (String) -> Unit) {
+private fun SelectorRangos(
+    rangos: List<Mode22ScannerViewModel.DidRange>,
+    seleccionado: Mode22ScannerViewModel.DidRange,
+    onElegir: (Mode22ScannerViewModel.DidRange) -> Unit,
+) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        etiquetas.forEach { etiqueta ->
-            ChipSeleccion(texto = etiqueta, seleccionado = etiqueta == seleccionada, onClick = { onElegir(etiqueta) })
+        rangos.forEach { rango ->
+            ChipSeleccion(texto = etiquetaRango(rango), seleccionado = rango == seleccionado, onClick = { onElegir(rango) })
         }
     }
 }
+
+@Composable
+private fun etiquetaRango(rango: Mode22ScannerViewModel.DidRange): String =
+    rango.descriptionRes?.let { stringResource(it, rango.label) } ?: rango.label
 
 /** Una sola acción principal (escanear o detener); vigilar y limpiar son secundarias. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -287,9 +287,9 @@ internal fun Mode22Acciones(
         ) {
             Text(
                 when {
-                    escaneando -> "Detener escaneo"
-                    vigilando -> "Detener vigilancia"
-                    else -> "Escanear"
+                    escaneando -> stringResource(R.string.settings_diagnostico_stop_scan)
+                    vigilando -> stringResource(R.string.settings_diagnostico_stop_watch)
+                    else -> stringResource(R.string.settings_diagnostico_scan)
                 },
             )
         }
@@ -297,8 +297,8 @@ internal fun Mode22Acciones(
             onClick = onVigilar,
             enabled = puedeVigilar,
             colors = ButtonDefaults.filledTonalButtonColors(containerColor = SurfaceHighColor, contentColor = TextPrimaryColor),
-        ) { Text("Vigilar") }
-        OutlinedButton(onClick = onLimpiar, enabled = puedeLimpiar) { Text("Limpiar") }
+        ) { Text(stringResource(R.string.settings_diagnostico_watch)) }
+        OutlinedButton(onClick = onLimpiar, enabled = puedeLimpiar) { Text(stringResource(R.string.settings_diagnostico_clear)) }
     }
 }
 
@@ -313,20 +313,20 @@ private fun ProgresoEscaneo(state: Mode22ScannerViewModel.ScannerState, respuest
                 trackColor = SurfaceHighColor,
             )
             Text(
-                "${state.current}/${state.total} — $respuestas respuestas",
+                stringResource(R.string.settings_diagnostico_progress, state.current, state.total, pluralStringResource(R.plurals.settings_mode22_responses, respuestas, respuestas)),
                 color = TextMutedColor,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
         Mode22ScannerViewModel.ScannerState.Watching -> Text(
-            "Vigilando $respuestas identificadores — cambia el modo de manejo ahora",
+            stringResource(R.string.settings_diagnostico_watching, respuestas),
             color = AccentColor,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Mode22ScannerViewModel.ScannerState.Idle -> if (respuestas > 0) {
-            Text("$respuestas identificadores con respuesta", color = TextMutedColor, fontSize = 12.sp)
+            Text(stringResource(R.string.settings_diagnostico_response_count, respuestas), color = TextMutedColor, fontSize = 12.sp)
         }
     }
 }
@@ -345,7 +345,7 @@ private fun HitRow(hit: Mode22ScannerViewModel.ScanHit) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "DID ${hit.did}",
+                stringResource(R.string.settings_diagnostico_did, hit.did),
                 color = if (hit.changedDuringWatch) SuccessColor else TextPrimaryColor,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -359,7 +359,7 @@ private fun HitRow(hit: Mode22ScannerViewModel.ScanHit) {
             )
             hit.previousValue?.let {
                 Text(
-                    "antes: $it",
+                    stringResource(R.string.settings_diagnostico_before, it),
                     color = TextMutedColor,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -368,7 +368,7 @@ private fun HitRow(hit: Mode22ScannerViewModel.ScanHit) {
         }
         if (hit.changedDuringWatch) {
             Text(
-                "CAMBIÓ",
+                stringResource(R.string.settings_diagnostico_changed),
                 color = SuccessColor,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,

@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -64,24 +65,22 @@ internal fun DeteccionCaidaCard(vm: SettingsViewModel) {
     ) { _ -> if (hasSmsPermission(context)) vm.updateCrashDetectionEnabled(true) }
 
     val crashSubject = if (activeVehicleProfile?.vehicleType == VehicleType.CAR) {
-        "un posible choque"
+        stringResource(R.string.settings_diagnostico_crash_subject_car)
     } else {
-        "un posible accidente de moto"
+        stringResource(R.string.settings_diagnostico_crash_subject_motorcycle)
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Detección de caída")
+        SectionTitle(stringResource(R.string.settings_diagnostico_detect_title))
         Text(
-            "Si detecta $crashSubject, suena una alarma de pantalla completa con " +
-                "cuenta regresiva de 60 s. Si no respondes \"ESTOY BIEN\", envía un SMS con tu última " +
-                "ubicación al contacto de emergencia. Desactivada por defecto.",
+            stringResource(R.string.settings_diagnostico_detect_description, crashSubject),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         OutlinedTextField(
             value = emergencyPhone,
             onValueChange = vm::updateEmergencyPhone,
-            label = { Text("Teléfono de emergencia", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_diagnostico_emergency_phone_label), fontSize = 12.sp) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             colors = settingsFieldColors(),
@@ -90,7 +89,7 @@ internal fun DeteccionCaidaCard(vm: SettingsViewModel) {
         Button(
             onClick = vm::saveEmergencyPhone,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Guardar teléfono", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_diagnostico_save_phone), color = BgColor) }
 
         Spacer(Modifier.height(4.dp))
         Row(
@@ -98,7 +97,7 @@ internal fun DeteccionCaidaCard(vm: SettingsViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Activar detección de caída",
+                stringResource(R.string.settings_diagnostico_enable_detection),
                 color = TextPrimaryColor,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
@@ -120,14 +119,14 @@ internal fun DeteccionCaidaCard(vm: SettingsViewModel) {
             )
         }
         Text(
-            "Requiere teléfono de emergencia guardado y permiso de SMS.",
+            stringResource(R.string.settings_diagnostico_detection_requires),
             color = TextMutedColor,
             fontSize = 11.sp,
         )
         Button(
             onClick = vm::testCrashAlert,
             colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-        ) { Text("Probar (sin enviar SMS real)", color = TextPrimaryColor) }
+        ) { Text(stringResource(R.string.settings_diagnostico_test_alert), color = TextPrimaryColor) }
     }
 }
 
@@ -157,19 +156,17 @@ internal fun ModoGuardiaCard(vm: SettingsViewModel) {
     val guardAlarmActive by vm.guardAlarmActive.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Modo guardia antirrobo")
+        SectionTitle(stringResource(R.string.settings_diagnostico_guard_title))
         Text(
-            "Con la moto apagada y parqueada cerca, el teléfono vigila el adaptador OBD: " +
-                "si despierta (alguien giró la llave), suena una alarma fuerte. Requiere estar " +
-                "en rango Bluetooth (~10-30 m) — cubre el robo exprés, no vigilancia remota.",
+            stringResource(R.string.settings_diagnostico_guard_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         ToggleRow(
-            "Modo guardia",
+            stringResource(R.string.settings_diagnostico_guard_toggle),
             guardRunning,
             { enabled -> if (enabled) vm.armGuard() else vm.disarmGuard() },
-            subtitle = if (guardAlarmActive) "⚠ ¡ALARMA ACTIVA — el adaptador despertó!" else null,
+            subtitle = if (guardAlarmActive) stringResource(R.string.settings_diagnostico_guard_alarm_active) else null,
         )
     }
 }
@@ -179,19 +176,22 @@ internal fun ModoGuardiaCard(vm: SettingsViewModel) {
 internal fun CustomPidsCard(vm: SettingsViewModel) {
     val context = LocalContext.current
     val customPidsJson by vm.customPidsJson.collectAsState()
+    val sharePackSubject = stringResource(R.string.settings_diagnostico_share_pack_subject)
+    val sharePackLabel = stringResource(R.string.settings_diagnostico_share_pack)
+    val sharePackChooser = stringResource(R.string.settings_diagnostico_share_pack_chooser)
+    val importLabel = stringResource(R.string.settings_diagnostico_import)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("PIDs personalizados")
+        SectionTitle(stringResource(R.string.settings_diagnostico_pids_title))
         Text(
-            "Definiciones extra en JSON (mismo esquema que pids_mode01.json). " +
-                "Para parámetros del fabricante, p. ej. modo de manejo vía Modo 22.",
+            stringResource(R.string.settings_diagnostico_pids_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         OutlinedTextField(
             value = customPidsJson,
             onValueChange = vm::updateCustomPidsJson,
-            label = { Text("JSON de PIDs custom", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_diagnostico_custom_pids_label), fontSize = 12.sp) },
             minLines = 4,
             maxLines = 10,
             textStyle = androidx.compose.ui.text.TextStyle(
@@ -208,19 +208,19 @@ internal fun CustomPidsCard(vm: SettingsViewModel) {
             Button(
                 onClick = vm::saveCustomPids,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            ) { Text("Validar y aplicar", color = BgColor) }
+            ) { Text(stringResource(R.string.settings_diagnostico_validate_apply), color = BgColor) }
             Button(
                 onClick = {
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, "RevScope PID pack")
+                        putExtra(Intent.EXTRA_SUBJECT, sharePackSubject)
                         putExtra(Intent.EXTRA_TEXT, customPidsJson)
                     }
-                    context.startActivity(Intent.createChooser(intent, "Compartir PID pack"))
+                    context.startActivity(Intent.createChooser(intent, sharePackChooser))
                 },
                 enabled = customPidsJson.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-            ) { Text("Compartir pack", color = TextPrimaryColor) }
+            ) { Text(sharePackLabel, color = TextPrimaryColor) }
             val importLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.OpenDocument()
             ) { uri ->
@@ -234,7 +234,7 @@ internal fun CustomPidsCard(vm: SettingsViewModel) {
             Button(
                 onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) },
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-            ) { Text("Importar", color = TextPrimaryColor) }
+            ) { Text(importLabel, color = TextPrimaryColor) }
         }
     }
 }
@@ -244,17 +244,16 @@ internal fun CustomPidAlertsCard(vm: SettingsViewModel) {
     val customAlertsJson by vm.customAlertsJson.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Alertas personalizadas por PID")
+        SectionTitle(stringResource(R.string.settings_diagnostico_alerts_title))
         Text(
-            "Umbral por PID en JSON: [{\"pid\":\"0A\",\"min\":200,\"nombre\":\"Presión de combustible\"}]. " +
-                "Para TPMS u otros sensores del fabricante, define primero el PID custom (Modo 22) y luego su alerta aquí.",
+            stringResource(R.string.settings_diagnostico_alerts_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         OutlinedTextField(
             value = customAlertsJson,
             onValueChange = vm::updateCustomAlertsJson,
-            label = { Text("JSON de alertas custom", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_diagnostico_alerts_json_label), fontSize = 12.sp) },
             minLines = 4,
             maxLines = 10,
             textStyle = androidx.compose.ui.text.TextStyle(
@@ -267,7 +266,7 @@ internal fun CustomPidAlertsCard(vm: SettingsViewModel) {
         Button(
             onClick = vm::saveCustomAlerts,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Validar y aplicar", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_diagnostico_validate_apply), color = BgColor) }
     }
 }
 
@@ -278,15 +277,14 @@ internal fun CopiaSeguridadCard(vm: SettingsViewModel, onImportRequested: (Uri) 
     val autoBackupEnabled by vm.autoBackupEnabled.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Copia de seguridad")
+        SectionTitle(stringResource(R.string.settings_diagnostico_backup_title))
         Text(
-            "Incluye viajes, perfiles, informes y ajustes. La API key NO se incluye " +
-                "(queda cifrada en este dispositivo) — guárdala de nuevo después de restaurar.",
+            stringResource(R.string.settings_diagnostico_backup_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         if (backupState == SettingsViewModel.BackupState.RESTARTING_AFTER_IMPORT) {
-            Text("Copia restaurada — reiniciando…", color = AccentColor, fontSize = 12.sp)
+            Text(stringResource(R.string.settings_diagnostico_backup_restored), color = AccentColor, fontSize = 12.sp)
         }
         val exportBackupLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.CreateDocument("application/zip"),
@@ -305,7 +303,7 @@ internal fun CopiaSeguridadCard(vm: SettingsViewModel, onImportRequested: (Uri) 
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) {
                 Text(
-                    if (backupState == SettingsViewModel.BackupState.EXPORTING) "Exportando…" else "Exportar copia",
+                    if (backupState == SettingsViewModel.BackupState.EXPORTING) stringResource(R.string.settings_diagnostico_exporting) else stringResource(R.string.settings_diagnostico_export_copy),
                     color = BgColor,
                 )
             }
@@ -315,16 +313,16 @@ internal fun CopiaSeguridadCard(vm: SettingsViewModel, onImportRequested: (Uri) 
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
             ) {
                 Text(
-                    if (backupState == SettingsViewModel.BackupState.IMPORTING) "Importando…" else "Importar copia",
+                    if (backupState == SettingsViewModel.BackupState.IMPORTING) stringResource(R.string.settings_diagnostico_importing) else stringResource(R.string.settings_diagnostico_import_copy),
                     color = TextPrimaryColor,
                 )
             }
         }
 
         Spacer(Modifier.height(4.dp))
-        ToggleRow("Copia automática semanal", autoBackupEnabled, vm::updateAutoBackupEnabled)
+        ToggleRow(stringResource(R.string.settings_diagnostico_auto_backup_weekly), autoBackupEnabled, vm::updateAutoBackupEnabled)
         Text(
-            "Cada semana guarda una copia en Descargas/RevScope (se conservan las últimas 4).",
+            stringResource(R.string.settings_diagnostico_auto_backup_description),
             color = TextMutedColor,
             fontSize = 11.sp,
         )
@@ -339,13 +337,13 @@ internal fun ServidorMcpCard(vm: SettingsViewModel) {
     val mcpServerEnabled by vm.mcpServerEnabled.collectAsState()
     val mcpToken by vm.mcpToken.collectAsState()
     val mcpServerState by vm.mcpServerState.collectAsState()
+    val mcpUrlLabel = stringResource(R.string.settings_diagnostico_mcp_url_clip)
+    val mcpTokenLabel = stringResource(R.string.settings_diagnostico_mcp_token_clip)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Servidor MCP (red local)")
+        SectionTitle(stringResource(R.string.settings_diagnostico_mcp_title))
         Text(
-            "Expone el estado de tu vehículo a asistentes de IA en tu red WiFi (Claude Desktop, " +
-                "LM Studio…): conexión, viajes, chequeos, DTCs, mantenimiento y documentos. " +
-                "Apagado por defecto — actívalo solo en redes de confianza.",
+            stringResource(R.string.settings_diagnostico_mcp_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
@@ -354,7 +352,7 @@ internal fun ServidorMcpCard(vm: SettingsViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Servidor MCP activo",
+                stringResource(R.string.settings_diagnostico_mcp_active),
                 color = TextPrimaryColor,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
@@ -373,8 +371,8 @@ internal fun ServidorMcpCard(vm: SettingsViewModel) {
             McpConnectionDetails(
                 mcpServerState = mcpServerState,
                 mcpToken = mcpToken,
-                onCopyUrl = { url -> copyToClipboard(context, "URL MCP", url) },
-                onCopyToken = { copyToClipboard(context, "Token MCP", mcpToken) },
+                onCopyUrl = { url -> copyToClipboard(context, mcpUrlLabel, url) },
+                onCopyToken = { copyToClipboard(context, mcpTokenLabel, mcpToken) },
             )
             McpPermisosToggles()
         }
@@ -386,8 +384,8 @@ private fun McpServerStatusText(enabled: Boolean, state: McpServerState) {
     if (!enabled) return
     val text = when (state) {
         is McpServerState.Running -> null // shown by McpConnectionDetails instead
-        McpServerState.NoWifi -> "Sin WiFi — conecta a una red para activar el servidor"
-        McpServerState.Stopped -> "Iniciando servidor…"
+        McpServerState.NoWifi -> stringResource(R.string.settings_diagnostico_mcp_no_wifi)
+        McpServerState.Stopped -> stringResource(R.string.settings_diagnostico_mcp_starting)
     }
     text?.let { Text(it, color = TextMutedColor, fontSize = 12.sp) }
 }
@@ -400,14 +398,13 @@ private fun McpConnectionDetails(
     onCopyToken: () -> Unit,
 ) {
     if (mcpServerState is McpServerState.Running) {
-        McpDetailRow(label = "URL", value = mcpServerState.url, onCopy = { onCopyUrl(mcpServerState.url) })
+        McpDetailRow(label = stringResource(R.string.settings_diagnostico_mcp_url_label), value = mcpServerState.url, onCopy = { onCopyUrl(mcpServerState.url) })
     }
     if (mcpToken.isNotBlank()) {
-        McpDetailRow(label = "Token", value = mcpToken, onCopy = onCopyToken)
+        McpDetailRow(label = stringResource(R.string.settings_diagnostico_mcp_token_label), value = mcpToken, onCopy = onCopyToken)
     }
     Text(
-        "En Claude Desktop u otro cliente MCP: agrega un servidor tipo streamable-http con esta " +
-            "URL y el header Authorization: Bearer <token>.",
+        stringResource(R.string.settings_diagnostico_mcp_help),
         color = TextMutedColor,
         fontSize = 11.sp,
     )
@@ -424,14 +421,14 @@ private fun McpDetailRow(label: String, value: String, onCopy: () -> Unit) {
             Text(label, color = TextMutedColor, fontSize = 11.sp)
             Text(value, color = AccentColor, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
         }
-        TextButton(onClick = onCopy) { Text("Copiar", color = AccentColor) }
+        TextButton(onClick = onCopy) { Text(stringResource(R.string.settings_diagnostico_copy), color = AccentColor) }
     }
 }
 
 private fun copyToClipboard(context: android.content.Context, label: String, text: String) {
     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
-    Toast.makeText(context, "$label copiado", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, context.getString(R.string.settings_diagnostico_copied, label), Toast.LENGTH_SHORT).show()
 }
 
 @Composable
@@ -444,15 +441,15 @@ internal fun AcercaDeCard(vm: SettingsViewModel, onRerunOnboarding: () -> Unit) 
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Acerca de")
-        Text("RevScope v$appVersion", color = TextMutedColor, fontSize = 12.sp)
+        SectionTitle(stringResource(R.string.settings_diagnostico_about_title))
+        Text(stringResource(R.string.settings_diagnostico_about_version, appVersion), color = TextMutedColor, fontSize = 12.sp)
         Button(
             onClick = vm::checkForUpdates,
             colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-        ) { Text("Buscar actualizaciones", color = TextPrimaryColor) }
+        ) { Text(stringResource(R.string.settings_diagnostico_check_updates), color = TextPrimaryColor) }
         Button(
             onClick = onRerunOnboarding,
             colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-        ) { Text("Volver a ver configuración inicial", color = TextPrimaryColor) }
+        ) { Text(stringResource(R.string.settings_diagnostico_rerun_onboarding), color = TextPrimaryColor) }
     }
 }
