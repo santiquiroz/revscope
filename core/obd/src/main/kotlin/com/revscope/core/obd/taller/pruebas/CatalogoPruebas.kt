@@ -45,13 +45,13 @@ object CatalogoPruebas {
             sostener(Pasos.CERRADO_2, "Suelta el acelerador por completo otra vez"),
             PasoPrueba(
                 clave = Pasos.BARRIDO_LENTO,
-                titulo = TextosBarridoTps.TITULOS_PASO.getValue(Pasos.BARRIDO_LENTO),
+                tituloRes = TextosBarridoTps.TITULOS_PASO.getValue(Pasos.BARRIDO_LENTO),
                 instruccion = "De cerrado a fondo y de vuelta, despacio y parejo",
                 modo = ModoPaso.Grabar(BARRIDO_LENTO_MS),
                 descartarInicioMs = 0,
             ),
         ),
-        analizar = { datos, bandas, _ -> AnalizadorBarridoTps.analizar(datos, bandas) },
+        analizar = AnalizadorBarridoTps::analizar,
     )
 
     val minimoRetorno = DefinicionPrueba(
@@ -207,7 +207,7 @@ object CatalogoPruebas {
 
     private fun sostener(clave: String, instruccion: String) = PasoPrueba(
         clave = clave,
-        titulo = TextosBarridoTps.TITULOS_PASO.getValue(clave),
+        tituloRes = TextosBarridoTps.TITULOS_PASO.getValue(clave),
         instruccion = instruccion,
         modo = ModoPaso.Sostener(SOSTENER_MS),
     )

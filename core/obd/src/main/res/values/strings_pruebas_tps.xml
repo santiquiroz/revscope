@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Barrido del TPS: pasos -->
+    <string name="obd_barrido_paso_cerrado_1">Closed</string>
+    <string name="obd_barrido_paso_medio">Half</string>
+    <string name="obd_barrido_paso_a_fondo">Wide open</string>
+    <string name="obd_barrido_paso_cerrado_2">Closed again</string>
+    <string name="obd_barrido_paso_barrido_lento">Slow sweep</string>
+
+    <!-- Barrido del TPS: comprobaciones -->
+    <string name="obd_barrido_comprobacion_cerrado">Closed</string>
+    <string name="obd_barrido_comprobacion_fondo">Wide open</string>
+    <string name="obd_barrido_comprobacion_recorrido">Travel</string>
+    <string name="obd_barrido_comprobacion_ruido">Noise while held (peak to peak)</string>
+    <string name="obd_barrido_comprobacion_repetibilidad">Closed repeatability</string>
+    <string name="obd_barrido_comprobacion_linealidad">Linearity (half)</string>
+    <string name="obd_barrido_comprobacion_orden">Order closed &lt; half &lt; wide open</string>
+    <string name="obd_barrido_comprobacion_sin_zonas_muertas">No dead zones</string>
+
+    <!-- Barrido del TPS: sin datos -->
+    <string name="obd_barrido_sin_datos_titulo">Not enough TPS data</string>
+    <string name="obd_barrido_sin_datos_interp">No TPS samples came in during: %1$s. Without them, the readings can\'t be compared with the bands.</string>
+    <string name="obd_barrido_sin_datos_siguiente">Check that the adapter is still connected and repeat the test</string>
+
+    <!-- Barrido del TPS: títulos -->
+    <string name="obd_barrido_titulo_cortes_saltos">Dropouts or spikes in the signal</string>
+    <string name="obd_barrido_titulo_senal_baja">Low signal across entire sweep, smooth and steady</string>
+    <string name="obd_barrido_titulo_senal_alta">High signal with the throttle closed</string>
+    <string name="obd_barrido_titulo_rango">Signal out of range or irregular</string>
+    <string name="obd_barrido_titulo_sin_barrido">Held steps within typical values, no slow sweep</string>
+    <string name="obd_barrido_titulo_normal">TPS signal within typical values</string>
+
+    <!-- Barrido del TPS: siguiente paso -->
+    <string name="obd_barrido_siguiente_cortes_saltos">Check the TPS connector and wiring, and measure the signal with the multimeter while moving the throttle slowly</string>
+    <string name="obd_barrido_siguiente_senal_baja">Measure the 5 V reference, ground and TPS signal with the multimeter (TPS template), confirm the part is the original one and check the connector</string>
+    <string name="obd_barrido_siguiente_senal_alta">Measure the TPS ground and signal with the multimeter (TPS template) with the throttle closed</string>
+    <string name="obd_barrido_siguiente_rango">Check the mechanical throttle stop and repeat the test; if it happens again, measure the signal with the multimeter</string>
+    <string name="obd_barrido_siguiente_sin_barrido">Repeat the test and, when the app asks, sweep the throttle slowly from closed to wide open</string>
+
+    <!-- Barrido del TPS: interpretación -->
+    <string name="obd_barrido_interp_cortes_saltos">The signal had %1$s and %2$s during the test: consistent with P0124 (intermittent TPS signal) or a worn sensor track.</string>
+    <string name="obd_barrido_interp_senal_alta">Closed %1$s, above the band (%2$s): consistent with P0123 (high TPS signal): reference shorted to signal, signal at 5 V or open ground.</string>
+    <string name="obd_barrido_interp_rango">Travel is %1$s, but %2$s: consistent with P0121 (TPS range or performance) or a mechanical stop adjustment.</string>
+    <string name="obd_barrido_interp_sin_barrido">Closed %1$s (%2$s), wide open %3$s (%4$s) and travel %5$s: stable and in order on the held steps, but %6$s.</string>
+    <string name="obd_barrido_interp_normal">Closed %1$s (%2$s), wide open %3$s (%4$s) and travel %5$s: stable, in order and with no dropouts, spikes or dead zones.</string>
+    <string name="obd_barrido_interp_senal_baja">Closed %1$s (%2$s) and wide open %3$s (%4$s): the signal stays low across the entire sweep. Travel is %5$s%6$s. It rises in order, smoothly, and repeats the closed reading (%7$s): consistent with P0122 (low TPS signal).</string>
+    <string name="obd_barrido_fraccion">, %1$s%% of typical%2$s</string>
+    <string name="obd_barrido_tipico">(≈%1$s)</string>
+    <string name="obd_barrido_sin_barrido_evaluado">too few slow-sweep samples came in, so spikes and dead zones weren\'t checked</string>
+    <string name="obd_barrido_nota_confianza">Low-confidence detection due to the %1$s sample rate.</string>
+
+    <!-- Barrido del TPS: hallazgos -->
+    <string name="obd_barrido_hallazgo_baja_confianza">Sample rate of %1$s, below 8 Hz: spike and dead-zone detection is low confidence</string>
+    <string name="obd_barrido_falla_orden">the positions are out of order (closed &lt; half &lt; wide open)</string>
+    <string name="obd_barrido_falla_zonas_muertas">%1$s while opening or closing</string>
+    <string name="obd_barrido_falla_sin_valor">%1$s could not be calculated</string>
+    <string name="obd_barrido_falla_fuera">%1$s %2$s %3$s the band (%4$s)</string>
+    <string name="obd_barrido_sin_banda">no reference band</string>
+    <plurals name="obd_barrido_cortes">
+        <item quantity="one">%1$d dropout</item>
+        <item quantity="other">%1$d dropouts</item>
+    </plurals>
+    <plurals name="obd_barrido_saltos">
+        <item quantity="one">%1$d spike</item>
+        <item quantity="other">%1$d spikes</item>
+    </plurals>
+    <plurals name="obd_barrido_zonas_muertas">
+        <item quantity="one">%1$d dead zone</item>
+        <item quantity="other">%1$d dead zones</item>
+    </plurals>
+</resources>

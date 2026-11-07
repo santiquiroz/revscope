@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Barrido del TPS: pasos -->
+    <string name="obd_barrido_paso_cerrado_1">Cerrado</string>
+    <string name="obd_barrido_paso_medio">Medio</string>
+    <string name="obd_barrido_paso_a_fondo">A fondo</string>
+    <string name="obd_barrido_paso_cerrado_2">Cerrado otra vez</string>
+    <string name="obd_barrido_paso_barrido_lento">Barrido lento</string>
+
+    <!-- Barrido del TPS: comprobaciones -->
+    <string name="obd_barrido_comprobacion_cerrado">Cerrado</string>
+    <string name="obd_barrido_comprobacion_fondo">A fondo</string>
+    <string name="obd_barrido_comprobacion_recorrido">Recorrido</string>
+    <string name="obd_barrido_comprobacion_ruido">Ruido al sostener (pico a pico)</string>
+    <string name="obd_barrido_comprobacion_repetibilidad">Repetibilidad del cerrado</string>
+    <string name="obd_barrido_comprobacion_linealidad">Linealidad (medio)</string>
+    <string name="obd_barrido_comprobacion_orden">Orden cerrado &lt; medio &lt; fondo</string>
+    <string name="obd_barrido_comprobacion_sin_zonas_muertas">Sin zonas muertas</string>
+
+    <!-- Barrido del TPS: sin datos -->
+    <string name="obd_barrido_sin_datos_titulo">Sin datos suficientes del TPS</string>
+    <string name="obd_barrido_sin_datos_interp">No llegaron muestras del TPS en: %1$s. Sin ellas no se puede comparar con las bandas.</string>
+    <string name="obd_barrido_sin_datos_siguiente">Revisa que el adaptador siga conectado y repite la prueba</string>
+
+    <!-- Barrido del TPS: títulos -->
+    <string name="obd_barrido_titulo_cortes_saltos">Cortes o saltos en la señal</string>
+    <string name="obd_barrido_titulo_senal_baja">Señal baja en todo el recorrido, pareja y estable</string>
+    <string name="obd_barrido_titulo_senal_alta">Señal alta con el acelerador cerrado</string>
+    <string name="obd_barrido_titulo_rango">Señal fuera de rango o irregular</string>
+    <string name="obd_barrido_titulo_sin_barrido">Pasos sostenidos dentro de lo típico, sin el barrido lento</string>
+    <string name="obd_barrido_titulo_normal">Señal del TPS dentro de lo típico</string>
+
+    <!-- Barrido del TPS: siguiente paso -->
+    <string name="obd_barrido_siguiente_cortes_saltos">Revisa el conector y el cableado del TPS y mide la señal con el multímetro moviendo el acelerador despacio</string>
+    <string name="obd_barrido_siguiente_senal_baja">Mide con el multímetro la referencia de 5 V, la masa y la señal del TPS (plantilla TPS), confirma que el repuesto sea el original y revisa el conector</string>
+    <string name="obd_barrido_siguiente_senal_alta">Mide con el multímetro la masa y la señal del TPS (plantilla TPS) con el acelerador cerrado</string>
+    <string name="obd_barrido_siguiente_rango">Revisa el tope mecánico del acelerador y repite la prueba; si se repite, mide la señal con el multímetro</string>
+    <string name="obd_barrido_siguiente_sin_barrido">Repite la prueba y, cuando la app lo pida, barre el acelerador despacio de cerrado a fondo</string>
+
+    <!-- Barrido del TPS: interpretación -->
+    <string name="obd_barrido_interp_cortes_saltos">La señal tuvo %1$s y %2$s durante la prueba: compatible con P0124 (señal intermitente del TPS) o con una pista gastada del sensor.</string>
+    <string name="obd_barrido_interp_senal_alta">Cerrado %1$s, por encima de la banda (%2$s): compatible con P0123 (señal alta del TPS): referencia en corto con la señal, señal a 5 V o masa abierta.</string>
+    <string name="obd_barrido_interp_rango">Recorre %1$s, pero %2$s: compatible con P0121 (rango o desempeño del TPS) o con un ajuste mecánico del tope.</string>
+    <string name="obd_barrido_interp_sin_barrido">Cerrado %1$s (%2$s), a fondo %3$s (%4$s) y recorrido %5$s: estable y en orden en los pasos sostenidos, pero %6$s.</string>
+    <string name="obd_barrido_interp_normal">Cerrado %1$s (%2$s), a fondo %3$s (%4$s) y recorrido %5$s: estable, en orden y sin cortes, saltos ni zonas muertas.</string>
+    <string name="obd_barrido_interp_senal_baja">Cerrado %1$s (%2$s) y a fondo %3$s (%4$s): la señal queda baja en todo el recorrido. Recorre %5$s%6$s. Sube en orden, pareja, y repite el cerrado (%7$s): compatible con P0122 (señal baja del TPS).</string>
+    <string name="obd_barrido_fraccion">, el %1$s %% del típico%2$s</string>
+    <string name="obd_barrido_tipico">(≈%1$s)</string>
+    <string name="obd_barrido_sin_barrido_evaluado">no llegaron muestras suficientes del barrido lento, así que no se buscaron saltos ni zonas muertas</string>
+    <string name="obd_barrido_nota_confianza">Detección con baja confianza por la tasa de %1$s.</string>
+
+    <!-- Barrido del TPS: hallazgos -->
+    <string name="obd_barrido_hallazgo_baja_confianza">Tasa de %1$s, por debajo de 8 Hz: la detección de saltos y zonas muertas es de baja confianza</string>
+    <string name="obd_barrido_falla_orden">las posiciones no quedan en orden (cerrado &lt; medio &lt; fondo)</string>
+    <string name="obd_barrido_falla_zonas_muertas">%1$s en plena subida o bajada</string>
+    <string name="obd_barrido_falla_sin_valor">%1$s no se pudo calcular</string>
+    <string name="obd_barrido_falla_fuera">%1$s %2$s %3$s de la banda (%4$s)</string>
+    <string name="obd_barrido_sin_banda">sin banda de referencia</string>
+    <plurals name="obd_barrido_cortes">
+        <item quantity="one">%1$d corte</item>
+        <item quantity="other">%1$d cortes</item>
+    </plurals>
+    <plurals name="obd_barrido_saltos">
+        <item quantity="one">%1$d salto</item>
+        <item quantity="other">%1$d saltos</item>
+    </plurals>
+    <plurals name="obd_barrido_zonas_muertas">
+        <item quantity="one">%1$d zona muerta</item>
+        <item quantity="other">%1$d zonas muertas</item>
+    </plurals>
+</resources>

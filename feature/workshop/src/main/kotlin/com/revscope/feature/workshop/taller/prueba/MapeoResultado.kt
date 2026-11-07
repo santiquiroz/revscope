@@ -76,7 +76,7 @@ internal object MapeoResultado {
         pesas = pesas(a, resolver),
         comprobaciones = a.comprobaciones.map { comprobacion(it, resolver) },
         graficas = listOfNotNull(
-            datos?.let { GraficaResultadoUi("Toda la prueba, en voltios", serie(it, a, resolver), leyendaTramos(it) + leyendaBandas(a, resolver)) },
+            datos?.let { GraficaResultadoUi("Toda la prueba, en voltios", serie(it, a, resolver), leyendaTramos(it, resolver) + leyendaBandas(a, resolver)) },
         ),
         referencia = referencia(a.vref, resolver),
         codigoGuia = TextosPrueba.codigoGuia(a.patron),
@@ -92,8 +92,8 @@ internal object MapeoResultado {
 
     private fun pesa(p: EstadisticaPaso, a: AnalisisBarridoTps, resolver: StringResolver): PesaUi {
         val banda = BANDA_POR_PASO[p.clave]?.let { a.comprobacion(it)?.banda }
-        val titulo = TextosBarridoTps.TITULOS_PASO[p.clave] ?: p.clave
-        val bandaUi = banda?.let(::bandaPesa)
+        val titulo = TextosBarridoTps.titulosPaso(resolver)[p.clave] ?: p.clave
+        val bandaUi = banda?.let { bandaPesa(it, resolver) }
         return PesaUi(
             titulo = titulo,
             valores = "${FormatoPosicion.porcentaje(p.mediaPct, resolver)} · ${FormatoPosicion.voltios(p.mediaV, resolver)} · " +
@@ -109,10 +109,10 @@ internal object MapeoResultado {
         )
     }
 
-    private fun bandaPesa(b: BandaReferencia): BandaPesaUi? {
+    private fun bandaPesa(b: BandaReferencia, resolver: StringResolver): BandaPesaUi? {
         val desde = b.min ?: return null
         val hasta = b.max ?: return null
-        return BandaPesaUi(desde, hasta, TextosBarridoTps.banda(b))
+        return BandaPesaUi(desde, hasta, TextosBarridoTps.banda(b, resolver))
     }
 
     private fun nivel(mediaV: Double, banda: BandaReferencia?): Veredicto = when {
@@ -126,7 +126,7 @@ internal object MapeoResultado {
             val formatted = LocaleNumbers.decimal(v, 2, resolver.locale)
             if (c.unidad.isEmpty()) formatted else "$formatted ${c.unidad}"
         }
-        val texto = c.banda?.let { "${c.etiqueta}: ${valor ?: "—"} · banda ${TextosBarridoTps.banda(it)}" } ?: c.etiqueta
+        val texto = c.banda?.let { "${c.etiqueta}: ${valor ?: "—"} · banda ${TextosBarridoTps.banda(it, resolver)}" } ?: c.etiqueta
         return ComprobacionUi(texto, c.cumple)
     }
 
@@ -154,9 +154,12 @@ internal object MapeoResultado {
     private fun bandasDe(a: AnalisisBarridoTps): Map<String, BandaReferencia> =
         a.comprobaciones.mapNotNull { it.banda }.associateBy { it.clave }
 
-    private fun leyendaTramos(datos: DatosPrueba): List<String> = listOf(
-        datos.segmentos.mapIndexed { i, s -> "${i + 1} ${TextosBarridoTps.TITULOS_PASO[s.clave] ?: s.clave}" }.joinToString(" · "),
-    ).filter { it.isNotEmpty() }
+    private fun leyendaTramos(datos: DatosPrueba, resolver: StringResolver): List<String> {
+        val titulos = TextosBarridoTps.titulosPaso(resolver)
+        return listOf(
+            datos.segmentos.mapIndexed { i, s -> "${i + 1} ${titulos[s.clave] ?: s.clave}" }.joinToString(" · "),
+        ).filter { it.isNotEmpty() }
+    }
 
     private fun leyendaBandas(a: AnalisisBarridoTps, resolver: StringResolver): List<String> =
         BandasPosicion.tps(bandasDe(a), UnidadPosicion.VOLTIOS, a.vref, resolver).map { it.descripcion }
