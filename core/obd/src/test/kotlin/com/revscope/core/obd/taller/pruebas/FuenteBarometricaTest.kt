@@ -58,7 +58,7 @@ class FuenteBarometricaTest {
         val etiqueta = ref.etiqueta(es)
         assertTrue(etiqueta, etiqueta.plano().contains("estimada"))
         assertTrue(etiqueta, etiqueta.plano().contains("±3 kPa"))
-        assertEquals(ref.etiqueta, etiqueta)
+        assertEquals("Presión estimada por la altitud GPS (±3 kPa, por clima y altitud GPS)", etiqueta.plano())
     }
 
     @Test

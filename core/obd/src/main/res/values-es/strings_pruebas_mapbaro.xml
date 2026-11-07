@@ -4,18 +4,6 @@
     <string name="obd_mapbaro_titulo_paso_contacto">Contacto</string>
     <string name="obd_mapbaro_comprobacion_diferencia">Diferencia entre el MAP y la barométrica (más ±%1$s de la fuente)</string>
 
-    <!-- MAP contra barométrica: fuentes de la referencia -->
-    <string name="obd_mapbaro_origen_ecu_nombre">PID 33 de la ECU</string>
-    <string name="obd_mapbaro_origen_ecu_nota">resolución del PID</string>
-    <string name="obd_mapbaro_origen_ecu_en_frase">el PID 33 de la ECU</string>
-    <string name="obd_mapbaro_origen_telefono_nombre">Barómetro del teléfono</string>
-    <string name="obd_mapbaro_origen_telefono_nota">típico</string>
-    <string name="obd_mapbaro_origen_telefono_en_frase">el barómetro del teléfono</string>
-    <string name="obd_mapbaro_origen_altitud_nombre">Presión estimada por la altitud GPS</string>
-    <string name="obd_mapbaro_origen_altitud_nota">por clima y altitud GPS</string>
-    <string name="obd_mapbaro_origen_altitud_en_frase">la presión estimada por la altitud GPS</string>
-    <string name="obd_mapbaro_origen_margen">%1$s (±%2$s, %3$s)</string>
-
     <!-- MAP contra barométrica: título -->
     <string name="obd_mapbaro_titulo_sin_datos">Sin lecturas del MAP</string>
     <string name="obd_mapbaro_titulo_sin_referencia">MAP en %1$s, sin presión barométrica para comparar</string>

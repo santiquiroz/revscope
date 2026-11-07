@@ -24,44 +24,8 @@ object TextosMapBaro {
 
     fun medidas(a: AnalisisMapBaro, resolver: StringResolver): List<String> = Redactor(a, resolver).medidas()
 
-    // La etiqueta de la fuente con su margen: «Barómetro del teléfono (±0,5 kPa, típico)».
-    fun etiqueta(r: ReferenciaBarometrica, resolver: StringResolver): String = margen(nombre(r.origen, resolver), r, resolver)
-
     private fun kpaTexto(x: Double, resolver: StringResolver): String =
         LocaleNumbers.compact(FormatoTaller.redondear(x, 1), resolver.locale) + ESPACIO_DURO + "kPa"
-
-    private fun enFrase(r: ReferenciaBarometrica, resolver: StringResolver): String = margen(enFrase(r.origen, resolver), r, resolver)
-
-    private fun margen(texto: String, r: ReferenciaBarometrica, resolver: StringResolver): String = resolver.get(
-        R.string.obd_mapbaro_origen_margen,
-        texto,
-        LocaleNumbers.compact(r.incertidumbreKpa, resolver.locale) + ESPACIO_DURO + "kPa",
-        nota(r.origen, resolver),
-    )
-
-    private fun nombre(o: OrigenBarometrica, resolver: StringResolver): String = resolver.get(
-        when (o) {
-            OrigenBarometrica.ECU -> R.string.obd_mapbaro_origen_ecu_nombre
-            OrigenBarometrica.TELEFONO -> R.string.obd_mapbaro_origen_telefono_nombre
-            OrigenBarometrica.ALTITUD_GPS -> R.string.obd_mapbaro_origen_altitud_nombre
-        },
-    )
-
-    private fun nota(o: OrigenBarometrica, resolver: StringResolver): String = resolver.get(
-        when (o) {
-            OrigenBarometrica.ECU -> R.string.obd_mapbaro_origen_ecu_nota
-            OrigenBarometrica.TELEFONO -> R.string.obd_mapbaro_origen_telefono_nota
-            OrigenBarometrica.ALTITUD_GPS -> R.string.obd_mapbaro_origen_altitud_nota
-        },
-    )
-
-    private fun enFrase(o: OrigenBarometrica, resolver: StringResolver): String = resolver.get(
-        when (o) {
-            OrigenBarometrica.ECU -> R.string.obd_mapbaro_origen_ecu_en_frase
-            OrigenBarometrica.TELEFONO -> R.string.obd_mapbaro_origen_telefono_en_frase
-            OrigenBarometrica.ALTITUD_GPS -> R.string.obd_mapbaro_origen_altitud_en_frase
-        },
-    )
 
     private class Redactor(private val a: AnalisisMapBaro, private val res: StringResolver) {
 
@@ -104,7 +68,7 @@ object TextosMapBaro {
                 ?: res.get(R.string.obd_mapbaro_banda_tipica, kpa(AnalizadorMapBaro.BANDA_TIPICA_KPA), res.get(R.string.obd_band_origin_typical))
             return res.get(
                 R.string.obd_mapbaro_frase_referencia,
-                enFrase(ref, res),
+                ref.enFrase(res),
                 kpa(ref.kPa),
                 kpaConSigno(a.deltaKpa ?: 0.0),
                 banda,
@@ -130,7 +94,7 @@ object TextosMapBaro {
             val ref = a.referencia
             val alt = a.alternativa
             if (ref != null && alt != null && a.contrasteDiscrepa) {
-                return res.get(R.string.obd_mapbaro_no_concluyente_contraste, enFrase(ref.origen, res), enFrase(alt.origen, res))
+                return res.get(R.string.obd_mapbaro_no_concluyente_contraste, ref.origen.enFrase(res), alt.origen.enFrase(res))
             }
             return res.get(R.string.obd_mapbaro_no_concluyente_incertidumbre)
         }
@@ -155,7 +119,7 @@ object TextosMapBaro {
             if (!a.contrasteDiscrepa) return null
             return res.get(
                 R.string.obd_mapbaro_hallazgo_contraste,
-                enFrase(alt.origen, res),
+                alt.origen.enFrase(res),
                 kpa(alt.kPa),
                 kpa(abs(delta)),
                 lado(delta),
@@ -181,14 +145,14 @@ object TextosMapBaro {
             val map = a.map ?: return emptyList()
             return listOfNotNull(
                 res.get(R.string.obd_mapbaro_medida_map, kpa(map.mediaKpa), rango(map)),
-                a.referencia?.let { res.get(R.string.obd_mapbaro_medida_baro, kpa(it.kPa), etiqueta(it, res)) }
+                a.referencia?.let { res.get(R.string.obd_mapbaro_medida_baro, kpa(it.kPa), it.etiqueta(res)) }
                     ?: res.get(R.string.obd_mapbaro_medida_baro_sin_fuente),
                 a.deltaKpa?.let { res.get(R.string.obd_mapbaro_medida_diferencia, kpaConSigno(it), kpa(a.toleranciaKpa ?: 0.0)) },
                 a.altitudEquivalenteM?.let { res.get(R.string.obd_mapbaro_medida_altitud, metros(it)) },
                 a.alternativa?.let { alt ->
                     res.get(
                         R.string.obd_mapbaro_medida_contraste,
-                        nombre(alt.origen, res),
+                        alt.origen.nombre(res),
                         kpa(alt.kPa),
                         kpaConSigno(a.deltaAlternativaKpa ?: 0.0),
                     )
