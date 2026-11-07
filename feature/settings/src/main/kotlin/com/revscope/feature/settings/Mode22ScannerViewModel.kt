@@ -47,14 +47,14 @@ class Mode22ScannerViewModel @Inject constructor() : ViewModel() {
         object Watching : ScannerState()
     }
 
-    data class DidRange(val label: String, val start: Int, val end: Int)
+    data class DidRange(val label: String, val start: Int, val end: Int, val descriptionRes: Int? = null)
 
     val presetRanges = listOf(
         DidRange("0100–01FF", 0x0100, 0x01FF),
         DidRange("0200–02FF", 0x0200, 0x02FF),
         DidRange("F000–F0FF", 0xF000, 0xF0FF),
-        DidRange("F180–F1FF (info ECU)", 0xF180, 0xF1FF),
-        DidRange("F400–F4FF (espejo modo 01)", 0xF400, 0xF4FF),
+        DidRange("F180–F1FF", 0xF180, 0xF1FF, R.string.settings_diagnostico_range_ecu_info),
+        DidRange("F400–F4FF", 0xF400, 0xF4FF, R.string.settings_diagnostico_range_mode01_mirror),
     )
 
     private val _state = MutableStateFlow<ScannerState>(ScannerState.Idle)
