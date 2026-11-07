@@ -3,6 +3,7 @@ package com.revscope.core.obd.taller.pruebas
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.telemetry.captura.LimitesCaptura
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -19,6 +20,13 @@ class CatalogoPruebasTest {
         soportado = { it in soportados },
         ahoraMs = ahora,
     )
+
+    private val resolver = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
+
+    private fun Precondicion.evaluar(c: ContextoPrueba) = evaluar(c, resolver)
 
     private fun muestra(tMs: Long, pid: String, valor: Double) = MuestraCaptura(tMs, tMs * 1_000, pid, valor, tMs, 50)
 
@@ -144,6 +152,16 @@ class CatalogoPruebasTest {
         assertTrue(tibio.aviso)
         assertTrue(tibio.texto, tibio.texto.contains("arranque tibio"))
         assertTrue(sinDatos.cumple && sinDatos.aviso)
+    }
+
+    @Test
+    fun `en inglés el motor tibio avisa que la prueba seguirá como arranque tibio`() {
+        val en = XmlStringResolver.en(com.revscope.core.obd.R::class.java, resDirs = listOf("src/main/res", "../common/src/main/res"))
+
+        val tibio = Precondicion.MotorFrio.evaluar(ctx("05" to 32.0, "0F" to 27.0), en)
+
+        assertEquals("Warm engine (engine 32 °C, air 27 °C): the test will continue as a \"warm start\"", tibio.texto.plano())
+        assertEquals("For a true cold start, repeat it after the engine sits overnight (≥ 6 h, typical)", tibio.queHacer!!.plano())
     }
 
     @Test

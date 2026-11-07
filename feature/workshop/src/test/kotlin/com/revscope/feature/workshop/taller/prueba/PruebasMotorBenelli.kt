@@ -92,7 +92,7 @@ internal object PruebasMotorBenelli {
         val ahora = 1_758_848_000_000L
         val lecturas = listOf("05" to 32.0, "0F" to 27.0, "0C" to 0.0, "0D" to 0.0).associate { (pid, v) -> pid to ObdReading(pid, v, "", ahora) }
         val ctx = ContextoPrueba(conectado = true, lecturas = lecturas, soportado = { true }, ahoraMs = ahora)
-        CatalogoPruebas.arranqueFrio.precondiciones.map { it.evaluar(ctx) }
+        CatalogoPruebas.arranqueFrio.precondiciones.map { it.evaluar(ctx, resolverPrueba()) }
     }
 
     private fun intentos(s: Double): Double = when {

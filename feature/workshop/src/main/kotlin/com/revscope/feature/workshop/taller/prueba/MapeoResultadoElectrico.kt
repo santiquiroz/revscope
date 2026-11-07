@@ -58,7 +58,7 @@ internal object MapeoResultadoElectrico {
 
     private fun leyendaBaro(a: AnalisisMapBaro, resolver: StringResolver): String? {
         val ref = a.referencia ?: return null
-        return "Barométrica ${kpa(ref.kPa, resolver)} ±${kpa(a.toleranciaKpa ?: 0.0, resolver)} · ${ref.etiqueta}"
+        return "Barométrica ${kpa(ref.kPa, resolver)} ±${kpa(a.toleranciaKpa ?: 0.0, resolver)} · ${ref.etiqueta(resolver)}"
     }
 
     private fun codigoBateria(p: PatronBateria): String? = when (p) {

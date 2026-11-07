@@ -123,7 +123,7 @@ internal object PruebasElectricasBenelli {
         val ahora = 1_758_848_000_000L
         val lecturas = listOf("0C" to 0.0, "0D" to 0.0).associate { (pid, v) -> pid to ObdReading(pid, v, "", ahora) }
         val ctx = ContextoPrueba(conectado = true, lecturas = lecturas, soportado = { it in soportados }, ahoraMs = ahora)
-        return reglas.map { it.evaluar(ctx) }
+        return reglas.map { it.evaluar(ctx, resolverPrueba()) }
     }
 
     private fun alternar(s: Double, a: Double, b: Double) = if ((s * 4).toInt() % 2 == 0) a else b

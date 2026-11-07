@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Precondiciones de las pruebas guiadas -->
+    <string name="obd_precondicion_adaptador_conectado">Adapter connected</string>
+    <string name="obd_precondicion_sin_adaptador">No adapter connected</string>
+    <string name="obd_precondicion_sin_adaptador_que_hacer">Connect the adapter and turn the ignition on</string>
+    <string name="obd_precondicion_motor_apagado_sin_rpm">Engine off (no RPM reading)</string>
+    <string name="obd_precondicion_motor_apagado_rpm_cero">Engine off (RPM&#160;=&#160;0)</string>
+    <string name="obd_precondicion_motor_encendido">Engine running (%1$s rpm)</string>
+    <string name="obd_precondicion_sin_rpm">No RPM reading</string>
+    <string name="obd_precondicion_motor_apagandose">Engine off or about to stall (%1$s rpm)</string>
+    <string name="obd_precondicion_encender">Start the engine and let it idle without touching the throttle</string>
+    <string name="obd_precondicion_neutro">Transmission in neutral: confirm it yourself (the ECU doesn\'t report it)</string>
+    <string name="obd_precondicion_neutro_que_hacer">You\'ll rev to about 3,000 rpm: shift into neutral before starting</string>
+    <string name="obd_precondicion_temperaturas">engine %1$s, air %2$s</string>
+    <string name="obd_precondicion_motor_frio">Cold engine (%1$s)</string>
+    <string name="obd_precondicion_motor_tibio">Warm engine (%1$s): the test will continue as a \"warm start\"</string>
+    <string name="obd_precondicion_motor_tibio_que_hacer">For a true cold start, repeat it after the engine sits overnight (≥&#160;6&#160;h, typical)</string>
+    <string name="obd_precondicion_sin_temperaturas">No engine or intake air temperature reading</string>
+    <string name="obd_precondicion_sin_temperaturas_que_hacer">The ignition-on step will decide; if the ECU doesn\'t report them, the result won\'t say whether the engine was cold</string>
+    <string name="obd_precondicion_luces">Headlight and lights: on many motorcycles the headlight stays on with the ignition (AHO)</string>
+    <string name="obd_precondicion_luces_que_hacer">This lowers the resting voltage and the range accounts for it; in a car, turn the lights off before starting</string>
+    <string name="obd_precondicion_baro_disponible">ECU barometric pressure available (PID %1$s)</string>
+    <string name="obd_precondicion_baro_no_disponible">The ECU doesn\'t report barometric pressure (PID %1$s)</string>
+    <string name="obd_precondicion_baro_que_hacer">The phone\'s barometer will be used or, if it has none, GPS altitude (estimated, ±3&#160;kPa): turn on location</string>
+    <string name="obd_precondicion_moto_detenida_sin_velocidad">Motorcycle stopped (no speed data: confirm it yourself)</string>
+    <string name="obd_precondicion_moto_detenida">Motorcycle stopped (0 km/h)</string>
+    <string name="obd_precondicion_moto_en_movimiento">Motorcycle moving (%1$s km/h)</string>
+    <string name="obd_precondicion_moto_en_movimiento_que_hacer">Stop the motorcycle: the test is done with it standing still</string>
+    <string name="obd_precondicion_pid_disponible">%1$s available on this ECU (PID %2$s)</string>
+    <string name="obd_precondicion_pid_no_disponible">%1$s not available on this ECU (PID %2$s)</string>
+
+    <!-- Fuente de la presión barométrica de referencia -->
+    <string name="obd_baro_ecu_nombre">ECU PID 33</string>
+    <string name="obd_baro_ecu_nota">PID resolution</string>
+    <string name="obd_baro_ecu_en_frase">ECU PID 33</string>
+    <string name="obd_baro_telefono_nombre">Phone barometer</string>
+    <string name="obd_baro_telefono_nota">typical</string>
+    <string name="obd_baro_telefono_en_frase">the phone barometer</string>
+    <string name="obd_baro_altitud_nombre">Pressure estimated from GPS altitude</string>
+    <string name="obd_baro_altitud_nota">from weather and GPS altitude</string>
+    <string name="obd_baro_altitud_en_frase">the pressure estimated from GPS altitude</string>
+    <string name="obd_baro_con_margen">%1$s (±%2$s&#160;kPa, %3$s)</string>
+</resources>
