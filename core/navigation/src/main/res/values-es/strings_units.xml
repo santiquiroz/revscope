@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="nav_spoken_meters">
+        <item quantity="one">En %1$d metro</item>
+        <item quantity="other">En %1$d metros</item>
+    </plurals>
+    <plurals name="nav_spoken_feet">
+        <item quantity="one">En %1$d pie</item>
+        <item quantity="other">En %1$d pies</item>
+    </plurals>
+    <plurals name="nav_spoken_kilometers">
+        <item quantity="one">En %1$d kilómetro</item>
+        <item quantity="other">En %1$d kilómetros</item>
+    </plurals>
+    <plurals name="nav_spoken_miles">
+        <item quantity="one">En %1$d milla</item>
+        <item quantity="other">En %1$d millas</item>
+    </plurals>
+    <string name="nav_spoken_kilometers_decimal">En %1$s kilómetros</string>
+    <string name="nav_spoken_miles_decimal">En %1$s millas</string>
+</resources>

@@ -1,6 +1,7 @@
 package com.revscope.feature.map
 
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,18 +31,23 @@ internal fun describeFeature(
     kind: String?,
     properties: Map<String, Any?>,
     resolver: StringResolver,
+    units: UnitFormatter,
 ): MapFeatureDescription? = when (kind) {
-    ICON_CAMERA, ICON_CAMERA_TARGET -> describeRadar(properties, resolver)
+    ICON_CAMERA, ICON_CAMERA_TARGET -> describeRadar(properties, resolver, units)
     ICON_POTHOLE -> describePothole(properties, resolver)
     ICON_DESTINATION -> describeDestination(properties, resolver)
-    ICON_PEER, ICON_PEER_RUMBO -> describePeer(properties, resolver)
+    ICON_PEER, ICON_PEER_RUMBO -> describePeer(properties, resolver, units)
     else -> null
 }
 
-private fun describeRadar(properties: Map<String, Any?>, resolver: StringResolver): MapFeatureDescription {
+private fun describeRadar(
+    properties: Map<String, Any?>,
+    resolver: StringResolver,
+    units: UnitFormatter,
+): MapFeatureDescription {
     val limitKmh = properties.numberOrNull(FEATURE_PROP_SPEED_LIMIT_KMH)?.toInt()
     val subtitle = if (limitKmh != null) {
-        resolver.get(R.string.map_feature_camera_limit, limitKmh)
+        resolver.get(R.string.map_feature_camera_limit, units.formatSpeed(limitKmh.toDouble()))
     } else {
         resolver.get(R.string.map_feature_camera_no_limit)
     }
@@ -69,11 +75,15 @@ private fun describeDestination(properties: Map<String, Any?>, resolver: StringR
     return MapFeatureDescription(title = name ?: resolver.get(R.string.map_feature_destination), subtitle = null)
 }
 
-private fun describePeer(properties: Map<String, Any?>, resolver: StringResolver): MapFeatureDescription {
+private fun describePeer(
+    properties: Map<String, Any?>,
+    resolver: StringResolver,
+    units: UnitFormatter,
+): MapFeatureDescription {
     val name = properties[FEATURE_PROP_NAME] as? String ?: resolver.get(R.string.map_feature_peer)
     val speedKmh = properties.numberOrNull(FEATURE_PROP_SPEED_KMH)?.toInt()
     val subtitle = if (speedKmh != null) {
-        resolver.get(R.string.map_feature_peer_speed, speedKmh)
+        resolver.get(R.string.map_feature_peer_speed, units.formatSpeed(speedKmh.toDouble()))
     } else {
         resolver.get(R.string.map_feature_peer_in_room)
     }

@@ -1,6 +1,9 @@
 package com.revscope.feature.map
 
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.uitesting.XmlStringResolver
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -13,12 +16,16 @@ class MapFeatureDescriptionTest {
 
     private val es = XmlStringResolver.es(R::class.java)
 
-    private fun describe(kind: String?, properties: Map<String, Any?>) = describeFeature(kind, properties, es)
+    private val en = XmlStringResolver.en(R::class.java)
+
+    private val metric = UnitFormatter(UnitSystem.METRIC, Locale("es"))
+
+    private fun describe(kind: String?, properties: Map<String, Any?>) = describeFeature(kind, properties, es, metric)
 
     @Test
     fun `radar con limite conocido muestra el limite`() {
         val result = describe(ICON_CAMERA, mapOf(FEATURE_PROP_SPEED_LIMIT_KMH to 60))
-        assertEquals(MapFeatureDescription("Radar fijo", "Fotomulta · límite 60 km/h"), result)
+        assertEquals(MapFeatureDescription("Radar fijo", "Fotomulta · límite 60 km/h"), result)
     }
 
     @Test
@@ -30,7 +37,7 @@ class MapFeatureDescriptionTest {
     @Test
     fun `radar objetivo describe igual que el radar normal`() {
         val result = describe(ICON_CAMERA_TARGET, mapOf(FEATURE_PROP_SPEED_LIMIT_KMH to 40))
-        assertEquals(MapFeatureDescription("Radar fijo", "Fotomulta · límite 40 km/h"), result)
+        assertEquals(MapFeatureDescription("Radar fijo", "Fotomulta · límite 40 km/h"), result)
     }
 
     @Test
@@ -71,7 +78,7 @@ class MapFeatureDescriptionTest {
             ICON_PEER,
             mapOf(FEATURE_PROP_NAME to "Nico", FEATURE_PROP_SPEED_KMH to 82.0),
         )
-        assertEquals(MapFeatureDescription("Nico", "82 km/h · en sala"), result)
+        assertEquals(MapFeatureDescription("Nico", "82 km/h · en sala"), result)
     }
 
     @Test
@@ -95,7 +102,8 @@ class MapFeatureDescriptionTest {
         val result = describeFeature(
             ICON_POTHOLE,
             mapOf(FEATURE_PROP_HITS to 4, FEATURE_PROP_LAST_HIT_MS to noonUtcMs),
-            XmlStringResolver.en(R::class.java),
+            en,
+            metric,
         )
         assertEquals("Reported pothole", result?.title)
         assertEquals(true, result?.subtitle?.startsWith("Reported 4× · last on "))
@@ -103,7 +111,21 @@ class MapFeatureDescriptionTest {
 
     @Test
     fun `en ingles el radar con limite conocido muestra el limite`() {
-        val result = describeFeature(ICON_CAMERA, mapOf(FEATURE_PROP_SPEED_LIMIT_KMH to 60), XmlStringResolver.en(R::class.java))
-        assertEquals(MapFeatureDescription("Fixed speed camera", "Photo enforcement · limit 60 km/h"), result)
+        val result = describeFeature(ICON_CAMERA, mapOf(FEATURE_PROP_SPEED_LIMIT_KMH to 60), en, metric)
+        assertEquals(MapFeatureDescription("Fixed speed camera", "Photo enforcement · limit 60 km/h"), result)
+    }
+
+    @Test
+    fun `en US el limite del radar va en mph`() {
+        val us = UnitFormatter(UnitSystem.US, Locale.US)
+        val result = describeFeature(ICON_CAMERA, mapOf(FEATURE_PROP_SPEED_LIMIT_KMH to 80), en, us)
+        assertEquals(MapFeatureDescription("Fixed speed camera", "Photo enforcement · limit 50 mph"), result)
+    }
+
+    @Test
+    fun `en US la velocidad del peer va en mph`() {
+        val us = UnitFormatter(UnitSystem.US, Locale.US)
+        val result = describeFeature(ICON_PEER, mapOf(FEATURE_PROP_NAME to "Nico", FEATURE_PROP_SPEED_KMH to 100.0), en, us)
+        assertEquals(MapFeatureDescription("Nico", "62 mph · in room"), result)
     }
 }

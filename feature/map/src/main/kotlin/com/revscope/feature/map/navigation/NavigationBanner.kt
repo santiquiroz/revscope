@@ -32,12 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.navigation.Maneuver
 import com.revscope.core.navigation.NavigationState
 import com.revscope.feature.map.R
@@ -97,8 +98,9 @@ fun NavigationProgressBar(state: NavigationState, speedKmh: Int? = null, modifie
         ) {
             // weight(fill=false): con 4 celdas en 320dp el Row sin pesos mide con ancho ilimitado
             // y el Surface CLIPEA la última celda en silencio; con pesos, reparten y nada se corta.
-            speedKmh?.let { ProgressField("$it km/h", stringResource(R.string.map_nav_field_speed), Modifier.weight(1f, fill = false)) } // i18n-ignore
-            ProgressField(formatDistance(state.distanceRemainingM), stringResource(R.string.map_nav_field_remaining), Modifier.weight(1f, fill = false))
+            val units = rememberUnitFormatter()
+            speedKmh?.let { ProgressField(units.formatSpeed(it.toDouble()), stringResource(R.string.map_nav_field_speed), Modifier.weight(1f, fill = false)) }
+            ProgressField(formatDistance(state.distanceRemainingM, units),stringResource(R.string.map_nav_field_remaining), Modifier.weight(1f, fill = false))
             ProgressField(formatDuration(state.durationRemainingS), stringResource(R.string.map_nav_field_en_route), Modifier.weight(1f, fill = false))
             ProgressField(arrivalClock(state.durationRemainingS), stringResource(R.string.map_nav_field_arrival), Modifier.weight(1f, fill = false))
         }
@@ -117,7 +119,7 @@ private fun ProgressField(value: String, label: String, modifier: Modifier = Mod
 private fun headline(state: NavigationState): String = when {
     state.arrived -> stringResource(R.string.map_nav_arrived)
     state.offRoute -> stringResource(R.string.map_nav_recalculating)
-    else -> formatDistance(state.distanceToManeuverM)
+    else -> formatDistance(state.distanceToManeuverM, rememberUnitFormatter())
 }
 
 @Composable
@@ -196,11 +198,18 @@ private fun turnIcon(modifier: String?): ImageVector? = when (modifier) {
 
 /** Mismo redondeo que la voz: si se oye "en 250 metros", en pantalla no puede decir 237. */
 @Composable
-private fun formatDistance(distanceM: Int): String = when {
-    distanceM < IMMEDIATE_M -> stringResource(R.string.map_nav_now)
-    distanceM < 1_000 -> "${(distanceM / METERS_ROUNDING).coerceAtLeast(1) * METERS_ROUNDING} m"
-    else -> LocaleNumbers.decimal(distanceM / 1_000.0, 1, LocalConfiguration.current.locales[0]) + " km" // i18n-ignore
-}
+private fun formatDistance(distanceM: Int, units: UnitFormatter): String =
+    if (distanceM < IMMEDIATE_M) stringResource(R.string.map_nav_now) else navDistanceText(distanceM, units)
+
+internal fun navDistanceText(distanceM: Int, units: UnitFormatter): String =
+    units.formatShortDistance(snapMeters(distanceM, units.system).toDouble())
+
+private fun snapMeters(distanceM: Int, system: UnitSystem): Int =
+    if (system == UnitSystem.METRIC && distanceM < 1_000) {
+        (distanceM / METERS_ROUNDING).coerceAtLeast(1) * METERS_ROUNDING
+    } else {
+        distanceM
+    }
 
 private fun formatDuration(seconds: Int): String {
     val minutes = seconds / 60

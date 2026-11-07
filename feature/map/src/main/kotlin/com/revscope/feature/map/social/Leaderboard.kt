@@ -20,17 +20,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.obd.service.LiveRouteHolder
 import com.revscope.core.obd.social.RoomClient
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.feature.map.R
-import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -278,7 +277,7 @@ private fun LeaderboardRow(position: Int, entry: RankingCalc.Entry, raceMode: Bo
             if (entry.arrived) {
                 stringResource(R.string.map_race_arrived)
             } else {
-                "${formatRemaining(entry.remainingM, LocalConfiguration.current.locales[0])} · ${formatEta(entry.etaMin)}"
+                "${formatRemaining(entry.remainingM, rememberUnitFormatter())} · ${formatEta(entry.etaMin)}"
             },
             color = TextMuted,
             fontSize = 11.sp,
@@ -309,8 +308,8 @@ fun RaceCountdownOverlay(secondsToShow: Int, modifier: Modifier = Modifier) {
     }
 }
 
-private fun formatRemaining(remainingM: Double, locale: Locale): String =
-    if (remainingM >= 1_000) LocaleNumbers.decimal(remainingM / 1_000.0, 1, locale) + " km" else "${remainingM.toInt()} m" // i18n-ignore
+internal fun formatRemaining(remainingM: Double, units: UnitFormatter): String =
+    units.formatShortDistance(remainingM)
 
 private fun formatEta(etaMin: Double?): String =
     etaMin?.let { "${it.toInt()} min" } ?: "—" // i18n-ignore

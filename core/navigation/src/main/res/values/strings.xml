@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Spoken distance before a maneuver. Units stay metric for now. -->
+    <!-- Spoken before a maneuver that is right ahead. Distances live in strings_units.xml. -->
     <string name="nav_distance_now">Now</string>
-    <string name="nav_distance_meters">In %1$d meters</string>
-    <string name="nav_distance_one_kilometer">In 1 kilometer</string>
-    <string name="nav_distance_kilometers">In %1$s kilometers</string>
     <!-- %1$s = distance, %2$s = action -->
     <string name="nav_spoken_with_distance">%1$s, %2$s</string>
 
