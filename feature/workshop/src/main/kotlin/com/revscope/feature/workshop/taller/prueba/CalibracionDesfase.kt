@@ -19,15 +19,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
-import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.CalibracionVoltaje
 import com.revscope.core.obd.taller.pruebas.DesfaseVoltaje
+import com.revscope.feature.workshop.R
+import java.util.Locale
 
 // ── Fila de ajustes: el desfase de AT RV del vehículo ────────────────────────
 
@@ -37,7 +41,7 @@ internal fun FilaDesfase(desfase: DesfaseVoltaje, onCalibrar: () -> Unit) {
     val resolver = remember(context) { AndroidStringResolver(context) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f)) {
-            Text("Desfase del voltaje del adaptador", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
+            Text(stringResource(R.string.workshop_prueba_desfase_fila_titulo), color = RevScopeColors.TextPrimary, style = RevScopeType.body)
             Text(
                 CalibracionVoltaje.texto(desfase, resolver),
                 color = RevScopeColors.TextSecondary,
@@ -45,7 +49,7 @@ internal fun FilaDesfase(desfase: DesfaseVoltaje, onCalibrar: () -> Unit) {
             )
         }
         TextButton(onClick = onCalibrar, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Calibrar", color = RevScopeColors.Accent, style = RevScopeType.label)
+            Text(stringResource(R.string.workshop_prueba_desfase_calibrar), color = RevScopeColors.Accent, style = RevScopeType.label)
         }
     }
 }
@@ -60,18 +64,24 @@ internal fun DialogoDesfase(estado: PruebaGuiadaUi, onGuardar: (Double?) -> Unit
     AlertDialog(
         onDismissRequest = onCerrar,
         containerColor = RevScopeColors.SurfaceHigh,
-        title = { Text("Calibrar el voltaje", color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
+        title = {
+            Text(stringResource(R.string.workshop_prueba_desfase_dialogo_titulo), color = RevScopeColors.TextPrimary, style = RevScopeType.title)
+        },
         text = {
             CuerpoDesfase(texto, estado.voltajeAdaptador, nuevo, { texto = it }, onQuitar = { onGuardar(null) }.takeIf { estado.desfase.calibrado })
         },
         confirmButton = {
             TextButton(onClick = { onGuardar(multimetro) }, enabled = nuevo != null, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Guardar", color = if (nuevo != null) RevScopeColors.Accent else RevScopeColors.TextSecondary, style = RevScopeType.label)
+                Text(
+                    stringResource(R.string.workshop_prueba_desfase_guardar),
+                    color = if (nuevo != null) RevScopeColors.Accent else RevScopeColors.TextSecondary,
+                    style = RevScopeType.label,
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onCerrar, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Cancelar", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                Text(stringResource(R.string.workshop_prueba_desfase_cancelar), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
             }
         },
     )
@@ -88,44 +98,47 @@ internal fun CuerpoDesfase(
     onQuitar: (() -> Unit)? = null,
 ) {
     val escrito = texto.isNotBlank()
+    val locale = LocalConfiguration.current.locales[0]
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
         Text(
-            "AT RV mide en el conector OBD con ±0,1-0,2 V (típico). Con el contacto puesto, mide la batería en los " +
-                "bornes con el multímetro y anótalo: la diferencia se guarda para este vehículo.",
+            stringResource(R.string.workshop_prueba_desfase_explicacion),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.body,
         )
         Text(
-            adaptadorV?.let { "El adaptador marca ahora ${voltios(it)}" } ?: "Sin lectura del adaptador: conéctalo y pon el contacto",
+            adaptadorV?.let { stringResource(R.string.workshop_prueba_desfase_adaptador_marca, voltios(it, locale)) }
+                ?: stringResource(R.string.workshop_prueba_desfase_sin_lectura),
             color = if (adaptadorV != null) RevScopeColors.TextPrimary else RevScopeColors.Warning,
             style = RevScopeType.body.copy(fontFeatureSettings = "tnum"),
         )
         OutlinedTextField(
             value = texto,
             onValueChange = onTexto,
-            label = { Text("Multímetro (V)") },
+            label = { Text(stringResource(R.string.workshop_prueba_desfase_multimetro)) },
             isError = escrito && nuevo == null,
-            supportingText = { Ayuda(nuevo, escrito) },
+            supportingText = { Ayuda(nuevo, escrito, locale) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         onQuitar?.let {
             TextButton(onClick = it, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Quitar la calibración", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                Text(stringResource(R.string.workshop_prueba_desfase_quitar), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
             }
         }
     }
 }
 
 @Composable
-private fun Ayuda(nuevo: DesfaseVoltaje?, escrito: Boolean) {
+private fun Ayuda(nuevo: DesfaseVoltaje?, escrito: Boolean, locale: Locale) {
     val texto = when {
-        nuevo != null -> "Desfase: ${FormatoTaller.conSigno(nuevo.voltios, 2)} V"
-        escrito -> "Entre 6 y 18 V y a menos de 1 V del adaptador"
-        else -> "Por ejemplo 12,6"
+        nuevo != null -> stringResource(R.string.workshop_prueba_desfase_ayuda_valor, LocaleNumbers.signed(nuevo.voltios, 2, locale))
+        escrito -> stringResource(R.string.workshop_prueba_desfase_ayuda_rango)
+        else -> stringResource(R.string.workshop_prueba_desfase_ayuda_ejemplo, LocaleNumbers.decimal(EJEMPLO_V, 1, locale))
     }
     Text(texto, color = if (escrito && nuevo == null) RevScopeColors.Danger else RevScopeColors.TextSecondary)
 }
 
-private fun voltios(v: Double) = "${FormatoTaller.numero(v, 1)} V"
+private const val EJEMPLO_V = 12.6
+
+private fun voltios(v: Double, locale: Locale) = "${LocaleNumbers.decimal(v, 1, locale)} V"

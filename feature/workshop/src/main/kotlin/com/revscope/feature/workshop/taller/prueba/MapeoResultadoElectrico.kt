@@ -14,6 +14,7 @@ import com.revscope.core.obd.taller.pruebas.PatronMapBaro
 import com.revscope.core.obd.taller.pruebas.TextosBateria
 import com.revscope.core.obd.taller.pruebas.TextosMapBaro
 import com.revscope.core.obd.taller.referencia.ClavesBanda
+import com.revscope.feature.workshop.R
 
 // Resultado de batería y carga y del MAP contra la barométrica: medidas en líneas, comprobaciones con su banda
 // y la serie de toda la prueba (el voltaje con la banda de carga; el MAP con la barométrica ± la tolerancia).
@@ -53,12 +54,18 @@ internal object MapeoResultadoElectrico {
     fun bandaBaro(a: AnalisisMapBaro, resolver: StringResolver): BandaGrafica? {
         val ref = a.referencia ?: return null
         val tolerancia = a.toleranciaKpa ?: return null
-        return BandaGrafica("Barométrica ±${kpa(tolerancia, resolver)}", ref.kPa - tolerancia, ref.kPa + tolerancia)
+        val etiqueta = resolver.get(R.string.workshop_prueba_resultado_banda_baro, kpa(tolerancia, resolver))
+        return BandaGrafica(etiqueta, ref.kPa - tolerancia, ref.kPa + tolerancia)
     }
 
     private fun leyendaBaro(a: AnalisisMapBaro, resolver: StringResolver): String? {
         val ref = a.referencia ?: return null
-        return "Barométrica ${kpa(ref.kPa, resolver)} ±${kpa(a.toleranciaKpa ?: 0.0, resolver)} · ${ref.etiqueta(resolver)}"
+        return resolver.get(
+            R.string.workshop_prueba_resultado_leyenda_baro,
+            kpa(ref.kPa, resolver),
+            kpa(a.toleranciaKpa ?: 0.0, resolver),
+            ref.etiqueta(resolver),
+        )
     }
 
     private fun codigoBateria(p: PatronBateria): String? = when (p) {

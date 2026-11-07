@@ -20,12 +20,14 @@ import com.revscope.core.obd.taller.pruebas.TextosArranqueFrio
 import com.revscope.core.obd.taller.pruebas.TextosMinimo
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
+import com.revscope.feature.workshop.R
 
 // Resultado del mínimo y del arranque en frío: medidas en líneas, comprobaciones con su banda y las series
 // de RPM y temperatura de toda la prueba con los pasos sombreados.
 internal object MapeoResultadoMotor {
 
     private const val CODIGO_ECT_INTERMITENTE = "P0119"
+    private const val SIN_VALOR = "—"
 
     fun minimo(base: ResultadoUi, a: AnalisisMinimo, datos: DatosPrueba?, resolver: StringResolver): ResultadoUi {
         val banda = a.comprobacion(ClavesBanda.MINIMO_RPM)?.banda
@@ -51,8 +53,9 @@ internal object MapeoResultadoMotor {
 
     fun comprobacion(c: Comprobacion, resolver: StringResolver): ComprobacionUi {
         val banda = c.banda ?: return ComprobacionUi(c.etiqueta, c.cumple)
-        val valor = c.valor?.let { "${LocaleNumbers.decimal(it, decimales(c.unidad), resolver.locale)} ${TextoBanda.unidad(c.unidad)}".trim() } ?: "—"
-        return ComprobacionUi("${c.etiqueta}: $valor · banda ${TextoBanda.citar(banda, decimalesBanda(banda.unidad), resolver)}", c.cumple)
+        val valor = c.valor?.let { "${LocaleNumbers.decimal(it, decimales(c.unidad), resolver.locale)} ${TextoBanda.unidad(c.unidad)}".trim() } ?: SIN_VALOR
+        val citada = TextoBanda.citar(banda, decimalesBanda(banda.unidad), resolver)
+        return ComprobacionUi(resolver.get(R.string.workshop_prueba_resultado_comprobacion, c.etiqueta, valor, citada), c.cumple)
     }
 
     private fun decimales(unidad: String): Int = when (unidad) {
@@ -93,23 +96,29 @@ internal object MapeoResultadoMotor {
         val m = MapeoMagnitud.de(pid, resolver)
         val puntos = datos.muestras.filter { it.pid == pid }.sortedBy { it.tMicros }.map { PuntoGrafica(it.tMicros / 1_000_000.0, it.valor) }
         if (puntos.size < 2) return null
+        val recorrido = resolver.get(
+            R.string.workshop_prueba_resultado_serie_descripcion,
+            m.nombre,
+            m.texto(puntos.minOf { it.y }, resolver),
+            m.texto(puntos.maxOf { it.y }, resolver),
+            MapeoResultado.pasosSombreados(datos.segmentos.size, resolver),
+        )
         val modelo = ModeloGrafica(
             series = listOf(SerieGrafica(m.nombre, puntos)),
-            descripcion = "${m.nombre} en toda la prueba: de ${m.texto(puntos.minOf { it.y }, resolver)} a ${m.texto(puntos.maxOf { it.y }, resolver)}, " +
-                "${pasosSombreados(datos.segmentos.size)}." + leyendaBanda?.let { " Banda $it" }.orEmpty(),
+            descripcion = recorrido + leyendaBanda?.let { " " + resolver.get(R.string.workshop_prueba_resultado_banda, it) }.orEmpty(),
             bandas = listOfNotNull(bandaGrafica),
             tramos = datos.segmentos.mapIndexed { i, s -> TramoGrafica("${i + 1}", s.inicioMs / 1_000.0, s.finMs / 1_000.0) },
         )
         val leyenda = listOf(datos.segmentos.mapIndexed { i, s -> "${i + 1} ${titulos[s.clave] ?: s.clave}" }.joinToString(" · ")) +
             listOfNotNull(leyendaBanda)
-        return GraficaResultadoUi(tituloSerie(m), modelo, leyenda)
+        return GraficaResultadoUi(tituloSerie(m, resolver), modelo, leyenda)
     }
-
-    private fun pasosSombreados(n: Int) = if (n == 1) "1 paso sombreado" else "$n pasos sombreados"
 
     // «RPM en toda la prueba, en rpm» repite la unidad: solo se agrega cuando dice algo más que el nombre.
-    private fun tituloSerie(m: Magnitud): String {
-        val titulo = "${m.nombre} en toda la prueba"
-        return if (m.unidad.equals(m.nombre, ignoreCase = true)) titulo else "$titulo, en ${m.unidad}"
-    }
+    private fun tituloSerie(m: Magnitud, resolver: StringResolver): String =
+        if (m.unidad.equals(m.nombre, ignoreCase = true)) {
+            resolver.get(R.string.workshop_prueba_resultado_serie_titulo, m.nombre)
+        } else {
+            resolver.get(R.string.workshop_prueba_resultado_serie_titulo_unidad, m.nombre, m.unidad)
+        }
 }
