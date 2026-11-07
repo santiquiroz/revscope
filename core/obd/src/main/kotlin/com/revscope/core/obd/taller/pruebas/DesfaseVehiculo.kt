@@ -61,9 +61,9 @@ class PreferenciasDesfaseDataStore @Inject constructor(private val settings: Dat
         }
     }
 
-    private fun voltios(vehiculoId: Long?) = doublePreferencesKey("taller_desfase_rv_v_${vehiculoId ?: SIN_VEHICULO}")
+    private fun voltios(vehiculoId: Long?) = doublePreferencesKey("taller_desfase_rv_v_${vehiculoId ?: SIN_VEHICULO}") // i18n-ignore
 
-    private fun origen(vehiculoId: Long?) = stringPreferencesKey("taller_desfase_rv_origen_${vehiculoId ?: SIN_VEHICULO}")
+    private fun origen(vehiculoId: Long?) = stringPreferencesKey("taller_desfase_rv_origen_${vehiculoId ?: SIN_VEHICULO}") // i18n-ignore
 
     private companion object {
         const val SIN_VEHICULO = "sin_vehiculo"
