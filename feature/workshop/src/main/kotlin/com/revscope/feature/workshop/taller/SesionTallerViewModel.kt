@@ -3,6 +3,8 @@ package com.revscope.feature.workshop.taller
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.feature.workshop.R
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.taller.sesion.AnalizadorSesion
@@ -38,15 +40,16 @@ class SesionTallerViewModel @Inject constructor(
     private val registro: RegistroTaller,
     private val analizador: AnalizadorSesion,
     private val entorno: EntornoTaller,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
-    private val sesionId: Long = checkNotNull(guardado.get<Long>(ARG_SESION)) { "Falta el argumento $ARG_SESION" }
+    private val sesionId: Long = checkNotNull(guardado.get<Long>(ARG_SESION)) { "Falta el argumento $ARG_SESION" } // i18n-ignore
     private val ui = MutableStateFlow(UiSesion())
     private val salidas = Channel<Unit>(Channel.BUFFERED)
     val salir: Flow<Unit> = salidas.receiveAsFlow()
 
     val estado: StateFlow<SesionTallerEstado> = combine(datos(), ui) { datos, ui ->
-        datos?.let { EstadoPantallaSesion.de(it, ui, entorno.zona) } ?: SesionTallerEstado(cargando = false, eliminada = true)
+        datos?.let { EstadoPantallaSesion.de(it, ui, entorno.zona, resolver) } ?: SesionTallerEstado(cargando = false, eliminada = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(DETENER_TRAS_MS), SesionTallerEstado())
 
     fun alternarComparacion() = ui.update { it.copy(comparacionExpandida = !it.comparacionExpandida) }
@@ -73,11 +76,16 @@ class SesionTallerViewModel @Inject constructor(
 
     fun confirmarCierre() = accion {
         val cerrada = registro.cerrarSesion(sesionId)
-        avisar(if (cerrada) "Sesión cerrada: las lecturas nuevas ya no se anotan en ella" else "La sesión ya estaba cerrada")
+        avisar(
+            resolver.get(
+                if (cerrada) R.string.workshop_session_closed_message else R.string.workshop_session_already_closed,
+            ),
+        )
     }
 
     fun confirmarEliminacion() = accion {
-        if (registro.eliminarSesion(sesionId)) salidas.send(Unit) else avisar("No se pudo eliminar la sesión")
+        if (registro.eliminarSesion(sesionId)) salidas.send(Unit)
+        else avisar(resolver.get(R.string.workshop_session_delete_failed))
     }
 
     fun guardarNota() = accion {
@@ -85,13 +93,13 @@ class SesionTallerViewModel @Inject constructor(
         if (!sePuedeAgregar() || texto.isBlank()) return@accion
         val guardada = registro.anotarNota(texto) != null
         if (guardada) ui.update { it.copy(nota = "") }
-        avisar(if (guardada) "Nota agregada a la sesión" else "No se pudo guardar la nota")
+        avisar(resolver.get(if (guardada) R.string.workshop_session_note_added else R.string.workshop_session_note_save_failed))
     }
 
     fun tomarInstantanea() = accion {
         if (!sePuedeAgregar()) return@accion
         val guardada = registro.anotarInstantanea(entorno.lecturas()) != null
-        avisar(if (guardada) "Instantánea de sensores agregada" else "No se pudo guardar la instantánea")
+        avisar(resolver.get(if (guardada) R.string.workshop_session_snapshot_added else R.string.workshop_session_snapshot_save_failed))
     }
 
     private fun abrirDialogo(dialogo: DialogoSesion) = ui.update { it.copy(dialogo = dialogo, menu = false, hojaAgregar = false) }

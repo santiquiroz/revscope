@@ -2,6 +2,8 @@ package com.revscope.feature.workshop.taller
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.feature.workshop.R
 import com.revscope.core.obd.taller.sesion.ChequeoBase
 import com.revscope.core.obd.taller.sesion.HistorialChequeos
 import com.revscope.core.obd.taller.sesion.RegistroTaller
@@ -27,6 +29,7 @@ class NuevaSesionViewModel @Inject constructor(
     private val repositorio: TallerRepository,
     private val historial: HistorialChequeos,
     private val entorno: EntornoTaller,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val _estado = MutableStateFlow(NuevaSesionEstado())
@@ -55,9 +58,9 @@ class NuevaSesionViewModel @Inject constructor(
 
     fun abrir() {
         val actual = vehiculo ?: return
-        val odometro = OdometroTexto.leer(_estado.value.odometro)
+        val odometro = OdometroTexto.leer(_estado.value.odometro, resolver)
         if (odometro.isFailure) {
-            _estado.update { it.copy(errorOdometro = OdometroTexto.ERROR) }
+            _estado.update { it.copy(errorOdometro = odometro.exceptionOrNull()?.message) }
             return
         }
         viewModelScope.launch { abrirOPedirCierre(actual, odometro.getOrNull()) }
@@ -65,7 +68,7 @@ class NuevaSesionViewModel @Inject constructor(
 
     fun confirmarCierreYAbrir() {
         _estado.update { it.copy(porCerrar = null) }
-        viewModelScope.launch { crear(OdometroTexto.leer(_estado.value.odometro).getOrNull()) }
+        viewModelScope.launch { crear(OdometroTexto.leer(_estado.value.odometro, resolver).getOrNull()) }
     }
 
     fun cancelarCierre() = _estado.update { it.copy(porCerrar = null) }
@@ -79,7 +82,7 @@ class NuevaSesionViewModel @Inject constructor(
             it.copy(
                 cargando = false,
                 vehiculo = actual?.nombre,
-                bases = bases.map { chequeo -> OpcionesChequeoBase.de(chequeo, entorno.zona) },
+                bases = bases.map { chequeo -> OpcionesChequeoBase.de(chequeo, entorno.zona, resolver) },
                 baseElegida = bases.firstOrNull()?.id,
                 odometro = km?.let(OdometroTexto::escribir).orEmpty(),
                 odometroDeEcu = km != null,
@@ -94,7 +97,12 @@ class NuevaSesionViewModel @Inject constructor(
             return
         }
         _estado.update {
-            it.copy(porCerrar = SesionPorCerrar(anterior.titulo, FechasTaller.fechaHora(anterior.inicio, entorno.zona)))
+            it.copy(
+                porCerrar = SesionPorCerrar(
+                    anterior.titulo,
+                    FechasSesion.fechaHora(anterior.inicio, entorno.zona, resolver.locale),
+                ),
+            )
         }
     }
 
@@ -102,7 +110,7 @@ class NuevaSesionViewModel @Inject constructor(
         _estado.update { it.copy(abriendo = true, error = null) }
         registro.abrirSesion(solicitud(odometroKm))
             .onSuccess { abiertas.send(it.id) }
-            .onFailure { e -> _estado.update { it.copy(error = e.message ?: "No se pudo abrir la sesión") } }
+            .onFailure { e -> _estado.update { it.copy(error = e.message ?: resolver.get(R.string.workshop_new_session_open_failed)) } }
         _estado.update { it.copy(abriendo = false) }
     }
 

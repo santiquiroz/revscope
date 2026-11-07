@@ -4,6 +4,7 @@ import com.revscope.core.obd.taller.sesion.ChequeoRegistrado
 import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.taller.sesion.Sintoma
 import com.revscope.core.obd.workshop.MetricasChequeo
+import com.revscope.feature.workshop.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -48,7 +49,7 @@ class NuevaSesionViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun TestScope.vm(): Pair<NuevaSesionViewModel, List<Long>> {
-        val vm = NuevaSesionViewModel(taller.registro, taller.repositorio, taller.historial, taller.entorno)
+        val vm = NuevaSesionViewModel(taller.registro, taller.repositorio, taller.historial, taller.entorno, PruebaStringResolver.es())
         val abiertas = mutableListOf<Long>()
         backgroundScope.launch { vm.sesionAbierta.toList(abiertas) }
         return vm to abiertas
@@ -132,7 +133,7 @@ class NuevaSesionViewModelTest {
 
         vm.abrir()
 
-        assertEquals(OdometroTexto.ERROR, vm.estado.value.errorOdometro)
+        assertEquals("Escribe los kilómetros solo con números, por ejemplo 12345", vm.estado.value.errorOdometro)
         assertTrue(abiertas.isEmpty())
         vm.cambiarOdometro("12000")
         assertNull(vm.estado.value.errorOdometro)
@@ -162,9 +163,23 @@ class NuevaSesionViewModelTest {
 
     @Test
     fun `el odómetro acepta puntos de miles y coma decimal`() {
-        assertEquals(12_345.6, OdometroTexto.leer("12.345,6").getOrNull()!!, 1e-9)
-        assertNull(OdometroTexto.leer("  ").getOrNull())
-        assertTrue(OdometroTexto.leer("-5").isFailure)
-        assertNotNull(OdometroTexto.leer("0").getOrNull())
+        val resolver = PruebaStringResolver.es()
+        assertEquals(12_345.6, OdometroTexto.leer("12.345,6", resolver).getOrNull()!!, 1e-9)
+        assertNull(OdometroTexto.leer("  ", resolver).getOrNull())
+        assertTrue(OdometroTexto.leer("-5", resolver).isFailure)
+        assertNotNull(OdometroTexto.leer("0", resolver).getOrNull())
+    }
+
+    @Test
+    fun `la confirmación de cierre previo se traduce al inglés`() {
+        assertEquals(
+            "“Benelli TNT 150i” was opened on Sep 25, 2026. To open this session, the previous one will close. " +
+                "Its timeline will be kept, and you can view it in Previous sessions.",
+            PruebaStringResolver.en().get(
+                R.string.workshop_new_session_previous_message,
+                "Benelli TNT 150i",
+                "Sep 25, 2026",
+            ),
+        )
     }
 }

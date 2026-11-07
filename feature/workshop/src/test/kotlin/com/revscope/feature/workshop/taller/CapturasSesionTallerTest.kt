@@ -14,7 +14,7 @@ import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class CapturasSesionTallerTest {
 
     private val selector = VehiculoEnEncabezado("Benelli TNT 150i", esMoto = true, estadoEnlace = "conectado", colorEstado = RevScopeColors.Success)
