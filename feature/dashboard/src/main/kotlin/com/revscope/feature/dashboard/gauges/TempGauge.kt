@@ -27,6 +27,8 @@ import com.revscope.feature.dashboard.R
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
 import com.revscope.core.designsystem.conCifrasTabulares
+import com.revscope.core.designsystem.rememberUnitFormatter
+import com.revscope.core.common.units.UnitFormatter
 
 private const val TEMP_MIN = -40f
 private const val TEMP_MAX = 130f
@@ -38,6 +40,7 @@ fun TempGauge(
     barHeight: Dp = 120.dp,
     barWidth: Dp = 16.dp,
 ) {
+    val units = rememberUnitFormatter()
     val fraction = (((tempCelsius ?: TEMP_MIN) - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)).coerceIn(0f, 1f)
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
@@ -52,7 +55,7 @@ fun TempGauge(
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         TextoAjustable(
-            texto = tempCelsius?.let { "${it.toInt()} °C" } ?: "—",
+            texto = tempCelsius?.let { textoTemperatura(it, units) } ?: "—",
             estilo = RevScopeType.label.conCifrasTabulares(),
             color = fillColor,
             modifier = Modifier.fillMaxWidth(),
@@ -92,3 +95,6 @@ fun TempGauge(
         )
     }
 }
+
+internal fun textoTemperatura(celsius: Float, units: UnitFormatter): String =
+    "${units.temperature(celsius.toDouble()).toInt()} ${units.temperatureLabel()}"
