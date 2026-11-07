@@ -28,6 +28,8 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.timber)
+
+    testImplementation(libs.junit)
 }
 
 kotlin {

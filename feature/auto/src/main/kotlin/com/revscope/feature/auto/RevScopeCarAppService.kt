@@ -7,6 +7,7 @@ import androidx.car.app.Screen
 import androidx.car.app.Session
 import androidx.car.app.validation.HostValidator
 import androidx.lifecycle.lifecycleScope
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.obd.alerts.AlertsEngine
 import com.revscope.core.obd.session.ObdSessionManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,16 +43,20 @@ class RevScopeCarAppService : CarAppService() {
     @Inject
     lateinit var alertsEngine: AlertsEngine
 
+    @Inject
+    lateinit var units: UnitFormatter
+
     override fun createHostValidator(): HostValidator =
         // Personal/sideload build — accept any host (Android Auto, DHU)
         HostValidator.ALLOW_ALL_HOSTS_VALIDATOR
 
-    override fun onCreateSession(): Session = RevScopeCarSession(sessionManager, alertsEngine)
+    override fun onCreateSession(): Session = RevScopeCarSession(sessionManager, alertsEngine, units)
 }
 
 class RevScopeCarSession(
     private val sessionManager: ObdSessionManager,
     private val alertsEngine: AlertsEngine,
+    private val units: UnitFormatter,
 ) : Session() {
 
     // AlertsEngine's tone/TTS goes out on STREAM_MUSIC, which Android Auto reroutes to the
@@ -62,7 +67,7 @@ class RevScopeCarSession(
 
     override fun onCreateScreen(intent: Intent): Screen {
         startAlertObserverOnce()
-        return DashboardCarScreen(carContext, sessionManager)
+        return DashboardCarScreen(carContext, sessionManager, units)
     }
 
     private fun startAlertObserverOnce() {
