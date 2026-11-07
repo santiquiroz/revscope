@@ -1,9 +1,11 @@
 package com.revscope.core.obd.legal
 
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.obd.R
 import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
@@ -20,7 +22,7 @@ class DocumentStatusCalculatorTest {
         val now = bogotaNoonMs(2026, 6, 5)
         val documents = baseDocuments(soatExpiresAt = utcMs(2026, 6, 1))
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es, region = Region.CO)
 
         val soat = statuses.first { it.tipo == DocumentStatusCalculator.DocType.SOAT }
         assertEquals(DocumentStatusCalculator.Nivel.VENCIDO, soat.nivel)
@@ -31,7 +33,7 @@ class DocumentStatusCalculatorTest {
     fun `soat que vence hoy evaluado a las 9pm bogota no marca vencido`() {
         val documents = baseDocuments(soatExpiresAt = utcMs(2026, 6, 10))
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, BOGOTA_9PM_JUN10_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, BOGOTA_9PM_JUN10_MS, resolver = es, region = Region.CO)
 
         val soat = statuses.first { it.tipo == DocumentStatusCalculator.DocType.SOAT }
         assertEquals(DocumentStatusCalculator.Nivel.ATENCION, soat.nivel)
@@ -43,7 +45,7 @@ class DocumentStatusCalculatorTest {
         val now = bogotaNoonMs(2026, 6, 1)
         val documents = baseDocuments(rtmExpiresAt = utcMs(2026, 7, 1))
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es, region = Region.CO)
 
         val rtm = statuses.first { it.tipo == DocumentStatusCalculator.DocType.RTM }
         assertEquals(DocumentStatusCalculator.Nivel.ATENCION, rtm.nivel)
@@ -54,7 +56,7 @@ class DocumentStatusCalculatorTest {
         val now = utcMs(2026, 6, 1)
         val documents = baseDocuments(insuranceExpiresAt = utcMs(2027, 1, 1))
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es, region = Region.CO)
 
         val todoRiesgo = statuses.first { it.tipo == DocumentStatusCalculator.DocType.TODO_RIESGO }
         assertEquals(DocumentStatusCalculator.Nivel.OK, todoRiesgo.nivel)
@@ -65,7 +67,7 @@ class DocumentStatusCalculatorTest {
         val now = utcMs(2026, 6, 1)
         val documents = baseDocuments()
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es, region = Region.CO)
 
         val licencia = statuses.first { it.tipo == DocumentStatusCalculator.DocType.LICENCIA }
         assertEquals(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR, licencia.nivel)
@@ -76,7 +78,7 @@ class DocumentStatusCalculatorTest {
     fun `pico y placa restringido ahora marca nivel vencido y arma el banner`() {
         val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, FRIDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, FRIDAY_10AM_MS, resolver = es, region = Region.CO)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.VENCIDO, picoYPlaca.nivel)
@@ -93,7 +95,7 @@ class DocumentStatusCalculatorTest {
             soatExpiresAt = utcMs(2026, 6, 1),
         )
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, FRIDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, FRIDAY_10AM_MS, resolver = es, region = Region.CO)
 
         assertEquals("SOAT vencido · Pico y placa hasta las 20:00", DocumentStatusCalculator.bannerText(statuses, es))
     }
@@ -107,7 +109,7 @@ class DocumentStatusCalculatorTest {
             soatExpiresAt = utcMs(2027, 1, 1),
         )
 
-        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, now, resolver = es, region = Region.CO)
 
         assertNull(DocumentStatusCalculator.bannerText(statuses, es))
     }
@@ -116,7 +118,7 @@ class DocumentStatusCalculatorTest {
     fun `pico y placa en bogota dia impar restringido marca nivel vencido`() {
         val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "bogota", isMotorcycle = false)
 
-        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS, resolver = es, region = Region.CO)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.VENCIDO, picoYPlaca.nivel)
@@ -127,7 +129,7 @@ class DocumentStatusCalculatorTest {
     fun `moto en bogota no tiene restriccion de pico y placa`() {
         val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "bogota", isMotorcycle = true)
 
-        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS, resolver = es, region = Region.CO)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.OK, picoYPlaca.nivel)
@@ -138,7 +140,7 @@ class DocumentStatusCalculatorTest {
     fun `cali sin reglas configuradas marca sin_configurar con detalle de rotacion pendiente`() {
         val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "cali", isMotorcycle = false)
 
-        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, null, ODD_WEEKDAY_10AM_MS, resolver = es, region = Region.CO)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR, picoYPlaca.nivel)
@@ -150,7 +152,7 @@ class DocumentStatusCalculatorTest {
         val documents = baseDocuments(plate = "ABC127", picoPlacaCity = "cali", isMotorcycle = false)
         val overrideParaMedellin = PicoYPlacaEngine.MEDELLIN_2026_S1
 
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideParaMedellin, FRIDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideParaMedellin, FRIDAY_10AM_MS, resolver = es, region = Region.CO)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR, picoYPlaca.nivel)
@@ -162,10 +164,45 @@ class DocumentStatusCalculatorTest {
         val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
         val overrideSinRestricciones = PicoYPlacaEngine.MEDELLIN_2026_S1.copy(rotation = emptyMap())
 
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideSinRestricciones, FRIDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, overrideSinRestricciones, FRIDAY_10AM_MS, resolver = es, region = Region.CO)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.OK, picoYPlaca.nivel)
+    }
+
+    // ── Región ─────────────────────────────────────────────────────────────────
+
+    private val en = XmlStringResolver.en(R::class.java)
+
+    @Test
+    fun `fuera de colombia no hay pico y placa ni frase en el banner`() {
+        val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
+
+        val statuses = DocumentStatusCalculator.calculate(documents, rules, FRIDAY_10AM_MS, resolver = en, region = Region.US)
+
+        assertTrue(statuses.none { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA })
+        assertNull(DocumentStatusCalculator.bannerText(statuses, en))
+    }
+
+    @Test
+    fun `titulos de documentos segun la region`() {
+        val documents = baseDocuments()
+        fun titulos(region: Region) = DocumentStatusCalculator.calculate(documents, rules, FRIDAY_10AM_MS, resolver = en, region = region)
+            .filter { it.tipo == DocumentStatusCalculator.DocType.SOAT || it.tipo == DocumentStatusCalculator.DocType.RTM }
+            .map { it.titulo }
+
+        assertEquals(listOf("Mandatory insurance (SOAT)", "Roadworthiness inspection (RTM)"), titulos(Region.CO))
+        assertEquals(listOf("Insurance", "MOT"), titulos(Region.GB))
+        assertEquals(listOf("Insurance", "Safety inspection"), titulos(Region.US))
+        assertEquals(listOf("Insurance", "Roadworthiness inspection"), titulos(Region.OTHER))
+    }
+
+    @Test
+    fun `en español colombia conserva SOAT y tecnomecanica`() {
+        val titulos = DocumentStatusCalculator.calculate(baseDocuments(), rules, FRIDAY_10AM_MS, resolver = es, region = Region.CO)
+            .take(2).map { it.titulo }
+
+        assertEquals(listOf("SOAT", "Tecnomecánica"), titulos)
     }
 
     // ── Fallback IA cuando las reglas curadas faltan o están vencidas ──────────
@@ -183,7 +220,7 @@ class DocumentStatusCalculatorTest {
         val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
 
         val statuses = DocumentStatusCalculator.calculate(
-            documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, resolver = es, aiFallbackRules =medellinS2PorIa,
+            documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, resolver = es, region = Region.CO, aiFallbackRules =medellinS2PorIa,
         )
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
@@ -195,7 +232,7 @@ class DocumentStatusCalculatorTest {
     fun `medellin con reglas vencidas sin fallback pide actualizar el semestre`() {
         val documents = baseDocuments(plate = "ABC122", picoPlacaCity = "medellin", isMotorcycle = false)
 
-        val statuses = DocumentStatusCalculator.calculate(documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, resolver = es)
+        val statuses = DocumentStatusCalculator.calculate(documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, resolver = es, region = Region.CO)
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
         assertEquals(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR, picoYPlaca.nivel)
@@ -208,7 +245,7 @@ class DocumentStatusCalculatorTest {
         val iaVencida = medellinS2PorIa.copy(validFromMs = 0L, validUntilMs = 1L)
 
         val statuses = DocumentStatusCalculator.calculate(
-            documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, resolver = es, aiFallbackRules =iaVencida,
+            documents, null, EXPIRED_S2_WEDNESDAY_10AM_MS, resolver = es, region = Region.CO, aiFallbackRules =iaVencida,
         )
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
@@ -223,7 +260,7 @@ class DocumentStatusCalculatorTest {
         val iaSinRestriccion = medellinS2PorIa.copy(rotation = emptyMap(), validFromMs = 0L)
 
         val statuses = DocumentStatusCalculator.calculate(
-            documents, null, ODD_WEEKDAY_10AM_MS, resolver = es, aiFallbackRules =iaSinRestriccion,
+            documents, null, ODD_WEEKDAY_10AM_MS, resolver = es, region = Region.CO, aiFallbackRules =iaSinRestriccion,
         )
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }
@@ -236,7 +273,7 @@ class DocumentStatusCalculatorTest {
         val caliPorIa = medellinS2PorIa.copy(cityId = "cali", displayName = "Cali")
 
         val statuses = DocumentStatusCalculator.calculate(
-            documents, null, ODD_WEEKDAY_10AM_MS, resolver = es, aiFallbackRules =caliPorIa,
+            documents, null, ODD_WEEKDAY_10AM_MS, resolver = es, region = Region.CO, aiFallbackRules =caliPorIa,
         )
 
         val picoYPlaca = statuses.first { it.tipo == DocumentStatusCalculator.DocType.PICO_Y_PLACA }

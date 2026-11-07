@@ -11,4 +11,24 @@ class RegionTest {
         assertEquals(Region.US, Region.fromCountry("US"))
         assertEquals(Region.OTHER, Region.fromCountry("DE"))
     }
+
+    @Test
+    fun `la SIM manda sobre el locale`() {
+        assertEquals(Region.CO, Region.fromSources(simCountry = "co", networkCountry = null, localeCountry = "US"))
+    }
+
+    @Test
+    fun `sin SIM usa la red`() {
+        assertEquals(Region.GB, Region.fromSources(simCountry = "", networkCountry = "gb", localeCountry = "US"))
+    }
+
+    @Test
+    fun `sin SIM ni red usa el locale`() {
+        assertEquals(Region.US, Region.fromSources(simCountry = " ", networkCountry = null, localeCountry = "US"))
+    }
+
+    @Test
+    fun `país desconocido es OTHER`() {
+        assertEquals(Region.OTHER, Region.fromSources(simCountry = "de", networkCountry = null, localeCountry = "US"))
+    }
 }

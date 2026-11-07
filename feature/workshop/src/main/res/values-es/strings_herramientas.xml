@@ -1,7 +1,5 @@
 <resources>
     <string name="workshop_al_dia_title">Vehículo al día</string>
-    <string name="workshop_al_dia_soat">SOAT</string>
-    <string name="workshop_al_dia_rtm">Tecnomecánica</string>
     <string name="workshop_al_dia_simit">SIMIT</string>
     <string name="workshop_al_dia_mechanical_check">Chequeo mecánico</string>
     <string name="workshop_al_dia_source_community">De la comunidad</string>

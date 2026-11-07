@@ -3,6 +3,10 @@
     <!-- Vehicle status: DocumentStatusCalculator -->
     <string name="obd_doc_title_soat">Mandatory insurance (SOAT)</string>
     <string name="obd_doc_title_rtm">Roadworthiness inspection (RTM)</string>
+    <string name="obd_doc_title_insurance">Insurance</string>
+    <string name="obd_doc_title_mot">MOT</string>
+    <string name="obd_doc_title_safety_inspection">Safety inspection</string>
+    <string name="obd_doc_title_inspection">Roadworthiness inspection</string>
     <string name="obd_doc_title_comprehensive">Comprehensive insurance</string>
     <string name="obd_doc_title_license">Driver\'s license</string>
     <string name="obd_doc_title_pico_placa">Pico y placa</string>

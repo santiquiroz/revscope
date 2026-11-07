@@ -3,6 +3,10 @@
     <!-- Vehículo al día: DocumentStatusCalculator -->
     <string name="obd_doc_title_soat">SOAT</string>
     <string name="obd_doc_title_rtm">Tecnomecánica</string>
+    <string name="obd_doc_title_insurance">Seguro</string>
+    <string name="obd_doc_title_mot">MOT</string>
+    <string name="obd_doc_title_safety_inspection">Inspección de seguridad</string>
+    <string name="obd_doc_title_inspection">Inspección técnica</string>
     <string name="obd_doc_title_comprehensive">Todo riesgo</string>
     <string name="obd_doc_title_license">Licencia</string>
     <string name="obd_doc_title_pico_placa">Pico y placa</string>

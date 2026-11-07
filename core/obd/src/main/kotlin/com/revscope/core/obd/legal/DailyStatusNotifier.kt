@@ -9,7 +9,9 @@ import androidx.core.app.NotificationCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.detect
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
@@ -86,6 +88,7 @@ class DailyStatusNotifier @Inject constructor(
         val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, nowMs)
         val statuses = DocumentStatusCalculator.calculate(
             documents, overrideRules, nowMs, aiFallbackRules = aiFallback, resolver = resolver,
+            region = Region.detect(context),
         )
         val notable = statuses.filter(::isNotable)
         if (notable.isEmpty()) return null
