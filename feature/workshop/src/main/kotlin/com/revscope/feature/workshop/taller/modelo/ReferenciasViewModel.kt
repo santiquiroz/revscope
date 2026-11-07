@@ -1,13 +1,17 @@
 package com.revscope.feature.workshop.taller.modelo
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.OrigenBanda
 import com.revscope.core.obd.taller.sesion.TallerRepository
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.EntornoTaller
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.text.DecimalFormatSymbols
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +26,7 @@ import javax.inject.Inject
 class ReferenciasViewModel @Inject constructor(
     private val repositorio: TallerRepository,
     entorno: EntornoTaller,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val local = MutableStateFlow(ReferenciasUi())
@@ -54,20 +59,20 @@ class ReferenciasViewModel @Inject constructor(
     fun cerrarDialogo() = local.update { it.copy(dialogo = null) }
 
     fun guardar() {
-        val claveModelo = vehiculoActual?.claveModelo ?: return avisar("Elige un modelo de referencia en Perfiles")
+        val claveModelo = vehiculoActual?.claveModelo ?: return avisar(R.string.workshop_ref_choose_model)
         val dialogo = local.value.dialogo ?: return
         val limites = limites(dialogo) ?: return
         val banda = dialogo.banda.copy(min = limites.first, max = limites.second, origen = OrigenBanda.USUARIO, fuente = "")
         viewModelScope.launch {
-            ejecutarGuardado("Referencia guardada") { repositorio.guardarBandaUsuario(claveModelo, banda) }
+            ejecutarGuardado(R.string.workshop_ref_saved) { repositorio.guardarBandaUsuario(claveModelo, banda) }
         }
     }
 
     fun restablecer(clave: String) {
-        val claveModelo = vehiculoActual?.claveModelo ?: return avisar("Elige un modelo de referencia en Perfiles")
+        val claveModelo = vehiculoActual?.claveModelo ?: return avisar(R.string.workshop_ref_choose_model)
         viewModelScope.launch {
-            ejecutarGuardado("Referencia restablecida a Típico") {
-                check(repositorio.restablecerBanda(claveModelo, clave)) { "La referencia no existe" }
+            ejecutarGuardado(R.string.workshop_ref_reset_done) {
+                check(repositorio.restablecerBanda(claveModelo, clave)) { "La referencia no existe" } // i18n-ignore
             }
         }
     }
@@ -92,20 +97,20 @@ class ReferenciasViewModel @Inject constructor(
         } catch (e: Exception) {
             if (version != versionCarga) return
             Timber.w(e, "Referencias: no se pudieron cargar")
-            local.value = local.value.copy(cargando = false, error = "No se pudieron cargar las referencias")
+            local.value = local.value.copy(cargando = false, error = resolver.get(R.string.workshop_ref_load_failed))
         }
     }
 
-    private suspend fun ejecutarGuardado(mensaje: String, accion: suspend () -> Unit) {
+    private suspend fun ejecutarGuardado(@StringRes mensaje: Int, accion: suspend () -> Unit) {
         try {
             accion()
-            local.update { it.copy(dialogo = null, mensaje = mensaje) }
+            local.update { it.copy(dialogo = null, mensaje = resolver.get(mensaje)) }
             cargar(vehiculoActual, conservarMensaje = true)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Timber.w(e, "Referencias: no se pudo guardar")
-            avisar("No se pudo guardar la referencia")
+            avisar(R.string.workshop_ref_save_failed)
         }
     }
 
@@ -113,26 +118,31 @@ class ReferenciasViewModel @Inject constructor(
         val min = dialogo.minimo.decimalONull()
         val max = dialogo.maximo.decimalONull()
         val error = when {
-            dialogo.minimo.isNotBlank() && min == null -> "El mínimo no es un número válido"
-            dialogo.maximo.isNotBlank() && max == null -> "El máximo no es un número válido"
-            min == null && max == null -> "Escribe al menos un límite"
-            min != null && max != null && min > max -> "El mínimo no puede ser mayor que el máximo"
+            dialogo.minimo.isNotBlank() && min == null -> R.string.workshop_ref_error_min_invalid
+            dialogo.maximo.isNotBlank() && max == null -> R.string.workshop_ref_error_max_invalid
+            min == null && max == null -> R.string.workshop_ref_error_no_limit
+            min != null && max != null && min > max -> R.string.workshop_ref_error_inverted
             else -> null
         }
         if (error == null) return min to max
-        cambiarDialogo { copy(error = error) }
+        val texto = resolver.get(error)
+        cambiarDialogo { copy(error = texto) }
         return null
     }
 
     private fun cambiarDialogo(cambio: EdicionBandaUi.() -> EdicionBandaUi) =
         local.update { estado -> estado.copy(dialogo = estado.dialogo?.cambio()) }
 
-    private fun avisar(mensaje: String) = local.update { it.copy(mensaje = mensaje) }
+    private fun avisar(@StringRes mensaje: Int) = local.update { it.copy(mensaje = resolver.get(mensaje)) }
 
     private fun String.decimalONull(): Double? =
         trim().takeIf(String::isNotEmpty)?.replace(',', '.')?.toDoubleOrNull()?.takeIf(Double::isFinite)
 
-    private fun Double?.formatoEditable(): String = this?.toString()?.replace('.', ',').orEmpty()
+    // El campo se relee con decimalONull, que acepta coma o punto; aquí solo se muestra con el separador del idioma.
+    private fun Double?.formatoEditable(): String {
+        val separador = DecimalFormatSymbols.getInstance(resolver.locale).decimalSeparator
+        return this?.toString()?.replace('.', separador).orEmpty()
+    }
 
     companion object {
         private const val MAX_VALOR = 16

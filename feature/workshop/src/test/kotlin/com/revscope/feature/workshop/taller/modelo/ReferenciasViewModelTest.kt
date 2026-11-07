@@ -2,14 +2,18 @@ package com.revscope.feature.workshop.taller.modelo
 
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.taller.modelo.ConocimientoModelo
+import com.revscope.core.obd.taller.multimetro.FuncionCable
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.BandasTipicas
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.OrigenBanda
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.TallerRepository
+import com.revscope.core.uitesting.XmlStringResolver
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.EntornoDePrueba
 import com.revscope.feature.workshop.taller.MAZDA
+import com.revscope.feature.workshop.taller.PruebaStringResolver
 import com.revscope.feature.workshop.taller.RepositorioEnMemoria
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +39,7 @@ class ReferenciasViewModelTest {
     fun preparar() {
         Dispatchers.setMain(despachador)
         repositorio = RepositorioReferencias()
-        viewModel = ReferenciasViewModel(repositorio, EntornoDePrueba())
+        viewModel = ReferenciasViewModel(repositorio, EntornoDePrueba(), PruebaStringResolver.es())
     }
 
     @After
@@ -103,7 +107,7 @@ class ReferenciasViewModelTest {
         val espera = CompletableDeferred<Unit>()
         val repo = RepositorioReferencias { clave -> if (clave == ModeloBenelli.conocimiento.clave) espera.await() }
         val entorno = EntornoDePrueba()
-        val vm = ReferenciasViewModel(repo, entorno)
+        val vm = ReferenciasViewModel(repo, entorno, PruebaStringResolver.es())
         vm.reintentar()
 
         entorno.vehiculoFlujo.value = MAZDA
@@ -121,7 +125,7 @@ class ReferenciasViewModelTest {
         val espera = CompletableDeferred<Unit>()
         val repo = RepositorioReferencias { clave -> if (clave == ModeloBenelli.conocimiento.clave) espera.await() }
         val entorno = EntornoDePrueba()
-        val vm = ConocimientoModeloViewModel(repo, entorno)
+        val vm = ConocimientoModeloViewModel(repo, entorno, PruebaStringResolver.es())
         vm.reintentar()
 
         entorno.vehiculoFlujo.value = MAZDA
@@ -131,6 +135,37 @@ class ReferenciasViewModelTest {
 
         assertEquals(MAZDA.nombre, vm.estado.value.vehiculo)
         assertNull(vm.estado.value.modelo)
+    }
+
+    @Test
+    fun `en inglés el error de límites invertidos y el campo editable usan el idioma`() = runTest(despachador) {
+        val vm = ReferenciasViewModel(RepositorioReferencias(), EntornoDePrueba(), PruebaStringResolver.en())
+        vm.editar(ClavesBanda.TPS_CERRADO_V)
+        assertEquals("0.3", vm.estado.value.dialogo?.minimo)
+        vm.cambiarMinimo("2")
+        vm.cambiarMaximo("1")
+
+        vm.guardar()
+
+        assertEquals("The minimum can't be greater than the maximum", vm.estado.value.dialogo?.error)
+    }
+
+    @Test
+    fun `la explicación de las bandas tiene versión inglesa`() {
+        assertEquals(
+            "Typical values are general industry references, not manufacturer specifications. " +
+                "A range marked Source shows where it came from; your changes always appear as Edited by you.",
+            XmlStringResolver.en(R::class.java).get(R.string.workshop_ref_explanation),
+        )
+    }
+
+    @Test
+    fun `el diálogo de cableado muestra la función en español`() = runTest(despachador) {
+        val vm = ConocimientoModeloViewModel(repositorio, EntornoDePrueba(), PruebaStringResolver.es())
+
+        vm.editarCable("TPS", FuncionCable.SENAL)
+
+        assertEquals("Señal", vm.estado.value.dialogoCable?.etiqueta)
     }
 
     private fun bandaTps() = viewModel.estado.value.bandas.single { it.clave == ClavesBanda.TPS_CERRADO_V }
