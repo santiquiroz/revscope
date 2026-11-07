@@ -43,6 +43,10 @@
         <item quantity="one">Zero to 60 in %1$s second</item>
         <item quantity="other">Zero to 60 in %1$s seconds</item>
     </plurals>
+    <plurals name="obd_launch_zero_to_sixty_mph">
+        <item quantity="one">Zero to sixty miles per hour in %1$s second</item>
+        <item quantity="other">Zero to sixty miles per hour in %1$s seconds</item>
+    </plurals>
     <string name="obd_trip_saved">Trip saved</string>
     <string name="obd_trip_summary_channel">Trip summary</string>
     <string name="obd_trip_summary_format">%1$s · %2$s max · %3$d min</string>

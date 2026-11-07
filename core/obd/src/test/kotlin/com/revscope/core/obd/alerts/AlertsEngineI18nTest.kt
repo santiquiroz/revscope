@@ -26,13 +26,29 @@ class AlertsEngineI18nTest {
 
     @Test
     fun `launch result uses locale decimal`() {
-        assertEquals("Zero to 100 in 12.4 seconds", launchPhrase(english, null, 12_400))
-        assertEquals("Cero a cien en 12,4 segundos", launchPhrase(spanish, null, 12_400))
-        assertEquals("Zero to 100 in 1.0 seconds", launchPhrase(english, null, 1_000))
-        assertEquals("Cero a cien en 1,0 segundos", launchPhrase(spanish, null, 1_000))
-        assertEquals("Cero a sesenta en 8,2 segundos", launchPhrase(spanish, 8_200, null))
-        assertEquals(null, launchPhrase(english, null, null))
+        assertEquals("Zero to 100 in 12.4 seconds", metricLaunch(english, null, 12_400))
+        assertEquals("Cero a cien en 12,4 segundos", metricLaunch(spanish, null, 12_400))
+        assertEquals("Zero to 100 in 1.0 seconds", metricLaunch(english, null, 1_000))
+        assertEquals("Cero a cien en 1,0 segundos", metricLaunch(spanish, null, 1_000))
+        assertEquals("Cero a sesenta en 8,2 segundos", metricLaunch(spanish, 8_200, null))
+        assertEquals(null, metricLaunch(english, null, null))
     }
+
+    @Test
+    fun `imperial launch speaks only the zero to sixty mph time`() {
+        assertEquals(
+            "Zero to sixty miles per hour in 7.9 seconds",
+            launchPhrase(english, 4_100, 8_400, 7_900, UnitSystem.US),
+        )
+        assertEquals(
+            "De cero a sesenta millas por hora en 7,9 segundos",
+            launchPhrase(spanish, 4_100, null, 7_900, UnitSystem.UK),
+        )
+        assertEquals(null, launchPhrase(english, 4_100, null, null, UnitSystem.US))
+    }
+
+    private fun metricLaunch(resolver: XmlStringResolver, to60Ms: Long?, to100Ms: Long?) =
+        launchPhrase(resolver, to60Ms, to100Ms, 7_900, UnitSystem.METRIC)
 
     private val metric = UnitFormatter(UnitSystem.METRIC, Locale("es"))
     private val us = UnitFormatter(UnitSystem.US, Locale.US)

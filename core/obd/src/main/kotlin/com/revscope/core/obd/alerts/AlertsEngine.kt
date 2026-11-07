@@ -66,7 +66,27 @@ internal fun lapPhrase(resolver: StringResolver, lapNumber: Int, timeMs: Long): 
     }
 }
 
-internal fun launchPhrase(resolver: StringResolver, to60Ms: Long?, to100Ms: Long?): String? {
+internal fun launchPhrase(
+    resolver: StringResolver,
+    to60Ms: Long?,
+    to100Ms: Long?,
+    to60MphMs: Long?,
+    system: UnitSystem,
+): String? =
+    if (system == UnitSystem.METRIC) {
+        metricLaunchPhrase(resolver, to60Ms, to100Ms)
+    } else {
+        to60MphMs?.let { secondsPhrase(resolver, R.plurals.obd_launch_zero_to_sixty_mph, it) }
+    }
+
+private fun secondsPhrase(resolver: StringResolver, resource: Int, timeMs: Long): String =
+    resolver.plural(
+        resource,
+        DECIMAL_SECONDS_PLURAL_COUNT,
+        LocaleNumbers.decimal(timeMs / 1000.0, 1, resolver.locale),
+    )
+
+private fun metricLaunchPhrase(resolver: StringResolver, to60Ms: Long?, to100Ms: Long?): String? {
     val timeMs: Long
     val resource: Int
     when {
@@ -80,12 +100,7 @@ internal fun launchPhrase(resolver: StringResolver, to60Ms: Long?, to100Ms: Long
         }
         else -> return null
     }
-    val seconds = timeMs / 1000.0
-    return resolver.plural(
-        resource,
-        DECIMAL_SECONDS_PLURAL_COUNT,
-        LocaleNumbers.decimal(seconds, 1, resolver.locale),
-    )
+    return secondsPhrase(resolver, resource, timeMs)
 }
 
 internal fun spokenSpeed(resolver: StringResolver, units: UnitFormatter, kmh: Double): String {
@@ -638,9 +653,9 @@ class AlertsEngine @Inject constructor(
     }
 
     /** Spoken 0-100 result — reaches the helmet intercom over the media stream. */
-    fun announceLaunch(to60Ms: Long?, to100Ms: Long?) {
+    fun announceLaunch(to60Ms: Long?, to100Ms: Long?, to60MphMs: Long?) {
         if (!voiceSport) return
-        val phrase = launchPhrase(resolver, to60Ms, to100Ms) ?: return
+        val phrase = launchPhrase(resolver, to60Ms, to100Ms, to60MphMs, units.system) ?: return
         Timber.i("AlertsEngine: $phrase")
         speak(phrase)
     }

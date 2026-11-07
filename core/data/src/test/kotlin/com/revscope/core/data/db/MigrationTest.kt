@@ -86,6 +86,16 @@ class MigrationTest {
     }
 
     @Test
+    fun `migra 20 a 21 con la columna nueva en null`() {
+        helper.createDatabase(TEST_DB, 20).use(::seedMotoWithSession)
+
+        helper.runMigrationsAndValidate(TEST_DB, 21, true, MIGRATION_20_21).use { db ->
+            assertSeedRowsSurvived(db)
+            assertTrue(db.queryIsNull("SELECT best0to60mphMs FROM sessions"))
+        }
+    }
+
+    @Test
     fun `9 a 19 encadenado conserva la moto y la sesion con los defaults nuevos`() {
         helper.createDatabase(TEST_DB, 9).use(::seedMotoWithSession)
 

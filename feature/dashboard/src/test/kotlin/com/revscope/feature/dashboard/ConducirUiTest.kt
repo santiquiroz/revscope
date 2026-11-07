@@ -2,6 +2,7 @@ package com.revscope.feature.dashboard
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.R as ObdR
@@ -54,20 +55,35 @@ class ConducirUiTest {
         assertFalse(EstadoConducirUi(conectado = true).gaugesAtenuados)
     }
 
+    private fun arrancada(
+        to60Ms: Long?,
+        to100Ms: Long?,
+        resolver: XmlStringResolver,
+        to60MphMs: Long? = 6_900,
+        system: UnitSystem = UnitSystem.METRIC,
+    ) = textoArrancada(to60Ms, to100Ms, to60MphMs, system, resolver)
+
     @Test
     fun `el aviso de arrancada muestra 0-100 con el 0-60 entre parentesis`() {
         assertEquals(
             "🏁 0-100 en 8.40s  (0-60: 4.10s)",
-            textoArrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = es)?.replace(',', '.'),
+            arrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = es)?.replace(',', '.'),
         )
-        assertEquals("🏁 0-60 en 4.10s", textoArrancada(to60Ms = 4_100, to100Ms = null, resolver = es)?.replace(',', '.'))
-        assertNull(textoArrancada(to60Ms = null, to100Ms = null, resolver = es))
+        assertEquals("🏁 0-60 en 4.10s", arrancada(to60Ms = 4_100, to100Ms = null, resolver = es)?.replace(',', '.'))
+        assertNull(arrancada(to60Ms = null, to100Ms = null, resolver = es))
     }
 
     @Test
     fun `en espanol el aviso de arrancada usa coma decimal y en ingles punto`() {
-        assertEquals("🏁 0-100 en 8,40s  (0-60: 4,10s)", textoArrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = es))
-        assertEquals("🏁 0-100 in 8.40s  (0-60: 4.10s)", textoArrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = en))
+        assertEquals("🏁 0-100 en 8,40s  (0-60: 4,10s)", arrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = es))
+        assertEquals("🏁 0-100 in 8.40s  (0-60: 4.10s)", arrancada(to60Ms = 4_100, to100Ms = 8_400, resolver = en))
+    }
+
+    @Test
+    fun `en sistema US o UK el aviso de arrancada muestra solo el 0-60 mph`() {
+        assertEquals("🏁 0-60 mph in 7.90s", arrancada(4_100, 8_400, en, to60MphMs = 7_900, system = UnitSystem.US))
+        assertEquals("🏁 0-60 mph en 7,90s", arrancada(4_100, null, es, to60MphMs = 7_900, system = UnitSystem.UK))
+        assertNull(arrancada(4_100, null, en, to60MphMs = null, system = UnitSystem.US))
     }
 
     @Test

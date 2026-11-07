@@ -295,6 +295,7 @@ class ObdSessionManager @Inject constructor(
     val launchResults = launchTimer.results
     private var bestTo60Ms: Long? = null
     private var bestTo100Ms: Long? = null
+    private var bestTo60MphMs: Long? = null
 
     private enum class ConnectMode {
         /** User-initiated: publish every state transition. */
@@ -349,12 +350,15 @@ class ObdSessionManager @Inject constructor(
     private suspend fun onLaunchResult(result: LaunchTimerEngine.LaunchResult) {
         result.to60Ms?.let { if (it < (bestTo60Ms ?: Long.MAX_VALUE)) bestTo60Ms = it }
         result.to100Ms?.let { if (it < (bestTo100Ms ?: Long.MAX_VALUE)) bestTo100Ms = it }
-        alertsEngine.announceLaunch(result.to60Ms, result.to100Ms)
+        result.to60MphMs?.let { if (it < (bestTo60MphMs ?: Long.MAX_VALUE)) bestTo60MphMs = it }
+        alertsEngine.announceLaunch(result.to60Ms, result.to100Ms, result.to60MphMs)
         // Persist immediately so a crash mid-trip doesn't lose the run
         val sessionId = _currentSessionIdFlow.value ?: return
         runCatching {
             sessionDao.getById(sessionId)?.let { session ->
-                sessionDao.update(session.copy(best0to60Ms = bestTo60Ms, best0to100Ms = bestTo100Ms))
+                sessionDao.update(
+                    session.copy(best0to60Ms = bestTo60Ms, best0to100Ms = bestTo100Ms, best0to60mphMs = bestTo60MphMs),
+                )
             }
         }.onFailure { Timber.w(it, "ObdSessionManager: failed to persist launch result") }
     }
@@ -1170,6 +1174,7 @@ class ObdSessionManager @Inject constructor(
         val sessionId = createSession(adapterName)
         bestTo60Ms = null
         bestTo100Ms = null
+        bestTo60MphMs = null
         launchTimer.reset()
         engineOffDetector.reset()
         autoTripTrigger.reset()

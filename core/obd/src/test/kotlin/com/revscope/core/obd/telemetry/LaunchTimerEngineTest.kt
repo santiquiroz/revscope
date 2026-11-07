@@ -71,6 +71,39 @@ class LaunchTimerEngineTest {
     }
 
     @Test
+    fun `run to 110 reports 0-60 mph between the 60 and 100 crossings`() = runTest {
+        val engine = LaunchTimerEngine()
+        var result: LaunchTimerEngine.LaunchResult? = null
+        val job = launch { result = engine.results.first() }
+        yield()
+
+        var t = engine.feedStandstill(0L)
+        listOf(20.0, 40.0, 60.0, 80.0, 110.0).forEach { v -> t += 500; engine.process(speed(v, t)) }
+        job.join()
+
+        val mph = result!!.to60MphMs!!
+        assertTrue(result!!.to60Ms!! < mph)
+        assertTrue(mph < result!!.to100Ms!!)
+        assertEquals(2_276L, mph, 2L)
+    }
+
+    @Test
+    fun `run that tops out at 98 reports 0-60 and 0-60 mph without 0-100`() = runTest {
+        val engine = LaunchTimerEngine()
+        var result: LaunchTimerEngine.LaunchResult? = null
+        val job = launch { result = engine.results.first() }
+        yield()
+
+        var t = engine.feedStandstill(0L)
+        listOf(30.0, 65.0, 98.0, 50.0, 0.0).forEach { v -> t += 500; engine.process(speed(v, t)) }
+        job.join()
+
+        assertNotNull(result!!.to60Ms)
+        assertNotNull(result!!.to60MphMs)
+        assertNull(result!!.to100Ms)
+    }
+
+    @Test
     fun `traffic crawl that reaches 60 much later is not a launch`() = runTest {
         // Field bug: "0-60 in 53-98 s" recorded when creeping through traffic
         val engine = LaunchTimerEngine()
