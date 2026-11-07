@@ -88,7 +88,7 @@ internal fun BarraPrueba(titulo: String, subtitulo: String?, onCancelar: () -> U
             modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars).heightIn(min = 56.dp).padding(end = 16.dp),
         ) {
             IconButton(onClick = onCancelar) {
-                Icon(Icons.Filled.Close, contentDescription = TextosPrueba.CANCELAR, tint = RevScopeColors.TextPrimary)
+                Icon(Icons.Filled.Close, contentDescription = stringResource(TextosPrueba.CANCELAR), tint = RevScopeColors.TextPrimary)
             }
             Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
                 Text(titulo, color = RevScopeColors.TextPrimary, style = RevScopeType.title, modifier = Modifier.semantics { heading() })

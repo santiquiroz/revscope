@@ -97,7 +97,7 @@ internal object MapeoResultado {
         return PesaUi(
             titulo = titulo,
             valores = "${FormatoPosicion.porcentaje(p.mediaPct, resolver)} · ${FormatoPosicion.voltios(p.mediaV, resolver)} · " +
-                "de ${FormatoPosicion.voltios(p.minV, resolver)} a ${FormatoPosicion.voltios(p.maxV, resolver)} · ${p.n} muestras a ${TextosPrueba.hz(p.hz)}",
+                "de ${FormatoPosicion.voltios(p.minV, resolver)} a ${FormatoPosicion.voltios(p.maxV, resolver)} · ${p.n} muestras a ${TextosPrueba.hz(p.hz, resolver)}",
             minV = p.minV,
             maxV = p.maxV,
             mediaV = p.mediaV,

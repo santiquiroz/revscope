@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TextosPrueba -->
+    <string name="workshop_prueba_accion_listo">Listo, lo estoy sosteniendo</string>
+    <string name="workshop_prueba_accion_terminar">Terminar</string>
+    <string name="workshop_prueba_cancelar">Cancelar prueba</string>
+    <string name="workshop_prueba_descripcion_tps_barrido">Con el motor apagado y el contacto puesto, lleva el acelerador por cinco posiciones mientras la app lee el TPS a la tasa máxima. Cada posición se compara con las bandas de referencia y el barrido lento busca cortes, saltos y zonas muertas.</string>
+    <string name="workshop_prueba_descripcion_minimo_retorno">Con el motor encendido y en neutro, graba 45 s de mínimo sin tocar el acelerador y luego 3 aceleradas a unas 3 000 rpm soltando de golpe: mide si el mínimo se sostiene, cuánto cae al soltar y si se apaga.</string>
+    <string name="workshop_prueba_descripcion_arranque_frio">Tras el reposo de la noche: compara la temperatura del motor con la del aire en contacto, cuenta los intentos de arranque y sigue el calentamiento hasta 60 °C o hasta que toques «Terminar».</string>
+    <string name="workshop_prueba_descripcion_bateria_carga">Lee el voltaje del adaptador (AT RV) tan rápido como responde: la batería en reposo con el contacto, la caída al arrancar y la carga en mínimo y a rpm altas. Si el adaptador se reinicia al arrancar, queda como hallazgo.</string>
+    <string name="workshop_prueba_descripcion_map_baro">Con el motor apagado no hay vacío: el MAP debe marcar la presión barométrica. Se compara con la de la ECU (PID 33), la del barómetro del teléfono o una estimada por la altitud GPS, cada una con su margen.</string>
+    <string name="workshop_prueba_modo_sostener">sostener %1$s&#160;s</string>
+    <string name="workshop_prueba_modo_grabar">se graba solo %1$s&#160;s</string>
+    <string name="workshop_prueba_modo_grabar_hasta_meta">graba hasta cumplir la meta o hasta que toques «Terminar» (máx. %1$s)</string>
+    <string name="workshop_prueba_modo_grabar_hasta">graba hasta que toques «Terminar» (máx. %1$s)</string>
+    <string name="workshop_prueba_modo_accion">graba hasta detectar el evento o hasta que toques «Terminar» (máx. %1$s)</string>
+    <string name="workshop_prueba_subtexto_posicionando">Cuando esté en posición, toca «Listo».</string>
+    <string name="workshop_prueba_subtexto_sosteniendo">Sostenlo quieto hasta que la cuenta llegue a&#160;0.</string>
+    <string name="workshop_prueba_subtexto_accion">Termina solo al detectarlo; si no, toca «Terminar».</string>
+    <string name="workshop_prueba_subtexto_toque">Toca «Terminar» cuando acabes.</string>
+    <string name="workshop_prueba_subtexto_automatico">Se graba solo: la cuenta marca cuánto falta.</string>
+    <string name="workshop_prueba_fase_posicionando">Posiciona el acelerador y toca Listo</string>
+    <string name="workshop_prueba_fase_sosteniendo">Sosteniendo</string>
+    <string name="workshop_prueba_fase_grabando">Grabando</string>
+    <string name="workshop_prueba_hz">%1$s Hz</string>
+    <string name="workshop_prueba_duracion_min">%1$s&#160;min</string>
+    <string name="workshop_prueba_duracion_s">%1$s&#160;s</string>
+
+    <!-- MapeoMagnitud -->
+    <string name="workshop_prueba_magnitud_temp_motor">Temperatura del motor</string>
+    <string name="workshop_prueba_magnitud_aire_admision">Aire de admisión</string>
+    <string name="workshop_prueba_magnitud_temp_ambiente">Temperatura ambiente</string>
+    <string name="workshop_prueba_magnitud_presion_baro">Presión barométrica</string>
+    <string name="workshop_prueba_magnitud_voltaje_bateria">Voltaje de la batería</string>
+    <string name="workshop_prueba_magnitud_fuente_at_rv">AT RV en el conector</string>
+    <string name="workshop_prueba_pid">PID %1$s</string>
+    <string name="workshop_prueba_banda_minimo">Mínimo</string>
+    <string name="workshop_prueba_banda_minimo_tipico">Mínimo típico</string>
+    <string name="workshop_prueba_banda_valle">Valle al arrancar</string>
+    <string name="workshop_prueba_banda_valle_tipico">Valle típico</string>
+    <string name="workshop_prueba_banda_carga">Carga</string>
+    <string name="workshop_prueba_banda_carga_tipica">Carga típica</string>
+    <string name="workshop_prueba_grafica_objetivo">. Banda: %1$s</string>
+    <string name="workshop_prueba_magnitud_descripcion_vacia">%1$s (%2$s) en los últimos 10 s: esperando muestras%3$s</string>
+    <string name="workshop_prueba_magnitud_descripcion">%1$s (%2$s) en los últimos 10 s: de %3$s a %4$s, %5$s%6$s</string>
+
+    <!-- MapeoPaso -->
+    <string name="workshop_prueba_titulo_grafica_voltios">Últimos 10 s, en voltios</string>
+    <string name="workshop_prueba_titulo_grafica_unidad">Últimos 10 s, en %1$s</string>
+    <string name="workshop_prueba_unidades_pid">unidades del PID</string>
+    <string name="workshop_prueba_vivo_tps">TPS · PID %1$s · con %2$s de referencia</string>
+    <string name="workshop_prueba_tps_descripcion_vacia">PID %1$s en los últimos 10 s: esperando muestras%2$s</string>
+    <string name="workshop_prueba_tps_descripcion">PID %1$s en los últimos 10 s: de %2$s a %3$s, %4$s%5$s</string>
+
+    <!-- PasoPrueba -->
+    <string name="workshop_prueba_repetir_paso">Repetir paso</string>
+    <string name="workshop_prueba_esperando_muestras">Esperando muestras del adaptador…</string>
+    <string name="workshop_prueba_leyenda_banda">Banda %1$s</string>
+</resources>

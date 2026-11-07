@@ -76,7 +76,7 @@ internal object MapeoResultadoMotor {
             datos,
             pid,
             titulos,
-            banda?.let(MapeoMagnitud::bandaGrafica),
+            banda?.let { MapeoMagnitud.bandaGrafica(it, resolver) },
             banda?.let { MapeoMagnitud.leyenda(it, resolver) },
             resolver,
         )
@@ -90,7 +90,7 @@ internal object MapeoResultadoMotor {
         leyendaBanda: String?,
         resolver: StringResolver,
     ): GraficaResultadoUi? {
-        val m = MapeoMagnitud.de(pid)
+        val m = MapeoMagnitud.de(pid, resolver)
         val puntos = datos.muestras.filter { it.pid == pid }.sortedBy { it.tMicros }.map { PuntoGrafica(it.tMicros / 1_000_000.0, it.valor) }
         if (puntos.size < 2) return null
         val modelo = ModeloGrafica(

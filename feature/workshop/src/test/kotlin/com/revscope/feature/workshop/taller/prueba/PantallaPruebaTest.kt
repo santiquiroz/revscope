@@ -64,7 +64,7 @@ class PantallaPruebaTest {
         val p = paso(1, FasePaso.POSICIONANDO, null)
 
         assertEquals(2 to 5, p.indice to p.total)
-        assertEquals(TextosPrueba.ACCION_LISTO, p.accionPrincipal)
+        assertEquals("Listo, lo estoy sosteniendo", p.accionPrincipal)
         assertNull(p.restanteS)
         assertEquals("Paso 2 de 5: Medio. Posiciona el acelerador y toca Listo", p.anuncio)
         assertTrue(p.confirmarAlCancelar)

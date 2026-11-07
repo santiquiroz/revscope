@@ -51,8 +51,8 @@ internal class PantallaPrueba(
         val d = definicion(tipo) ?: return null
         return FasePantalla.Preparacion(
             tipo = tipo,
-            descripcion = TextosPrueba.descripcion(tipo),
-            pasos = d.resuelta(resolver).pasos.map(TextosPrueba::paso),
+            descripcion = TextosPrueba.descripcion(tipo, resolver),
+            pasos = d.resuelta(resolver).pasos.map { TextosPrueba.paso(it, resolver) },
             precondiciones = precondiciones.map { ItemPrecondicion(it.texto, it.cumple, it.queHacer, it.aviso) },
             usaVref = d.pids.any(PidsPosicion::es),
             usaDesfase = d.fuente == FuenteMuestras.VOLTAJE_ADAPTADOR,
@@ -60,6 +60,6 @@ internal class PantallaPrueba(
     }
 
     private fun elegir() = FasePantalla.Elegir(
-        TipoPrueba.entries.map { OpcionPrueba(it, TextosPrueba.descripcion(it), it in disponibles) },
+        TipoPrueba.entries.map { OpcionPrueba(it, TextosPrueba.descripcion(it, resolver), it in disponibles) },
     )
 }

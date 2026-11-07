@@ -30,11 +30,15 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaPruebaGuiadaTest {
 
     @get:Rule
     val compose = createComposeRule()
+
+    private companion object {
+        const val LISTO = "Listo, lo estoy sosteniendo"
+    }
 
     private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
 
@@ -75,7 +79,7 @@ class SemanticaPruebaGuiadaTest {
             }
         }
 
-        compose.onNodeWithContentDescription(TextosPrueba.CANCELAR).assertHasClickAction().performClick()
+        compose.onNodeWithContentDescription("Cancelar prueba").assertHasClickAction().performClick()
         estado = estado.copy(dialogo = DialogoPrueba.CANCELAR)
 
         compose.onNodeWithText("¿Descartar la prueba?").assertIsDisplayed()
@@ -91,12 +95,12 @@ class SemanticaPruebaGuiadaTest {
         var estado by mutableStateOf(ui(BarridoBenelli.enPaso(1, FasePaso.POSICIONANDO, null)))
         compose.setContent { RevScopeTheme { PruebaGuiadaContent(estado, AccionesPrueba(onAvanzar = { avanzar++ })) } }
 
-        compose.onAllNodesWithText(TextosPrueba.ACCION_LISTO).assertCountEquals(1)
-        compose.onNodeWithText(TextosPrueba.ACCION_LISTO).performClick()
+        compose.onAllNodesWithText(LISTO).assertCountEquals(1)
+        compose.onNodeWithText(LISTO).performClick()
         estado = ui(BarridoBenelli.enPaso(1, FasePaso.SOSTENIENDO, 3_000))
 
-        compose.onAllNodesWithText(TextosPrueba.ACCION_LISTO).assertCountEquals(0)
-        compose.onNodeWithText(TEXTO_REPETIR_PASO).assertExists()
+        compose.onAllNodesWithText(LISTO).assertCountEquals(0)
+        compose.onNodeWithText("Repetir paso").assertExists()
         assertEquals(1, avanzar)
     }
 
