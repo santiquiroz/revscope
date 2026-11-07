@@ -54,7 +54,7 @@ interface Transport {
         detener: () -> Boolean = { false },
         alLinea: (String) -> Unit,
     ): String =
-        throw UnsupportedOperationException("este transporte no soporta modo monitor")
+        throw UnsupportedOperationException("este transporte no soporta modo monitor") // i18n-ignore
 
     fun observeConnectionState(): Flow<ConnectionState>
 

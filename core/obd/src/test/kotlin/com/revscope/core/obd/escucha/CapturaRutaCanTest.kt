@@ -1,7 +1,9 @@
 package com.revscope.core.obd.escucha
 
+import com.revscope.core.obd.R
 import com.revscope.core.obd.mcp.leaseFixture
 import com.revscope.core.obd.session.EstadoViaje
+import com.revscope.core.uitesting.XmlStringResolver
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -25,6 +27,7 @@ class CapturaRutaCanTest {
     @get:Rule
     val temporal = TemporaryFolder()
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     private var reloj = 1_000L
     private val escucha = mockk<EscuchaCan>()
     private val gps = mockk<MuestreadorGpsCaptura>()
@@ -37,7 +40,7 @@ class CapturaRutaCanTest {
         val fixture = leaseFixture(conectado)
         every { fixture.manager.estadoViaje } returns MutableStateFlow(viaje)
         val repositorio = CapturasCanRepositorio(temporal.root)
-        val servicio = ServicioEscuchaCan(fixture.manager, escucha, repositorio)
+        val servicio = ServicioEscuchaCan(fixture.manager, escucha, repositorio, resolver)
         every { gps.iniciar(any()) } returns true
         every { gps.detener() } returns listOf(MuestraGps(500L, 42.5f, 3f, 180f))
         every { gps.velocidadActualKmh } returns 42.5f
@@ -47,7 +50,7 @@ class CapturaRutaCanTest {
             while (!opciones.detener()) delay(100)
             captura(inicio = 1_200L, etiqueta = opciones.etiqueta)
         }
-        return CapturaRutaCan(fixture.manager, servicio, repositorio, gps, { reloj }, scope) to repositorio
+        return CapturaRutaCan(fixture.manager, servicio, repositorio, gps, resolver, { reloj }, scope) to repositorio
     }
 
     @Test
@@ -56,7 +59,7 @@ class CapturaRutaCanTest {
 
         assertTrue(captura.iniciar("ruta").isFailure)
 
-        assertEquals(EstadoCapturaRuta.Fallo(CapturaRutaCan.SIN_CONEXION), captura.estado.value)
+        assertEquals(EstadoCapturaRuta.Fallo("vehículo no conectado"), captura.estado.value)
         verify(exactly = 0) { gps.iniciar(any()) }
     }
 
@@ -66,7 +69,7 @@ class CapturaRutaCanTest {
 
         assertTrue(captura.iniciar("ruta").isFailure)
 
-        assertEquals(EstadoCapturaRuta.Fallo(ServicioEscuchaCan.VIAJE_GRABANDO), captura.estado.value)
+        assertEquals(EstadoCapturaRuta.Fallo("hay un viaje grabando; el modo escucha detiene el sondeo"), captura.estado.value)
         coVerify(exactly = 0) { escucha.capturar(any(), any()) }
     }
 
@@ -78,7 +81,7 @@ class CapturaRutaCanTest {
         runCurrent()
         assertTrue(captura.iniciar("otra").isFailure)
 
-        assertEquals(EstadoCapturaRuta.Fallo(CapturaRutaCan.YA_CAPTURANDO), captura.estado.value)
+        assertEquals(EstadoCapturaRuta.Fallo("ya hay una captura de ruta en curso"), captura.estado.value)
         assertTrue(captura.iniciar("tercera").isFailure)
         advanceTimeBy(1_000)
         runCurrent()

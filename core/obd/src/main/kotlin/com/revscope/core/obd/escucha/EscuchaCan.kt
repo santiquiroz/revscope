@@ -1,5 +1,7 @@
 package com.revscope.core.obd.escucha
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.protocol.ResponseParser
 import javax.inject.Inject
@@ -24,10 +26,13 @@ private class Acumulado(val inicio: Long, val limiteMs: Long) {
     var huecoAbiertoDesde: Long? = null
 }
 
-class EscuchaCan internal constructor(private val ahora: () -> Long) {
+class EscuchaCan internal constructor(
+    private val resolver: StringResolver,
+    private val ahora: () -> Long,
+) {
 
     @Inject
-    constructor() : this(System::currentTimeMillis)
+    constructor(resolver: StringResolver) : this(resolver, System::currentTimeMillis)
 
     suspend fun capturar(bt: Transport, opciones: OpcionesEscucha): CapturaCan {
         val protocolo = leerProtocolo(bt)
@@ -37,7 +42,7 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
         try {
             ComandosMonitor.preparar(bt)
             silencioso = configurarSilencioso(bt)
-            if (opciones.filtro != null) bt.exchange("AT CRA ${opciones.filtro}\r")
+            if (opciones.filtro != null) bt.exchange("AT CRA ${opciones.filtro}\r") // i18n-ignore
             monitorear(bt, opciones, bits29, a)
         } finally {
             ComandosMonitor.restaurar(bt)
@@ -106,9 +111,9 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
         (ahora() - a.inicio).coerceIn(0L, a.limiteMs)
 
     private suspend fun leerProtocolo(bt: Transport): String {
-        val numero = ResponseParser.cleanResponse(bt.exchange("AT DPN\r")).removePrefix("A")
+        val numero = ResponseParser.cleanResponse(bt.exchange("AT DPN\r")).removePrefix("A") // i18n-ignore
         if (numero !in PROTOCOLOS_CAN) {
-            throw IllegalStateException("el protocolo $numero no es CAN; el modo escucha solo funciona con CAN")
+            throw IllegalStateException(resolver.get(R.string.obd_listen_protocol_not_can, numero))
         }
         return numero
     }
