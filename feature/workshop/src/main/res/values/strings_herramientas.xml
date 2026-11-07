@@ -29,13 +29,13 @@
     <string name="workshop_maintenance_save">Save</string>
     <string name="workshop_maintenance_edit_interval">Edit interval</string>
     <string name="workshop_maintenance_register_service">Log service</string>
-    <string name="workshop_maintenance_every_km">Every %1$d km</string>
-    <string name="workshop_maintenance_overdue_km">Overdue by %1$d km</string>
-    <string name="workshop_maintenance_due_in_km">Due in %1$d km</string>
+    <string name="workshop_maintenance_every_km">Every %1$s</string>
+    <string name="workshop_maintenance_overdue_km">Overdue by %1$s</string>
+    <string name="workshop_maintenance_due_in_km">Due in %1$s</string>
     <string name="workshop_maintenance_add_item">Add item</string>
     <string name="workshop_maintenance_new_item">New maintenance item</string>
     <string name="workshop_maintenance_name">Name</string>
-    <string name="workshop_maintenance_interval_km">Interval in km</string>
+    <string name="workshop_maintenance_interval_km">Interval in %1$s</string>
     <string name="workshop_maintenance_add">Add</string>
     <string name="workshop_maintenance_cancel">Cancel</string>
     <string name="workshop_maintenance_interval_for">Interval for %1$s</string>
@@ -107,7 +107,6 @@
     <string name="workshop_odometer_unavailable_title">Odometer unavailable over OBD</string>
     <string name="workshop_odometer_unavailable_description">Your vehicle does not expose standard PID 01 A6 — common on motorcycles and vehicles made before 2015. Use the Mode 22 scanner (Workshop → Advanced scanner) to find the manufacturer-specific DID.</string>
     <string name="workshop_odometer_last_ecu_reading">Last ECU reading</string>
-    <string name="workshop_odometer_distance_km">%1$d km</string>
     <string name="workshop_odometer_error_unsupported">Your vehicle does not expose the odometer over OBD (PID 01 A6) — use the Mode 22 scanner to find the manufacturer\'s DID</string>
     <string name="workshop_odometer_error_reading">Could not read the odometer — try again</string>
     <string name="workshop_odometer_error_not_connected">Connect the adapter first</string>
@@ -118,8 +117,8 @@
     <string name="workshop_speed_comparison_obd">OBD</string>
     <string name="workshop_speed_comparison_gps">GPS</string>
     <string name="workshop_speed_comparison_difference">Difference</string>
-    <string name="workshop_speed_comparison_delta">%1$s km/h</string>
-    <string name="workshop_speed_comparison_speed_up">-- (speed up past 10 km/h)</string>
+    <string name="workshop_speed_comparison_delta">%1$s %2$s</string>
+    <string name="workshop_speed_comparison_speed_up">-- (speed up past %1$s)</string>
     <string name="workshop_speed_comparison_percent">%1$s%%</string>
     <string name="workshop_speed_comparison_no_data">--</string>
     <string name="workshop_speed_comparison_explanation">The speedometer usually reads higher than the actual GPS speed. Test on a straight road at a steady speed.</string>

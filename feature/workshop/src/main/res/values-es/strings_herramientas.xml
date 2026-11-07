@@ -29,13 +29,13 @@
     <string name="workshop_maintenance_save">Guardar</string>
     <string name="workshop_maintenance_edit_interval">Editar intervalo</string>
     <string name="workshop_maintenance_register_service">Registrar servicio</string>
-    <string name="workshop_maintenance_every_km">Cada %1$d km</string>
-    <string name="workshop_maintenance_overdue_km">Vencido hace %1$d km</string>
-    <string name="workshop_maintenance_due_in_km">Faltan %1$d km</string>
+    <string name="workshop_maintenance_every_km">Cada %1$s</string>
+    <string name="workshop_maintenance_overdue_km">Vencido hace %1$s</string>
+    <string name="workshop_maintenance_due_in_km">Faltan %1$s</string>
     <string name="workshop_maintenance_add_item">Agregar ítem</string>
     <string name="workshop_maintenance_new_item">Nuevo ítem de mantenimiento</string>
     <string name="workshop_maintenance_name">Nombre</string>
-    <string name="workshop_maintenance_interval_km">Intervalo en km</string>
+    <string name="workshop_maintenance_interval_km">Intervalo en %1$s</string>
     <string name="workshop_maintenance_add">Agregar</string>
     <string name="workshop_maintenance_cancel">Cancelar</string>
     <string name="workshop_maintenance_interval_for">Intervalo de %1$s</string>
@@ -107,7 +107,6 @@
     <string name="workshop_odometer_unavailable_title">Odómetro no disponible por OBD</string>
     <string name="workshop_odometer_unavailable_description">Tu vehículo no expone el PID estándar 01 A6 — común en motos y vehículos anteriores a 2015. Usa el escáner Mode 22 (Taller → Escáner avanzado) para buscar el DID propietario del fabricante.</string>
     <string name="workshop_odometer_last_ecu_reading">Última lectura ECU</string>
-    <string name="workshop_odometer_distance_km">%1$d km</string>
     <string name="workshop_odometer_error_unsupported">Tu vehículo no expone el odómetro por OBD (PID 01 A6) — usa el escáner Mode 22 para buscar el DID del fabricante</string>
     <string name="workshop_odometer_error_reading">No se pudo leer el odómetro — intenta de nuevo</string>
     <string name="workshop_odometer_error_not_connected">Conecta el adaptador primero</string>
@@ -118,8 +117,8 @@
     <string name="workshop_speed_comparison_obd">OBD</string>
     <string name="workshop_speed_comparison_gps">GPS</string>
     <string name="workshop_speed_comparison_difference">Diferencia</string>
-    <string name="workshop_speed_comparison_delta">%1$s km/h</string>
-    <string name="workshop_speed_comparison_speed_up">-- (acelera a más de 10 km/h)</string>
+    <string name="workshop_speed_comparison_delta">%1$s %2$s</string>
+    <string name="workshop_speed_comparison_speed_up">-- (acelera a más de %1$s)</string>
     <string name="workshop_speed_comparison_percent">%1$s%%</string>
     <string name="workshop_speed_comparison_no_data">--</string>
     <string name="workshop_speed_comparison_explanation">El velocímetro suele marcar más que la velocidad real GPS. Mide en vía recta a velocidad constante.</string>

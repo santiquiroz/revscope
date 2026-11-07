@@ -47,8 +47,8 @@ import com.revscope.core.obd.workshop.OdometerChecker
 import com.revscope.core.obd.workshop.OdometerVerifier
 import java.text.SimpleDateFormat
 import java.util.Date
+import com.revscope.core.designsystem.rememberUnitFormatter
 import java.util.Locale
-import kotlin.math.roundToLong
 
 private const val DATE_PATTERN = "d MMM yyyy, HH:mm" // i18n-ignore: locale-neutral date pattern.
 
@@ -181,17 +181,18 @@ private fun NoSoportadoCard() {
 }
 
 @Composable
-private fun UltimaLecturaCard(
+internal fun UltimaLecturaCard(
     ultima: OdometerVerifier.Reading,
     diagnosis: DiagnosticRules.Diagnosis?,
     locale: Locale,
 ) {
     val fecha = formatFecha(ultima.epochMs, locale)
+    val units = rememberUnitFormatter()
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Text(stringResource(R.string.workshop_odometer_last_ecu_reading), color = RevScopeColors.TextSecondary, fontSize = 12.sp)
             Text(
-                stringResource(R.string.workshop_odometer_distance_km, ultima.km.roundToLong()),
+                units.formatDistance(ultima.km, decimals = 0),
                 color = RevScopeColors.TextPrimary,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
@@ -216,11 +217,12 @@ private fun EstadoRow(d: DiagnosticRules.Diagnosis) {
 }
 
 @Composable
-private fun HistorialRow(lectura: OdometerVerifier.Reading, locale: Locale) {
+internal fun HistorialRow(lectura: OdometerVerifier.Reading, locale: Locale) {
+    val units = rememberUnitFormatter()
     Surface(shape = RoundedCornerShape(10.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         FilaEtiquetaValor(
             etiqueta = formatFecha(lectura.epochMs, locale),
-            valor = stringResource(R.string.workshop_odometer_distance_km, lectura.km.roundToLong()),
+            valor = units.formatDistance(lectura.km, decimals = 0),
             colorValor = RevScopeColors.TextPrimary,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
         )

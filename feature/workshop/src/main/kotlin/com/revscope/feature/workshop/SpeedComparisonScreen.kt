@@ -37,6 +37,8 @@ import com.revscope.core.designsystem.TextoAjustable
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.workshop.SpeedDeltaAverager
 import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.designsystem.rememberUnitFormatter
 import kotlin.math.roundToInt
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -130,17 +132,18 @@ private fun ComparisonContent(
 ) {
     val gps = gpsSpeed ?: 0.0
     val locale = LocalConfiguration.current.locales[0]
+    val units = rememberUnitFormatter()
     val deltaAbs = obdSpeed - gps
     val deltaPercent = deltaPercentOrNull(obdSpeed, gps)
 
     Spacer(Modifier.height(16.dp))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        SpeedColumn(stringResource(R.string.workshop_speed_comparison_obd), obdSpeed, Modifier.weight(1f))
-        SpeedColumn(stringResource(R.string.workshop_speed_comparison_gps), gps, Modifier.weight(1f))
+        SpeedColumn(stringResource(R.string.workshop_speed_comparison_obd), units.speed(obdSpeed), Modifier.weight(1f))
+        SpeedColumn(stringResource(R.string.workshop_speed_comparison_gps), units.speed(gps), Modifier.weight(1f))
     }
 
     Spacer(Modifier.height(20.dp))
-    DeltaCard(deltaAbs, deltaPercent, locale)
+    DeltaCard(deltaAbs, deltaPercent, units)
 
     Spacer(Modifier.height(16.dp))
     AverageCard(averageDeltaPercent, onReset, locale)
@@ -171,14 +174,16 @@ private fun SpeedColumn(label: String, speed: Double, modifier: Modifier = Modif
 }
 
 @Composable
-private fun DeltaCard(deltaAbs: Double, deltaPercent: Double?, locale: java.util.Locale) {
+private fun DeltaCard(deltaAbs: Double, deltaPercent: Double?, units: UnitFormatter) {
+    val locale = units.locale
     Surface(shape = RoundedCornerShape(14.dp), color = SurfaceColor, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(stringResource(R.string.workshop_speed_comparison_difference), color = TextMutedColor, fontSize = 12.sp)
             Text(
                 stringResource(
                     R.string.workshop_speed_comparison_delta,
-                    LocaleNumbers.signed(deltaAbs, 1, locale),
+                    LocaleNumbers.signed(units.speed(deltaAbs), 1, locale),
+                    units.speedLabel(),
                 ),
                 color = TextColor,
                 style = RevScopeType.numeros.copy(fontSize = 22.sp),
@@ -188,7 +193,10 @@ private fun DeltaCard(deltaAbs: Double, deltaPercent: Double?, locale: java.util
             Text(
                 deltaPercent?.let {
                     stringResource(R.string.workshop_speed_comparison_percent, LocaleNumbers.signed(it, 1, locale))
-                } ?: stringResource(R.string.workshop_speed_comparison_speed_up),
+                } ?: stringResource(
+                    R.string.workshop_speed_comparison_speed_up,
+                    units.formatSpeed(SpeedDeltaAverager.MIN_GPS_SPEED_KMH),
+                ),
                 color = if ((deltaPercent ?: 0.0) > 0) WarnColor else TextMutedColor,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 2.dp),
