@@ -27,8 +27,12 @@ import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.PosicionEnBanda
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.feature.workshop.R
 
 internal object MapeoResultado {
+
+    private const val SERIE_TPS = "TPS"
+    private const val SIN_VALOR = "—"
 
     private val BANDA_POR_PASO = mapOf(
         Pasos.CERRADO_1 to ClavesBanda.TPS_CERRADO_V,
@@ -75,15 +79,19 @@ internal object MapeoResultado {
     ) = base.copy(
         pesas = pesas(a, resolver),
         comprobaciones = a.comprobaciones.map { comprobacion(it, resolver) },
-        graficas = listOfNotNull(
-            datos?.let { GraficaResultadoUi("Toda la prueba, en voltios", serie(it, a, resolver), leyendaTramos(it, resolver) + leyendaBandas(a, resolver)) },
-        ),
+        graficas = listOfNotNull(datos?.let { graficaBarrido(it, a, resolver) }),
         referencia = referencia(a.vref, resolver),
         codigoGuia = TextosPrueba.codigoGuia(a.patron),
     )
 
+    private fun graficaBarrido(datos: DatosPrueba, a: AnalisisBarridoTps, resolver: StringResolver) = GraficaResultadoUi(
+        resolver.get(R.string.workshop_prueba_resultado_grafica_tps_titulo),
+        serie(datos, a, resolver),
+        leyendaTramos(datos, resolver) + leyendaBandas(a, resolver),
+    )
+
     fun referencia(vref: ReferenciaVoltaje, resolver: StringResolver): String =
-        "Referencia ${FormatoPosicion.voltios(vref.voltios, resolver)} · ${vref.origen}"
+        resolver.get(R.string.workshop_prueba_resultado_referencia, FormatoPosicion.voltios(vref.voltios, resolver), vref.origen)
 
     // ── Pesas: lo medido en cada posición contra su banda ────────────────────
 
@@ -96,17 +104,32 @@ internal object MapeoResultado {
         val bandaUi = banda?.let { bandaPesa(it, resolver) }
         return PesaUi(
             titulo = titulo,
-            valores = "${FormatoPosicion.porcentaje(p.mediaPct, resolver)} · ${FormatoPosicion.voltios(p.mediaV, resolver)} · " +
-                "de ${FormatoPosicion.voltios(p.minV, resolver)} a ${FormatoPosicion.voltios(p.maxV, resolver)} · ${p.n} muestras a ${TextosPrueba.hz(p.hz)}",
+            valores = valoresPesa(p, resolver),
             minV = p.minV,
             maxV = p.maxV,
             mediaV = p.mediaV,
             escalaV = a.vref.voltios,
             banda = bandaUi,
             nivel = nivel(p.mediaV, banda),
-            descripcion = "$titulo: media ${FormatoPosicion.voltios(p.mediaV, resolver)}, " +
-                (bandaUi?.let { "banda ${it.texto}" } ?: "sin banda fija: debe quedar entre cerrado y fondo"),
+            descripcion = descripcionPesa(titulo, p, bandaUi, resolver),
         )
+    }
+
+    private fun valoresPesa(p: EstadisticaPaso, resolver: StringResolver): String = resolver.plural(
+        R.plurals.workshop_prueba_resultado_pesa_valores,
+        p.n,
+        FormatoPosicion.porcentaje(p.mediaPct, resolver),
+        FormatoPosicion.voltios(p.mediaV, resolver),
+        FormatoPosicion.voltios(p.minV, resolver),
+        FormatoPosicion.voltios(p.maxV, resolver),
+        p.n,
+        TextosPrueba.hz(p.hz),
+    )
+
+    private fun descripcionPesa(titulo: String, p: EstadisticaPaso, bandaUi: BandaPesaUi?, resolver: StringResolver): String {
+        val banda = bandaUi?.let { resolver.get(R.string.workshop_prueba_resultado_pesa_banda, it.texto) }
+            ?: resolver.get(R.string.workshop_prueba_resultado_pesa_sin_banda)
+        return resolver.get(R.string.workshop_prueba_resultado_pesa_descripcion, titulo, FormatoPosicion.voltios(p.mediaV, resolver), banda)
     }
 
     private fun bandaPesa(b: BandaReferencia, resolver: StringResolver): BandaPesaUi? {
@@ -126,7 +149,9 @@ internal object MapeoResultado {
             val formatted = LocaleNumbers.decimal(v, 2, resolver.locale)
             if (c.unidad.isEmpty()) formatted else "$formatted ${c.unidad}"
         }
-        val texto = c.banda?.let { "${c.etiqueta}: ${valor ?: "—"} · banda ${TextosBarridoTps.banda(it, resolver)}" } ?: c.etiqueta
+        val texto = c.banda?.let {
+            resolver.get(R.string.workshop_prueba_resultado_comprobacion, c.etiqueta, valor ?: SIN_VALOR, TextosBarridoTps.banda(it, resolver))
+        } ?: c.etiqueta
         return ComprobacionUi(texto, c.cumple)
     }
 
@@ -136,20 +161,29 @@ internal object MapeoResultado {
         val puntos = datos.muestras.filter { it.pid == AnalizadorBarridoTps.PID_TPS }
             .sortedBy { it.tMicros }
             .map { PuntoGrafica(it.tMicros / 1_000_000.0, datos.vref.aVoltios(it.valor)) }
-        if (puntos.size < 2) return sinSerie()
+        if (puntos.size < 2) return sinSerie(resolver)
         val bandas = BandasPosicion.tps(bandasDe(a), UnidadPosicion.VOLTIOS, datos.vref, resolver)
+        val recorrido = resolver.get(
+            R.string.workshop_prueba_resultado_serie_descripcion,
+            SERIE_TPS,
+            FormatoPosicion.voltios(puntos.minOf { it.y }, resolver),
+            FormatoPosicion.voltios(puntos.maxOf { it.y }, resolver),
+            pasosSombreados(datos.segmentos.size, resolver),
+        )
         return ModeloGrafica(
-            series = listOf(SerieGrafica("TPS", puntos)),
-            descripcion = "TPS en toda la prueba: de ${FormatoPosicion.voltios(puntos.minOf { it.y }, resolver)} a " +
-                "${FormatoPosicion.voltios(puntos.maxOf { it.y }, resolver)}, ${datos.segmentos.size} pasos sombreados. " +
-                bandas.joinToString("; ") { it.descripcion },
+            series = listOf(SerieGrafica(SERIE_TPS, puntos)),
+            descripcion = "$recorrido " + bandas.joinToString("; ") { it.descripcion },
             bandas = bandas.map { BandaGrafica(it.etiquetaCorta, it.min, it.max) },
             tramos = datos.segmentos.mapIndexed { i, s -> TramoGrafica("${i + 1}", s.inicioMs / 1_000.0, s.finMs / 1_000.0) },
             rangoY = 0.0..datos.vref.voltios,
         )
     }
 
-    private fun sinSerie() = ModeloGrafica(emptyList(), "Sin muestras del TPS para dibujar")
+    fun pasosSombreados(n: Int, resolver: StringResolver): String =
+        resolver.plural(R.plurals.workshop_prueba_resultado_pasos_sombreados, n, n)
+
+    private fun sinSerie(resolver: StringResolver) =
+        ModeloGrafica(emptyList(), resolver.get(R.string.workshop_prueba_resultado_sin_muestras_tps))
 
     private fun bandasDe(a: AnalisisBarridoTps): Map<String, BandaReferencia> =
         a.comprobaciones.mapNotNull { it.banda }.associateBy { it.clave }

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ResultadoPrueba -->
+    <string name="workshop_prueba_resultado_listo">Done</string>
+    <string name="workshop_prueba_resultado_siguiente_paso">Suggested next step</string>
+    <string name="workshop_prueba_resultado_medido_contra_banda">Measured against the range</string>
+    <string name="workshop_prueba_resultado_pie_referencia">%1$s. Each bar runs from 0 to the reference.</string>
+    <string name="workshop_prueba_resultado_banda">Range %1$s</string>
+    <string name="workshop_prueba_resultado_sin_banda_fija">No fixed range: it should fall between closed and wide open</string>
+    <string name="workshop_prueba_resultado_nivel_dentro">Within range</string>
+    <string name="workshop_prueba_resultado_nivel_fuera">Out of range</string>
+    <string name="workshop_prueba_resultado_nivel_revisar">Check</string>
+    <string name="workshop_prueba_resultado_nivel_sin_banda">No range</string>
+    <string name="workshop_prueba_resultado_comprobaciones">Checks</string>
+    <string name="workshop_prueba_resultado_cumple">Pass</string>
+    <string name="workshop_prueba_resultado_no_cumple">Fail</string>
+    <string name="workshop_prueba_resultado_medidas">Measurements</string>
+    <string name="workshop_prueba_resultado_ya_guardado">Already saved to the session</string>
+    <string name="workshop_prueba_resultado_guardar_sesion_nueva">Save to a new session</string>
+    <string name="workshop_prueba_resultado_ver_guia">View guide %1$s</string>
+    <string name="workshop_prueba_resultado_repetir">Repeat the test</string>
+
+    <!-- MapeoResultado / MapeoResultadoMotor / MapeoResultadoElectrico -->
+    <string name="workshop_prueba_resultado_grafica_tps_titulo">Whole test, in volts</string>
+    <string name="workshop_prueba_resultado_referencia">Reference %1$s · %2$s</string>
+    <plurals name="workshop_prueba_resultado_pesa_valores">
+        <item quantity="one">%1$s · %2$s · %3$s to %4$s · %5$d sample at %6$s</item>
+        <item quantity="other">%1$s · %2$s · %3$s to %4$s · %5$d samples at %6$s</item>
+    </plurals>
+    <string name="workshop_prueba_resultado_pesa_descripcion">%1$s: average %2$s, %3$s</string>
+    <string name="workshop_prueba_resultado_pesa_banda">range %1$s</string>
+    <string name="workshop_prueba_resultado_pesa_sin_banda">no fixed range: it should fall between closed and wide open</string>
+    <string name="workshop_prueba_resultado_comprobacion">%1$s: %2$s · range %3$s</string>
+    <string name="workshop_prueba_resultado_serie_descripcion">%1$s over the whole test: %2$s to %3$s, %4$s.</string>
+    <plurals name="workshop_prueba_resultado_pasos_sombreados">
+        <item quantity="one">%d shaded step</item>
+        <item quantity="other">%d shaded steps</item>
+    </plurals>
+    <string name="workshop_prueba_resultado_sin_muestras_tps">No TPS samples to plot</string>
+    <string name="workshop_prueba_resultado_serie_titulo">%1$s over the whole test</string>
+    <string name="workshop_prueba_resultado_serie_titulo_unidad">%1$s over the whole test, in %2$s</string>
+    <string name="workshop_prueba_resultado_banda_baro">Barometric ±%1$s</string>
+    <string name="workshop_prueba_resultado_leyenda_baro">Barometric %1$s ±%2$s · %3$s</string>
+
+    <!-- CalibracionDesfase -->
+    <string name="workshop_prueba_desfase_fila_titulo">Adapter voltage offset</string>
+    <string name="workshop_prueba_desfase_calibrar">Calibrate</string>
+    <string name="workshop_prueba_desfase_dialogo_titulo">Calibrate voltage</string>
+    <string name="workshop_prueba_desfase_guardar">Save</string>
+    <string name="workshop_prueba_desfase_cancelar">Cancel</string>
+    <string name="workshop_prueba_desfase_explicacion">AT RV reads at the OBD connector within ±0.1–0.2&#160;V (typical). With the ignition on, measure the battery at its terminals with the multimeter and enter the value: the difference is saved for this vehicle.</string>
+    <string name="workshop_prueba_desfase_adaptador_marca">The adapter now reads %1$s</string>
+    <string name="workshop_prueba_desfase_sin_lectura">No adapter reading: connect it and turn the ignition on</string>
+    <string name="workshop_prueba_desfase_multimetro">Multimeter (V)</string>
+    <string name="workshop_prueba_desfase_quitar">Remove calibration</string>
+    <string name="workshop_prueba_desfase_ayuda_valor">Offset: %1$s&#160;V</string>
+    <string name="workshop_prueba_desfase_ayuda_rango">Between 6 and 18&#160;V and within 1&#160;V of the adapter</string>
+    <string name="workshop_prueba_desfase_ayuda_ejemplo">For example, %1$s</string>
+</resources>

@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.prueba
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -33,6 +34,7 @@ import com.revscope.core.designsystem.NivelBadge
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.TarjetaTaller
 import com.revscope.feature.workshop.taller.nivel
 import com.revscope.feature.workshop.taller.texto
@@ -49,7 +51,7 @@ internal fun ColumnScope.ResultadoPrueba(r: ResultadoUi, estado: PruebaGuiadaUi,
         r.graficas.filter { it.modelo.tieneDatos }.forEach { SerieCompleta(it) }
         AccionesResultado(r, estado, acciones)
     }
-    PieConAccion("Listo", acciones.onTerminar)
+    PieConAccion(stringResource(R.string.workshop_prueba_resultado_listo), acciones.onTerminar)
 }
 
 @Composable
@@ -65,17 +67,17 @@ private fun TarjetaVeredicto(r: ResultadoUi) {
 @Composable
 private fun TarjetaSiguiente(texto: String) {
     TarjetaTaller {
-        Text("Siguiente paso sugerido", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+        Text(stringResource(R.string.workshop_prueba_resultado_siguiente_paso), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
         Text(texto, color = RevScopeColors.TextPrimary, style = RevScopeType.body)
     }
 }
 
 @Composable
 private fun PesasPorPaso(r: ResultadoUi) {
-    Seccion("Medido contra la banda")
+    Seccion(stringResource(R.string.workshop_prueba_resultado_medido_contra_banda))
     TarjetaTaller {
         r.pesas.forEach { PesaFila(it) }
-        Text("${r.referencia}. Cada barra va de 0 a la referencia.", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        Text(stringResource(R.string.workshop_prueba_resultado_pie_referencia, r.referencia), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
 }
 
@@ -90,34 +92,38 @@ private fun PesaFila(p: PesaUi) {
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             Text(p.titulo, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
-            NivelBadge(p.nivel.nivel(), texto = textoNivelPesa(p.nivel))
+            NivelBadge(p.nivel.nivel(), texto = stringResource(textoNivelPesa(p.nivel)))
         }
         Text(p.valores, color = RevScopeColors.TextPrimary, style = RevScopeType.body.copy(fontFeatureSettings = "tnum"))
         PesaReferencia(p)
         Text(
-            p.banda?.let { "Banda ${it.texto}" } ?: "Sin banda fija: debe quedar entre cerrado y fondo",
+            p.banda?.let { stringResource(R.string.workshop_prueba_resultado_banda, it.texto) }
+                ?: stringResource(R.string.workshop_prueba_resultado_sin_banda_fija),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
     }
 }
 
-private fun textoNivelPesa(nivel: Veredicto): String = when (nivel) {
-    Veredicto.OK -> "Dentro"
-    Veredicto.FALLA -> "Fuera de banda"
-    Veredicto.ATENCION -> "Revisar"
-    Veredicto.INFO -> "Sin banda"
+@StringRes
+private fun textoNivelPesa(nivel: Veredicto): Int = when (nivel) {
+    Veredicto.OK -> R.string.workshop_prueba_resultado_nivel_dentro
+    Veredicto.FALLA -> R.string.workshop_prueba_resultado_nivel_fuera
+    Veredicto.ATENCION -> R.string.workshop_prueba_resultado_nivel_revisar
+    Veredicto.INFO -> R.string.workshop_prueba_resultado_nivel_sin_banda
 }
 
 @Composable
 private fun Comprobaciones(r: ResultadoUi) {
-    Seccion("Comprobaciones")
+    Seccion(stringResource(R.string.workshop_prueba_resultado_comprobaciones))
+    val cumple = stringResource(R.string.workshop_prueba_resultado_cumple)
+    val noCumple = stringResource(R.string.workshop_prueba_resultado_no_cumple)
     TarjetaTaller {
         r.comprobaciones.forEach { c ->
             if (c.cumple) {
-                FilaIcono(Icons.Filled.CheckCircle, RevScopeColors.Success, c.texto, "Cumple")
+                FilaIcono(Icons.Filled.CheckCircle, RevScopeColors.Success, c.texto, cumple)
             } else {
-                FilaIcono(Icons.Filled.Cancel, RevScopeColors.Danger, c.texto, "No cumple")
+                FilaIcono(Icons.Filled.Cancel, RevScopeColors.Danger, c.texto, noCumple)
             }
         }
     }
@@ -125,7 +131,7 @@ private fun Comprobaciones(r: ResultadoUi) {
 
 @Composable
 private fun Medidas(medidas: List<String>) {
-    Seccion("Medidas")
+    Seccion(stringResource(R.string.workshop_prueba_resultado_medidas))
     TarjetaTaller {
         medidas.forEach { Text(it, color = RevScopeColors.TextPrimary, style = RevScopeType.body.copy(fontFeatureSettings = "tnum")) }
     }
@@ -144,13 +150,19 @@ private fun SerieCompleta(g: GraficaResultadoUi) {
 private fun AccionesResultado(r: ResultadoUi, estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (r.guardado) {
-            FilaIcono(Icons.Filled.CheckCircle, RevScopeColors.Success, "Ya guardado en la sesión")
+            FilaIcono(Icons.Filled.CheckCircle, RevScopeColors.Success, stringResource(R.string.workshop_prueba_resultado_ya_guardado))
         } else {
-            BotonSecundario("Guardar en una sesión nueva", habilitado = !estado.ocupado, onClick = acciones.onGuardarEnSesion)
+            BotonSecundario(
+                stringResource(R.string.workshop_prueba_resultado_guardar_sesion_nueva),
+                habilitado = !estado.ocupado,
+                onClick = acciones.onGuardarEnSesion,
+            )
         }
         val verGuia = acciones.onVerGuia
-        if (r.codigoGuia != null && verGuia != null) BotonSecundario("Ver guía ${r.codigoGuia}") { verGuia(r.codigoGuia) }
-        BotonSecundario("Repetir la prueba", onClick = acciones.onReintentar)
+        if (r.codigoGuia != null && verGuia != null) {
+            BotonSecundario(stringResource(R.string.workshop_prueba_resultado_ver_guia, r.codigoGuia)) { verGuia(r.codigoGuia) }
+        }
+        BotonSecundario(stringResource(R.string.workshop_prueba_resultado_repetir), onClick = acciones.onReintentar)
     }
 }
 
