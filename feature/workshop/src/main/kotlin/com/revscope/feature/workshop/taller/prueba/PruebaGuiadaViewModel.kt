@@ -25,6 +25,7 @@ import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.taller.sesion.SolicitudSesion
 import com.revscope.core.obd.taller.sesion.TallerRepository
 import com.revscope.core.obd.taller.sesion.VehiculoActivo
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.EntornoTaller
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -144,7 +145,7 @@ class PruebaGuiadaViewModel @Inject constructor(
 
     // null quita la calibración; con lo del multímetro se guarda la diferencia contra el adaptador.
     fun guardarDesfase(multimetroV: Double?) {
-        val nuevo = multimetroV?.let { CalibracionVoltaje.desde(it, local.value.voltajeAdaptador) ?: return avisar(NO_CALIBRA) }
+        val nuevo = multimetroV?.let { CalibracionVoltaje.desde(it, local.value.voltajeAdaptador) ?: return avisar(resolver.get(R.string.workshop_prueba_pantalla_no_calibra)) }
         cerrarDialogo()
         viewModelScope.launch {
             runCatching { fuenteDesfase.guardar(nuevo) }.onFailure { Timber.w(it, "Prueba guiada: no se pudo guardar el desfase") }
@@ -178,7 +179,8 @@ class PruebaGuiadaViewModel @Inject constructor(
             registro.abrirSesion(SolicitudSesion(titulo = tipo.titulo(resolver))).onFailure { return@accion avisar(it.message) }
         }
         val id = controlador.guardarResultadoEnSesion()
-        avisar(if (id != null) "Resultado guardado en una sesión nueva" else "No se pudo guardar el resultado")
+        val texto = if (id != null) R.string.workshop_prueba_pantalla_guardado_sesion_nueva else R.string.workshop_prueba_pantalla_no_guardado
+        avisar(resolver.get(texto))
     }
 
     fun mensajeMostrado() = local.update { it.copy(mensaje = null) }
@@ -248,11 +250,10 @@ class PruebaGuiadaViewModel @Inject constructor(
         }
     }
 
-    private fun avisar(mensaje: String?) = local.update { it.copy(mensaje = mensaje ?: "Algo salió mal") }
+    private fun avisar(mensaje: String?) = local.update { it.copy(mensaje = mensaje ?: resolver.get(R.string.workshop_prueba_pantalla_error_generico)) }
 
     companion object {
         const val ARG_TIPO = "tipo"
-        private const val NO_CALIBRA = "Sin lectura del adaptador o con más de 1 V de diferencia: no se calibró"
         private const val DETENER_TRAS_MS = 5_000L
         private const val REFRESCO_SERIE_MS = 150L
         private const val REFRESCO_PRECONDICIONES_MS = 1_000L

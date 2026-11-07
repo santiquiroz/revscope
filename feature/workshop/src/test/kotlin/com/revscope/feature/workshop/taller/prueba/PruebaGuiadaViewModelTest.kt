@@ -1,6 +1,8 @@
 package com.revscope.feature.workshop.taller.prueba
 
 import androidx.lifecycle.SavedStateHandle
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.taller.grafica.FuenteVref
 import com.revscope.core.obd.taller.grafica.PreferenciasVref
@@ -67,10 +69,13 @@ class PruebaGuiadaViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm(tipo: TipoPrueba? = TipoPrueba.TPS_BARRIDO) = PruebaGuiadaViewModel(
+    private fun vm(
+        tipo: TipoPrueba? = TipoPrueba.TPS_BARRIDO,
+        textos: StringResolver = resolverPrueba(),
+    ) = PruebaGuiadaViewModel(
         SavedStateHandle(tipo?.let { mapOf(PruebaGuiadaViewModel.ARG_TIPO to it.name) } ?: emptyMap()),
         controlador, enlace, taller.entorno, FuenteVref(preferencias, taller.repositorio, resolverPrueba()) { BENELLI }, { emptyList() },
-        taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI }, resolverPrueba(),
+        taller.repositorio, { BENELLI }, taller.registro, FuenteDesfase(desfases) { BENELLI }, textos,
     ).also { v -> CoroutineScope(despachador).launch { v.estado.collect { } } }
 
     @Test
@@ -172,6 +177,26 @@ class PruebaGuiadaViewModelTest {
         assertEquals(DesfaseVoltaje.SIN_CALIBRAR, vm.estado.value.desfase)
         assertTrue(vm.estado.value.mensaje!!, vm.estado.value.mensaje!!.contains("no se calibró"))
         assertEquals(DialogoPrueba.DESFASE, vm.estado.value.dialogo)
+    }
+
+    @Test
+    fun `en ingles el aviso de calibracion fallida sale en ingles`() {
+        val ingles = XmlStringResolver.en(
+            com.revscope.core.obd.R::class.java,
+            com.revscope.feature.workshop.R::class.java,
+            com.revscope.core.designsystem.R::class.java,
+            resDirs = listOf("src/main/res", "../../core/obd/src/main/res", "../../core/designsystem/src/main/res"),
+        )
+        val vm = vm(tipo = TipoPrueba.BATERIA_CARGA, textos = ingles)
+
+        vm.pedirDesfase()
+        vm.guardarDesfase(12.6)
+
+        assertEquals("No adapter reading or more than 1 V of difference: not calibrated", vm.estado.value.mensaje)
+        assertEquals(
+            "The test didn't finish: no samples. Anything recorded was saved to the session, if one was open.",
+            ingles.get(com.revscope.feature.workshop.R.string.workshop_prueba_pantalla_fallida, "no samples"),
+        )
     }
 
     @Test
