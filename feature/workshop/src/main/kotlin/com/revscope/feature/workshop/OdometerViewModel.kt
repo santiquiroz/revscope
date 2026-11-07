@@ -18,11 +18,6 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 
-private const val NO_SOPORTADO_MENSAJE =
-    "Tu vehículo no expone el odómetro por OBD (PID 01 A6) — usa el escáner Mode 22 " +
-        "para buscar el DID del fabricante"
-private const val LECTURA_FALLIDA_MENSAJE = "No se pudo leer el odómetro — intenta de nuevo"
-
 @HiltViewModel
 class OdometerViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
@@ -54,7 +49,7 @@ class OdometerViewModel @Inject constructor(
     fun leerAhora() {
         if (_leyendoAhora.value) return
         if (sessionManager.connectionState.value !is ConnectionState.Connected) {
-            _mensaje.value = "Conecta el adaptador primero"
+            _mensaje.value = resolver.get(R.string.workshop_odometer_error_not_connected)
             return
         }
         viewModelScope.launch {
@@ -66,7 +61,7 @@ class OdometerViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.w(e, "OdometerViewModel: lectura falló")
-                _mensaje.value = LECTURA_FALLIDA_MENSAJE
+                _mensaje.value = resolver.get(R.string.workshop_odometer_error_reading)
             } finally {
                 _leyendoAhora.value = false
             }
@@ -92,7 +87,13 @@ class OdometerViewModel @Inject constructor(
     }
 
     private fun mensajeDeFalloDeLectura(): String =
-        if (sessionManager.odometerSupported.value == false) NO_SOPORTADO_MENSAJE else LECTURA_FALLIDA_MENSAJE
+        resolver.get(
+            if (sessionManager.odometerSupported.value == false) {
+                R.string.workshop_odometer_error_unsupported
+            } else {
+                R.string.workshop_odometer_error_reading
+            },
+        )
 
     private suspend fun refrescarHistorial(profileId: Long?) {
         _historial.value = profileId?.let { sessionManager.odometerHistoryFor(it) } ?: emptyList()

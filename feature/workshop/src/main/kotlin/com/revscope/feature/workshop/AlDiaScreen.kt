@@ -50,6 +50,8 @@ import com.revscope.core.designsystem.NivelBadge
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.trip.MaintenanceCalculator
 
@@ -112,7 +114,7 @@ internal fun AlDiaContent(
 ) {
     val escalaLetra = LocalDensity.current.fontScale
     Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = "Vehículo al día", subtitulo = vehiculo?.nombre, onVolver = acciones.onVolver)
+        BarraConVolver(titulo = stringResource(R.string.workshop_al_dia_title), subtitulo = vehiculo?.nombre, onVolver = acciones.onVolver)
         RejillaAlDia(vehiculo, estados, licenciaVenceEn, mantenimientoNivel, mantenimientoDetalle, zoneBrief, acciones, escalaLetra)
     }
 }
@@ -145,7 +147,7 @@ private fun RejillaAlDia(
             item {
                 DocCard(it, acciones.onPerfiles) {
                     TextButton(onClick = acciones.onChequeo) {
-                        Text("Chequeo mecánico", color = RevScopeColors.Accent, style = RevScopeType.label)
+                        Text(stringResource(R.string.workshop_al_dia_mechanical_check), color = RevScopeColors.Accent, style = RevScopeType.label)
                     }
                 }
             }
@@ -166,8 +168,8 @@ private fun RejillaAlDia(
 @Composable
 private fun ZoneBriefCard(brief: com.revscope.core.obd.service.ZoneBriefHolder.ZoneBrief) {
     val fuente = when (brief.source) {
-        com.revscope.core.obd.service.ZoneBriefHolder.Source.COMMUNITY -> "De la comunidad"
-        com.revscope.core.obd.service.ZoneBriefHolder.Source.AI -> "Generado por IA"
+        com.revscope.core.obd.service.ZoneBriefHolder.Source.COMMUNITY -> stringResource(R.string.workshop_al_dia_source_community)
+        com.revscope.core.obd.service.ZoneBriefHolder.Source.AI -> stringResource(R.string.workshop_al_dia_source_ai)
     }
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
@@ -207,7 +209,7 @@ private fun DocCardContent(
     extra: (@Composable () -> Unit)?,
 ) {
     Column(Modifier.padding(14.dp)) {
-        TituloConNivel(status.titulo, nivelDocumento(status.nivel))
+        TituloConNivel(tituloDocumento(status), nivelDocumento(status.nivel))
         Spacer(Modifier.height(8.dp))
         Text(
             text = status.detalle,
@@ -216,7 +218,7 @@ private fun DocCardContent(
         )
         if (sinConfigurar) {
             Text(
-                "Toca para configurar",
+                stringResource(R.string.workshop_al_dia_tap_to_configure),
                 color = RevScopeColors.Accent,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
@@ -231,6 +233,14 @@ private fun DocCardContent(
 }
 
 @Composable
+private fun tituloDocumento(status: DocumentStatusCalculator.DocStatus): String =
+    when (status.tipo) {
+        DocumentStatusCalculator.DocType.SOAT -> stringResource(R.string.workshop_al_dia_soat)
+        DocumentStatusCalculator.DocType.RTM -> stringResource(R.string.workshop_al_dia_rtm)
+        else -> status.titulo
+    }
+
+@Composable
 private fun TituloConNivel(titulo: String, nivel: NivelConTexto) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(titulo, color = RevScopeColors.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -241,16 +251,26 @@ private fun TituloConNivel(titulo: String, nivel: NivelConTexto) {
 @Composable
 private fun MultasCard(plate: String?) {
     val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            TituloConNivel("Multas", NivelConTexto(NivelEstado.SIN_DATO, R.string.workshop_health_level_not_checked))
+            TituloConNivel(stringResource(R.string.workshop_al_dia_fines), NivelConTexto(NivelEstado.SIN_DATO, R.string.workshop_health_level_not_checked))
             Spacer(Modifier.height(8.dp))
-            Text("Consulta comparendos en el sistema SIMIT", color = RevScopeColors.TextSecondary, fontSize = 12.sp)
+            Text(
+                stringResource(R.string.workshop_al_dia_fines_description, stringResource(R.string.workshop_al_dia_simit)),
+                color = RevScopeColors.TextSecondary,
+                fontSize = 12.sp,
+            )
             TextButton(
-                onClick = { openSimit(context, plate) },
+                onClick = { openSimit(context, resolver, plate) },
                 modifier = Modifier.padding(top = 6.dp),
             ) {
-                Text("Consultar en SIMIT", color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.workshop_al_dia_check_simit, stringResource(R.string.workshop_al_dia_simit)),
+                    color = RevScopeColors.Accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }
@@ -264,27 +284,27 @@ private fun MaintenanceCard(nivel: DocumentStatusCalculator.Nivel, detalle: Stri
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Column(Modifier.padding(14.dp)) {
-            TituloConNivel("Mantenimiento", nivelDocumento(nivel))
+            TituloConNivel(stringResource(R.string.workshop_al_dia_maintenance), nivelDocumento(nivel))
             Spacer(Modifier.height(8.dp))
             Text(detalle, color = RevScopeColors.TextPrimary, fontSize = 12.sp)
         }
     }
 }
 
-private fun openSimit(context: Context, plate: String?) {
-    copyPlateToClipboard(context, plate)
+private fun openSimit(context: Context, resolver: StringResolver, plate: String?) {
+    copyPlateToClipboard(context, resolver, plate)
     runCatching {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SIMIT_URL)))
     }.onFailure {
-        Toast.makeText(context, "No hay navegador disponible", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, resolver.get(R.string.workshop_al_dia_no_browser), Toast.LENGTH_SHORT).show()
     }
 }
 
-private fun copyPlateToClipboard(context: Context, plate: String?) {
+private fun copyPlateToClipboard(context: Context, resolver: StringResolver, plate: String?) {
     if (plate.isNullOrBlank()) return
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("Placa", plate))
-    Toast.makeText(context, "Placa copiada", Toast.LENGTH_SHORT).show()
+    clipboard.setPrimaryClip(ClipData.newPlainText(resolver.get(R.string.workshop_al_dia_plate_clipboard_label), plate))
+    Toast.makeText(context, resolver.get(R.string.workshop_al_dia_plate_copied), Toast.LENGTH_SHORT).show()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -303,7 +323,7 @@ private fun LicenseCard(
             .clickable { showPicker = true },
     ) {
         DocCardContent(status, status.nivel == DocumentStatusCalculator.Nivel.SIN_CONFIGURAR) {
-            Text("Toca para editar", color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.workshop_al_dia_tap_to_edit), color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }
 
@@ -315,10 +335,10 @@ private fun LicenseCard(
                 TextButton(onClick = {
                     onChange(pickerState.selectedDateMillis)
                     showPicker = false
-                }) { Text("Aceptar") }
+                }) { Text(stringResource(R.string.workshop_al_dia_accept)) }
             },
             dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text("Cancelar") }
+                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.workshop_al_dia_cancel)) }
             },
         ) {
             DatePicker(state = pickerState)
@@ -329,8 +349,8 @@ private fun LicenseCard(
 @Composable
 private fun SinVehiculoActivo(onOpenProfiles: () -> Unit) {
     EmptyState(
-        mensaje = "Sin vehículo activo. Activa un vehículo en Perfiles para ver el estado de sus documentos.",
-        accion = AccionEstado("Ir a perfiles", onOpenProfiles),
+        mensaje = stringResource(R.string.workshop_al_dia_no_vehicle),
+        accion = AccionEstado(stringResource(R.string.workshop_al_dia_open_profiles), onOpenProfiles),
         icono = Icons.Default.Verified,
         modifier = Modifier.padding(top = 24.dp),
     )

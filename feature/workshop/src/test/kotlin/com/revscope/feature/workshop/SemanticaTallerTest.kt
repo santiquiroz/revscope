@@ -106,9 +106,11 @@ class SemanticaTallerTest {
             }
         }
 
-        compose.onNodeWithText("Fuel trim corto B1").assertIsDisplayed()
-        compose.onAllNodesWithText("No disponible en esta ECU")[0].assertIsDisplayed()
-        compose.onNodeWithText("Esta ECU no reporta fuel trim corto b1 (PID 06).").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(R.string.workshop_mixture_fuel_trim_short_b1)).assertIsDisplayed()
+        compose.onAllNodesWithText(resolverEs.get(R.string.workshop_mixture_unavailable_ecu))[0].assertIsDisplayed()
+        compose.onNodeWithText(
+            resolverEs.get(R.string.workshop_mixture_unsupported_reason, "fuel trim corto b1", "06"),
+        ).assertIsDisplayed()
     }
 
     @Test
@@ -145,7 +147,7 @@ class SemanticaTallerTest {
             }
         }
 
-        compose.onNodeWithText("Ir a perfiles").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(R.string.workshop_al_dia_open_profiles)).assertIsDisplayed()
         compose.onNodeWithContentDescription(resolverEs.get(DesignSystemR.string.ds_back)).performClick()
 
         assertTrue(volvio)
