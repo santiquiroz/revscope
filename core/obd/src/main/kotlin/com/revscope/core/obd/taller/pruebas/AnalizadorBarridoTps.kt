@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.PosicionEnBanda
@@ -28,11 +30,11 @@ object AnalizadorBarridoTps {
         val TODOS = SOSTENIDOS + BARRIDO_LENTO
     }
 
-    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>): ResultadoPrueba {
+    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>, resolver: StringResolver): ResultadoPrueba {
         val estadisticas = Pasos.TODOS.mapNotNull { estadistica(datos, it) }
         val faltan = Pasos.SOSTENIDOS.filter { clave -> estadisticas.none { it.clave == clave } }
-        if (faltan.isNotEmpty()) return TextosBarridoTps.sinDatos(faltan)
-        return TextosBarridoTps.resultado(analisis(datos, bandas, estadisticas))
+        if (faltan.isNotEmpty()) return TextosBarridoTps.sinDatos(faltan, resolver)
+        return TextosBarridoTps.resultado(analisis(datos, bandas, estadisticas, resolver), resolver)
     }
 
     fun recorridoTipicoV(bandas: Map<String, BandaReferencia>): Double? {
@@ -42,7 +44,12 @@ object AnalizadorBarridoTps {
         return bandas[ClavesBanda.TPS_RECORRIDO_MIN_V]?.min
     }
 
-    private fun analisis(datos: DatosPrueba, bandas: Map<String, BandaReferencia>, pasos: List<EstadisticaPaso>): AnalisisBarridoTps {
+    private fun analisis(
+        datos: DatosPrueba,
+        bandas: Map<String, BandaReferencia>,
+        pasos: List<EstadisticaPaso>,
+        resolver: StringResolver,
+    ): AnalisisBarridoTps {
         fun media(clave: String) = pasos.first { it.clave == clave }.mediaV
         val cerrado = media(Pasos.CERRADO_1)
         val fondo = media(Pasos.A_FONDO)
@@ -62,7 +69,7 @@ object AnalizadorBarridoTps {
             patron = PatronTps.NORMAL,
             barridoEvaluado = barrido.size >= MIN_MUESTRAS_BARRIDO,
         )
-        val comprobado = base.copy(comprobaciones = comprobaciones(base, bandas))
+        val comprobado = base.copy(comprobaciones = comprobaciones(base, bandas, resolver))
         return comprobado.copy(patron = patron(comprobado))
     }
 
@@ -90,16 +97,29 @@ object AnalizadorBarridoTps {
         return segmentos.sumOf { datos.serie(PID_TPS, it.clave).size } * 1_000.0 / ms
     }
 
-    private fun comprobaciones(a: AnalisisBarridoTps, bandas: Map<String, BandaReferencia>): List<Comprobacion> = listOfNotNull(
-        Comprobacion.contra(ClavesBanda.TPS_CERRADO_V, "Cerrado", a.cerradoV, "V", bandas),
-        Comprobacion.contra(ClavesBanda.TPS_FONDO_V, "A fondo", a.fondoV, "V", bandas),
-        Comprobacion.contra(ClavesBanda.TPS_RECORRIDO_MIN_V, "Recorrido", a.recorridoV, "V", bandas),
-        Comprobacion.contra(ClavesBanda.TPS_RUIDO_MAX_V, "Ruido al sostener (pico a pico)", a.ruidoMaxV, "V", bandas),
-        Comprobacion.contra(ClavesBanda.TPS_REPETIBILIDAD_V, "Repetibilidad del cerrado", a.repetibilidadV, "V", bandas),
-        Comprobacion.contra(ClavesBanda.TPS_LINEALIDAD, "Linealidad (medio)", a.linealidad, "", bandas),
-        Comprobacion.siNo(CLAVE_ORDEN, "Orden cerrado < medio < fondo", a.ordenCorrecto),
-        Comprobacion.siNo(CLAVE_SIN_ZONAS_MUERTAS, "Sin zonas muertas", a.cuenta(TipoIrregularidad.ZONA_MUERTA) == 0)
-            .takeIf { a.barridoEvaluado },
+    private fun comprobaciones(
+        a: AnalisisBarridoTps,
+        bandas: Map<String, BandaReferencia>,
+        res: StringResolver,
+    ): List<Comprobacion> = listOfNotNull(
+        Comprobacion.contra(ClavesBanda.TPS_CERRADO_V, res.get(R.string.obd_barrido_comprobacion_cerrado), a.cerradoV, "V", bandas),
+        Comprobacion.contra(ClavesBanda.TPS_FONDO_V, res.get(R.string.obd_barrido_comprobacion_fondo), a.fondoV, "V", bandas),
+        Comprobacion.contra(ClavesBanda.TPS_RECORRIDO_MIN_V, res.get(R.string.obd_barrido_comprobacion_recorrido), a.recorridoV, "V", bandas),
+        Comprobacion.contra(ClavesBanda.TPS_RUIDO_MAX_V, res.get(R.string.obd_barrido_comprobacion_ruido), a.ruidoMaxV, "V", bandas),
+        Comprobacion.contra(
+            ClavesBanda.TPS_REPETIBILIDAD_V,
+            res.get(R.string.obd_barrido_comprobacion_repetibilidad),
+            a.repetibilidadV,
+            "V",
+            bandas,
+        ),
+        Comprobacion.contra(ClavesBanda.TPS_LINEALIDAD, res.get(R.string.obd_barrido_comprobacion_linealidad), a.linealidad, "", bandas),
+        Comprobacion.siNo(CLAVE_ORDEN, res.get(R.string.obd_barrido_comprobacion_orden), a.ordenCorrecto),
+        Comprobacion.siNo(
+            CLAVE_SIN_ZONAS_MUERTAS,
+            res.get(R.string.obd_barrido_comprobacion_sin_zonas_muertas),
+            a.cuenta(TipoIrregularidad.ZONA_MUERTA) == 0,
+        ).takeIf { a.barridoEvaluado },
     )
 
     private fun patron(a: AnalisisBarridoTps): PatronTps = when {

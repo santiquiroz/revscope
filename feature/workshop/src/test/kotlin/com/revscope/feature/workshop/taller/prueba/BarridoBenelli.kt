@@ -23,7 +23,7 @@ internal object BarridoBenelli {
     private const val HZ = 10
 
     val bandas = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
-    private val pasos = CatalogoPruebas.barridoTps.pasos
+    private val pasos = CatalogoPruebas.barridoTps.resuelta(resolverPrueba()).pasos
 
     fun pct(byte: Int): Double = byte * 100.0 / 255.0
 
@@ -50,7 +50,7 @@ internal object BarridoBenelli {
 
     fun terminada(eventoId: Long? = 21): EstadoPrueba.Terminada {
         val datos = datos()
-        return EstadoPrueba.Terminada(AnalizadorBarridoTps.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorBarridoTps.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     fun enPaso(indice: Int, fase: FasePaso, restanteMs: Long?) = EstadoPrueba.EnPaso(

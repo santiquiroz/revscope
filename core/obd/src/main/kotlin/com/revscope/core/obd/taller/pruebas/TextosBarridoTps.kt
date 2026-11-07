@@ -1,164 +1,197 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.AnalizadorBarridoTps.Pasos
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
-import com.revscope.core.obd.taller.referencia.PosicionEnBanda
 import com.revscope.core.obd.taller.sesion.Veredicto
 
 // Redacción de «compatible con…», citando cada banda con su origen (típica, con fuente o editada).
 object TextosBarridoTps {
 
-    private const val SIN_BARRIDO_EVALUADO =
-        "no llegaron muestras suficientes del barrido lento, así que no se buscaron saltos ni zonas muertas"
-
-    val TITULOS_PASO = mapOf(
-        Pasos.CERRADO_1 to "Cerrado",
-        Pasos.MEDIO to "Medio",
-        Pasos.A_FONDO to "A fondo",
-        Pasos.CERRADO_2 to "Cerrado otra vez",
-        Pasos.BARRIDO_LENTO to "Barrido lento",
+    val TITULOS_PASO: Map<String, Int> = mapOf(
+        Pasos.CERRADO_1 to R.string.obd_barrido_paso_cerrado_1,
+        Pasos.MEDIO to R.string.obd_barrido_paso_medio,
+        Pasos.A_FONDO to R.string.obd_barrido_paso_a_fondo,
+        Pasos.CERRADO_2 to R.string.obd_barrido_paso_cerrado_2,
+        Pasos.BARRIDO_LENTO to R.string.obd_barrido_paso_barrido_lento,
     )
 
-    fun resultado(a: AnalisisBarridoTps) = ResultadoPrueba(
-        tipo = TipoPrueba.TPS_BARRIDO,
-        veredicto = a.patron.veredicto,
-        titulo = titulo(a.patron),
-        interpretacion = interpretacion(a) + notaConfianza(a),
-        siguientePaso = siguientePaso(a.patron),
-        hallazgos = hallazgos(a),
-        bajaConfianza = a.bajaConfianza,
-        detalle = a,
-    )
+    fun titulosPaso(resolver: StringResolver): Map<String, String> = TITULOS_PASO.mapValues { resolver.get(it.value) }
 
-    fun sinDatos(faltan: List<String>) = ResultadoPrueba(
+    fun resultado(a: AnalisisBarridoTps, resolver: StringResolver): ResultadoPrueba = Redactor(a, resolver).resultado()
+
+    fun sinDatos(faltan: List<String>, resolver: StringResolver) = ResultadoPrueba(
         tipo = TipoPrueba.TPS_BARRIDO,
         veredicto = Veredicto.ATENCION,
-        titulo = "Sin datos suficientes del TPS",
-        interpretacion = "No llegaron muestras del TPS en: ${faltan.joinToString { TITULOS_PASO[it] ?: it }}. " +
-            "Sin ellas no se puede comparar con las bandas.",
-        siguientePaso = "Revisa que el adaptador siga conectado y repite la prueba",
+        titulo = resolver.get(R.string.obd_barrido_sin_datos_titulo),
+        interpretacion = resolver.get(
+            R.string.obd_barrido_sin_datos_interp,
+            faltan.joinToString { clave -> TITULOS_PASO[clave]?.let { resolver.get(it) } ?: clave },
+        ),
+        siguientePaso = resolver.get(R.string.obd_barrido_sin_datos_siguiente),
         hallazgos = emptyList(),
         bajaConfianza = false,
         detalle = SinDatosTps(faltan),
     )
 
-    fun titulo(patron: PatronTps): String = when (patron) {
-        PatronTps.CORTES_O_SALTOS -> "Cortes o saltos en la señal"
-        PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO -> "Señal baja en todo el recorrido, pareja y estable"
-        PatronTps.SENAL_ALTA -> "Señal alta con el acelerador cerrado"
-        PatronTps.RANGO_DESEMPENO -> "Señal fuera de rango o irregular"
-        PatronTps.SIN_BARRIDO -> "Pasos sostenidos dentro de lo típico, sin el barrido lento"
-        PatronTps.NORMAL -> "Señal del TPS dentro de lo típico"
-    }
+    fun titulo(patron: PatronTps, resolver: StringResolver): String = resolver.get(
+        when (patron) {
+            PatronTps.CORTES_O_SALTOS -> R.string.obd_barrido_titulo_cortes_saltos
+            PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO -> R.string.obd_barrido_titulo_senal_baja
+            PatronTps.SENAL_ALTA -> R.string.obd_barrido_titulo_senal_alta
+            PatronTps.RANGO_DESEMPENO -> R.string.obd_barrido_titulo_rango
+            PatronTps.SIN_BARRIDO -> R.string.obd_barrido_titulo_sin_barrido
+            PatronTps.NORMAL -> R.string.obd_barrido_titulo_normal
+        },
+    )
 
-    fun siguientePaso(patron: PatronTps): String? = when (patron) {
-        PatronTps.CORTES_O_SALTOS ->
-            "Revisa el conector y el cableado del TPS y mide la señal con el multímetro moviendo el acelerador despacio"
-        PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO ->
-            "Mide con el multímetro la referencia de 5 V, la masa y la señal del TPS (plantilla TPS), confirma que el " +
-                "repuesto sea el original y revisa el conector"
-        PatronTps.SENAL_ALTA -> "Mide con el multímetro la masa y la señal del TPS (plantilla TPS) con el acelerador cerrado"
-        PatronTps.RANGO_DESEMPENO ->
-            "Revisa el tope mecánico del acelerador y repite la prueba; si se repite, mide la señal con el multímetro"
-        PatronTps.SIN_BARRIDO -> "Repite la prueba y, cuando la app lo pida, barre el acelerador despacio de cerrado a fondo"
+    fun siguientePaso(patron: PatronTps, resolver: StringResolver): String? = when (patron) {
+        PatronTps.CORTES_O_SALTOS -> R.string.obd_barrido_siguiente_cortes_saltos
+        PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO -> R.string.obd_barrido_siguiente_senal_baja
+        PatronTps.SENAL_ALTA -> R.string.obd_barrido_siguiente_senal_alta
+        PatronTps.RANGO_DESEMPENO -> R.string.obd_barrido_siguiente_rango
+        PatronTps.SIN_BARRIDO -> R.string.obd_barrido_siguiente_sin_barrido
         PatronTps.NORMAL -> null
-    }
+    }?.let { resolver.get(it) }
 
-    private fun interpretacion(a: AnalisisBarridoTps): String = when (a.patron) {
-        PatronTps.CORTES_O_SALTOS ->
-            "La señal tuvo ${cuantos(a.cuenta(TipoIrregularidad.CORTE), "corte", "cortes")} y " +
-                "${cuantos(a.cuenta(TipoIrregularidad.SALTO), "salto", "saltos")} durante la prueba: compatible con " +
-                "P0124 (señal intermitente del TPS) o con una pista gastada del sensor."
-        PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO -> senalBaja(a)
-        PatronTps.SENAL_ALTA ->
-            "Cerrado ${v(a.cerradoV)}, por encima de la banda (${bandaDe(a, ClavesBanda.TPS_CERRADO_V)}): compatible " +
-                "con P0123 (señal alta del TPS): referencia en corto con la señal, señal a 5 V o masa abierta."
-        PatronTps.RANGO_DESEMPENO ->
-            "Recorre ${v(a.recorridoV)}, pero ${a.comprobaciones.filterNot { it.cumple }.joinToString("; ") { falla(it, a) }}: " +
-                "compatible con P0121 (rango o desempeño del TPS) o con un ajuste mecánico del tope."
-        PatronTps.SIN_BARRIDO ->
-            "Cerrado ${v(a.cerradoV)} (${bandaDe(a, ClavesBanda.TPS_CERRADO_V)}), a fondo ${v(a.fondoV)} " +
-                "(${bandaDe(a, ClavesBanda.TPS_FONDO_V)}) y recorrido ${v(a.recorridoV)}: estable y en orden en los " +
-                "pasos sostenidos, pero $SIN_BARRIDO_EVALUADO."
-        PatronTps.NORMAL ->
-            "Cerrado ${v(a.cerradoV)} (${bandaDe(a, ClavesBanda.TPS_CERRADO_V)}), a fondo ${v(a.fondoV)} " +
-                "(${bandaDe(a, ClavesBanda.TPS_FONDO_V)}) y recorrido ${v(a.recorridoV)}: estable, en orden y sin " +
-                "cortes, saltos ni zonas muertas."
-    }
+    fun banda(b: BandaReferencia, resolver: StringResolver): String =
+        "${rango(b, resolver)}, ${b.etiquetaOrigen(resolver)}"
 
-    private fun senalBaja(a: AnalisisBarridoTps): String {
-        val tipico = a.recorridoTipicoV?.let { " (≈${v(it)})" }.orEmpty()
-        val fraccion = a.fraccionRecorrido?.let { ", el ${FormatoTaller.numero(it * 100, 0)} % del típico$tipico" }.orEmpty()
-        return "Cerrado ${v(a.cerradoV)} (${bandaDe(a, ClavesBanda.TPS_CERRADO_V)}) y a fondo ${v(a.fondoV)} " +
-            "(${bandaDe(a, ClavesBanda.TPS_FONDO_V)}): la señal queda baja en todo el recorrido. Recorre " +
-            "${v(a.recorridoV)}$fraccion. Sube en orden, pareja, y repite el cerrado (${v(a.repetibilidadV)}): " +
-            "compatible con P0122 (señal baja del TPS)."
-    }
-
-    private fun notaConfianza(a: AnalisisBarridoTps): String {
-        val depende = a.patron == PatronTps.CORTES_O_SALTOS || a.patron == PatronTps.RANGO_DESEMPENO
-        if (!a.bajaConfianza || !depende) return ""
-        return " Detección con baja confianza por la tasa de ${hz(a.tasaHz)}."
-    }
-
-    private fun hallazgos(a: AnalisisBarridoTps): List<String> = buildList {
-        a.comprobaciones.filterNot { it.cumple }.forEach { add(falla(it, a).replaceFirstChar(Char::uppercase)) }
-        irregularidades(a)?.let(::add)
-        if (!a.barridoEvaluado && a.patron != PatronTps.SIN_BARRIDO) add(SIN_BARRIDO_EVALUADO.replaceFirstChar(Char::uppercase))
-        if (a.bajaConfianza) {
-            add("Tasa de ${hz(a.tasaHz)}, por debajo de 8 Hz: la detección de saltos y zonas muertas es de baja confianza")
-        }
-    }
-
-    private fun irregularidades(a: AnalisisBarridoTps): String? {
-        val partes = listOf(
-            a.cuenta(TipoIrregularidad.CORTE) to ("corte" to "cortes"),
-            a.cuenta(TipoIrregularidad.SALTO) to ("salto" to "saltos"),
-            a.cuenta(TipoIrregularidad.ZONA_MUERTA) to ("zona muerta" to "zonas muertas"),
-        ).filter { it.first > 0 }.map { (n, nombres) -> cuantos(n, nombres.first, nombres.second) }
-        return partes.takeIf { it.isNotEmpty() }?.joinToString(", ")?.replaceFirstChar(Char::uppercase)
-    }
-
-    private fun falla(c: Comprobacion, a: AnalisisBarridoTps): String = when {
-        c.clave == AnalizadorBarridoTps.CLAVE_ORDEN -> "las posiciones no quedan en orden (cerrado < medio < fondo)"
-        c.clave == AnalizadorBarridoTps.CLAVE_SIN_ZONAS_MUERTAS ->
-            "${cuantos(a.cuenta(TipoIrregularidad.ZONA_MUERTA), "zona muerta", "zonas muertas")} en plena subida o bajada"
-        c.valor == null -> "${c.etiqueta.lowercase()} no se pudo calcular"
-        else -> "${c.etiqueta.lowercase()} ${valor(c)} ${lado(c.posicion)} de la banda (${c.banda?.let(::banda)})"
-    }
-
-    private fun lado(posicion: PosicionEnBanda?): String =
-        if (posicion == PosicionEnBanda.BAJO) "por debajo" else "por encima"
-
-    private fun valor(c: Comprobacion): String {
-        val x = c.valor ?: return "—"
-        return if (c.unidad.isEmpty()) FormatoTaller.numero(x, 2) else "${FormatoTaller.numero(x, 2)} ${c.unidad}"
-    }
-
-    private fun bandaDe(a: AnalisisBarridoTps, clave: String): String =
-        a.comprobacion(clave)?.banda?.let(::banda) ?: "sin banda de referencia"
-
-    fun banda(b: BandaReferencia): String = "${rango(b)}, ${b.etiquetaOrigen}"
-
-    private fun rango(b: BandaReferencia): String {
-        val unidad = if (b.unidad == "V") " V" else ""
+    private fun rango(b: BandaReferencia, resolver: StringResolver): String {
+        val unidad = if (b.unidad == "V") ESPACIO + "V" else ""
         val min = b.min
         val max = b.max
         return when {
-            min != null && max != null -> "${numeroBanda(min)}–${numeroBanda(max)}$unidad"
-            min != null -> "≥ ${numeroBanda(min)}$unidad"
-            else -> "≤ ${numeroBanda(max ?: 0.0)}$unidad"
+            min != null && max != null -> "${numeroBanda(min, resolver)}–${numeroBanda(max, resolver)}$unidad"
+            min != null -> "≥ ${numeroBanda(min, resolver)}$unidad"
+            else -> "≤ ${numeroBanda(max ?: 0.0, resolver)}$unidad"
         }
     }
 
-    private fun numeroBanda(x: Double): String =
-        FormatoTaller.numero(x, if (FormatoTaller.redondear(x, 1) == x) 1 else 2)
+    private fun numeroBanda(x: Double, resolver: StringResolver): String =
+        LocaleNumbers.decimal(x, if (FormatoTaller.redondear(x, 1) == x) 1 else 2, resolver.locale)
 
-    private fun cuantos(n: Int, uno: String, varios: String): String = if (n == 1) "1 $uno" else "$n $varios"
+    private class Redactor(private val a: AnalisisBarridoTps, private val res: StringResolver) {
 
-    private fun v(x: Double): String = "${FormatoTaller.numero(x, 2)} V"
+        fun resultado() = ResultadoPrueba(
+            tipo = TipoPrueba.TPS_BARRIDO,
+            veredicto = a.patron.veredicto,
+            titulo = titulo(a.patron, res),
+            interpretacion = interpretacion() + notaConfianza(),
+            siguientePaso = siguientePaso(a.patron, res),
+            hallazgos = hallazgos(),
+            bajaConfianza = a.bajaConfianza,
+            detalle = a,
+        )
 
-    private fun hz(x: Double): String = "${FormatoTaller.numero(x, 1)} Hz"
+        // ── Interpretación ──────────────────────────────────────────────────
+
+        private fun interpretacion(): String = when (a.patron) {
+            PatronTps.CORTES_O_SALTOS -> res.get(
+                R.string.obd_barrido_interp_cortes_saltos,
+                cuantos(R.plurals.obd_barrido_cortes, a.cuenta(TipoIrregularidad.CORTE)),
+                cuantos(R.plurals.obd_barrido_saltos, a.cuenta(TipoIrregularidad.SALTO)),
+            )
+            PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO -> senalBaja()
+            PatronTps.SENAL_ALTA -> res.get(R.string.obd_barrido_interp_senal_alta, v(a.cerradoV), bandaDe(ClavesBanda.TPS_CERRADO_V))
+            PatronTps.RANGO_DESEMPENO -> res.get(
+                R.string.obd_barrido_interp_rango,
+                v(a.recorridoV),
+                a.comprobaciones.filterNot { it.cumple }.joinToString("; ") { falla(it) },
+            )
+            PatronTps.SIN_BARRIDO -> extremos(R.string.obd_barrido_interp_sin_barrido, sinBarridoEvaluado())
+            PatronTps.NORMAL -> extremos(R.string.obd_barrido_interp_normal)
+        }
+
+        private fun extremos(id: Int, vararg extra: Any): String = res.get(
+            id,
+            v(a.cerradoV),
+            bandaDe(ClavesBanda.TPS_CERRADO_V),
+            v(a.fondoV),
+            bandaDe(ClavesBanda.TPS_FONDO_V),
+            v(a.recorridoV),
+            *extra,
+        )
+
+        private fun senalBaja(): String {
+            val tipico = a.recorridoTipicoV?.let { ESPACIO + res.get(R.string.obd_barrido_tipico, v(it)) }.orEmpty()
+            val fraccion = a.fraccionRecorrido?.let { res.get(R.string.obd_barrido_fraccion, n(it * 100, 0), tipico) }.orEmpty()
+            return res.get(
+                R.string.obd_barrido_interp_senal_baja,
+                v(a.cerradoV),
+                bandaDe(ClavesBanda.TPS_CERRADO_V),
+                v(a.fondoV),
+                bandaDe(ClavesBanda.TPS_FONDO_V),
+                v(a.recorridoV),
+                fraccion,
+                v(a.repetibilidadV),
+            )
+        }
+
+        private fun notaConfianza(): String {
+            val depende = a.patron == PatronTps.CORTES_O_SALTOS || a.patron == PatronTps.RANGO_DESEMPENO
+            if (!a.bajaConfianza || !depende) return ""
+            return ESPACIO + res.get(R.string.obd_barrido_nota_confianza, hz(a.tasaHz))
+        }
+
+        // ── Hallazgos ───────────────────────────────────────────────────────
+
+        private fun hallazgos(): List<String> = buildList {
+            a.comprobaciones.filterNot { it.cumple }.forEach { add(falla(it).replaceFirstChar(Char::uppercase)) }
+            irregularidades()?.let(::add)
+            if (!a.barridoEvaluado && a.patron != PatronTps.SIN_BARRIDO) add(sinBarridoEvaluado().replaceFirstChar(Char::uppercase))
+            if (a.bajaConfianza) add(res.get(R.string.obd_barrido_hallazgo_baja_confianza, hz(a.tasaHz)))
+        }
+
+        private fun irregularidades(): String? {
+            val partes = listOf(
+                a.cuenta(TipoIrregularidad.CORTE) to R.plurals.obd_barrido_cortes,
+                a.cuenta(TipoIrregularidad.SALTO) to R.plurals.obd_barrido_saltos,
+                a.cuenta(TipoIrregularidad.ZONA_MUERTA) to R.plurals.obd_barrido_zonas_muertas,
+            ).filter { it.first > 0 }.map { (cuenta, id) -> cuantos(id, cuenta) }
+            return partes.takeIf { it.isNotEmpty() }?.joinToString(", ")?.replaceFirstChar(Char::uppercase)
+        }
+
+        private fun falla(c: Comprobacion): String = when {
+            c.clave == AnalizadorBarridoTps.CLAVE_ORDEN -> res.get(R.string.obd_barrido_falla_orden)
+            c.clave == AnalizadorBarridoTps.CLAVE_SIN_ZONAS_MUERTAS -> res.get(
+                R.string.obd_barrido_falla_zonas_muertas,
+                cuantos(R.plurals.obd_barrido_zonas_muertas, a.cuenta(TipoIrregularidad.ZONA_MUERTA)),
+            )
+            c.valor == null -> res.get(R.string.obd_barrido_falla_sin_valor, c.etiqueta.lowercase())
+            else -> res.get(
+                R.string.obd_barrido_falla_fuera,
+                c.etiqueta.lowercase(),
+                valor(c),
+                TextoBanda.lado(c.posicion, res),
+                c.banda?.let { banda(it, res) }.toString(),
+            )
+        }
+
+        // ── Formato ─────────────────────────────────────────────────────────
+
+        private fun sinBarridoEvaluado(): String = res.get(R.string.obd_barrido_sin_barrido_evaluado)
+
+        private fun valor(c: Comprobacion): String {
+            val x = c.valor ?: return "—"
+            return if (c.unidad.isEmpty()) n(x, 2) else n(x, 2) + ESPACIO + c.unidad
+        }
+
+        private fun bandaDe(clave: String): String =
+            a.comprobacion(clave)?.banda?.let { banda(it, res) } ?: res.get(R.string.obd_barrido_sin_banda)
+
+        private fun cuantos(id: Int, cuenta: Int): String = res.plural(id, cuenta, cuenta)
+
+        private fun v(x: Double): String = n(x, 2) + ESPACIO + "V"
+
+        private fun hz(x: Double): String = n(x, 1) + ESPACIO + "Hz"
+
+        private fun n(x: Double, decimales: Int): String = LocaleNumbers.decimal(x, decimales, res.locale)
+    }
+
+    private const val ESPACIO = " "
 }
