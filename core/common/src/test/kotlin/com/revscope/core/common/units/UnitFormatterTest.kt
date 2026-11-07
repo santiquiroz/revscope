@@ -115,4 +115,31 @@ class UnitFormatterTest {
     fun `fromTag garbage falls back to region default`() {
         assertEquals(UnitSystem.METRIC, UnitSystem.fromTag("garbage", Region.CO))
     }
+
+    @Test
+    fun `formatShortDistance in METRIC rounds meters to nearest ten`() {
+        assertEquals("350 m", metric.formatShortDistance(347.0))
+    }
+
+    @Test
+    fun `formatShortDistance in METRIC with Spanish locale switches to km`() {
+        val es = UnitFormatter(UnitSystem.METRIC, Locale("es"))
+        assertEquals("1,2 km", es.formatShortDistance(1234.0))
+    }
+
+    @Test
+    fun `shortDistance in US below a tenth of a mile is feet`() {
+        assertEquals(Measure(330.0, DistanceUnit.FEET), us.shortDistance(100.0))
+        assertEquals("330 ft", us.formatShortDistance(100.0))
+    }
+
+    @Test
+    fun `formatShortDistance in UK uses miles with one decimal`() {
+        assertEquals("0.3 mi", uk.formatShortDistance(500.0))
+    }
+
+    @Test
+    fun `shortDistance in US at a tenth of a mile is miles`() {
+        assertEquals(DistanceUnit.MILES, us.shortDistance(160.9344).unit)
+    }
 }
