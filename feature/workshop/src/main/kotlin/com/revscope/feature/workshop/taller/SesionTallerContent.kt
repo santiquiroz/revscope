@@ -35,13 +35,19 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.designsystem.BarraConVolver
 import com.revscope.core.designsystem.EmptyState
 import com.revscope.core.designsystem.FilaEtiquetaValor
@@ -50,7 +56,9 @@ import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.obd.taller.sesion.FilaComparacion
+import com.revscope.core.obd.taller.sesion.etiqueta
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.feature.workshop.R
 
 data class AccionesSesion(
     val onVolver: () -> Unit = {},
@@ -104,7 +112,7 @@ fun SesionTallerContent(estado: SesionTallerEstado, acciones: AccionesSesion) {
 @Composable
 private fun CargandoSesion(onVolver: () -> Unit) {
     Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = "Sesión de taller", onVolver = onVolver)
+        BarraConVolver(titulo = stringResource(R.string.workshop_session_screen_title), onVolver = onVolver)
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = RevScopeColors.Accent)
         }
@@ -115,12 +123,12 @@ private fun CargandoSesion(onVolver: () -> Unit) {
 private fun MenuSesion(estado: SesionTallerEstado, acciones: AccionesSesion) {
     Box {
         IconButton(onClick = { acciones.onMenu(true) }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = "Más opciones de la sesión", tint = RevScopeColors.TextPrimary)
+        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.workshop_session_more_options), tint = RevScopeColors.TextPrimary)
         }
         DropdownMenu(expanded = estado.ui.menu, onDismissRequest = { acciones.onMenu(false) }) {
-            acciones.onGenerarInforme?.let { OpcionMenu("Generar informe", it) }
-            if (estado.abierta) OpcionMenu("Cerrar sesión", acciones.onPedirCierre)
-            OpcionMenu("Eliminar sesión", acciones.onPedirEliminacion, peligrosa = true)
+        acciones.onGenerarInforme?.let { OpcionMenu(stringResource(R.string.workshop_session_generate_report), it) }
+        if (estado.abierta) OpcionMenu(stringResource(R.string.workshop_session_close_confirm), acciones.onPedirCierre)
+        OpcionMenu(stringResource(R.string.workshop_session_delete_confirm), acciones.onPedirEliminacion, peligrosa = true)
         }
     }
 }
@@ -140,7 +148,7 @@ private fun TarjetaResumen(estado: SesionTallerEstado) {
     TarjetaTaller {
         EstadoSesionFila(estado.abierta, estado.estadoTexto)
         if (estado.sintomas.isNotEmpty()) {
-            TituloBloque("Síntomas")
+            TituloBloque(stringResource(R.string.workshop_session_symptoms))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 estado.sintomas.forEach { PastillaTexto(it) }
             }
@@ -149,13 +157,13 @@ private fun TarjetaResumen(estado: SesionTallerEstado) {
             Text("«${estado.sintomasTexto}»", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
         }
         if (estado.notas.isNotBlank()) {
-            TituloBloque("Notas")
+            TituloBloque(stringResource(R.string.workshop_session_notes))
             Text(estado.notas, color = RevScopeColors.TextPrimary, style = RevScopeType.body)
         }
-        estado.odometro?.let { FilaEtiquetaValor("Odómetro al abrir", it) }
-        TituloBloque("Códigos actuales")
+        estado.odometro?.let { FilaEtiquetaValor(stringResource(R.string.workshop_session_odometer_at_open), it) }
+        TituloBloque(stringResource(R.string.workshop_session_current_codes))
         if (estado.codigos.isEmpty()) {
-            Text("Sin códigos leídos en esta sesión.", color = RevScopeColors.TextSecondary, style = RevScopeType.body)
+            Text(stringResource(R.string.workshop_session_no_codes), color = RevScopeColors.TextSecondary, style = RevScopeType.body)
         } else {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 estado.codigos.forEach { PastillaCodigo(it) }
@@ -196,9 +204,9 @@ private fun TarjetaComparar(estado: SesionTallerEstado, acciones: AccionesSesion
 
 @Composable
 private fun SinBase() {
-    Text("Comparación", color = RevScopeColors.TextPrimary, style = RevScopeType.title)
+    Text(stringResource(R.string.workshop_session_comparison), color = RevScopeColors.TextPrimary, style = RevScopeType.title)
     Text(
-        "Esta sesión no tiene un chequeo de salud anterior como base, así que no hay con qué comparar.",
+        stringResource(R.string.workshop_session_no_baseline),
         color = RevScopeColors.TextSecondary,
         style = RevScopeType.body,
     )
@@ -206,31 +214,39 @@ private fun SinBase() {
 
 @Composable
 private fun SinChequeoAhora(fechaBase: String, estado: SesionTallerEstado, onChequeo: () -> Unit) {
-    Text("Comparación con el chequeo del $fechaBase", color = RevScopeColors.TextPrimary, style = RevScopeType.title)
+    Text(stringResource(R.string.workshop_session_comparison_date, fechaBase), color = RevScopeColors.TextPrimary, style = RevScopeType.title)
     Text(
-        "Corre un chequeo de salud en esta sesión para ver qué cambió desde entonces.",
+        stringResource(R.string.workshop_session_run_check_to_compare),
         color = RevScopeColors.TextSecondary,
         style = RevScopeType.body,
     )
     if (estado.agregar == DisponibilidadAgregar.Disponible) {
         OutlinedButton(onClick = onChequeo, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Correr chequeo ahora", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+            Text(stringResource(R.string.workshop_session_run_check_now), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
         }
     }
 }
 
 @Composable
 private fun FilasComparacion(comparacion: TarjetaComparacion.Filas, expandida: Boolean, onAlternar: () -> Unit) {
+    val stateDescription = stringResource(
+        if (expandida) R.string.workshop_session_expanded else R.string.workshop_session_collapsed,
+    )
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .clickable(onClickLabel = if (expandida) "Ocultar la comparación" else "Mostrar la comparación", onClick = onAlternar)
-            .semantics { stateDescription = if (expandida) "Desplegada" else "Plegada" },
+            .clickable(
+                onClickLabel = stringResource(
+                    if (expandida) R.string.workshop_session_hide_comparison else R.string.workshop_session_show_comparison,
+                ),
+                onClick = onAlternar,
+            )
+            .semantics { this.stateDescription = stateDescription },
     ) {
         Text(
-            "Comparación con el chequeo del ${comparacion.fechaBase}",
+            stringResource(R.string.workshop_session_comparison_date, comparacion.fechaBase),
             color = RevScopeColors.TextPrimary,
             style = RevScopeType.title,
             modifier = Modifier.weight(1f),
@@ -240,7 +256,7 @@ private fun FilasComparacion(comparacion: TarjetaComparacion.Filas, expandida: B
     if (!expandida) return
     comparacion.filas.forEach { FilaComparada(it) }
     Text(
-        "Una base es un solo chequeo: las diferencias piden atención, no confirman una falla.",
+        stringResource(R.string.workshop_session_baseline_caveat),
         color = RevScopeColors.TextSecondary,
         style = RevScopeType.bodySmall,
     )
@@ -248,19 +264,23 @@ private fun FilasComparacion(comparacion: TarjetaComparacion.Filas, expandida: B
 
 @Composable
 private fun FilaComparada(fila: FilaComparacion) {
+    val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     Surface(color = RevScopeColors.SurfaceHigh, shape = RoundedCornerShape(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(fila.metrica.etiqueta, color = RevScopeColors.TextPrimary, style = RevScopeType.label, modifier = Modifier.weight(1f, fill = false))
-                if (fila.veredicto != Veredicto.INFO) NivelBadge(fila.veredicto.nivel(), texto = fila.veredicto.texto())
+                Text(fila.metrica.etiqueta(resolver), color = RevScopeColors.TextPrimary, style = RevScopeType.label, modifier = Modifier.weight(1f, fill = false))
+                if (fila.veredicto != Veredicto.INFO) NivelBadge(fila.veredicto.nivel(), texto = fila.veredicto.etiqueta(resolver))
             }
             Text(
-                "Base: ${fila.base} · Ahora: ${fila.ahora}",
+                stringResource(R.string.workshop_session_baseline_and_current, fila.base, fila.ahora),
                 color = RevScopeColors.TextPrimary,
                 style = RevScopeType.body.conCifrasTabulares(),
             )
             Text(fila.cambio, color = RevScopeColors.TextSecondary, style = RevScopeType.body)
-            fila.referencia?.let { Text("Umbral $it", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall) }
+            fila.referencia?.let {
+                Text(stringResource(R.string.workshop_session_threshold, it), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+            }
         }
     }
 }
@@ -268,10 +288,10 @@ private fun FilaComparada(fila: FilaComparacion) {
 @Composable
 private fun TarjetaSugeridas(sugeridas: List<PruebaSugeridaUi>) {
     TarjetaTaller {
-        Text("Pruebas sugeridas", color = RevScopeColors.TextPrimary, style = RevScopeType.title)
+        Text(stringResource(R.string.workshop_session_suggested_tests), color = RevScopeColors.TextPrimary, style = RevScopeType.title)
         if (sugeridas.isEmpty()) {
             Text(
-                "Todavía no hay sugerencias: lee los códigos o anota síntomas.",
+                stringResource(R.string.workshop_session_no_suggestions),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.body,
             )
@@ -286,7 +306,7 @@ private fun TarjetaSugeridas(sugeridas: List<PruebaSugeridaUi>) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(Icons.Filled.Info, contentDescription = null, tint = RevScopeColors.TextSecondary, modifier = Modifier.size(16.dp).padding(top = 2.dp))
             Text(
-                "Orientativas: salen de los códigos y los síntomas, no son un diagnóstico.",
+                stringResource(R.string.workshop_session_suggestions_caveat),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
@@ -296,11 +316,14 @@ private fun TarjetaSugeridas(sugeridas: List<PruebaSugeridaUi>) {
 
 private fun LazyListScope.lineaDeTiempo(estado: SesionTallerEstado, onAlternar: (Long) -> Unit) {
     item(key = "linea-titulo") {
-        EncabezadoSeccion("Línea de tiempo · ${if (estado.eventos.size == 1) "1 evento" else "${estado.eventos.size} eventos"}")
+        val count = estado.eventos.size
+        EncabezadoSeccion(
+            pluralStringResource(R.plurals.workshop_session_timeline_title, count, count),
+        )
     }
     if (estado.eventos.isEmpty()) {
         item(key = "linea-vacia") {
-            EmptyState("Todavía no hay nada anotado. Lee los códigos, corre un chequeo o agrega una nota para empezar.")
+            EmptyState(stringResource(R.string.workshop_session_timeline_empty))
         }
         return
     }
@@ -319,8 +342,10 @@ private fun BarraInferiorSesion(agregar: DisponibilidadAgregar, onAgregar: () ->
     Surface(color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.navigationBarsPadding().padding(16.dp)) {
             when (agregar) {
-                DisponibilidadAgregar.Disponible -> BotonPrincipalTaller("Agregar a la sesión", onClick = onAgregar)
-                DisponibilidadAgregar.SesionCerrada -> AvisoBarra("Sesión cerrada: se puede consultar pero ya no recibe lecturas.")
+                DisponibilidadAgregar.Disponible ->
+                    BotonPrincipalTaller(stringResource(R.string.workshop_session_add_title), onClick = onAgregar)
+                DisponibilidadAgregar.SesionCerrada ->
+                    AvisoBarra(stringResource(R.string.workshop_session_closed_read_only))
                 is DisponibilidadAgregar.OtroVehiculo -> AvisoBarra(agregar.mensaje)
             }
         }
@@ -334,3 +359,13 @@ private fun AvisoBarra(texto: String) {
         Text(texto, color = RevScopeColors.TextPrimary, style = RevScopeType.body)
     }
 }
+
+private fun Veredicto.etiqueta(resolver: StringResolver): String =
+    resolver.get(
+        when (this) {
+            Veredicto.OK -> R.string.workshop_session_verdict_ok
+            Veredicto.ATENCION -> R.string.workshop_session_verdict_attention
+            Veredicto.FALLA -> R.string.workshop_session_verdict_failure
+            Veredicto.INFO -> R.string.workshop_session_verdict_info
+        },
+    )

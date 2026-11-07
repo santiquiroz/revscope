@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.sesion.AnalisisSesion
 import com.revscope.core.obd.taller.sesion.EventoTaller
 import com.revscope.core.obd.taller.sesion.FilaComparacion
@@ -9,6 +10,7 @@ import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.Veredicto
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
 import com.revscope.core.obd.taller.sesion.etiqueta
+import com.revscope.feature.workshop.R
 import java.io.File
 import java.time.ZoneId
 
@@ -83,76 +85,81 @@ internal object EstadoPantallaSesion {
 
     const val MAX_SUGERIDAS = 3
 
-    fun de(datos: DatosSesion, ui: UiSesion, zona: ZoneId): SesionTallerEstado {
+    fun de(datos: DatosSesion, ui: UiSesion, zona: ZoneId, resolver: StringResolver): SesionTallerEstado {
         val sesion = datos.sesion
         val ordenados = LineaDeTiempo.ordenar(datos.eventos)
         return SesionTallerEstado(
             cargando = false,
             titulo = sesion.titulo,
-            subtitulo = subtitulo(sesion, datos.vehiculoActivo, zona),
+            subtitulo = subtitulo(sesion, datos.vehiculoActivo, zona, resolver),
             abierta = sesion.abierta,
-            estadoTexto = estadoTexto(sesion, zona),
-            sintomas = sesion.sintomas.sortedBy { it.ordinal }.map { it.etiqueta },
+            estadoTexto = estadoTexto(sesion, zona, resolver),
+            sintomas = sesion.sintomas.sortedBy { it.ordinal }.map { it.etiqueta(resolver) },
             sintomasTexto = sesion.sintomasTexto,
             notas = sesion.notas,
-            odometro = sesion.odometroKm?.let { "${Miles.agrupar(it)} km" },
+            odometro = sesion.odometroKm?.let { resolver.get(R.string.workshop_session_odometer_value, Miles.agrupar(it)) },
             codigos = datos.analisis.codigos,
-            comparacion = comparacion(datos.analisis, zona),
-            sugeridas = datos.analisis.sugeridas.take(MAX_SUGERIDAS).map { PruebaSugeridaUi(it.accion.etiqueta, it.motivo) },
-            eventos = ordenados.map { evento(it, sesion.inicio, zona) },
-            agregar = disponibilidad(sesion, datos.vehiculoActivo),
+            comparacion = comparacion(datos.analisis, zona, resolver),
+            sugeridas = datos.analisis.sugeridas.take(MAX_SUGERIDAS).map { PruebaSugeridaUi(it.accion.etiqueta(resolver), it.motivo) },
+            eventos = ordenados.map { evento(it, sesion.inicio, zona, resolver) },
+            agregar = disponibilidad(sesion, datos.vehiculoActivo, resolver),
             adaptadorConectado = datos.conectado,
             loQueSeBorra = LoQueSeBorra(datos.eventos.size, datos.eventos.count { it.adjunto != null }),
             ui = ui,
         )
     }
 
-    fun disponibilidad(sesion: SesionTaller, activo: VehiculoTaller?): DisponibilidadAgregar = when {
+    fun disponibilidad(sesion: SesionTaller, activo: VehiculoTaller?, resolver: StringResolver): DisponibilidadAgregar = when {
         !sesion.abierta -> DisponibilidadAgregar.SesionCerrada
         activo?.id != sesion.vehiculoId -> DisponibilidadAgregar.OtroVehiculo(
-            "Esta sesión es de otro vehículo. Elígelo como vehículo activo para agregarle lecturas.",
+            resolver.get(R.string.workshop_session_other_vehicle),
         )
         else -> DisponibilidadAgregar.Disponible
     }
 
-    private fun subtitulo(sesion: SesionTaller, activo: VehiculoTaller?, zona: ZoneId): String {
-        val fecha = FechasTaller.fecha(sesion.inicio, zona)
+    private fun subtitulo(sesion: SesionTaller, activo: VehiculoTaller?, zona: ZoneId, resolver: StringResolver): String {
+        val fecha = FechasSesion.fecha(sesion.inicio, zona, resolver.locale)
         return if (activo?.id == sesion.vehiculoId) "${activo.nombre} · $fecha" else fecha
     }
 
-    private fun estadoTexto(sesion: SesionTaller, zona: ZoneId): String {
-        val cierre = sesion.cierre ?: return "Abierta desde las ${FechasTaller.hora(sesion.inicio, zona)}"
-        return "Cerrada el ${FechasTaller.fechaHora(cierre, zona)}"
+    private fun estadoTexto(sesion: SesionTaller, zona: ZoneId, resolver: StringResolver): String {
+        val cierre = sesion.cierre
+            ?: return resolver.get(R.string.workshop_session_opened_at, FechasSesion.hora(sesion.inicio, zona, resolver.locale))
+        return resolver.get(R.string.workshop_session_closed_at, FechasSesion.fechaHora(cierre, zona, resolver.locale))
     }
 
-    private fun comparacion(analisis: AnalisisSesion, zona: ZoneId): TarjetaComparacion {
+    private fun comparacion(analisis: AnalisisSesion, zona: ZoneId, resolver: StringResolver): TarjetaComparacion {
         val base = analisis.chequeoBase ?: return TarjetaComparacion.SinBase
-        val fecha = FechasTaller.fecha(base.instante, zona)
+        val fecha = FechasSesion.fecha(base.instante, zona, resolver.locale)
         if (analisis.comparacion.isEmpty()) return TarjetaComparacion.SinChequeoAhora(fecha)
         return TarjetaComparacion.Filas(fecha, analisis.comparacion)
     }
 
-    private fun evento(evento: EventoTaller, inicio: Long, zona: ZoneId): EventoUi {
+    private fun evento(evento: EventoTaller, inicio: Long, zona: ZoneId, resolver: StringResolver): EventoUi {
         return EventoUi(
             id = evento.id,
-            hora = horaEvento(evento.instante, inicio, zona),
+            hora = horaEvento(evento.instante, inicio, zona, resolver),
             tipo = evento.tipo,
             titulo = evento.titulo,
             resumen = evento.resumen,
             veredicto = evento.veredicto,
-            detalle = detalle(evento, zona),
+            detalle = detalle(evento, zona, resolver),
         )
     }
 
-    private fun horaEvento(instante: Long, inicio: Long, zona: ZoneId): String {
-        val hora = FechasTaller.hora(instante, zona)
-        return if (FechasTaller.mismoDia(instante, inicio, zona)) hora else "${FechasTaller.dia(instante, zona)} · $hora"
+    private fun horaEvento(instante: Long, inicio: Long, zona: ZoneId, resolver: StringResolver): String {
+        val hora = FechasSesion.hora(instante, zona, resolver.locale)
+        return if (FechasTaller.mismoDia(instante, inicio, zona)) hora else "${FechasSesion.dia(instante, zona, resolver.locale)} · $hora"
     }
 
-    private fun detalle(evento: EventoTaller, zona: ZoneId): List<String> = listOfNotNull(
-        "Hora exacta: ${FechasTaller.fecha(evento.instante, zona)}, ${FechasTaller.horaExacta(evento.instante, zona)}",
-        if (evento.origen == OrigenEvento.MCP) "Anotado desde el PC (MCP)" else "Anotado por la app",
-        evento.adjunto?.let { "Archivo guardado en la sesión: ${File(it).name}" },
+    private fun detalle(evento: EventoTaller, zona: ZoneId, resolver: StringResolver): List<String> = listOfNotNull(
+        resolver.get(
+            R.string.workshop_session_exact_time,
+            FechasSesion.fecha(evento.instante, zona, resolver.locale),
+            FechasSesion.horaExacta(evento.instante, zona, resolver.locale),
+        ),
+        resolver.get(if (evento.origen == OrigenEvento.MCP) R.string.workshop_session_added_from_pc else R.string.workshop_session_added_from_app),
+        evento.adjunto?.let { resolver.get(R.string.workshop_session_saved_file, File(it).name) },
     )
 }
 
