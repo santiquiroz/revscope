@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ControladorPruebaGuiada: rechazos al iniciar -->
+    <string name="obd_catalogo_rechazo_ya_en_curso">Ya hay una prueba guiada en curso: termínala o cancélala</string>
+    <string name="obd_catalogo_rechazo_captura_activa">Detén la captura rápida primero</string>
+    <string name="obd_catalogo_rechazo_no_disponible">La prueba «%1$s» todavía no está disponible</string>
+
+    <!-- ControladorPruebaGuiada: errores de captura -->
+    <string name="obd_catalogo_error_iniciar_captura">No se pudo iniciar la captura: %1$s</string>
+    <string name="obd_catalogo_moto_en_movimiento">Moto en movimiento (%1$s km/h): la prueba se hace con la moto detenida</string>
+
+    <!-- ControladorPruebaGuiada: motivos de fin/cancelación -->
+    <string name="obd_catalogo_motivo_enlace_perdido">Se perdió el enlace con el adaptador</string>
+    <string name="obd_catalogo_motivo_captura_detenida_otra">Se detuvo la captura rápida desde otra pantalla o el MCP</string>
+    <string name="obd_catalogo_motivo_captura_detenida">La captura se detuvo: %1$s</string>
+    <string name="obd_catalogo_motivo_usuario">Cancelada por el usuario</string>
+
+    <!-- ControladorPruebaGuiada: acciones rechazadas -->
+    <string name="obd_catalogo_fallo_sin_prueba_anterior">No hay una prueba anterior que repetir</string>
+    <string name="obd_catalogo_fallo_paso_graba_solo">Este paso graba solo: espera a que termine la cuenta</string>
+    <string name="obd_catalogo_fallo_sin_prueba">No hay una prueba guiada en curso</string>
+    <string name="obd_catalogo_fallo_sin_captura">La captura de la prueba no está activa</string>
+
+    <!-- ControladorPruebaGuiada: anuncios de voz / UI -->
+    <string name="obd_catalogo_anuncio_sostener">Sostén %1$d segundos</string>
+    <string name="obd_catalogo_anuncio_grabando_tiempo">Grabando %1$d segundos.</string>
+    <string name="obd_catalogo_anuncio_posicionando">Cuando esté en posición, toca Listo.</string>
+    <string name="obd_catalogo_anuncio_paso">Paso %1$d de %2$d. %3$s. %4$s. %5$s</string>
+    <string name="obd_catalogo_anuncio_terminada">Prueba terminada. %1$s</string>
+    <string name="obd_catalogo_anuncio_cancelada">Prueba cancelada</string>
+    <string name="obd_catalogo_anuncio_fallida">La prueba no terminó. %1$s</string>
+    <string name="obd_catalogo_error_analizar">No se pudo analizar la prueba</string>
+
+    <!-- CatalogoPruebas: instrucciones de pasos (TPS barrido) -->
+    <string name="obd_catalogo_paso_tps_cerrado_1_instruccion">Suelta el acelerador por completo y no lo toques</string>
+    <string name="obd_catalogo_paso_tps_medio_instruccion">Lleva el acelerador a la mitad del recorrido y sostenlo quieto</string>
+    <string name="obd_catalogo_paso_tps_a_fondo_instruccion">Abre el acelerador hasta el tope y sostenlo</string>
+    <string name="obd_catalogo_paso_tps_cerrado_2_instruccion">Suelta el acelerador por completo otra vez</string>
+    <string name="obd_catalogo_paso_tps_barrido_lento_instruccion">De cerrado a fondo y de vuelta, despacio y parejo</string>
+
+    <!-- CatalogoPruebas: instrucciones de pasos (mínimo y retorno) -->
+    <string name="obd_catalogo_paso_minimo_instruccion">No toques el acelerador: deja el motor en mínimo</string>
+    <string name="obd_catalogo_paso_retorno_instruccion">Acelera hasta unas 3 000 rpm y suelta de golpe</string>
+
+    <!-- CatalogoPruebas: instrucciones de pasos (arranque en frío) -->
+    <string name="obd_catalogo_paso_arranque_contacto_instruccion">Contacto puesto y motor apagado: no arranques todavía</string>
+    <string name="obd_catalogo_paso_arranque_instruccion">Arranca ahora, como lo haces siempre</string>
+    <string name="obd_catalogo_paso_calentamiento_instruccion">Déjalo en mínimo sin acelerar; puedes terminar antes de llegar a 60 °C</string>
+
+    <!-- CatalogoPruebas: instrucciones de pasos (batería y carga) -->
+    <string name="obd_catalogo_paso_bateria_contacto_instruccion">Contacto puesto y motor apagado: no arranques todavía</string>
+    <string name="obd_catalogo_paso_bateria_arranque_instruccion">Arranca ahora, como lo haces siempre</string>
+    <string name="obd_catalogo_paso_bateria_minimo_instruccion">Déjalo en mínimo sin acelerar</string>
+    <string name="obd_catalogo_paso_bateria_rpm_altas_instruccion">Acelera en neutro hasta unas 3 000-4 000 rpm y sostenlas</string>
+
+    <!-- CatalogoPruebas: instrucciones de pasos (MAP contra barométrica) -->
+    <string name="obd_catalogo_paso_mapbaro_contacto_instruccion">Contacto puesto y motor apagado: no toques el acelerador</string>
+
+    <!-- CatalogoPruebas: textos de precondiciones que no están en strings_pruebas_precondicion.xml -->
+    <string name="obd_catalogo_precondicion_tps_motor_apagado_que_hacer">Apaga el motor y deja el contacto puesto: a fondo con el motor encendido no es un barrido seguro</string>
+    <string name="obd_catalogo_precondicion_tps_pid_no_disponible_que_hacer">Mide la señal del TPS con el multímetro (plantilla TPS)</string>
+    <string name="obd_catalogo_precondicion_minimo_rpm_no_disponible_que_hacer">Sin RPM no se puede medir el mínimo: revisa el enlace con la ECU</string>
+    <string name="obd_catalogo_precondicion_ect_nombre">Temperatura del motor</string>
+    <string name="obd_catalogo_precondicion_arranque_motor_apagado_que_hacer">Apaga el motor y deja el contacto puesto: la prueba empieza antes de arrancar</string>
+    <string name="obd_catalogo_precondicion_ect_no_disponible_que_hacer">Sin ella no se puede seguir el calentamiento: mide el sensor con el multímetro (plantilla ECT)</string>
+    <string name="obd_catalogo_precondicion_bateria_motor_apagado_que_hacer">Apaga el motor y deja el contacto puesto: la prueba mide el reposo antes de arrancar</string>
+    <string name="obd_catalogo_precondicion_mapbaro_motor_apagado_que_hacer">Apaga el motor y deja el contacto puesto: con el motor girando hay vacío y el MAP baja</string>
+    <string name="obd_catalogo_precondicion_mapbaro_pid_no_disponible_que_hacer">Mide la señal del MAP con el multímetro (plantilla MAP)</string>
+</resources>

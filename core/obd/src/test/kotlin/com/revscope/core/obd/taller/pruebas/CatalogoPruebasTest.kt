@@ -98,7 +98,7 @@ class CatalogoPruebasTest {
         assertEquals(listOf("MINIMO", "RETORNO_1", "RETORNO_2", "RETORNO_3"), d.pasos.map { it.clave })
         assertEquals(ModoPaso.Grabar(45_000), d.pasos.first().modo)
         assertTrue(d.pasos.drop(1).all { it.modo == ModoPaso.Grabar(8_000) && it.descartarInicioMs == 0L })
-        assertTrue(d.pasos.drop(1).all { it.instruccion.contains("3 000 rpm") })
+        assertTrue(d.pasos.drop(1).all { it.instruccion(resolver).contains("3 000 rpm") })
         assertEquals("0C", d.pidPrincipal(d.pasos.first()))
     }
 

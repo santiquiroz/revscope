@@ -30,8 +30,8 @@ data class DefinicionPrueba(
 
     fun titulo(resolver: StringResolver): String = tipo.titulo(resolver)
 
-    // Los pasos con [PasoPrueba.tituloRes] quedan con su título en el idioma del resolutor.
-    fun resuelta(resolver: StringResolver): DefinicionPrueba = copy(pasos = pasos.map { it.copy(titulo = it.titulo(resolver)) })
+    // Los pasos con [PasoPrueba.tituloRes] e [instruccionRes] quedan con su título e instrucción en el idioma del resolutor.
+    fun resuelta(resolver: StringResolver): DefinicionPrueba = copy(pasos = pasos.map { it.copy(titulo = it.titulo(resolver), instruccion = it.instruccion(resolver)) })
 
     // El PID que se muestra en vivo en cada paso: el del paso si lo dice, si no el primero de la prueba.
     fun pidPrincipal(paso: PasoPrueba): String = paso.pidPrincipal ?: pids.first()
@@ -46,17 +46,20 @@ data class DefinicionPrueba(
 }
 
 // [tituloRes], si está, manda sobre [titulo]: el catálogo no tiene resolutor y la definición se resuelve al usarla.
+// [instruccionRes] igual: la instrucción del paso en el idioma del resolutor.
 data class PasoPrueba(
     val clave: String,
     val titulo: String = "",
-    val instruccion: String,
+    val instruccion: String = "",
     val modo: ModoPaso,
     val descartarInicioMs: Long = 1_000,
     val terminarCuando: CriterioFin? = null,
     val pidPrincipal: String? = null,
     @StringRes val tituloRes: Int? = null,
+    @StringRes val instruccionRes: Int? = null,
 ) {
     fun titulo(resolver: StringResolver): String = tituloRes?.let { resolver.get(it) } ?: titulo
+    fun instruccion(resolver: StringResolver): String = instruccionRes?.let { resolver.get(it) } ?: instruccion
 }
 
 sealed interface ModoPaso {

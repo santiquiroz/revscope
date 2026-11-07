@@ -89,7 +89,7 @@ internal object MapeoPaso {
             indice = e.indice + 1,
             total = e.total,
             titulo = e.paso.titulo,
-            instruccion = e.paso.instruccion,
+            instruccion = e.paso.instruccion(resolver),
             subtexto = TextosPrueba.subtexto(e.fase, e.paso.modo),
             fase = e.fase,
             restanteS = restanteS,
