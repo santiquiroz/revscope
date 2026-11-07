@@ -18,6 +18,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,9 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.ObdSessionManager
@@ -287,12 +290,13 @@ private fun rememberAvisoTemporal(connectionVm: ConnectionViewModel): String? {
 @Composable
 private fun rememberAlertaActiva(connectionVm: ConnectionViewModel, resolver: StringResolver): String? {
     var alerta by remember { mutableStateOf<String?>(null) }
+    val system by rememberUpdatedState(rememberUnitFormatter().system)
     LaunchedEffect(Unit) {
         connectionVm.alerts.collect { alert -> alerta = alert.message }
     }
     LaunchedEffect(Unit) {
         connectionVm.launchResults.collect { result ->
-            alerta = textoArrancada(result.to60Ms, result.to100Ms, resolver) ?: alerta
+            alerta = textoArrancada(result.to60Ms, result.to100Ms, result.to60MphMs, system, resolver) ?: alerta
         }
     }
     LaunchedEffect(alerta) {
@@ -304,8 +308,24 @@ private fun rememberAlertaActiva(connectionVm: ConnectionViewModel, resolver: St
     return alerta
 }
 
-internal fun textoArrancada(to60Ms: Long?, to100Ms: Long?, resolver: StringResolver): String? {
-    fun segundos(ms: Long) = LocaleNumbers.decimal(ms / 1000.0, 2, resolver.locale)
+internal fun textoArrancada(
+    to60Ms: Long?,
+    to100Ms: Long?,
+    to60MphMs: Long?,
+    system: UnitSystem,
+    resolver: StringResolver,
+): String? =
+    if (system == UnitSystem.METRIC) {
+        textoArrancadaMetrica(to60Ms, to100Ms, resolver)
+    } else {
+        to60MphMs?.let { resolver.get(R.string.drive_launch_0_60_mph, segundosArrancada(it, resolver)) }
+    }
+
+private fun segundosArrancada(ms: Long, resolver: StringResolver): String =
+    LocaleNumbers.decimal(ms / 1000.0, 2, resolver.locale)
+
+private fun textoArrancadaMetrica(to60Ms: Long?, to100Ms: Long?, resolver: StringResolver): String? {
+    fun segundos(ms: Long) = segundosArrancada(ms, resolver)
     return when {
         to100Ms != null && to60Ms != null ->
             resolver.get(R.string.drive_launch_0_100_with_0_60, segundos(to100Ms), segundos(to60Ms))

@@ -58,6 +58,7 @@
     <string name="drive_launch_0_100_with_0_60">"🏁 0-100 en %1$ss  (0-60: %2$ss)"</string>
     <string name="drive_launch_0_100">🏁 0-100 en %1$ss</string>
     <string name="drive_launch_0_60">🏁 0-60 en %1$ss</string>
+    <string name="drive_launch_0_60_mph">🏁 0-60 mph en %1$ss</string>
 
     <!-- Encabezado -->
     <string name="drive_link_connected">Adaptador conectado</string>

@@ -201,6 +201,12 @@ val MIGRATION_19_20 = object : Migration(19, 20) {
     }
 }
 
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `sessions` ADD COLUMN `best0to60mphMs` INTEGER")
+    }
+}
+
 // Al final del archivo: los val de nivel superior se inicializan en orden de aparición.
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_9_10,
@@ -214,4 +220,5 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_17_18,
     MIGRATION_18_19,
     MIGRATION_19_20,
+    MIGRATION_20_21,
 )
