@@ -24,7 +24,7 @@
     <string name="workshop_maintenance_export_csv">Export CSV</string>
     <string name="workshop_maintenance_activate_vehicle">Activate a vehicle in Profiles to set up its maintenance.</string>
     <string name="workshop_maintenance_choose_vehicle">Choose vehicle</string>
-    <string name="workshop_maintenance_odometer_hint">Enter your vehicle&apos;s current mileage to get started</string>
+    <string name="workshop_maintenance_odometer_hint">Enter your vehicle\'s current mileage to get started</string>
     <string name="workshop_maintenance_current_mileage">Current mileage</string>
     <string name="workshop_maintenance_save">Save</string>
     <string name="workshop_maintenance_edit_interval">Edit interval</string>
@@ -108,7 +108,7 @@
     <string name="workshop_odometer_unavailable_description">Your vehicle does not expose standard PID 01 A6 — common on motorcycles and vehicles made before 2015. Use the Mode 22 scanner (Workshop → Advanced scanner) to find the manufacturer-specific DID.</string>
     <string name="workshop_odometer_last_ecu_reading">Last ECU reading</string>
     <string name="workshop_odometer_distance_km">%1$d km</string>
-    <string name="workshop_odometer_error_unsupported">Your vehicle does not expose the odometer over OBD (PID 01 A6) — use the Mode 22 scanner to find the manufacturer&apos;s DID</string>
+    <string name="workshop_odometer_error_unsupported">Your vehicle does not expose the odometer over OBD (PID 01 A6) — use the Mode 22 scanner to find the manufacturer\'s DID</string>
     <string name="workshop_odometer_error_reading">Could not read the odometer — try again</string>
     <string name="workshop_odometer_error_not_connected">Connect the adapter first</string>
 
