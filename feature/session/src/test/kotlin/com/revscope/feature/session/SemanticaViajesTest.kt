@@ -9,7 +9,6 @@ import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.designsystem.RevScopeTheme
-import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
