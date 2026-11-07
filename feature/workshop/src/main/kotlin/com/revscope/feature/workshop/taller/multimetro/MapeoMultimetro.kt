@@ -25,7 +25,7 @@ internal object MapeoMultimetro {
     private val SIN_CABLES_DE_COLOR = setOf(SensorMultimetro.BATERIA, SensorMultimetro.INYECTOR)
 
     fun ui(l: LocalMultimetro, resolver: StringResolver): MultimetroUi {
-        val ctx = l.contexto ?: return sinContexto(l)
+        val ctx = l.contexto ?: return sinContexto(l, resolver)
         val plantilla = plantillaEfectiva(ctx, l.colores, resolver)
         val lecturas = lecturas(plantilla, l.textos)
         val veredicto = lecturas.takeIf { it.isNotEmpty() }
@@ -44,7 +44,7 @@ internal object MapeoMultimetro {
         )
     }
 
-    private fun sinContexto(l: LocalMultimetro) = MultimetroUi(
+    private fun sinContexto(l: LocalMultimetro, resolver: StringResolver) = MultimetroUi(
         cargando = l.cargando,
         error = l.error,
         sensor = l.sensor,
