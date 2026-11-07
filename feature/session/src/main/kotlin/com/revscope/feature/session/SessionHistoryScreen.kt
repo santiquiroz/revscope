@@ -55,7 +55,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.designsystem.AccionEstado
+import com.revscope.core.designsystem.LocalUnitSystem
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.designsystem.ConfirmarDestructivoDialog
 import com.revscope.core.designsystem.EmptyState
 import com.revscope.core.designsystem.FranjaSelectorVehiculo
@@ -214,9 +217,11 @@ internal fun ConfirmarBorrarViajeDialog(
     onConfirmar: () -> Unit,
     onCancelar: () -> Unit,
 ) {
+    val system = LocalUnitSystem.current
+    val units = remember(system, resolver.locale) { UnitFormatter(system, resolver.locale) }
     ConfirmarDestructivoDialog(
         titulo = resolver.get(R.string.trips_delete_trip_title),
-        mensaje = descripcionViaje(sesion, resolver),
+        mensaje = descripcionViaje(sesion, resolver, units),
         avisos = listOf(resolver.get(R.string.trips_delete_trip_message)),
         textoConfirmar = resolver.get(R.string.trips_delete_trip_confirm),
         onConfirmar = onConfirmar,
@@ -224,11 +229,12 @@ internal fun ConfirmarBorrarViajeDialog(
     )
 }
 
-internal fun descripcionViaje(sesion: SessionEntity, resolver: StringResolver): String =
+internal fun descripcionViaje(sesion: SessionEntity, resolver: StringResolver, units: UnitFormatter): String =
     resolver.get(
         R.string.trips_trip_of,
         SimpleDateFormat("dd MMM yyyy  HH:mm", resolver.locale).format(Date(sesion.startedAt)), // i18n-ignore
-        LocaleNumbers.decimal(sesion.distanceKm.toDouble(), 1, resolver.locale),
+        LocaleNumbers.decimal(units.distance(sesion.distanceKm.toDouble()), 1, resolver.locale),
+        units.distanceLabel(),
     )
 
 @Composable
@@ -241,6 +247,7 @@ internal fun SessionItem(
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val dateFormat = remember(locale) { SimpleDateFormat("dd MMM yyyy  HH:mm", locale) } // i18n-ignore
+    val units = rememberUnitFormatter()
     val durationMs = (session.endedAt ?: System.currentTimeMillis()) - session.startedAt
     val durationMin = TimeUnit.MILLISECONDS.toMinutes(durationMs)
     val durationSec = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60
@@ -280,10 +287,13 @@ internal fun SessionItem(
                     value = stringResource(R.string.trips_duration_format, durationMin, durationSec),
                 )
                 StatChip(label = stringResource(R.string.trips_chip_max_rpm), value = session.maxRpm.toString())
-                StatChip(label = stringResource(R.string.trips_chip_max_speed), value = session.maxSpeed.toString())
                 StatChip(
-                    label = stringResource(R.string.trips_chip_distance),
-                    value = LocaleNumbers.decimal(session.distanceKm.toDouble(), 1, locale),
+                    label = stringResource(R.string.trips_chip_max_speed, units.speedLabel()),
+                    value = LocaleNumbers.decimal(units.speed(session.maxSpeed.toDouble()), 0, locale),
+                )
+                StatChip(
+                    label = units.distanceLabel(),
+                    value = LocaleNumbers.decimal(units.distance(session.distanceKm.toDouble()), 1, locale),
                 )
             }
         }

@@ -40,9 +40,9 @@
     <string name="trips_avg_rpm">Avg RPM</string>
     <string name="trips_max_accel">Max throttle</string>
     <string name="trips_fuel_cost">Fuel cost (COP)</string>
-    <string name="trips_0_60">🏁 0–60 km/h</string>
-    <string name="trips_0_100">🏁 0–100 km/h</string>
-    <string name="trips_route_summary">GPS route — %1$s km · max %2$d km/h (GPS)</string>
+    <string name="trips_0_60">🏁 0–60</string>
+    <string name="trips_0_100">🏁 0–100</string>
+    <string name="trips_route_summary">GPS route — %1$s · max %2$s (GPS)</string>
     <string name="trips_route_legend">blue = slow · yellow = medium · red = fast</string>
     <string name="trips_route_racing">racing line — red points = hard braking</string>
     <string name="trips_friction_circle">Friction circle — grip used (red = braking)</string>
@@ -55,7 +55,7 @@
     <string name="trips_avg_heart">Avg heart</string>
     <string name="trips_max_heart">Max heart</string>
     <string name="trips_rpm_chart">RPM during the trip</string>
-    <string name="trips_speed_chart">Speed during the trip (km/h)</string>
+    <string name="trips_speed_chart">Speed during the trip (%1$s)</string>
     <string name="trips_heart_chart">Pilot heart rate (bpm)</string>
     <string name="trips_time_axis">time (mm:ss)</string>
     <string name="trips_ai_analysis">AI analysis</string>
@@ -78,7 +78,7 @@
     <string name="trips_card_best_lap">BEST LAP</string>
     <string name="trips_card_heart_max">MAX BPM</string>
     <string name="trips_card_lean_max">MAX LEAN</string>
-    <string name="trips_trip_of">Trip on %1$s · %2$s km</string>
+    <string name="trips_trip_of">Trip on %1$s · %2$s %3$s</string>
     <string name="trips_trip_not_found">Trip not found</string>
     <string name="trips_report_load_error">Error loading the report</string>
     <string name="trips_compare_run_a">A · %1$s</string>
@@ -101,8 +101,6 @@
     <string name="trips_lap_step">%1$d:%2$02d.%3$02d%4$s</string>
     <string name="trips_card_gps_footer">github.com/santiquiroz/revscope</string>
     <string name="trips_duration_format">%1$dm %2$02ds</string>
-    <string name="trips_distance_value">%1$s km</string>
-    <string name="trips_speed_value">%1$s km/h</string>
     <string name="trips_g_value">%1$s G</string>
     <string name="trips_lean_value">%1$s° lean</string>
     <string name="trips_lap_g">%1$sG</string>
@@ -120,6 +118,5 @@
     <string name="trips_my_vehicle">My vehicle</string>
     <string name="trips_debrief_error">Error generating analysis</string>
     <string name="trips_chip_max_rpm">Max RPM</string>
-    <string name="trips_chip_max_speed">Max km/h</string>
-    <string name="trips_chip_distance">km</string>
+    <string name="trips_chip_max_speed">Max %1$s</string>
 </resources>

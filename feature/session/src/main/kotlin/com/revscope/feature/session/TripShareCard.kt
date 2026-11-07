@@ -10,6 +10,8 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,9 +55,9 @@ object TripShareCard {
         val showLean: Boolean = true,
     )
 
-    fun render(context: Context, resolver: StringResolver, data: CardData): Uri? = runCatching {
+    fun render(context: Context, resolver: StringResolver, units: UnitFormatter, data: CardData): Uri? = runCatching {
         val bitmap = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)
-        draw(Canvas(bitmap), data, resolver)
+        draw(Canvas(bitmap), stats(data, resolver, units), data, resolver)
         val dir = File(context.cacheDir, "exports").apply { mkdirs() }
         val file = File(dir, "revscope_trip_card.png")
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 95, it) }
@@ -63,7 +65,7 @@ object TripShareCard {
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }.getOrNull()
 
-    private fun draw(canvas: Canvas, data: CardData, resolver: StringResolver) {
+    private fun draw(canvas: Canvas, stats: List<Pair<String, String>>, data: CardData, resolver: StringResolver) {
         canvas.drawColor(BG)
         val title = paint(ACCENT, 64f, bold = true)
         val label = paint(MUTED, 34f)
@@ -86,34 +88,6 @@ object TripShareCard {
         }
 
         // Stats grid: 2 columns
-        val stats = buildList {
-            add(resolver.get(R.string.trips_card_distance) to resolver.get(
-                R.string.trips_distance_value,
-                LocaleNumbers.decimal(data.distanceKm.toDouble(), 1, resolver.locale),
-            ))
-            add(resolver.get(R.string.trips_card_duration) to formatDuration(data.durationMs, resolver))
-            add(resolver.get(R.string.trips_card_max_speed) to resolver.get(R.string.trips_speed_value, data.maxSpeed))
-            add(resolver.get(R.string.trips_card_max_rpm) to data.maxRpm.toString())
-            data.best0to100Ms?.let { add(resolver.get(R.string.trips_card_0_100) to "%.2fs".format(Locale.ROOT, it / 1000.0)) }
-            data.maxLateralG?.let {
-                add(resolver.get(R.string.trips_card_g_lat) to resolver.get(
-                    R.string.trips_g_value,
-                    LocaleNumbers.decimal(it.toDouble(), 2, resolver.locale),
-                ))
-            }
-            if (data.showLean) data.maxLeanDeg?.let {
-                add(resolver.get(R.string.trips_card_lean_max) to resolver.get(
-                    R.string.trips_lean_value,
-                    LocaleNumbers.decimal(it.toDouble(), 0, resolver.locale),
-                ))
-            }
-            data.maxBpm?.let { add(resolver.get(R.string.trips_card_heart_max) to resolver.get(R.string.trips_card_bpm_value, it)) }
-            if (data.lapCount > 0) {
-                add(resolver.get(R.string.trips_card_laps) to data.lapCount.toString())
-                data.bestLapMs?.let { add(resolver.get(R.string.trips_card_best_lap) to formatLapTime(it)) }
-            }
-        }.take(8)
-
         val gridTop = 840f
         val rowH = 110f
         val colW = (WIDTH - 2 * MARGIN) / 2f
@@ -127,6 +101,38 @@ object TripShareCard {
         // Footer
         canvas.drawText(resolver.get(R.string.trips_card_gps_footer), MARGIN, HEIGHT - 60f, paint(MUTED, 30f))
     }
+
+    internal fun stats(data: CardData, resolver: StringResolver, units: UnitFormatter): List<Pair<String, String>> = buildList {
+        add(resolver.get(R.string.trips_card_distance) to units.formatDistance(data.distanceKm.toDouble()))
+        add(resolver.get(R.string.trips_card_duration) to formatDuration(data.durationMs, resolver))
+        add(resolver.get(R.string.trips_card_max_speed) to units.formatSpeed(data.maxSpeed.toDouble()))
+        add(resolver.get(R.string.trips_card_max_rpm) to data.maxRpm.toString())
+        data.best0to100Ms?.let { add(cardSprintLabel(resolver, units) to "%.2fs".format(Locale.ROOT, it / 1000.0)) }
+        data.maxLateralG?.let {
+            add(resolver.get(R.string.trips_card_g_lat) to resolver.get(
+                R.string.trips_g_value,
+                LocaleNumbers.decimal(it.toDouble(), 2, resolver.locale),
+            ))
+        }
+        if (data.showLean) data.maxLeanDeg?.let {
+            add(resolver.get(R.string.trips_card_lean_max) to resolver.get(
+                R.string.trips_lean_value,
+                LocaleNumbers.decimal(it.toDouble(), 0, resolver.locale),
+            ))
+        }
+        data.maxBpm?.let { add(resolver.get(R.string.trips_card_heart_max) to resolver.get(R.string.trips_card_bpm_value, it)) }
+        if (data.lapCount > 0) {
+            add(resolver.get(R.string.trips_card_laps) to data.lapCount.toString())
+            data.bestLapMs?.let { add(resolver.get(R.string.trips_card_best_lap) to formatLapTime(it)) }
+        }
+    }.take(8)
+
+    private fun cardSprintLabel(resolver: StringResolver, units: UnitFormatter): String =
+        if (units.system == UnitSystem.METRIC) {
+            resolver.get(R.string.trips_card_0_100)
+        } else {
+            resolver.get(R.string.trips_units_card_sprint, units.formatSpeed(SPRINT_LONG_KMH))
+        }
 
     private fun drawTrack(canvas: Canvas, track: List<Pair<Double, Double>>, x: Float, y: Float, w: Float, h: Float) {
         val midLatRad = Math.toRadians(track.map { it.first }.average())

@@ -63,10 +63,14 @@ import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import androidx.annotation.StringRes
 import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.obd.trip.EcoScoreCalculator
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -246,6 +250,7 @@ private fun ReportContent(
     val assignedVehicleName = profiles.find { it.id == session.vehicleProfileId }?.name ?: stringResource(R.string.trips_no_vehicle)
     val isMotorcycle by vm.isMotorcycle.collectAsState()
     val sessionDateFormat = remember(locale) { SimpleDateFormat("dd MMM yyyy  HH:mm", locale) } // i18n-ignore
+    val units = rememberUnitFormatter()
 
     Column(
         modifier = modifier
@@ -278,23 +283,12 @@ private fun ReportContent(
             )
             StatCard(
                 stringResource(R.string.trips_distance),
-                stringResource(R.string.trips_distance_value, LocaleNumbers.decimal(session.distanceKm.toDouble(), 1, locale)),
+                units.formatDistance(session.distanceKm.toDouble()),
                 Modifier.weight(1f),
             )
             StatCard(stringResource(R.string.trips_points), report.totalPoints.toString(), Modifier.weight(1f))
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            StatCard(stringResource(R.string.trips_max_speed), stringResource(R.string.trips_speed_value, session.maxSpeed), Modifier.weight(1f))
-            StatCard(
-                stringResource(R.string.trips_avg_speed),
-                stringResource(R.string.trips_speed_value, LocaleNumbers.decimal(report.avgSpeedKmh.toDouble(), 0, locale)),
-                Modifier.weight(1f),
-            )
-            StatCard(stringResource(R.string.trips_max_temp), "${report.maxCoolantTemp}°C", Modifier.weight(1f))
-        }
+        SpeedTempRow(session.maxSpeed, report.avgSpeedKmh, report.maxCoolantTemp, units)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -325,12 +319,12 @@ private fun ReportContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 StatCard(
-                    stringResource(R.string.trips_0_60),
+                    sprintLabel(R.string.trips_0_60, SPRINT_SHORT_KMH, units),
                     session.best0to60Ms?.let { "%.2fs".format(Locale.ROOT, it / 1000.0) } ?: "—",
                     Modifier.weight(1f),
                 )
                 StatCard(
-                    stringResource(R.string.trips_0_100),
+                    sprintLabel(R.string.trips_0_100, SPRINT_LONG_KMH, units),
                     session.best0to100Ms?.let { "%.2fs".format(Locale.ROOT, it / 1000.0) } ?: "—",
                     Modifier.weight(1f),
                 )
@@ -339,11 +333,7 @@ private fun ReportContent(
 
         if (report.gpsTrack.size >= 2) {
             Text(
-                stringResource(
-                    R.string.trips_route_summary,
-                    LocaleNumbers.decimal(report.gpsDistanceKm, 1, locale),
-                    report.gpsMaxSpeedKmh,
-                ),
+                routeSummary(report.gpsDistanceKm, report.gpsMaxSpeedKmh.toDouble(), units),
                 color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -506,7 +496,12 @@ private fun ReportContent(
             ChartSection(stringResource(R.string.trips_rpm_chart), report.rpmSeries, unit = "RPM", durationMs = durationMs)
         }
         if (report.speedSeries.size >= 2) {
-            ChartSection(stringResource(R.string.trips_speed_chart), report.speedSeries, unit = "km/h", durationMs = durationMs)
+            ChartSection(
+                stringResource(R.string.trips_speed_chart, units.speedLabel()),
+                remember(report.speedSeries, units) { speedSeriesIn(report.speedSeries, units) },
+                unit = units.speedLabel(),
+                durationMs = durationMs,
+            )
         }
         if (report.hrSeries.size >= 2) {
             ChartSection(stringResource(R.string.trips_heart_chart), report.hrSeries, unit = "bpm", durationMs = durationMs)
@@ -514,6 +509,36 @@ private fun ReportContent(
         Spacer(Modifier.height(16.dp))
     }
 }
+
+@Composable
+internal fun SpeedTempRow(maxSpeedKmh: Int, avgSpeedKmh: Float, maxCoolantC: Int, units: UnitFormatter) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        StatCard(stringResource(R.string.trips_max_speed), units.formatSpeed(maxSpeedKmh.toDouble()), Modifier.weight(1f))
+        StatCard(stringResource(R.string.trips_avg_speed), units.formatSpeed(avgSpeedKmh.toDouble()), Modifier.weight(1f))
+        StatCard(stringResource(R.string.trips_max_temp), units.formatTemperature(maxCoolantC.toDouble()), Modifier.weight(1f))
+    }
+}
+
+internal const val SPRINT_SHORT_KMH = 60.0
+internal const val SPRINT_LONG_KMH = 100.0
+
+@Composable
+internal fun sprintLabel(@StringRes metricLabel: Int, kmh: Double, units: UnitFormatter): String =
+    if (units.system == UnitSystem.METRIC) {
+        stringResource(metricLabel)
+    } else {
+        stringResource(R.string.trips_units_sprint, units.formatSpeed(kmh))
+    }
+
+@Composable
+internal fun routeSummary(distanceKm: Double, maxSpeedKmh: Double, units: UnitFormatter): String =
+    stringResource(R.string.trips_route_summary, units.formatDistance(distanceKm), units.formatSpeed(maxSpeedKmh))
+
+internal fun speedSeriesIn(seriesKmh: List<Float>, units: UnitFormatter): List<Float> =
+    seriesKmh.map { units.speed(it.toDouble()).toFloat() }
 
 @Composable
 private fun ChartSection(title: String, series: List<Float>, unit: String, durationMs: Long) {
