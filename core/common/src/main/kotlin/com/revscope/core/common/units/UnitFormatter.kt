@@ -41,6 +41,35 @@ class UnitFormatter(val system: UnitSystem, val locale: Locale) {
     fun formatVolume(l: Double, decimals: Int = 1): String = format(volume(l), decimals, volumeLabel())
     fun formatFuelEconomy(kmPerL: Double): String = format(fuelEconomy(kmPerL), 1, fuelEconomyLabel())
 
+    fun shortDistance(meters: Double): Measure =
+        if (imperialDistance) imperialShortDistance(meters) else metricShortDistance(meters)
+
+    fun formatShortDistance(meters: Double): String {
+        val measure = shortDistance(meters)
+        return format(measure.value, shortDistanceDecimals(measure.unit), measure.unit.label)
+    }
+
+    private fun metricShortDistance(meters: Double): Measure =
+        if (meters < METERS_PER_KM) {
+            Measure(roundToStep(meters), DistanceUnit.METERS)
+        } else {
+            Measure(meters / METERS_PER_KM, DistanceUnit.KILOMETERS)
+        }
+
+    private fun imperialShortDistance(meters: Double): Measure =
+        if (meters < FEET_MAX_METERS) {
+            Measure(roundToStep(meters * FEET_PER_METER), DistanceUnit.FEET)
+        } else {
+            Measure(meters / METERS_PER_MILE, DistanceUnit.MILES)
+        }
+
+    private fun roundToStep(value: Double): Double = Math.round(value / SHORT_DISTANCE_STEP) * SHORT_DISTANCE_STEP
+
+    private fun shortDistanceDecimals(unit: DistanceUnit): Int = when (unit) {
+        DistanceUnit.METERS, DistanceUnit.FEET -> 0
+        DistanceUnit.KILOMETERS, DistanceUnit.MILES -> 1
+    }
+
     private fun format(value: Double, decimals: Int, label: String): String =
         LocaleNumbers.decimal(value, decimals, locale) + NBSP + label
 
@@ -51,6 +80,11 @@ class UnitFormatter(val system: UnitSystem, val locale: Locale) {
         const val KPA_PER_PSI = 6.894757
         const val LITERS_PER_US_GALLON = 3.785411784
         const val LITERS_PER_IMPERIAL_GALLON = 4.54609
+        const val FEET_PER_METER = 3.28084
+        const val METERS_PER_MILE = 1609.344
+        const val METERS_PER_KM = 1000.0
+        const val FEET_MAX_METERS = 160.9344
+        const val SHORT_DISTANCE_STEP = 10.0
         const val NBSP = " "
     }
 }
