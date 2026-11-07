@@ -8,6 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.FuelPricePrefs
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.DistanceUnit
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -58,6 +61,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -75,6 +79,7 @@ class SettingsViewModel @Inject constructor(
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
     private val mapDownloadService: MapDownloadService,
     private val stringResolver: StringResolver,
+    private val units: UnitFormatter,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -114,7 +119,7 @@ class SettingsViewModel @Inject constructor(
     private val _ttsEnabled = MutableStateFlow(true)
     val ttsEnabled: StateFlow<Boolean> = _ttsEnabled.asStateFlow()
 
-    private val _tempMaxC = MutableStateFlow("105")
+    private val _tempMaxC = MutableStateFlow(temperatureFieldValue(DEFAULT_TEMP_MAX_C, units).toString())
     val tempMaxC: StateFlow<String> = _tempMaxC.asStateFlow()
 
     private val _voltageMin = MutableStateFlow("11.8")
@@ -132,7 +137,7 @@ class SettingsViewModel @Inject constructor(
     private val _fuelPriceDiesel = MutableStateFlow(FuelPricePrefs.DEFAULT_DIESEL.toLong().toString())
     val fuelPriceDiesel: StateFlow<String> = _fuelPriceDiesel.asStateFlow()
 
-    private val _cameraAlertRadius = MutableStateFlow(CameraAlertRadius.DEFAULT_M.toString())
+    private val _cameraAlertRadius = MutableStateFlow(radiusFieldValue(CameraAlertRadius.DEFAULT_M, units).toString())
     val cameraAlertRadius: StateFlow<String> = _cameraAlertRadius.asStateFlow()
 
     private val _engineSoundEnabled = MutableStateFlow(false)
@@ -298,7 +303,8 @@ class SettingsViewModel @Inject constructor(
                 _picoPlacaRulesJson.value = prefs[PreferencesKeys.PICO_PLACA_RULES_JSON].orEmpty()
                 _alertsEnabled.value = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
                 _ttsEnabled.value = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
-                _tempMaxC.value = (prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: 105).toString()
+                _tempMaxC.value =
+                    temperatureFieldValue(prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: DEFAULT_TEMP_MAX_C, units).toString()
                 _voltageMin.value = (prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: 11.8f).toString()
                 _redlineRpm.value = (prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: 10_500).toString()
                 _askVehicleOnStart.value = prefs[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true
@@ -310,7 +316,8 @@ class SettingsViewModel @Inject constructor(
                 _voiceVoltage.value = prefs[PreferencesKeys.VOICE_VOLTAGE] ?: true
                 _voiceSpeedCameras.value = prefs[PreferencesKeys.VOICE_SPEED_CAMERAS] ?: true
                 _cameraAlertRadius.value =
-                    CameraAlertRadius.sanitize(prefs[PreferencesKeys.CAMERA_ALERT_RADIUS_M]).toString()
+                    radiusFieldValue(CameraAlertRadius.sanitize(prefs[PreferencesKeys.CAMERA_ALERT_RADIUS_M]), units)
+                        .toString()
                 _engineSoundEnabled.value = prefs[PreferencesKeys.ENGINE_SOUND_ENABLED] ?: false
                 _engineSoundPack.value = SoundPack.fromId(prefs[PreferencesKeys.ENGINE_SOUND_PACK]).id
                 _engineSoundVolume.value = (prefs[PreferencesKeys.ENGINE_SOUND_VOLUME] ?: 70).toString()
@@ -511,17 +518,17 @@ class SettingsViewModel @Inject constructor(
 
     fun saveAlertSettings() {
         viewModelScope.launch {
-            val temp = _tempMaxC.value.toIntOrNull()
+            val temp = _tempMaxC.value.toIntOrNull()?.let { temperatureFieldToCelsius(it, units) }
             val voltage = _voltageMin.value.toFloatOrNull()
             val redline = _redlineRpm.value.toIntOrNull()
-            if (temp == null || temp !in 60..150 ||
+            if (temp == null || temp !in TEMP_MAX_RANGE_C ||
                 voltage == null || voltage !in 8f..15f ||
                 redline == null || redline !in 3_000..20_000
             ) {
-                _lastSaveResult.value =
-                    SaveResult(false, stringResolver.get(R.string.settings_alert_thresholds_out_of_range))
+                _lastSaveResult.value = SaveResult(false, thresholdsOutOfRangeMessage())
                 return@launch
             }
+            _tempMaxC.value = temperatureFieldValue(temp, units).toString()
             val result = runCatching {
                 settings.edit {
                     it[PreferencesKeys.ALERTS_ENABLED] = _alertsEnabled.value
@@ -539,6 +546,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+
+    private fun thresholdsOutOfRangeMessage(): String = stringResolver.get(
+        R.string.settings_alert_thresholds_out_of_range,
+        temperatureFieldValue(TEMP_MAX_RANGE_C.first, units),
+        temperatureFieldValue(TEMP_MAX_RANGE_C.last, units),
+    )
 
     /** Persists provider + its model override/base URL to DataStore and its key to SecureKeyStore. */
     fun saveAiSettings() {
@@ -953,6 +966,8 @@ class SettingsViewModel @Inject constructor(
                         R.string.settings_speed_cameras_downloaded,
                         result.total,
                         sourceBreakdown(result),
+                        cameraDownloadDistance(units),
+                        units.distanceLabel(),
                     )
                     persistLastCameraCenter(location.latitude, location.longitude)
                 }
@@ -1014,21 +1029,30 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val parsed = _cameraAlertRadius.value.toIntOrNull()
             if (parsed == null) {
-                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_camera_alert_radius_invalid))
+                _lastSaveResult.value = SaveResult(false, radiusInvalidMessage())
                 return@launch
             }
-            val radius = CameraAlertRadius.sanitize(parsed)
-            _cameraAlertRadius.value = radius.toString()
+            val radius = CameraAlertRadius.sanitize(radiusFieldToMeters(parsed, units))
+            val shown = radiusFieldValue(radius, units)
+            _cameraAlertRadius.value = shown.toString()
             _lastSaveResult.value = runCatching {
                 settings.edit { it[PreferencesKeys.CAMERA_ALERT_RADIUS_M] = radius }
             }.fold(
                 onSuccess = {
-                    SaveResult(true, stringResolver.get(R.string.settings_camera_alert_radius_saved, radius))
+                    SaveResult(
+                        true,
+                        stringResolver.get(R.string.settings_camera_alert_radius_saved, shown, radiusFieldUnit(units).label),
+                    )
                 },
                 onFailure = { SaveResult(false, stringResolver.get(R.string.settings_camera_alert_radius_save_error)) },
             )
         }
     }
+
+    private fun radiusInvalidMessage(): String = stringResolver.get(
+        R.string.settings_camera_alert_radius_invalid,
+        stringResolver.get(radiusUnitWordRes(units)),
+    )
 
     /** Guarda el centro de la última descarga exitosa para el refresco semanal automático. */
     private suspend fun persistLastCameraCenter(latitude: Double, longitude: Double) {
@@ -1067,3 +1091,33 @@ class SettingsViewModel @Inject constructor(
 
     private fun isValidPicoPlacaRulesJson(json: String): Boolean = PicoYPlacaEngine.parseRulesJson(json) != null
 }
+
+private const val DEFAULT_TEMP_MAX_C = 105
+private val TEMP_MAX_RANGE_C = 60..150
+private const val CAMERA_DOWNLOAD_RADIUS_KM = 50.0
+private const val METERS_PER_KM = 1000.0
+private const val FEET_PER_MILE = 5280.0
+
+internal fun temperatureFieldValue(celsius: Int, units: UnitFormatter): Int =
+    units.temperature(celsius.toDouble()).roundToInt()
+
+internal fun temperatureFieldToCelsius(value: Int, units: UnitFormatter): Int =
+    units.toMetricTemperature(value.toDouble()).roundToInt()
+
+internal fun radiusFieldUnit(units: UnitFormatter): DistanceUnit =
+    if (units.system == UnitSystem.METRIC) DistanceUnit.METERS else DistanceUnit.FEET
+
+internal fun radiusUnitWordRes(units: UnitFormatter): Int =
+    if (units.system == UnitSystem.METRIC) R.string.settings_units_word_meters else R.string.settings_units_word_feet
+
+internal fun radiusFieldValue(meters: Int, units: UnitFormatter): Int =
+    (units.distance(meters / METERS_PER_KM) * subunitsPerDistanceUnit(units)).roundToInt()
+
+internal fun radiusFieldToMeters(value: Int, units: UnitFormatter): Int =
+    (units.toMetricDistance(value / subunitsPerDistanceUnit(units)) * METERS_PER_KM).roundToInt()
+
+internal fun cameraDownloadDistance(units: UnitFormatter): Int =
+    units.distance(CAMERA_DOWNLOAD_RADIUS_KM).roundToInt()
+
+private fun subunitsPerDistanceUnit(units: UnitFormatter): Double =
+    if (units.system == UnitSystem.METRIC) METERS_PER_KM else FEET_PER_MILE

@@ -33,7 +33,7 @@ class RadaresAlertasTextosTest {
             "Descarga los radares en 50 km a tu alrededor. " +
                 "Fuentes: OpenStreetMap + registro oficial ANSV · se actualiza cada semana automáticamente. " +
                 "Al conducir, la app avisa por voz al acercarte (funciona offline tras descargar).",
-            es.get(R.string.settings_alertas_cameras_description),
+            es.get(R.string.settings_alertas_cameras_description, 50, "km"),
         )
     }
 

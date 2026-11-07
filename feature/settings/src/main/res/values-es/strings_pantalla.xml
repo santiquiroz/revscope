@@ -88,7 +88,7 @@
     <string name="settings_fuel_price_out_of_range">Precio fuera de rango (1.000-50.000 COP)</string>
     <string name="settings_fuel_prices_updated">Precios de combustible actualizados</string>
     <string name="settings_fuel_prices_save_error">Error guardando precios de combustible</string>
-    <string name="settings_alert_thresholds_out_of_range">Umbrales fuera de rango (temp 60-150, volt 8-15, RPM 3000-20000)</string>
+    <string name="settings_alert_thresholds_out_of_range">Umbrales fuera de rango (temp %1$d-%2$d, volt 8-15, RPM 3000-20000)</string>
     <string name="settings_alerts_updated">Alertas actualizadas</string>
     <string name="settings_alerts_save_error">Error guardando alertas</string>
     <string name="settings_ai_api_key_missing">Falta la API key</string>
@@ -118,14 +118,14 @@
     <string name="settings_speed_cameras_location_search">Buscando tu ubicación…</string>
     <string name="settings_speed_cameras_no_location">Sin ubicación — conecta el GPS o abre Maps un momento</string>
     <string name="settings_speed_cameras_downloading">Descargando radares (OpenStreetMap + ANSV)…</string>
-    <string name="settings_speed_cameras_downloaded">%1$d radares en 50 km (%2$s) — avisos por voz activos al conducir</string>
+    <string name="settings_speed_cameras_downloaded">%1$d radares en %3$d %4$s (%2$s) — avisos por voz activos al conducir</string>
     <string name="settings_speed_cameras_download_error">Error descargando (¿internet?) — intenta de nuevo</string>
     <string name="settings_speed_cameras_sources">OSM: %1$d · ANSV: %2$d</string>
     <string name="settings_engine_volume_invalid">Volumen inválido — usa un número 0-100</string>
     <string name="settings_engine_volume_saved">Volumen del motor: %1$d%%</string>
     <string name="settings_engine_volume_save_error">Error guardando el volumen</string>
-    <string name="settings_camera_alert_radius_invalid">Radio inválido — usa un número en metros</string>
-    <string name="settings_camera_alert_radius_saved">Radio de aviso: %1$d m</string>
+    <string name="settings_camera_alert_radius_invalid">Radio inválido — usa un número en %1$s</string>
+    <string name="settings_camera_alert_radius_saved">Radio de aviso: %1$d %2$s</string>
     <string name="settings_camera_alert_radius_save_error">Error guardando el radio de aviso</string>
     <string name="settings_ai_save_error">Error guardando la configuración de IA</string>
     <string name="settings_ai_secure_storage_error">No se pudo guardar la API key: el almacén seguro del teléfono no está disponible. No se activaron las funciones IA</string>

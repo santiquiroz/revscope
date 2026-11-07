@@ -28,7 +28,7 @@
     <string name="settings_alertas_ai_pico_placa">AI-powered Pico y placa in any city</string>
     <string name="settings_alertas_ai_pico_placa_supported">Looks up the restriction for the city you\'re in (pico y placa, hoy no circula, rodízio…) and keeps it until it expires</string>
     <string name="settings_alertas_ai_pico_placa_unsupported">Set up an AI provider with web search first — we recommend Gemini for its free tier</string>
-    <string name="settings_alertas_temp_max">Max temp °C</string>
+    <string name="settings_alertas_temp_max">Max temp %1$s</string>
     <string name="settings_alertas_voltage_min">Min volt</string>
     <string name="settings_alertas_redline_rpm">Redline RPM</string>
     <string name="settings_alertas_redline_hint">Redline also controls the dashboard shift light.</string>
@@ -45,10 +45,10 @@
 
     <!-- Speed cameras -->
     <string name="settings_alertas_cameras_title">Speed cameras</string>
-    <string name="settings_alertas_cameras_description">Downloads speed cameras within 50 km of you. Sources: OpenStreetMap + official ANSV registry · updates automatically every week. While driving, the app warns you by voice as you approach (works offline after downloading).</string>
+    <string name="settings_alertas_cameras_description">Downloads speed cameras within %1$d %2$s of you. Sources: OpenStreetMap + official ANSV registry · updates automatically every week. While driving, the app warns you by voice as you approach (works offline after downloading).</string>
     <string name="settings_alertas_cameras_download">Download cameras for my area</string>
-    <string name="settings_alertas_cameras_radius">Alert radius (m)</string>
-    <string name="settings_alertas_cameras_radius_hint">Distance at which the voice warning plays (100-1000 m). Fewer meters = fewer early warnings.</string>
+    <string name="settings_alertas_cameras_radius">Alert radius (%1$s)</string>
+    <string name="settings_alertas_cameras_radius_hint">Distance at which the voice warning plays (%1$d-%2$d %3$s). Fewer %4$s = fewer early warnings.</string>
     <string name="settings_alertas_cameras_save_radius">Save radius</string>
 
     <!-- Custom Pico y placa -->
