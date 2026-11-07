@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PruebaGuiadaContent -->
+    <string name="workshop_prueba_pantalla_titulo">Pruebas guiadas</string>
+    <string name="workshop_prueba_pantalla_cancelada">Prueba cancelada</string>
+    <string name="workshop_prueba_pantalla_analizando">Analizando la prueba…</string>
+    <string name="workshop_prueba_pantalla_nada_guardado">No se guardó nada en la sesión.</string>
+    <string name="workshop_prueba_pantalla_empezar_de_nuevo">Empezar de nuevo</string>
+    <string name="workshop_prueba_pantalla_fallida">La prueba no terminó: %1$s. Lo grabado quedó en la sesión, si había una abierta.</string>
+    <string name="workshop_prueba_pantalla_volver">Volver</string>
+    <string name="workshop_prueba_pantalla_descartar_titulo">¿Descartar la prueba?</string>
+    <string name="workshop_prueba_pantalla_descartar">Descartar</string>
+    <string name="workshop_prueba_pantalla_seguir">Seguir con la prueba</string>
+    <string name="workshop_prueba_pantalla_aviso_detiene">Se detiene la captura y la prueba no se analiza.</string>
+    <string name="workshop_prueba_pantalla_aviso_pasos_hechos">%1$d de %2$d pasos ya hechos no se guardan en la sesión.</string>
+    <string name="workshop_prueba_pantalla_aviso_paso_en_curso">Lo grabado del paso en curso no se guarda en la sesión.</string>
+
+    <!-- PreparacionPrueba -->
+    <string name="workshop_prueba_pantalla_elegir_intro">Paso a paso, leyendo a la tasa máxima y con veredicto. Si hay una sesión abierta, el resultado queda en ella.</string>
+    <string name="workshop_prueba_pantalla_proxima_version">Llega en una próxima versión</string>
+    <string name="workshop_prueba_pantalla_antes_de_empezar">Antes de empezar</string>
+    <string name="workshop_prueba_pantalla_comprobando">Comprobando el adaptador y la moto…</string>
+    <string name="workshop_prueba_pantalla_pasos">Pasos</string>
+    <string name="workshop_prueba_pantalla_paso_numerado">%1$d. %2$s</string>
+    <string name="workshop_prueba_pantalla_ajustes">Ajustes</string>
+    <string name="workshop_prueba_pantalla_empezar">Empezar prueba</string>
+    <string name="workshop_prueba_pantalla_resolver_marcado">Resuelve lo marcado para empezar.</string>
+    <string name="workshop_prueba_pantalla_no_cumple">No cumple</string>
+    <string name="workshop_prueba_pantalla_aviso">Aviso</string>
+    <string name="workshop_prueba_pantalla_cumple">Cumple</string>
+    <string name="workshop_prueba_pantalla_vref_titulo" formatted="false">Referencia para pasar % a V</string>
+    <string name="workshop_prueba_pantalla_vref_valor">%1$s V · %2$s</string>
+    <string name="workshop_prueba_pantalla_cambiar">Cambiar</string>
+    <string name="workshop_prueba_pantalla_voz">Guía por voz</string>
+    <string name="workshop_prueba_pantalla_voz_descripcion">Dice cada paso y la cuenta: las manos van en el acelerador</string>
+
+    <!-- PruebaGuiadaViewModel -->
+    <string name="workshop_prueba_pantalla_guardado_sesion_nueva">Resultado guardado en una sesión nueva</string>
+    <string name="workshop_prueba_pantalla_no_guardado">No se pudo guardar el resultado</string>
+    <string name="workshop_prueba_pantalla_error_generico">Algo salió mal</string>
+    <string name="workshop_prueba_pantalla_no_calibra">Sin lectura del adaptador o con más de 1 V de diferencia: no se calibró</string>
+</resources>

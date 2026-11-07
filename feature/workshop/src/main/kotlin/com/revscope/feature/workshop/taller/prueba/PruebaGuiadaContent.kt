@@ -39,6 +39,7 @@ import com.revscope.core.designsystem.ErrorState
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.BotonPrincipalTaller
 
 data class AccionesPrueba(
@@ -70,7 +71,7 @@ fun PruebaGuiadaContent(estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
             is FasePantalla.Paso -> PasoPrueba(fase.paso, estado, acciones)
             is FasePantalla.Analizando -> Analizando(estado, acciones)
             is FasePantalla.Resultado -> ResultadoPrueba(fase.resultado, estado, acciones)
-            is FasePantalla.Cancelada -> Interrumpida(estado, "Prueba cancelada", fase.motivo, acciones)
+            is FasePantalla.Cancelada -> Interrumpida(estado, stringResource(R.string.workshop_prueba_pantalla_cancelada), fase.motivo, acciones)
             is FasePantalla.Fallida -> Fallida(fase, estado, acciones)
         }
     }
@@ -143,7 +144,7 @@ private fun ColumnScope.Analizando(estado: PruebaGuiadaUi, acciones: AccionesPru
     ) {
         CircularProgressIndicator(color = RevScopeColors.Accent)
         Text(
-            "Analizando la prueba…",
+            stringResource(R.string.workshop_prueba_pantalla_analizando),
             color = RevScopeColors.TextPrimary,
             style = RevScopeType.body,
             textAlign = TextAlign.Center,
@@ -158,15 +159,15 @@ private fun ColumnScope.Interrumpida(estado: PruebaGuiadaUi, titulo: String, mot
     CuerpoDesplazable {
         Text(titulo, color = RevScopeColors.TextPrimary, style = RevScopeType.title)
         Text(motivo, color = RevScopeColors.TextSecondary, style = RevScopeType.body)
-        Text("No se guardó nada en la sesión.", color = RevScopeColors.TextSecondary, style = RevScopeType.body)
+        Text(stringResource(R.string.workshop_prueba_pantalla_nada_guardado), color = RevScopeColors.TextSecondary, style = RevScopeType.body)
     }
-    PieConAccion("Empezar de nuevo", acciones.onReintentar)
+    PieConAccion(stringResource(R.string.workshop_prueba_pantalla_empezar_de_nuevo), acciones.onReintentar)
 }
 
 @Composable
 private fun ColumnScope.Fallida(fase: FasePantalla.Fallida, estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
     BarraConVolver(titulo = estado.titulo(), subtitulo = estado.vehiculo, onVolver = acciones.onTerminar)
-    val mensaje = "La prueba no terminó: ${fase.motivo}. Lo grabado quedó en la sesión, si había una abierta."
+    val mensaje = stringResource(R.string.workshop_prueba_pantalla_fallida, fase.motivo)
     Box(Modifier.weight(1f).fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
         if (fase.reintentable) {
             ErrorState(mensaje, acciones.onReintentar)
@@ -174,7 +175,7 @@ private fun ColumnScope.Fallida(fase: FasePantalla.Fallida, estado: PruebaGuiada
             Text(mensaje, color = RevScopeColors.TextPrimary, style = RevScopeType.body, textAlign = TextAlign.Center)
         }
     }
-    if (!fase.reintentable) PieConAccion("Volver", acciones.onTerminar)
+    if (!fase.reintentable) PieConAccion(stringResource(R.string.workshop_prueba_pantalla_volver), acciones.onTerminar)
 }
 
 // ── Diálogos ────────────────────────────────────────────────────────────────
@@ -193,21 +194,23 @@ private fun DialogosPrueba(estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
 private fun ConfirmarCancelar(estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
     val paso = (estado.fase as? FasePantalla.Paso)?.paso
     ConfirmarDestructivoDialog(
-        titulo = "¿Descartar la prueba?",
-        textoConfirmar = "Descartar",
-        textoCancelar = "Seguir con la prueba",
+        titulo = stringResource(R.string.workshop_prueba_pantalla_descartar_titulo),
+        textoConfirmar = stringResource(R.string.workshop_prueba_pantalla_descartar),
+        textoCancelar = stringResource(R.string.workshop_prueba_pantalla_seguir),
         onConfirmar = acciones.onConfirmarCancelar,
         onCancelar = acciones.onCerrarDialogo,
-        avisos = listOfNotNull("Se detiene la captura y la prueba no se analiza.", paso?.let(::loQueSePierde)),
+        avisos = listOfNotNull(stringResource(R.string.workshop_prueba_pantalla_aviso_detiene), paso?.let { loQueSePierde(it) }),
     )
 }
 
+@Composable
 private fun loQueSePierde(paso: PasoUi): String =
     if (paso.grabados > 0) {
-        "${paso.grabados} de ${paso.total} pasos ya hechos no se guardan en la sesión."
+        stringResource(R.string.workshop_prueba_pantalla_aviso_pasos_hechos, paso.grabados, paso.total)
     } else {
-        "Lo grabado del paso en curso no se guarda en la sesión."
+        stringResource(R.string.workshop_prueba_pantalla_aviso_paso_en_curso)
     }
 
 @Composable
-internal fun PruebaGuiadaUi.titulo(): String = fase.tipo?.let { stringResource(it.tituloRes) } ?: "Pruebas guiadas"
+internal fun PruebaGuiadaUi.titulo(): String =
+    fase.tipo?.let { stringResource(it.tituloRes) } ?: stringResource(R.string.workshop_prueba_pantalla_titulo)
