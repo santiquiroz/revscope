@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.multimetro
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -46,6 +48,7 @@ import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.obd.taller.multimetro.EstadoCelda
 import com.revscope.core.obd.taller.multimetro.FuncionCable
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.TarjetaTaller
 
 object DisposicionMultimetro {
@@ -77,7 +80,7 @@ private val ANCHO_CABLE = (DisposicionMultimetro.ANCHO_CABLE_DP - DisposicionMul
 private fun TablaCables(plantilla: PlantillaUi, onValor: (FuncionCable, String, String) -> Unit) {
     TarjetaTaller {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(DisposicionMultimetro.SEPARACION_DP.dp)) {
-            Text("Cable", color = RevScopeColors.TextSecondary, style = RevScopeType.label, modifier = Modifier.width(ANCHO_CABLE))
+            Text(stringResource(R.string.workshop_multimetro_table_wire), color = RevScopeColors.TextSecondary, style = RevScopeType.label, modifier = Modifier.width(ANCHO_CABLE))
             plantilla.condiciones.forEach {
                 Text(it, color = RevScopeColors.TextSecondary, style = RevScopeType.label, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
             }
@@ -113,7 +116,7 @@ private fun FilaTabla(fila: FilaCableUi, unidad: String, onValor: (FuncionCable,
 // En la tabla no cabe la banda de cada celda: se cita debajo, una vez por cable si es la misma en todas.
 @Composable
 private fun ValoresEsperados(plantilla: PlantillaUi) {
-    Text("Valores esperados", color = RevScopeColors.TextSecondary, style = RevScopeType.label)
+    Text(stringResource(R.string.workshop_multimetro_expected_values), color = RevScopeColors.TextSecondary, style = RevScopeType.label)
     plantilla.filas.forEach { fila ->
         val celdas = fila.celdas.filter { it.aplica && it.referencia != null }
         val unica = celdas.map { it.referencia }.distinct().singleOrNull()
@@ -150,7 +153,7 @@ private fun CeldaEnTarjeta(fila: FilaCableUi, celda: CeldaUi, unidad: String, on
         Text(celda.etiquetaCondicion, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
         CampoValor(fila, celda, unidad, onValor, conUnidad = true)
         IndicadorCelda(celda, corto = false)
-        celda.referencia?.let { TextoEsperado("Esperado: $it") }
+        celda.referencia?.let { TextoEsperado(stringResource(R.string.workshop_multimetro_expected, it)) }
     }
 }
 
@@ -160,7 +163,7 @@ private fun CeldaEnTarjeta(fila: FilaCableUi, celda: CeldaUi, unidad: String, on
 private fun EtiquetaCable(fila: FilaCableUi, modifier: Modifier = Modifier) {
     Column(modifier) {
         Text(fila.etiqueta, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
-        Text(fila.color ?: "Sin color", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+        Text(fila.color ?: stringResource(R.string.workshop_multimetro_no_color), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
 }
 
@@ -173,7 +176,7 @@ private fun CampoValor(
     onValor: (FuncionCable, String, String) -> Unit,
     conUnidad: Boolean = false,
 ) {
-    val descripcion = "${fila.etiqueta}${fila.color?.let { " ($it)" }.orEmpty()}, ${celda.etiquetaCondicion}, en $unidad"
+    val descripcion = descripcionCampo(fila, celda, unidad)
     val interaccion = remember { MutableInteractionSource() }
     val colores = coloresCampo()
     // Relleno de 8 dp y no los 16 del campo estándar: en la tabla de un teléfono de 360 dp cada columna mide ~64 dp.
@@ -206,6 +209,12 @@ private fun CampoValor(
 }
 
 @Composable
+private fun descripcionCampo(fila: FilaCableUi, celda: CeldaUi, unidad: String): String {
+    val color = fila.color ?: return stringResource(R.string.workshop_multimetro_field_cd, fila.etiqueta, celda.etiquetaCondicion, unidad)
+    return stringResource(R.string.workshop_multimetro_field_color_cd, fila.etiqueta, color, celda.etiquetaCondicion, unidad)
+}
+
+@Composable
 private fun coloresCampo() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = RevScopeColors.TextPrimary,
     unfocusedTextColor = RevScopeColors.TextPrimary,
@@ -217,19 +226,44 @@ private fun coloresCampo() = OutlinedTextFieldDefaults.colors(
     unfocusedSuffixColor = RevScopeColors.TextSecondary,
 )
 
-private data class Aspecto(val icono: ImageVector, val color: Color, val corto: String, val largo: String)
+private data class Aspecto(val icono: ImageVector, val color: Color, @StringRes val corto: Int, @StringRes val largo: Int)
 
 private fun aspecto(celda: CeldaUi): Aspecto? = when {
-    celda.invalido -> Aspecto(Icons.Filled.Error, RevScopeColors.Danger, "No es un número", "No es un número: usa coma o punto")
+    celda.invalido -> Aspecto(
+        Icons.Filled.Error,
+        RevScopeColors.Danger,
+        R.string.workshop_multimetro_cell_invalid_short,
+        R.string.workshop_multimetro_cell_invalid_long,
+    )
     celda.estado == null -> null
     else -> aspectoDe(celda.estado)
 }
 
 private fun aspectoDe(estado: EstadoCelda): Aspecto = when (estado) {
-    EstadoCelda.DENTRO -> Aspecto(Icons.Filled.CheckCircle, RevScopeColors.Success, "Dentro", "Dentro de lo esperado")
-    EstadoCelda.BAJO -> Aspecto(Icons.Filled.ArrowDownward, RevScopeColors.Danger, "Bajo", "Por debajo de lo esperado")
-    EstadoCelda.ALTO -> Aspecto(Icons.Filled.ArrowUpward, RevScopeColors.Danger, "Alto", "Por encima de lo esperado")
-    EstadoCelda.SIN_REFERENCIA -> Aspecto(Icons.Filled.RemoveCircle, RevScopeColors.TextSecondary, "Sin ref.", "Sin valor esperado")
+    EstadoCelda.DENTRO -> Aspecto(
+        Icons.Filled.CheckCircle,
+        RevScopeColors.Success,
+        R.string.workshop_multimetro_cell_within_short,
+        R.string.workshop_multimetro_cell_within_long,
+    )
+    EstadoCelda.BAJO -> Aspecto(
+        Icons.Filled.ArrowDownward,
+        RevScopeColors.Danger,
+        R.string.workshop_multimetro_cell_low_short,
+        R.string.workshop_multimetro_cell_low_long,
+    )
+    EstadoCelda.ALTO -> Aspecto(
+        Icons.Filled.ArrowUpward,
+        RevScopeColors.Danger,
+        R.string.workshop_multimetro_cell_high_short,
+        R.string.workshop_multimetro_cell_high_long,
+    )
+    EstadoCelda.SIN_REFERENCIA -> Aspecto(
+        Icons.Filled.RemoveCircle,
+        RevScopeColors.TextSecondary,
+        R.string.workshop_multimetro_cell_no_ref_short,
+        R.string.workshop_multimetro_cell_no_ref_long,
+    )
 }
 
 @Composable
@@ -238,6 +272,6 @@ private fun IndicadorCelda(celda: CeldaUi, corto: Boolean) {
     val lado = with(LocalDensity.current) { 14.sp.toDp() }
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Top) {
         Icon(a.icono, contentDescription = null, tint = a.color, modifier = Modifier.padding(top = 1.dp).size(lado))
-        Text(if (corto) a.corto else a.largo, color = a.color, style = RevScopeType.bodySmall)
+        Text(stringResource(if (corto) a.corto else a.largo), color = a.color, style = RevScopeType.bodySmall)
     }
 }

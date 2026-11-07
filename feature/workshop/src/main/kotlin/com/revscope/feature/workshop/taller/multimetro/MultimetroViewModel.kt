@@ -10,6 +10,7 @@ import com.revscope.core.obd.taller.multimetro.SensorMultimetro
 import com.revscope.core.obd.taller.multimetro.VeredictoMultimetro
 import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.taller.sesion.SolicitudSesion
+import com.revscope.feature.workshop.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,24 +73,27 @@ class MultimetroViewModel @Inject constructor(
     fun guardarEnSesion() = trabajar {
         val l = local.value
         val ctx = l.contexto ?: return@trabajar
-        val plantilla = MapeoMultimetro.plantillaEfectiva(ctx, l.colores)
+        val plantilla = MapeoMultimetro.plantillaEfectiva(ctx, l.colores, resolver)
         val lecturas = MapeoMultimetro.lecturas(plantilla, l.textos)
-        if (lecturas.isEmpty()) return@trabajar avisar("Escribe al menos una medida para guardarla")
+        if (lecturas.isEmpty()) return@trabajar avisar(resolver.get(R.string.workshop_multimetro_enter_reading))
         if (ctx.sesion == null) {
-            registro.abrirSesion(SolicitudSesion(titulo = "Multímetro: ${plantilla.titulo}"))
-                .onFailure { return@trabajar avisar(it.message ?: "No se pudo abrir la sesión") }
+            registro.abrirSesion(SolicitudSesion(titulo = resolver.get(R.string.workshop_multimetro_session_title, plantilla.titulo)))
+                .onFailure { return@trabajar avisar(it.message ?: resolver.get(R.string.workshop_multimetro_session_open_failed)) }
         }
         val id = asistente.guardarTabla(plantilla, VeredictoMultimetro.combinar(plantilla, lecturas, ctx.bandas, ctx.ecu, resolver))
-        avisar(if (id != null) "Medición guardada en la sesión" else "No se pudo guardar la medición")
+        avisar(resolver.get(if (id != null) R.string.workshop_multimetro_saved else R.string.workshop_multimetro_save_failed))
         recargarContexto()
     }
 
     fun guardarColores() = trabajar {
         val l = local.value
         val ctx = l.contexto ?: return@trabajar
-        val nombre = ctx.modelo?.nombre ?: return@trabajar avisar("Elige el modelo de referencia del vehículo en Perfiles")
+        val nombre = ctx.modelo?.nombre ?: return@trabajar avisar(resolver.get(R.string.workshop_multimetro_choose_model))
         val ok = asistente.guardarColores(ctx.plantilla, l.colores)
-        avisar(if (ok) "Colores guardados en la plantilla de $nombre" else "No se pudieron guardar los colores")
+        avisar(
+            if (ok) resolver.get(R.string.workshop_multimetro_colors_saved, nombre)
+            else resolver.get(R.string.workshop_multimetro_colors_save_failed),
+        )
         if (ok) recargarContexto()
     }
 
@@ -105,7 +109,7 @@ class MultimetroViewModel @Inject constructor(
                 .onFailure { e ->
                     if (e is CancellationException) throw e
                     Timber.w(e, "Multímetro: no se pudo cargar la plantilla")
-                    local.update { it.copy(cargando = false, error = "No se pudo cargar la plantilla del vehículo") }
+                    local.update { it.copy(cargando = false, error = resolver.get(R.string.workshop_multimetro_load_failed)) }
                 }
         }
     }

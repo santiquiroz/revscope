@@ -23,7 +23,11 @@ import org.json.JSONObject
 
 // El caso del 25-sep-2026: cableado del TPS medido por el dueño y lo que marcó el multímetro por detrás del conector.
 object MultimetroBenelli {
-    private val resolver = XmlStringResolver.es(ObdR::class.java, resDirs = listOf("../../core/obd/src/main/res"))
+    private val resolver = XmlStringResolver.es(
+        ObdR::class.java,
+        com.revscope.feature.workshop.R::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
 
     val cableadoTps = CableadoSensor(
         sensor = "TPS",
