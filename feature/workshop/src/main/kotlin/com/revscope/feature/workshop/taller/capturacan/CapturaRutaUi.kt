@@ -1,7 +1,10 @@
 package com.revscope.feature.workshop.taller.capturacan
 
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.escucha.CapturaRutaCan
 import com.revscope.core.obd.escucha.EstadoCapturaRuta
+import com.revscope.feature.workshop.R
 import kotlin.math.roundToInt
 
 data class CapturaRutaUi(
@@ -12,7 +15,10 @@ data class CapturaRutaUi(
 ) {
     val capturando: Boolean get() = estado is EstadoCapturaRuta.Capturando
     val botonHabilitado: Boolean get() = capturando || conectado
-    val textoBoton: String get() = if (capturando) "Detener y guardar" else "Iniciar captura"
+
+    @get:StringRes
+    val textoBoton: Int
+        get() = if (capturando) R.string.workshop_can_capture_stop_and_save else R.string.workshop_can_capture_start
 }
 
 internal object FormatoCapturaRuta {
@@ -24,10 +30,16 @@ internal object FormatoCapturaRuta {
         return "%02d:%02d".format(segundos / 60, segundos % 60)
     }
 
-    fun velocidad(kmh: Float?): String = kmh?.let { "${it.roundToInt()} km/h" } ?: "sin señal"
+    fun velocidad(kmh: Float?, resolver: StringResolver): String =
+        kmh?.let { resolver.get(R.string.workshop_can_capture_speed_kmh, it.roundToInt()) }
+            ?: resolver.get(R.string.workshop_can_capture_no_signal)
 
-    fun resumenTerminada(t: EstadoCapturaRuta.Terminada): String {
-        val gps = if (t.muestrasGps == 0) "sin muestras GPS" else "${t.muestrasGps} muestras GPS"
-        return "${t.tramas} tramas · $gps · ${cronometro(t.duracionMs)}"
+    fun resumenTerminada(t: EstadoCapturaRuta.Terminada, resolver: StringResolver): String {
+        val gps = if (t.muestrasGps == 0) {
+            resolver.get(R.string.workshop_can_capture_no_gps_samples)
+        } else {
+            resolver.plural(R.plurals.workshop_can_capture_gps_samples, t.muestrasGps, t.muestrasGps)
+        }
+        return resolver.plural(R.plurals.workshop_can_capture_summary, t.tramas, t.tramas, gps, cronometro(t.duracionMs))
     }
 }
