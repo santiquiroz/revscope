@@ -28,7 +28,7 @@
     <string name="settings_alertas_ai_pico_placa">Pico y placa por IA en cualquier ciudad</string>
     <string name="settings_alertas_ai_pico_placa_supported">Investiga la restricción de la ciudad donde estés (pico y placa, hoy no circula, rodízio…) y la guarda hasta que venza</string>
     <string name="settings_alertas_ai_pico_placa_unsupported">Configura primero un proveedor de IA con búsqueda web — recomendamos Gemini por su capa gratuita</string>
-    <string name="settings_alertas_temp_max">Temp máx °C</string>
+    <string name="settings_alertas_temp_max">Temp máx %1$s</string>
     <string name="settings_alertas_voltage_min">Volt mín</string>
     <string name="settings_alertas_redline_rpm">Zona roja RPM</string>
     <string name="settings_alertas_redline_hint">La zona roja también controla el shift light del dashboard.</string>
@@ -45,10 +45,10 @@
 
     <!-- Radares de velocidad -->
     <string name="settings_alertas_cameras_title">Radares de velocidad</string>
-    <string name="settings_alertas_cameras_description">Descarga los radares en 50 km a tu alrededor. Fuentes: OpenStreetMap + registro oficial ANSV · se actualiza cada semana automáticamente. Al conducir, la app avisa por voz al acercarte (funciona offline tras descargar).</string>
+    <string name="settings_alertas_cameras_description">Descarga los radares en %1$d %2$s a tu alrededor. Fuentes: OpenStreetMap + registro oficial ANSV · se actualiza cada semana automáticamente. Al conducir, la app avisa por voz al acercarte (funciona offline tras descargar).</string>
     <string name="settings_alertas_cameras_download">Descargar radares de mi zona</string>
-    <string name="settings_alertas_cameras_radius">Radio de aviso (m)</string>
-    <string name="settings_alertas_cameras_radius_hint">Distancia a la que suena el aviso por voz (100-1000 m). Menos metros = menos avisos anticipados.</string>
+    <string name="settings_alertas_cameras_radius">Radio de aviso (%1$s)</string>
+    <string name="settings_alertas_cameras_radius_hint">Distancia a la que suena el aviso por voz (%1$d-%2$d %3$s). Menos %4$s = menos avisos anticipados.</string>
     <string name="settings_alertas_cameras_save_radius">Guardar radio</string>
 
     <!-- Pico y placa personalizado -->

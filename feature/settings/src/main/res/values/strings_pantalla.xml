@@ -88,7 +88,7 @@
     <string name="settings_fuel_price_out_of_range">Price out of range (1,000–50,000 COP)</string>
     <string name="settings_fuel_prices_updated">Fuel prices updated</string>
     <string name="settings_fuel_prices_save_error">Error saving fuel prices</string>
-    <string name="settings_alert_thresholds_out_of_range">Thresholds out of range (temp 60–150, voltage 8–15, RPM 3000–20000)</string>
+    <string name="settings_alert_thresholds_out_of_range">Thresholds out of range (temp %1$d–%2$d, voltage 8–15, RPM 3000–20000)</string>
     <string name="settings_alerts_updated">Alerts updated</string>
     <string name="settings_alerts_save_error">Error saving alerts</string>
     <string name="settings_ai_api_key_missing">API key is missing</string>
@@ -118,14 +118,14 @@
     <string name="settings_speed_cameras_location_search">Finding your location…</string>
     <string name="settings_speed_cameras_no_location">No location — connect GPS or open Maps for a moment</string>
     <string name="settings_speed_cameras_downloading">Downloading speed cameras (OpenStreetMap + ANSV)…</string>
-    <string name="settings_speed_cameras_downloaded">%1$d speed cameras within 50 km (%2$s) — voice alerts are active while driving</string>
+    <string name="settings_speed_cameras_downloaded">%1$d speed cameras within %3$d %4$s (%2$s) — voice alerts are active while driving</string>
     <string name="settings_speed_cameras_download_error">Download error (no internet?) — try again</string>
     <string name="settings_speed_cameras_sources">OSM: %1$d · ANSV: %2$d</string>
     <string name="settings_engine_volume_invalid">Invalid volume — use a number from 0 to 100</string>
     <string name="settings_engine_volume_saved">Engine volume: %1$d%%</string>
     <string name="settings_engine_volume_save_error">Error saving volume</string>
-    <string name="settings_camera_alert_radius_invalid">Invalid radius — enter a value in meters</string>
-    <string name="settings_camera_alert_radius_saved">Alert radius: %1$d m</string>
+    <string name="settings_camera_alert_radius_invalid">Invalid radius — enter a value in %1$s</string>
+    <string name="settings_camera_alert_radius_saved">Alert radius: %1$d %2$s</string>
     <string name="settings_camera_alert_radius_save_error">Error saving alert radius</string>
     <string name="settings_ai_save_error">Error saving AI settings</string>
     <string name="settings_ai_secure_storage_error">Could not save the API key: secure storage on this phone is unavailable. AI features were not enabled</string>

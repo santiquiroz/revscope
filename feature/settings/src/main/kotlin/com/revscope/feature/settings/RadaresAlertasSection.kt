@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.designsystem.rememberUnitFormatter
+import com.revscope.core.obd.cameras.CameraAlertRadius
 import com.revscope.core.obd.sound.SoundPack
 
 private val BgColor = Color(0xFF0A0A0F)
@@ -173,15 +175,7 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = tempMaxC,
-                onValueChange = vm::updateTempMaxC,
-                label = { Text(stringResource(R.string.settings_alertas_temp_max), fontSize = 11.sp) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = settingsFieldColors(),
-                modifier = Modifier.weight(1f),
-            )
+            TempMaxField(tempMaxC, vm::updateTempMaxC, Modifier.weight(1f))
             OutlinedTextField(
                 value = voltageMin,
                 onValueChange = vm::updateVoltageMin,
@@ -211,6 +205,20 @@ internal fun AlertasAudioCard(vm: SettingsViewModel) {
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
         ) { Text(stringResource(R.string.settings_alertas_save), color = BgColor) }
     }
+}
+
+@Composable
+internal fun TempMaxField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    val units = rememberUnitFormatter()
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(R.string.settings_alertas_temp_max, units.temperatureLabel()), fontSize = 11.sp) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = settingsFieldColors(),
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -295,36 +303,60 @@ internal fun RadaresVelocidadCard(vm: SettingsViewModel) {
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle(stringResource(R.string.settings_alertas_cameras_title))
-        Text(
-            stringResource(R.string.settings_alertas_cameras_description),
-            color = TextMutedColor,
-            fontSize = 12.sp,
-        )
+        CamerasDescription()
         cameraStatus?.let { Text(it, color = AccentColor, fontSize = 12.sp) }
         Button(
             onClick = vm::downloadSpeedCameras,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
         ) { Text(stringResource(R.string.settings_alertas_cameras_download), color = BgColor) }
 
-        OutlinedTextField(
-            value = cameraAlertRadius,
-            onValueChange = vm::updateCameraAlertRadius,
-            label = { Text(stringResource(R.string.settings_alertas_cameras_radius)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            colors = settingsFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Text(
-            stringResource(R.string.settings_alertas_cameras_radius_hint),
-            color = TextMutedColor,
-            fontSize = 12.sp,
-        )
+        CameraRadiusField(cameraAlertRadius, vm::updateCameraAlertRadius)
+        CameraRadiusHint()
         Button(
             onClick = vm::saveCameraAlertRadius,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
         ) { Text(stringResource(R.string.settings_alertas_cameras_save_radius), color = BgColor) }
     }
+}
+
+@Composable
+internal fun CamerasDescription() {
+    val units = rememberUnitFormatter()
+    Text(
+        stringResource(R.string.settings_alertas_cameras_description, cameraDownloadDistance(units), units.distanceLabel()),
+        color = TextMutedColor,
+        fontSize = 12.sp,
+    )
+}
+
+@Composable
+internal fun CameraRadiusField(value: String, onValueChange: (String) -> Unit) {
+    val units = rememberUnitFormatter()
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(R.string.settings_alertas_cameras_radius, radiusFieldUnit(units).label)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+        colors = settingsFieldColors(),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+internal fun CameraRadiusHint() {
+    val units = rememberUnitFormatter()
+    Text(
+        stringResource(
+            R.string.settings_alertas_cameras_radius_hint,
+            radiusFieldValue(CameraAlertRadius.MIN_M, units),
+            radiusFieldValue(CameraAlertRadius.MAX_M, units),
+            radiusFieldUnit(units).label,
+            stringResource(radiusUnitWordRes(units)),
+        ),
+        color = TextMutedColor,
+        fontSize = 12.sp,
+    )
 }
 
 @Composable
