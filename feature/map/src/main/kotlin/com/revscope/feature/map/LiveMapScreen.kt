@@ -48,7 +48,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,8 +70,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.revscope.core.common.i18n.AndroidStringResolver
-import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.maps.MapDownloadState
 import com.revscope.core.maps.MapLibreMapView
 import com.revscope.core.maps.MapStyleProvider
@@ -103,7 +103,7 @@ import org.maplibre.android.gestures.StandardScaleGestureDetector
 import org.maplibre.android.maps.MapLibreMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Locale
+import kotlin.math.roundToInt
 
 private val AttributionColor = Color(0xFF6B7089)
 
@@ -189,6 +189,7 @@ fun LiveMapScreen(
     val standaloneFix = if (route.isEmpty()) liveFix else null
     val context = LocalContext.current
     val tapResolver = remember(context) { AndroidStringResolver(context) }
+    val units = rememberUnitFormatter()
     val language = AppLanguage.current(context).language
     var hasLocationPermission by remember {
         mutableStateOf(
@@ -395,7 +396,7 @@ fun LiveMapScreen(
                 }
             },
         ) { map, style ->
-            installLiveMapLayers(style, density, data)
+            installLiveMapLayers(style, density, data, units)
             mapRef = map
             // Sube en cada instalación de estilo para que los efectos de datos y cámara
             // vuelvan a correr: al recargar el estilo las fuentes viejas quedan detached.
@@ -414,7 +415,7 @@ fun LiveMapScreen(
             // ningún marcador cierra la tarjeta que estuviera abierta (resolveTappedFeature
             // devuelve null en ese caso).
             map.addOnMapClickListener { latLng ->
-                tappedFeature = resolveTappedFeature(map, latLng, tapResolver)
+                tappedFeature = resolveTappedFeature(map, latLng, tapResolver, units)
                 true
             }
             map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
@@ -444,7 +445,7 @@ fun LiveMapScreen(
         // queda pegado al dot hasta que alguna OTRA key cambie por su cuenta (p. ej. GPS
         // moviéndose 3m+) — con la moto parada eso podía no pasar nunca.
         LaunchedEffect(mapRef, styleEpoch, routeRevision, cameras, potholes, peers, approaching, alertRadiusM, destination, destinationName, plannedRoute, standaloneFix, routeAlternatives, puckVehicleType) {
-            mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data) }
+            mapRef?.style?.let { if (it.isFullyLoaded()) updateLiveMapData(it, data, units) }
         }
 
         // Nav "idle" = sin navegación o ya llegado — en ambos casos NavCamera dejó de dictar el
@@ -1018,7 +1019,7 @@ private fun RouteInfoChip(
                 Text(
                     when {
                         routing -> stringResource(R.string.map_route_calculating)
-                        plannedRoute != null -> formatRouteSummary(plannedRoute, LocalConfiguration.current.locales[0])
+                        plannedRoute != null -> formatRouteSummary(plannedRoute, rememberUnitFormatter())
                         else -> stringResource(R.string.map_route_none)
                     },
                     color = Color(0xFFE8FF00),
@@ -1138,16 +1139,21 @@ internal fun SharedDestBanner(
     }
 }
 
-private fun formatRouteSummary(route: NavigationRoute, locale: Locale): String {
+internal fun formatRouteSummary(route: NavigationRoute, units: UnitFormatter): String {
     val km = route.distanceM / 1000.0
     val minutes = (route.durationS / 60.0).toInt()
-    val distance = LocaleNumbers.decimal(km, if (km >= 10) 0 else 1, locale) + " km" // i18n-ignore
+    val distance = units.formatDistance(km, if (units.distance(km) >= 10) 0 else 1)
     val time = if (minutes >= 60) "${minutes / 60} h ${minutes % 60} min" else "$minutes min" // i18n-ignore
     return "$distance · $time"
 }
 
 // Con letra grande el ranking crece hasta 1,5 veces su ancho y luego envuelve.
 internal fun anchoLeaderboard(escalaLetra: Float): Dp = 220.dp * minOf(maxOf(escalaLetra, 1f), 1.5f)
+
+internal fun cameraDistanceText(distanceM: Int, units: UnitFormatter): String =
+    units.formatShortDistance(distanceM.toDouble())
+
+internal fun wholeSpeed(kmh: Double, units: UnitFormatter): Int = units.speed(kmh).roundToInt()
 
 /** Aviso inline dismisseable — mismo look para el error de navegación y el de mapa offline
  * corrupto (fix C: ahora nunca conviven, pickSecondaryBanner elige uno). internal: la usa
@@ -1191,11 +1197,16 @@ private fun currentBearingDegrees(route: List<LiveRouteHolder.RoutePoint>): Doub
  * dibuja como texto por encima de su ícono (offset -2.2em), así que tocar el nombre cae fuera
  * del hit-test de los íconos solos — misma fuente (SRC_MARKERS), mismas properties, sin caso
  * especial en describeFeature. */
-private fun resolveTappedFeature(map: MapLibreMap, latLng: LatLng, resolver: StringResolver): MapFeatureDescription? {
+private fun resolveTappedFeature(
+    map: MapLibreMap,
+    latLng: LatLng,
+    resolver: StringResolver,
+    units: UnitFormatter,
+): MapFeatureDescription? {
     val screenPoint = map.projection.toScreenLocation(latLng)
     val feature = map.queryRenderedFeatures(screenPoint, LYR_MARKERS, LYR_MARKERS_ROTANTES, LYR_PEER_LABELS).firstOrNull() ?: return null
     val (kind, properties) = describableProperties(feature)
-    return describeFeature(kind, properties, resolver)
+    return describeFeature(kind, properties, resolver, units)
 }
 
 /** Banner del radar al que el vehículo se dirige — solo ese, nunca los de otras calles.
@@ -1212,10 +1223,13 @@ internal fun ApproachingCameraBanner(
         ) {
             Icon(Icons.Default.Speed, contentDescription = null, tint = Color.White)
             Spacer(Modifier.width(8.dp))
+            val units = rememberUnitFormatter()
             Text(
                 buildString {
-                    append(stringResource(R.string.map_camera_ahead, target.distanceM))
-                    target.maxSpeedKmh?.let { append("  ·  ").append(stringResource(R.string.map_camera_limit, it)) }
+                    append(stringResource(R.string.map_camera_ahead, cameraDistanceText(target.distanceM, units)))
+                    target.maxSpeedKmh?.let {
+                        append("  ·  ").append(stringResource(R.string.map_camera_limit, wholeSpeed(it.toDouble(), units)))
+                    }
                 },
                 color = Color.White,
                 fontSize = 15.sp,
@@ -1373,7 +1387,7 @@ private fun SpeedOverlay(speedFlow: StateFlow<Int?>, modifier: Modifier = Modifi
 private fun CurrentSpeedBadge(speedKmh: Int, modifier: Modifier = Modifier) {
     Surface(color = Color(0xCC12121A), modifier = modifier) {
         Text(
-            "$speedKmh km/h", // i18n-ignore
+            rememberUnitFormatter().formatSpeed(speedKmh.toDouble()),
             color = Color(0xFFE8FF00),
             fontSize = 28.sp,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

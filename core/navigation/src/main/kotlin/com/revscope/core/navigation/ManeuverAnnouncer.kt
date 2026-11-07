@@ -1,6 +1,7 @@
 package com.revscope.core.navigation
 
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 
 /**
  * Decide **cuándo** hablar. [ManeuverSpeech] decide qué decir.
@@ -12,7 +13,10 @@ import com.revscope.core.common.i18n.StringResolver
  * Guarda estado, pero es determinístico: la misma secuencia de estados produce la misma
  * secuencia de frases.
  */
-class ManeuverAnnouncer(private val resolver: StringResolver) {
+class ManeuverAnnouncer(
+    private val resolver: StringResolver,
+    private val units: UnitFormatter,
+) {
 
     private var currentManeuverIndex = -1
     private var closestTierAnnounced = Int.MAX_VALUE
@@ -40,7 +44,7 @@ class ManeuverAnnouncer(private val resolver: StringResolver) {
     private fun arrivalAnnouncement(state: NavigationState): String? {
         if (announcedArrival) return null
         announcedArrival = true
-        return ManeuverSpeech.spoken(state.maneuver ?: ARRIVAL, 0, resolver)
+        return ManeuverSpeech.spoken(state.maneuver ?: ARRIVAL, 0, resolver, units)
     }
 
     private fun offRouteAnnouncement(): String? {
@@ -56,7 +60,7 @@ class ManeuverAnnouncer(private val resolver: StringResolver) {
         if (tier >= closestTierAnnounced) return null
         closestTierAnnounced = tier
         startedTalking = true
-        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM, resolver)
+        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM, resolver, units)
     }
 
     private fun rewindOnNewManeuver(index: Int) {
@@ -72,7 +76,7 @@ class ManeuverAnnouncer(private val resolver: StringResolver) {
     private fun firstWordOfTheTrip(state: NavigationState, maneuver: Maneuver): String? {
         if (startedTalking) return null
         startedTalking = true
-        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM, resolver)
+        return ManeuverSpeech.spoken(maneuver, state.distanceToManeuverM, resolver, units)
     }
 
     /** El umbral más cercano que la distancia ya cruzó; los más lejanos quedan saltados. */

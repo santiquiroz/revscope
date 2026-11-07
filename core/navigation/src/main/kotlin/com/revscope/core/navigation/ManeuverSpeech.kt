@@ -2,6 +2,8 @@ package com.revscope.core.navigation
 
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.DistanceUnit
+import com.revscope.core.common.units.UnitFormatter
 import kotlin.math.roundToInt
 
 /**
@@ -29,36 +31,43 @@ object ManeuverSpeech {
     /** Debajo de esto ya no tiene sentido anunciar una distancia. */
     private const val IMMEDIATE_M = 30
 
-    /** Los metros se redondean a este múltiplo: 'en 237 metros' no es una instrucción útil. */
-    private const val METERS_ROUNDING = 50
+    /** Metros y pies se redondean a este múltiplo: 'en 237 metros' no es una instrucción útil. */
+    private const val SHORT_ROUNDING = 50
 
-    fun spoken(maneuver: Maneuver, distanceM: Int, resolver: StringResolver): String {
+    private const val TENTHS = 10.0
+
+    fun spoken(maneuver: Maneuver, distanceM: Int, resolver: StringResolver, units: UnitFormatter): String {
         val action = action(maneuver, resolver)
         if (maneuver.type == "arrive") return action
-        return resolver.get(R.string.nav_spoken_with_distance, distancePrefix(distanceM, resolver), action)
+        return resolver.get(R.string.nav_spoken_with_distance, distancePrefix(distanceM, resolver, units), action)
     }
 
-    private fun distancePrefix(distanceM: Int, resolver: StringResolver): String = when {
-        distanceM < IMMEDIATE_M -> resolver.get(R.string.nav_distance_now)
-        distanceM < 1_000 -> {
-            val rounded = ((distanceM.toDouble() / METERS_ROUNDING).roundToInt() * METERS_ROUNDING)
-                .coerceAtLeast(METERS_ROUNDING)
-            resolver.get(R.string.nav_distance_meters, rounded)
+    private fun distancePrefix(distanceM: Int, resolver: StringResolver, units: UnitFormatter): String {
+        if (distanceM < IMMEDIATE_M) return resolver.get(R.string.nav_distance_now)
+        val measure = units.shortDistance(distanceM.toDouble())
+        return when (measure.unit) {
+            DistanceUnit.METERS -> shortPhrase(R.plurals.nav_spoken_meters, measure.value, resolver)
+            DistanceUnit.FEET -> shortPhrase(R.plurals.nav_spoken_feet, measure.value, resolver)
+            DistanceUnit.KILOMETERS ->
+                longPhrase(R.plurals.nav_spoken_kilometers, R.string.nav_spoken_kilometers_decimal, measure.value, resolver)
+            // Una milla nunca cae en metros enteros: sin redondear, 1609 m se diría "1.0 miles".
+            DistanceUnit.MILES ->
+                longPhrase(R.plurals.nav_spoken_miles, R.string.nav_spoken_miles_decimal, toTenth(measure.value), resolver)
         }
-        else -> {
-            val km = distanceM / 1_000.0
-            // Separador decimal del idioma a propósito: en español lo lee un TTS que espera coma.
-            val text = if (km % 1.0 == 0.0) {
-                km.toInt().toString()
-            } else {
-                LocaleNumbers.decimal(km, 1, resolver.locale)
-            }
-            if (text == "1") {
-                resolver.get(R.string.nav_distance_one_kilometer)
-            } else {
-                resolver.get(R.string.nav_distance_kilometers, text)
-            }
-        }
+    }
+
+    private fun shortPhrase(plural: Int, value: Double, resolver: StringResolver): String {
+        val rounded = ((value / SHORT_ROUNDING).roundToInt() * SHORT_ROUNDING).coerceAtLeast(SHORT_ROUNDING)
+        return resolver.plural(plural, rounded, rounded)
+    }
+
+    private fun toTenth(value: Double): Double = (value * TENTHS).roundToInt() / TENTHS
+
+    private fun longPhrase(plural: Int, decimal: Int, value: Double, resolver: StringResolver): String {
+        if (value % 1.0 == 0.0) return resolver.plural(plural, value.toInt(), value.toInt())
+        // Separador decimal del idioma a propósito: en español lo lee un TTS que espera coma.
+        val text = LocaleNumbers.decimal(value, 1, resolver.locale)
+        return resolver.get(decimal, text)
     }
 
     private fun action(maneuver: Maneuver, resolver: StringResolver): String {

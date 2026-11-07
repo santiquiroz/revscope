@@ -47,14 +47,14 @@
     <string name="map_place_work">Trabajo</string>
     <string name="map_feature_close">Cerrar descripción</string>
     <string name="map_feature_camera_title">Radar fijo</string>
-    <string name="map_feature_camera_limit">Fotomulta · límite %1$d km/h</string>
+    <string name="map_feature_camera_limit">Fotomulta · límite %1$s</string>
     <string name="map_feature_camera_no_limit">Fotomulta · límite no registrado</string>
     <string name="map_feature_pothole_title">Hueco reportado</string>
     <string name="map_feature_pothole_hits">Reportado %1$d× · última vez %2$s</string>
     <string name="map_feature_pothole_once">Reportado el %1$s</string>
     <string name="map_feature_destination">Destino</string>
     <string name="map_feature_peer">Compañero de sala</string>
-    <string name="map_feature_peer_speed">%1$d km/h · en sala</string>
+    <string name="map_feature_peer_speed">%1$s · en sala</string>
     <string name="map_feature_peer_in_room">En sala</string>
     <string name="map_offline_ready">Mapa offline listo</string>
     <string name="map_download_failed">Descarga del mapa falló: %1$s — reintentá desde Ajustes</string>
@@ -90,7 +90,7 @@
     <string name="map_shared_dest_go">Ir</string>
     <string name="map_shared_dest_dismiss">Descartar propuesta</string>
     <string name="map_close_notice">Cerrar aviso</string>
-    <string name="map_camera_ahead">Radar en %1$d m</string>
+    <string name="map_camera_ahead">Radar en %1$s</string>
     <string name="map_camera_limit">límite %1$d</string>
     <string name="map_remote_promo">Mapa premium activo por internet — descargalo para usarlo sin datos</string>
     <string name="map_download">Descargar</string>

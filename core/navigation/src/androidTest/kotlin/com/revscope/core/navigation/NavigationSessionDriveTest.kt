@@ -3,6 +3,8 @@ package com.revscope.core.navigation
 import android.content.res.Configuration
 import androidx.test.platform.app.InstrumentationRegistry
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -119,7 +121,8 @@ class NavigationSessionDriveTest {
     fun la_frase_que_se_dice_al_arrancar_es_una_instruccion_de_verdad() {
         val primero = drive().first()
 
-        val frase = ManeuverSpeech.spoken(primero.maneuver!!, primero.distanceToManeuverM, spanish())
+        val metric = UnitFormatter(UnitSystem.METRIC, Locale("es"))
+        val frase = ManeuverSpeech.spoken(primero.maneuver!!, primero.distanceToManeuverM, spanish(), metric)
         assertTrue("debe hablar de distancia: $frase", frase.startsWith("En ") || frase.startsWith("Ahora"))
         assertFalse("no puede quedar una preposición colgando: $frase", frase.trimEnd().endsWith(" en"))
     }

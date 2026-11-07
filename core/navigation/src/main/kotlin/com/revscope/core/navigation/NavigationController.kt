@@ -1,6 +1,7 @@
 package com.revscope.core.navigation
 
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,9 +21,10 @@ import javax.inject.Singleton
 class NavigationController @Inject constructor(
     private val voice: NavigationVoice,
     resolver: StringResolver,
+    units: UnitFormatter,
 ) {
 
-    private val announcer = ManeuverAnnouncer(resolver)
+    private val announcer = ManeuverAnnouncer(resolver, units)
 
     private val _state = MutableStateFlow<NavigationState?>(null)
     val state: StateFlow<NavigationState?> = _state.asStateFlow()

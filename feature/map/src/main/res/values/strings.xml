@@ -47,14 +47,14 @@
     <string name="map_place_work">Work</string>
     <string name="map_feature_close">Close description</string>
     <string name="map_feature_camera_title">Fixed speed camera</string>
-    <string name="map_feature_camera_limit">Photo enforcement · limit %1$d km/h</string>
+    <string name="map_feature_camera_limit">Photo enforcement · limit %1$s</string>
     <string name="map_feature_camera_no_limit">Photo enforcement · limit not recorded</string>
     <string name="map_feature_pothole_title">Reported pothole</string>
     <string name="map_feature_pothole_hits">Reported %1$d× · last on %2$s</string>
     <string name="map_feature_pothole_once">Reported on %1$s</string>
     <string name="map_feature_destination">Destination</string>
     <string name="map_feature_peer">Room member</string>
-    <string name="map_feature_peer_speed">%1$d km/h · in room</string>
+    <string name="map_feature_peer_speed">%1$s · in room</string>
     <string name="map_feature_peer_in_room">In room</string>
     <string name="map_offline_ready">Offline map ready</string>
     <string name="map_download_failed">Map download failed: %1$s — try again from Settings</string>
@@ -90,7 +90,7 @@
     <string name="map_shared_dest_go">Go</string>
     <string name="map_shared_dest_dismiss">Dismiss suggestion</string>
     <string name="map_close_notice">Close notice</string>
-    <string name="map_camera_ahead">Speed camera in %1$d m</string>
+    <string name="map_camera_ahead">Speed camera in %1$s</string>
     <string name="map_camera_limit">limit %1$d</string>
     <string name="map_remote_promo">Premium map streaming online — download it to use without data</string>
     <string name="map_download">Download</string>
