@@ -3,7 +3,6 @@ package com.revscope.feature.map
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -64,7 +63,6 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -88,6 +86,9 @@ import com.revscope.core.navigation.NavigationRoute
 import com.revscope.core.navigation.RouteLabel
 import com.revscope.core.navigation.RouteScoring
 import com.revscope.feature.map.location.InitialCentering
+import com.revscope.feature.map.location.LocationAccess
+import com.revscope.feature.map.location.locationAccessOf
+import com.revscope.feature.map.location.readLocationAccess
 import com.revscope.feature.map.navigation.NavCamera
 import com.revscope.feature.map.navigation.NavCameraInputs
 import com.revscope.feature.map.navigation.NavigationBanner
@@ -191,26 +192,32 @@ fun LiveMapScreen(
     val tapResolver = remember(context) { AndroidStringResolver(context) }
     val units = rememberUnitFormatter()
     val language = AppLanguage.current(context).language
-    var hasLocationPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED,
-        )
-    }
+    var locationAccess by remember { mutableStateOf(readLocationAccess(context)) }
+    val hasLocationPermission = locationAccess != LocationAccess.NONE
     // Android 12+ ignora un request de FINE sin COARSE en el mismo diálogo.
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { grants ->
-        hasLocationPermission = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        locationAccess = locationAccessOf(
+            fine = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true,
+            coarse = grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true,
+        )
     }
     val centering = remember { InitialCentering() }
 
     // GPS solo con el mapa visible Y la app en foreground: Home o pantalla apagada lo cortan.
+    // Keyed en locationAccess (no en el booleano): pasar de aproximada a precisa re-arranca el
+    // provider para que cambie de NETWORK/FUSED a GPS.
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(hasLocationPermission, lifecycleOwner) {
+    DisposableEffect(locationAccess, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> if (hasLocationPermission) viewModel.onMapVisible()
+                // Re-leer: el permiso pudo cambiar en Ajustes del sistema mientras la app estaba atrás.
+                Lifecycle.Event.ON_START -> {
+                    val current = readLocationAccess(context)
+                    locationAccess = current
+                    if (current != LocationAccess.NONE) viewModel.onMapVisible()
+                }
                 Lifecycle.Event.ON_STOP -> viewModel.onMapHidden()
                 else -> Unit
             }
@@ -608,6 +615,8 @@ fun LiveMapScreen(
                     }
                 }
             }
+        } else if (locationAccess == LocationAccess.COARSE) {
+            ApproximateLocationHint(Modifier.align(Alignment.TopCenter).padding(top = BAJO_SELECTOR, start = 12.dp, end = 12.dp))
         }
 
         // Gated en navigation == null, NO navIdle (re-keyeado en la ola final — regresión de
@@ -1358,6 +1367,22 @@ private fun MapDownloadConfirmDialog(
 /** X3: chip flotante "Recentrar" (estilo Google Maps) — visible con nav activa mientras el
  * usuario paneó el mapa (follow apagado); un tap re-engancha el follow, que ya hace que la
  * cámara vuelva sola (mismo mecanismo existente del LaunchedEffect de cámara). */
+@Composable
+private fun ApproximateLocationHint(modifier: Modifier = Modifier) {
+    Surface(
+        color = Color(0xF2121218),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        modifier = modifier,
+    ) {
+        Text(
+            stringResource(R.string.map_location_approximate),
+            color = Color(0xFFF0F0F8),
+            fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+        )
+    }
+}
+
 @Composable
 private fun RecenterChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(

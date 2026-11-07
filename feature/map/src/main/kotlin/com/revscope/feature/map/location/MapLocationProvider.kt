@@ -1,10 +1,13 @@
 package com.revscope.feature.map.location
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import com.revscope.core.obd.service.LiveRouteHolder
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -48,8 +51,15 @@ class MapLocationProvider @Inject constructor(
         // Sin permiso o sin provider GPS: el mapa queda en lastKnown, el banner de la
         // pantalla se encarga de pedirlo — acá no se revienta.
         runCatching {
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, UPDATE_INTERVAL_MS, UPDATE_MIN_DISTANCE_M, l)
+            lm.requestLocationUpdates(providerFor(lm), UPDATE_INTERVAL_MS, UPDATE_MIN_DISTANCE_M, l)
         }.onSuccess { listener = l }
+    }
+
+    // GPS_PROVIDER exige FINE: con solo "aproximada" (Android 12+) hay que escuchar otro provider.
+    private fun providerFor(lm: LocationManager): String {
+        val sdkInt = Build.VERSION.SDK_INT
+        val hasFused = sdkInt >= Build.VERSION_CODES.S && lm.hasProvider(LocationManager.FUSED_PROVIDER)
+        return locationProviderFor(readLocationAccess(context) == LocationAccess.FINE, sdkInt, hasFused)
     }
 
     fun stop() {
@@ -90,4 +100,27 @@ class MapLocationProvider @Inject constructor(
         const val UPDATE_INTERVAL_MS = 1_000L
         const val UPDATE_MIN_DISTANCE_M = 3f
     }
+}
+
+enum class LocationAccess { NONE, COARSE, FINE }
+
+fun locationAccessOf(fine: Boolean, coarse: Boolean): LocationAccess = when {
+    fine -> LocationAccess.FINE
+    coarse -> LocationAccess.COARSE
+    else -> LocationAccess.NONE
+}
+
+fun readLocationAccess(context: Context): LocationAccess = locationAccessOf(
+    fine = isGranted(context, Manifest.permission.ACCESS_FINE_LOCATION),
+    coarse = isGranted(context, Manifest.permission.ACCESS_COARSE_LOCATION),
+)
+
+private fun isGranted(context: Context, permission: String): Boolean =
+    context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+
+@SuppressLint("InlinedApi")
+fun locationProviderFor(hasFine: Boolean, sdkInt: Int, hasFused: Boolean): String = when {
+    hasFine -> LocationManager.GPS_PROVIDER
+    sdkInt >= Build.VERSION_CODES.S && hasFused -> LocationManager.FUSED_PROVIDER
+    else -> LocationManager.NETWORK_PROVIDER
 }

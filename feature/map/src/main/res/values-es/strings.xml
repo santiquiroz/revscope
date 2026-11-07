@@ -61,6 +61,7 @@
     <string name="map_osm_attribution">© OpenStreetMap contributors</string>
     <string name="map_location_disabled">Ubicación desactivada</string>
     <string name="map_location_allow">Permitir</string>
+    <string name="map_location_approximate">Ubicación aproximada: activa la ubicación precisa para navegar.</string>
     <string name="map_night_mode_auto">Mapa nocturno: automático</string>
     <string name="map_night_mode_on">Mapa nocturno: encendido</string>
     <string name="map_night_mode_off">Mapa nocturno: apagado</string>
