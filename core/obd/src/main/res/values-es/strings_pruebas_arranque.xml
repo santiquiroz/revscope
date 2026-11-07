@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Arranque en frío: pasos -->
+    <string name="obd_arranque_titulo_paso_contacto">Contacto</string>
+    <string name="obd_arranque_titulo_paso_arranque">Arranque</string>
+    <string name="obd_arranque_titulo_paso_calentamiento">Calentamiento</string>
+
+    <!-- Arranque en frío: comprobaciones -->
+    <string name="obd_arranque_comprobacion_arranco">Arrancó</string>
+    <string name="obd_arranque_comprobacion_primer_intento">Al primer intento</string>
+    <string name="obd_arranque_comprobacion_sin_apagones">Sin apagones después de arrancar</string>
+    <string name="obd_arranque_comprobacion_ect_sin_saltos">Temperatura del motor sin saltos</string>
+    <string name="obd_arranque_comprobacion_perfil">El mínimo rápido baja al calentar</string>
+    <string name="obd_arranque_comprobacion_sensores">Temperaturas coherentes en reposo</string>
+
+    <!-- Arranque en frío: título -->
+    <string name="obd_arranque_titulo_frio">Arranque en frío: %1$s</string>
+    <string name="obd_arranque_titulo_tibio">Arranque tibio: %1$s</string>
+    <string name="obd_arranque_cuerpo_sin_datos">sin datos suficientes de RPM</string>
+    <string name="obd_arranque_cuerpo_no_arranco">no arrancó</string>
+    <string name="obd_arranque_cuerpo_se_apaga">se apagó %1$s después de arrancar</string>
+    <string name="obd_arranque_cuerpo_saltos_ect">saltos en la temperatura del motor</string>
+    <string name="obd_arranque_cuerpo_varios_intentos">arrancó al %1$d.º intento%2$s</string>
+    <string name="obd_arranque_cuerpo_irregular">arrancó, con observaciones</string>
+    <string name="obd_arranque_cuerpo_normal">arrancó al primer intento%1$s</string>
+    <string name="obd_arranque_en_tiempo">en %1$s</string>
+
+    <!-- Arranque en frío: interpretación -->
+    <string name="obd_arranque_sin_lectura_motor">Sin lectura de la temperatura del motor en contacto: no se pudo confirmar que el motor estuviera frío.</string>
+    <string name="obd_arranque_sin_lectura_aire">Sin lectura de la temperatura del aire en contacto: no se pudo confirmar que el motor estuviera frío.</string>
+    <string name="obd_arranque_frase_condicion">En contacto, el motor marcaba %1$s y el aire %2$s (%3$s de diferencia; frío es menos de %4$s, %5$s).</string>
+    <string name="obd_arranque_frase_tibio">%1$s Es un arranque tibio: no equivale a un arranque tras el reposo de la noche.</string>
+    <string name="obd_arranque_no_giro">El motor no giró durante el paso de arranque.</string>
+    <string name="obd_arranque_no_quedo_encendido">No quedó encendido en %1$s.</string>
+    <string name="obd_arranque_al_primer_intento">al primer intento</string>
+    <string name="obd_arranque_al_intento">al %1$d.º intento</string>
+    <string name="obd_arranque_despues_se_apago">Después se apagó %1$s.</string>
+    <string name="obd_arranque_frase_arranque">Arrancó %1$s, %2$s después de pedirlo.</string>
+    <string name="obd_arranque_llego_a">Llegó a %1$s en %2$s.</string>
+    <string name="obd_arranque_llego_hasta">Llegó hasta %1$s sin alcanzar %2$s.</string>
+    <string name="obd_arranque_verbo_bajo">bajó</string>
+    <string name="obd_arranque_verbo_subio">subió</string>
+    <string name="obd_arranque_cierre_esperado">como se espera</string>
+    <string name="obd_arranque_cierre_deberia_bajar">y debería bajar a medida que calienta</string>
+    <string name="obd_arranque_frase_perfil">El mínimo rápido %1$s de %2$s a %3$s&#160;rpm mientras el motor pasaba de %4$s a %5$s, %6$s.</string>
+    <string name="obd_arranque_frase_saltos">La temperatura del motor saltó %1$s en %2$s: compatible con P0119 (señal intermitente del sensor de temperatura del motor) o con un falso contacto en su conector.</string>
+    <string name="obd_arranque_nota_aire">En motos refrigeradas por aire, el sensor de «motor» suele medir la culata o el aceite: sube distinto que un refrigerante.</string>
+
+    <!-- Arranque en frío: hallazgos -->
+    <string name="obd_arranque_hallazgo_motor_bajo_aire">El motor marca %1$s menos que el aire tras el reposo: revisa los sensores ECT e IAT</string>
+    <string name="obd_arranque_hallazgo_aire_ambiente">El aire de admisión (%1$s) difiere del ambiente (%2$s) con el motor frío: revisa el IAT</string>
+    <string name="obd_arranque_hallazgo_intento">Arrancó al %1$d.º intento</string>
+    <string name="obd_arranque_hallazgo_se_apago">Se apagó %1$s después de arrancar</string>
+    <string name="obd_arranque_hallazgo_salto">La temperatura del motor saltó %1$s en %2$s</string>
+    <string name="obd_arranque_hallazgo_ect_bajo">La temperatura del motor bajó %1$s mientras calentaba</string>
+    <string name="obd_arranque_hallazgo_minimo_subio">El mínimo rápido subió de %1$s a %2$s&#160;rpm mientras calentaba</string>
+
+    <!-- Arranque en frío: siguiente paso -->
+    <string name="obd_arranque_siguiente_sin_datos">Revisa que el adaptador siga conectado y repite la prueba</string>
+    <string name="obd_arranque_siguiente_no_arranco">Mide la batería con el multímetro durante el arranque (plantilla batería) y revisa combustible y chispa</string>
+    <string name="obd_arranque_siguiente_se_apaga">Corre la prueba de mínimo y retorno con el motor frío y revisa el control del mínimo</string>
+    <string name="obd_arranque_siguiente_saltos_ect">Revisa el conector y el cableado del sensor de temperatura del motor y mídelo con el multímetro (plantilla ECT)</string>
+    <string name="obd_arranque_siguiente_varios_intentos">Repite la prueba tras el reposo de la noche; si sigue costando, mide la batería durante el arranque (plantilla batería)</string>
+    <string name="obd_arranque_siguiente_sensores">Mide los sensores de temperatura con el multímetro (plantillas ECT e IAT)</string>
+    <string name="obd_arranque_siguiente_ect">Mide el sensor de temperatura del motor con el multímetro (plantilla ECT)</string>
+    <string name="obd_arranque_siguiente_minimo">Revisa el control del mínimo: el mínimo rápido debería bajar a medida que el motor calienta</string>
+    <string name="obd_arranque_siguiente_repetir_frio">Para confirmarlo en frío, repite la prueba tras el reposo de la noche (≥ 6 h, típico)</string>
+
+    <!-- Arranque en frío: medidas -->
+    <string name="obd_arranque_medida_contacto">En contacto: %1$s · %2$s</string>
+    <string name="obd_arranque_parte_motor">motor %1$s</string>
+    <string name="obd_arranque_parte_aire">aire %1$s</string>
+    <string name="obd_arranque_parte_ambiente">ambiente %1$s</string>
+    <string name="obd_arranque_sin_temperaturas">sin temperaturas</string>
+    <string name="obd_arranque_condicion_frio">frío</string>
+    <string name="obd_arranque_condicion_tibio">tibio</string>
+    <string name="obd_arranque_condicion_sin_dato">sin dato</string>
+    <string name="obd_arranque_medida_arranque">Arranque: %1$s, %2$s hasta prender</string>
+    <string name="obd_arranque_medida_no_prendio">Arranque: no prendió (%1$s)</string>
+    <string name="obd_arranque_medida_apagones">Apagones después de arrancar: %1$d</string>
+    <string name="obd_arranque_medida_perfil">Mínimo rápido: %1$s&#160;rpm con %2$s → %3$s&#160;rpm con %4$s</string>
+    <string name="obd_arranque_medida_hasta">Hasta %1$s: %2$s</string>
+    <string name="obd_arranque_medida_no_llego">Hasta %1$s: no llegó (máximo %2$s)</string>
+    <string name="obd_arranque_medida_saltos">Saltos de la temperatura del motor: %1$s</string>
+    <string name="obd_arranque_ninguno">ninguno</string>
+    <plurals name="obd_arranque_veces">
+        <item quantity="one">%1$d vez</item>
+        <item quantity="other">%1$d veces</item>
+    </plurals>
+    <plurals name="obd_arranque_intentos">
+        <item quantity="one">%1$d intento</item>
+        <item quantity="other">%1$d intentos</item>
+    </plurals>
+</resources>

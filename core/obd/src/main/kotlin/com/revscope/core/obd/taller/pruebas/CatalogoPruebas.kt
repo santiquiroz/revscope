@@ -93,14 +93,14 @@ object CatalogoPruebas {
         pasos = listOf(
             PasoPrueba(
                 clave = PasosArranque.CONTACTO,
-                titulo = TextosArranqueFrio.TITULOS_PASO.getValue(PasosArranque.CONTACTO),
+                tituloRes = TextosArranqueFrio.TITULOS_PASO.getValue(PasosArranque.CONTACTO),
                 instruccion = "Contacto puesto y motor apagado: no arranques todavía",
                 modo = ModoPaso.Grabar(CONTACTO_MS),
                 pidPrincipal = AnalizadorArranqueFrio.PID_ECT,
             ),
             PasoPrueba(
                 clave = PasosArranque.ARRANQUE,
-                titulo = TextosArranqueFrio.TITULOS_PASO.getValue(PasosArranque.ARRANQUE),
+                tituloRes = TextosArranqueFrio.TITULOS_PASO.getValue(PasosArranque.ARRANQUE),
                 instruccion = "Arranca ahora, como lo haces siempre",
                 modo = ModoPaso.Accion(ARRANQUE_MAX_MS),
                 descartarInicioMs = 0,
@@ -109,7 +109,7 @@ object CatalogoPruebas {
             ),
             PasoPrueba(
                 clave = PasosArranque.CALENTAMIENTO,
-                titulo = TextosArranqueFrio.TITULOS_PASO.getValue(PasosArranque.CALENTAMIENTO),
+                tituloRes = TextosArranqueFrio.TITULOS_PASO.getValue(PasosArranque.CALENTAMIENTO),
                 instruccion = "Déjalo en mínimo sin acelerar; puedes terminar antes de llegar a 60 °C",
                 modo = ModoPaso.GrabarHasta(CALENTAMIENTO_MAX_MS),
                 descartarInicioMs = 0,
@@ -117,7 +117,7 @@ object CatalogoPruebas {
                 pidPrincipal = AnalizadorArranqueFrio.PID_ECT,
             ),
         ),
-        analizar = { datos, bandas, _ -> AnalizadorArranqueFrio.analizar(datos, bandas) },
+        analizar = AnalizadorArranqueFrio::analizar,
     )
 
     val bateriaCarga = DefinicionPrueba(

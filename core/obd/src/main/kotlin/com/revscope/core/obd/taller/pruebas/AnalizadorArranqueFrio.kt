@@ -1,5 +1,7 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
@@ -52,7 +54,7 @@ object AnalizadorArranqueFrio {
     fun esArranque(rpm: List<Punto>, tramo: IntRange): Boolean =
         SerieNumerica.duracionMs(rpm, tramo) >= ARRANQUE_SOSTENIDO_MS && tramo.any { rpm[it].valor >= ARRANCADO_MIN_RPM }
 
-    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>): ResultadoPrueba {
+    fun analizar(datos: DatosPrueba, bandas: Map<String, BandaReferencia>, resolver: StringResolver): ResultadoPrueba {
         val rpm = datos.serie(PID_RPM, Pasos.TRAS_CONTACTO)
         val ect = datos.serie(PID_ECT, Pasos.TODOS)
         val arranque = arranque(datos, rpm)
@@ -68,8 +70,8 @@ object AnalizadorArranqueFrio {
             comprobaciones = emptyList(),
             patron = PatronArranque.NORMAL,
         )
-        val comprobado = base.copy(comprobaciones = comprobaciones(base))
-        return TextosArranqueFrio.resultado(comprobado.copy(patron = patron(comprobado, rpm)))
+        val comprobado = base.copy(comprobaciones = comprobaciones(base, resolver))
+        return TextosArranqueFrio.resultado(comprobado.copy(patron = patron(comprobado, rpm)), resolver)
     }
 
     // ── Contacto ────────────────────────────────────────────────────────────
@@ -145,14 +147,18 @@ object AnalizadorArranqueFrio {
 
     // ── Comprobaciones y patrón ─────────────────────────────────────────────
 
-    private fun comprobaciones(a: AnalisisArranqueFrio): List<Comprobacion> = listOfNotNull(
-        Comprobacion.siNo(CLAVE_ARRANCO, "Arrancó", a.arranque.arranco),
-        Comprobacion.siNo(CLAVE_PRIMER_INTENTO, "Al primer intento", a.arranque.arranco && a.arranque.intentos == 1),
-        Comprobacion.siNo(CLAVE_SIN_APAGONES, "Sin apagones después de arrancar", a.apagones == 0),
-        Comprobacion.siNo(CLAVE_ECT_SIN_SALTOS, "Temperatura del motor sin saltos", a.saltosEct.isEmpty()),
-        a.perfil?.baja?.let { Comprobacion.siNo(CLAVE_PERFIL, "El mínimo rápido baja al calentar", it) },
+    private fun comprobaciones(a: AnalisisArranqueFrio, res: StringResolver): List<Comprobacion> = listOfNotNull(
+        Comprobacion.siNo(CLAVE_ARRANCO, res.get(R.string.obd_arranque_comprobacion_arranco), a.arranque.arranco),
+        Comprobacion.siNo(
+            CLAVE_PRIMER_INTENTO,
+            res.get(R.string.obd_arranque_comprobacion_primer_intento),
+            a.arranque.arranco && a.arranque.intentos == 1,
+        ),
+        Comprobacion.siNo(CLAVE_SIN_APAGONES, res.get(R.string.obd_arranque_comprobacion_sin_apagones), a.apagones == 0),
+        Comprobacion.siNo(CLAVE_ECT_SIN_SALTOS, res.get(R.string.obd_arranque_comprobacion_ect_sin_saltos), a.saltosEct.isEmpty()),
+        a.perfil?.baja?.let { Comprobacion.siNo(CLAVE_PERFIL, res.get(R.string.obd_arranque_comprobacion_perfil), it) },
         a.plausibilidad.takeIf { it.condicion != CondicionMotor.SIN_DATO }
-            ?.let { Comprobacion.siNo(CLAVE_SENSORES, "Temperaturas coherentes en reposo", it.coherente) },
+            ?.let { Comprobacion.siNo(CLAVE_SENSORES, res.get(R.string.obd_arranque_comprobacion_sensores), it.coherente) },
     )
 
     private fun patron(a: AnalisisArranqueFrio, rpm: List<Punto>): PatronArranque = when {

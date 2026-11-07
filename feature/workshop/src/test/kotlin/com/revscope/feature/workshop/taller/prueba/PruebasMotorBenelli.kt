@@ -76,7 +76,7 @@ internal object PruebasMotorBenelli {
 
     fun arranqueTerminado(eventoId: Long? = 23): EstadoPrueba.Terminada {
         val datos = arranque()
-        return EstadoPrueba.Terminada(AnalizadorArranqueFrio.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorArranqueFrio.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     // Calentando: paso 3 de 3, graba hasta 60 °C o «Terminar»; la temperatura va en 41 °C.
