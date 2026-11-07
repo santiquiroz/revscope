@@ -18,6 +18,7 @@ import com.revscope.core.obd.taller.pruebas.FasePaso
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ClavesBanda
+import com.revscope.feature.workshop.R
 import kotlin.math.ceil
 
 // Serie en vivo de un PID: (ms de la captura, valor en %).
@@ -60,7 +61,7 @@ internal object MapeoPaso {
         return base(e, resolver).copy(
             vivo = serie.lastOrNull()?.let { valorVivo(pid, it.second, vref, resolver) },
             grafica = grafica(pid, serie, vref, objetivo, resolver),
-            tituloGrafica = "Últimos 10 s, en voltios",
+            tituloGrafica = resolver.get(R.string.workshop_prueba_titulo_grafica_voltios),
             leyendaGrafica = objetivo.map { it.descripcion },
         )
     }
@@ -77,9 +78,14 @@ internal object MapeoPaso {
         return base(e, resolver).copy(
             vivo = serie.lastOrNull()?.let { MapeoMagnitud.valorVivo(pid, it.second, resolver) },
             grafica = MapeoMagnitud.grafica(pid, serie, VENTANA_MS, banda, resolver),
-            tituloGrafica = "Últimos 10 s, en ${MapeoMagnitud.de(pid).unidad.ifEmpty { "unidades del PID" }}",
+            tituloGrafica = tituloMagnitud(pid, resolver),
             leyendaGrafica = listOfNotNull(banda?.let { MapeoMagnitud.leyenda(it, resolver) }),
         )
+    }
+
+    private fun tituloMagnitud(pid: String, resolver: StringResolver): String {
+        val unidad = MapeoMagnitud.de(pid, resolver).unidad.ifEmpty { resolver.get(R.string.workshop_prueba_unidades_pid) }
+        return resolver.get(R.string.workshop_prueba_titulo_grafica_unidad, unidad)
     }
 
     private fun base(e: EstadoPrueba.EnPaso, resolver: StringResolver): PasoUi {
@@ -90,7 +96,7 @@ internal object MapeoPaso {
             total = e.total,
             titulo = e.paso.titulo,
             instruccion = e.paso.instruccion,
-            subtexto = TextosPrueba.subtexto(e.fase, e.paso.modo),
+            subtexto = TextosPrueba.subtexto(e.fase, e.paso.modo, resolver),
             fase = e.fase,
             restanteS = restanteS,
             duracionS = ceil(e.paso.modo.limiteMs / 1_000.0).toInt(),
@@ -100,7 +106,7 @@ internal object MapeoPaso {
             tituloGrafica = "",
             leyendaGrafica = emptyList(),
             anuncio = anuncio(e, restanteS, resolver),
-            accionPrincipal = TextosPrueba.accionPrincipal(e.fase, e.paso.modo),
+            accionPrincipal = TextosPrueba.accionPrincipal(e.fase, e.paso.modo, resolver),
             grabados = e.indice,
         )
     }
@@ -108,11 +114,11 @@ internal object MapeoPaso {
     // Lo que lee TalkBack solo cambia al cambiar de paso o de fase y en los últimos 3 s, no con cada décima.
     fun anuncio(e: EstadoPrueba.EnPaso, restanteS: Int?, resolver: StringResolver): String {
         if (e.fase != FasePaso.POSICIONANDO && restanteS != null && restanteS in 1..SEGUNDOS_ANUNCIADOS) return "$restanteS"
-        return "${textoPaso(e.indice + 1, e.total, resolver, e.paso.titulo)}. ${TextosPrueba.estadoFase(e.fase)}"
+        return "${textoPaso(e.indice + 1, e.total, resolver, e.paso.titulo)}. ${TextosPrueba.estadoFase(e.fase, resolver)}"
     }
 
     private fun valorVivo(pid: String, porcentaje: Double, vref: ReferenciaVoltaje, resolver: StringResolver) = ValorVivoUi(
-        etiqueta = "TPS · PID $pid · con ${FormatoPosicion.voltios(vref.voltios, resolver)} de referencia",
+        etiqueta = resolver.get(R.string.workshop_prueba_vivo_tps, pid, FormatoPosicion.voltios(vref.voltios, resolver)),
         principal = FormatoPosicion.porcentaje(porcentaje, resolver),
         secundario = FormatoPosicion.voltios(vref.aVoltios(porcentaje), resolver),
     )
@@ -137,10 +143,12 @@ internal object MapeoPaso {
     }
 
     private fun descripcion(pid: String, valoresV: List<Double>, bandas: List<BandaEnEscala>, resolver: StringResolver): String {
-        val objetivo = bandas.joinToString("; ") { it.descripcion }.let { if (it.isEmpty()) "" else ". Banda: $it" }
-        if (valoresV.isEmpty()) return "PID $pid en los últimos 10 s: esperando muestras$objetivo"
+        val objetivo = bandas.joinToString("; ") { it.descripcion }
+            .let { if (it.isEmpty()) "" else resolver.get(R.string.workshop_prueba_grafica_objetivo, it) }
+        if (valoresV.isEmpty()) return resolver.get(R.string.workshop_prueba_tps_descripcion_vacia, pid, objetivo)
         val min = FormatoPosicion.voltios(valoresV.min(), resolver)
         val max = FormatoPosicion.voltios(valoresV.max(), resolver)
-        return "PID $pid en los últimos 10 s: de $min a $max, ${Tendencia.de(valoresV, ESTABLE_MAX_V, resolver)}$objetivo"
+        val tendencia = Tendencia.de(valoresV, ESTABLE_MAX_V, resolver)
+        return resolver.get(R.string.workshop_prueba_tps_descripcion, pid, min, max, tendencia, objetivo)
     }
 }
