@@ -33,13 +33,13 @@ internal object MapeoResultadoElectrico {
 
     fun mapBaro(base: ResultadoUi, a: AnalisisMapBaro, datos: DatosPrueba?, resolver: StringResolver): ResultadoUi = base.copy(
         comprobaciones = a.comprobaciones.map { MapeoResultadoMotor.comprobacion(it, resolver) },
-        medidas = TextosMapBaro.medidas(a),
+        medidas = TextosMapBaro.medidas(a, resolver),
         graficas = listOfNotNull(
             datos?.let {
                 MapeoResultadoMotor.graficaCon(
                     it,
                     AnalizadorMapBaro.PID_MAP,
-                    TextosMapBaro.TITULOS_PASO,
+                    TextosMapBaro.titulosPaso(resolver),
                     bandaBaro(a, resolver),
                     leyendaBaro(a, resolver),
                     resolver,

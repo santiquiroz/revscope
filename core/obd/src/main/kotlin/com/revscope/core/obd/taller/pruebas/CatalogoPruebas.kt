@@ -179,12 +179,12 @@ object CatalogoPruebas {
         pasos = listOf(
             PasoPrueba(
                 clave = PasosMap.CONTACTO,
-                titulo = TextosMapBaro.TITULOS_PASO.getValue(PasosMap.CONTACTO),
+                tituloRes = TextosMapBaro.TITULOS_PASO.getValue(PasosMap.CONTACTO),
                 instruccion = "Contacto puesto y motor apagado: no toques el acelerador",
                 modo = ModoPaso.Grabar(CONTACTO_MS),
             ),
         ),
-        analizar = { datos, bandas, _ -> AnalizadorMapBaro.analizar(datos, bandas) },
+        analizar = AnalizadorMapBaro::analizar,
         usaAmbiente = true,
     )
 

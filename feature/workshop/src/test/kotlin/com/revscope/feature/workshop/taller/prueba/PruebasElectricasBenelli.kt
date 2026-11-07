@@ -105,7 +105,7 @@ internal object PruebasElectricasBenelli {
 
     fun mapTerminado(eventoId: Long? = 26): EstadoPrueba.Terminada {
         val datos = map()
-        return EstadoPrueba.Terminada(AnalizadorMapBaro.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorMapBaro.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     fun enMap() = enPaso(TipoPrueba.MAP_BARO, 0, FasePaso.GRABANDO, 6_000)
