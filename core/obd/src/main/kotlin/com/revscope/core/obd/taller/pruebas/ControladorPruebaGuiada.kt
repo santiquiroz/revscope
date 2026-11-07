@@ -110,7 +110,7 @@ class ControladorPruebaGuiada(
             rechazoAlIniciar(tipo)?.let { return@withLock Result.failure(IllegalStateException(it)) }
             val definicion = checkNotNull(definiciones(tipo)).resuelta(resolver)
             ultimaSolicitud = tipo to opciones
-            val verificacion = EstadoPrueba.Verificando(tipo, definicion.precondiciones.map { it.evaluar(contexto()) })
+            val verificacion = EstadoPrueba.Verificando(tipo, definicion.precondiciones.map { it.evaluar(contexto(), resolver) })
             if (!verificacion.listas) return@withLock Result.success(publicar(verificacion))
             Result.success(arrancar(definicion, opciones))
         }

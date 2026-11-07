@@ -228,7 +228,7 @@ class PruebaGuiadaViewModel @Inject constructor(
                 val definicion = tipo?.let(CatalogoPruebas::definicion) ?: return@collectLatest
                 while (true) {
                     val ctx = ContextoPrueba(enlace.conectado(), enlace.lecturas(), enlace::soportado, entorno.ahora())
-                    local.update { it.copy(precondiciones = definicion.precondiciones.map { p -> p.evaluar(ctx) }) }
+                    local.update { it.copy(precondiciones = definicion.precondiciones.map { p -> p.evaluar(ctx, resolver) }) }
                     delay(REFRESCO_PRECONDICIONES_MS)
                 }
             }
