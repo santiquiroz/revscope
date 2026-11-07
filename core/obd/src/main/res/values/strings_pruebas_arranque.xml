@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Arranque en frío: pasos -->
+    <string name="obd_arranque_titulo_paso_contacto">Ignition on</string>
+    <string name="obd_arranque_titulo_paso_arranque">Starting</string>
+    <string name="obd_arranque_titulo_paso_calentamiento">Warm-up</string>
+
+    <!-- Arranque en frío: comprobaciones -->
+    <string name="obd_arranque_comprobacion_arranco">Started</string>
+    <string name="obd_arranque_comprobacion_primer_intento">On the first attempt</string>
+    <string name="obd_arranque_comprobacion_sin_apagones">No stalls after starting</string>
+    <string name="obd_arranque_comprobacion_ect_sin_saltos">No engine temperature spikes</string>
+    <string name="obd_arranque_comprobacion_perfil">Fast idle drops as it warms up</string>
+    <string name="obd_arranque_comprobacion_sensores">Temperatures consistent at rest</string>
+
+    <!-- Arranque en frío: título -->
+    <string name="obd_arranque_titulo_frio">Cold start: %1$s</string>
+    <string name="obd_arranque_titulo_tibio">Warm start: %1$s</string>
+    <string name="obd_arranque_cuerpo_sin_datos">not enough RPM data</string>
+    <string name="obd_arranque_cuerpo_no_arranco">did not start</string>
+    <string name="obd_arranque_cuerpo_se_apaga">stalled %1$s after starting</string>
+    <string name="obd_arranque_cuerpo_saltos_ect">engine temperature spikes</string>
+    <string name="obd_arranque_cuerpo_varios_intentos">started after %1$d attempts%2$s</string>
+    <string name="obd_arranque_cuerpo_irregular">started, with observations</string>
+    <string name="obd_arranque_cuerpo_normal">started on the first attempt%1$s</string>
+    <string name="obd_arranque_en_tiempo">in %1$s</string>
+
+    <!-- Arranque en frío: interpretación -->
+    <string name="obd_arranque_sin_lectura_motor">No engine temperature reading with the ignition on: could not confirm the engine was cold.</string>
+    <string name="obd_arranque_sin_lectura_aire">No intake air temperature reading with the ignition on: could not confirm the engine was cold.</string>
+    <string name="obd_arranque_frase_condicion">With the ignition on, the engine read %1$s and the air %2$s (%3$s apart; cold is under %4$s, %5$s).</string>
+    <string name="obd_arranque_frase_tibio">%1$s This is a warm start: not the same as a start after sitting overnight.</string>
+    <string name="obd_arranque_no_giro">The engine did not turn over during the Starting step.</string>
+    <string name="obd_arranque_no_quedo_encendido">It did not keep running after %1$s.</string>
+    <string name="obd_arranque_al_primer_intento">on the first attempt</string>
+    <string name="obd_arranque_al_intento">after %1$d attempts</string>
+    <string name="obd_arranque_despues_se_apago">It then stalled %1$s.</string>
+    <string name="obd_arranque_frase_arranque">Started %1$s, %2$s after cranking.</string>
+    <string name="obd_arranque_llego_a">Reached %1$s in %2$s.</string>
+    <string name="obd_arranque_llego_hasta">Peaked at %1$s without reaching %2$s.</string>
+    <string name="obd_arranque_verbo_bajo">fell</string>
+    <string name="obd_arranque_verbo_subio">rose</string>
+    <string name="obd_arranque_cierre_esperado">as expected</string>
+    <string name="obd_arranque_cierre_deberia_bajar">and should drop as it warms up</string>
+    <string name="obd_arranque_frase_perfil">Fast idle %1$s from %2$s to %3$s&#160;rpm as the engine went from %4$s to %5$s, %6$s.</string>
+    <string name="obd_arranque_frase_saltos">Engine temperature jumped %1$s in %2$s: consistent with P0119 (intermittent engine temperature sensor signal) or a loose contact at its connector.</string>
+    <string name="obd_arranque_nota_aire">On air-cooled motorcycles, the “engine” sensor usually reads the cylinder head or the oil: it rises differently than coolant.</string>
+
+    <!-- Arranque en frío: hallazgos -->
+    <string name="obd_arranque_hallazgo_motor_bajo_aire">The engine reads %1$s colder than the air after sitting: check the ECT and IAT sensors</string>
+    <string name="obd_arranque_hallazgo_aire_ambiente">Intake air (%1$s) differs from ambient (%2$s) with the engine cold: check the IAT</string>
+    <string name="obd_arranque_hallazgo_intento">Started after %1$d attempts</string>
+    <string name="obd_arranque_hallazgo_se_apago">Stalled %1$s after starting</string>
+    <string name="obd_arranque_hallazgo_salto">Engine temperature jumped %1$s in %2$s</string>
+    <string name="obd_arranque_hallazgo_ect_bajo">Engine temperature dropped %1$s while warming up</string>
+    <string name="obd_arranque_hallazgo_minimo_subio">Fast idle rose from %1$s to %2$s&#160;rpm while warming up</string>
+
+    <!-- Arranque en frío: siguiente paso -->
+    <string name="obd_arranque_siguiente_sin_datos">Check that the adapter is still connected and repeat the test</string>
+    <string name="obd_arranque_siguiente_no_arranco">Measure the battery with the multimeter while cranking (battery template) and check fuel and spark</string>
+    <string name="obd_arranque_siguiente_se_apaga">Run the Idle and return test with the engine cold and check the idle control</string>
+    <string name="obd_arranque_siguiente_saltos_ect">Check the engine temperature sensor connector and wiring, and measure it with the multimeter (ECT template)</string>
+    <string name="obd_arranque_siguiente_varios_intentos">Repeat the test after sitting overnight; if it still struggles, measure the battery while cranking (battery template)</string>
+    <string name="obd_arranque_siguiente_sensores">Measure the temperature sensors with the multimeter (ECT and IAT templates)</string>
+    <string name="obd_arranque_siguiente_ect">Measure the engine temperature sensor with the multimeter (ECT template)</string>
+    <string name="obd_arranque_siguiente_minimo">Check the idle control: fast idle should drop as the engine warms up</string>
+    <string name="obd_arranque_siguiente_repetir_frio">To confirm it cold, repeat the test after sitting overnight (≥ 6 h, typical)</string>
+
+    <!-- Arranque en frío: medidas -->
+    <string name="obd_arranque_medida_contacto">Ignition on: %1$s · %2$s</string>
+    <string name="obd_arranque_parte_motor">engine %1$s</string>
+    <string name="obd_arranque_parte_aire">air %1$s</string>
+    <string name="obd_arranque_parte_ambiente">ambient %1$s</string>
+    <string name="obd_arranque_sin_temperaturas">no temperatures</string>
+    <string name="obd_arranque_condicion_frio">cold</string>
+    <string name="obd_arranque_condicion_tibio">warm</string>
+    <string name="obd_arranque_condicion_sin_dato">no data</string>
+    <string name="obd_arranque_medida_arranque">Starting: %1$s, %2$s to start</string>
+    <string name="obd_arranque_medida_no_prendio">Starting: did not start (%1$s)</string>
+    <string name="obd_arranque_medida_apagones">Stalls after starting: %1$d</string>
+    <string name="obd_arranque_medida_perfil">Fast idle: %1$s&#160;rpm at %2$s → %3$s&#160;rpm at %4$s</string>
+    <string name="obd_arranque_medida_hasta">Time to %1$s: %2$s</string>
+    <string name="obd_arranque_medida_no_llego">Time to %1$s: not reached (max %2$s)</string>
+    <string name="obd_arranque_medida_saltos">Engine temperature spikes: %1$s</string>
+    <string name="obd_arranque_ninguno">none</string>
+    <plurals name="obd_arranque_veces">
+        <item quantity="one">once</item>
+        <item quantity="other">%1$d times</item>
+    </plurals>
+    <plurals name="obd_arranque_intentos">
+        <item quantity="one">%1$d attempt</item>
+        <item quantity="other">%1$d attempts</item>
+    </plurals>
+</resources>

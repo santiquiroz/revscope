@@ -12,6 +12,7 @@ import com.revscope.core.obd.taller.pruebas.ArranqueSintetico.soloMotorDeArranqu
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.Veredicto
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -20,9 +21,19 @@ import org.junit.Test
 
 class AnalizadorArranqueFrioTest {
 
+    private val resolver = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
+    private val ingles = XmlStringResolver.en(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
     private val moto = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
 
-    private fun resultado(p: Perfil) = AnalizadorArranqueFrio.analizar(datos(p), moto).plano()
+    private fun resultado(p: Perfil) = AnalizadorArranqueFrio.analizar(datos(p), moto, resolver).plano()
 
     private fun analisis(p: Perfil) = resultado(p).detalle as AnalisisArranqueFrio
 
@@ -166,11 +177,28 @@ class AnalizadorArranqueFrioTest {
     @Test
     fun `las medidas dicen la condición, los intentos y el calentamiento`() {
         val a = analisis(Perfil(ectContacto = 32.0, iatContacto = 27.0, rpmArranque = dosIntentos(), ectCalentamiento = calentar(desde = 32.0)))
-        val medidas = TextosArranqueFrio.medidas(a).map { it.plano() }
+        val medidas = TextosArranqueFrio.medidas(a, resolver).map { it.plano() }
 
         assertTrue(medidas.toString(), "En contacto: motor 32 °C, aire 27 °C · tibio" in medidas)
         assertTrue(medidas.toString(), "Arranque: 2 intentos, 3,5 s hasta prender" in medidas)
         assertTrue(medidas.toString(), "Saltos de la temperatura del motor: ninguno" in medidas)
+    }
+
+    @Test
+    fun `en inglés la frase de la condición lleva las cifras, el límite y su origen`() {
+        val datos = datos(Perfil(ectContacto = 32.0, iatContacto = 27.0, rpmArranque = dosIntentos(), ectCalentamiento = calentar(desde = 32.0)))
+        val r = AnalizadorArranqueFrio.analizar(datos, moto, ingles).plano()
+
+        assertTrue(r.titulo, r.titulo.startsWith("Warm start: started after 2 attempts in 3.5 s"))
+        assertTrue(
+            r.interpretacion,
+            r.interpretacion.startsWith(
+                "With the ignition on, the engine read 32 °C and the air 27 °C (5 °C apart; cold is under 5 °C, Typical (editable)). " +
+                    "This is a warm start: not the same as a start after sitting overnight.",
+            ),
+        )
+        val medidas = TextosArranqueFrio.medidas(r.detalle as AnalisisArranqueFrio, ingles).map { it.plano() }
+        assertTrue(medidas.toString(), "Starting: 2 attempts, 3.5 s to start" in medidas)
     }
 
     @Test

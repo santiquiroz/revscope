@@ -38,11 +38,12 @@ internal object MapeoResultadoMotor {
 
     fun arranque(base: ResultadoUi, a: AnalisisArranqueFrio, datos: DatosPrueba?, resolver: StringResolver): ResultadoUi = base.copy(
         comprobaciones = a.comprobaciones.map { comprobacion(it, resolver) },
-        medidas = TextosArranqueFrio.medidas(a),
+        medidas = TextosArranqueFrio.medidas(a, resolver),
         graficas = datos?.let { d ->
+            val titulos = TextosArranqueFrio.titulosPaso(resolver)
             listOfNotNull(
-                grafica(d, AnalizadorArranqueFrio.PID_RPM, TextosArranqueFrio.TITULOS_PASO, null, resolver),
-                grafica(d, AnalizadorArranqueFrio.PID_ECT, TextosArranqueFrio.TITULOS_PASO, null, resolver),
+                grafica(d, AnalizadorArranqueFrio.PID_RPM, titulos, null, resolver),
+                grafica(d, AnalizadorArranqueFrio.PID_ECT, titulos, null, resolver),
             )
         }.orEmpty(),
         codigoGuia = CODIGO_ECT_INTERMITENTE.takeIf { a.patron == PatronArranque.SALTOS_ECT },
