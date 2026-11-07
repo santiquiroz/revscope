@@ -22,4 +22,16 @@ class BackupManagerTest {
         assertFalse(isRestorableVersion(imported = current + 1, current = current))
         assertFalse(isRestorableVersion(imported = 0, current = current))
     }
+
+    @Test
+    fun `shouldCopy solo con el WAL vacio`() {
+        assertTrue(shouldCopy(walLength = 0L))
+        assertFalse(shouldCopy(walLength = 1L))
+        assertFalse(shouldCopy(walLength = 4_096L))
+    }
+
+    @Test
+    fun `MAX_EXPORT_ATTEMPTS es 3`() {
+        assertEquals(3, MAX_EXPORT_ATTEMPTS)
+    }
 }

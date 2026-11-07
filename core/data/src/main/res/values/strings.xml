@@ -3,4 +3,5 @@
     <string name="data_invalid_zip_entry">Invalid ZIP entry: %1$s</string>
     <string name="data_incompatible_database_version">Incompatible database version (%1$d). Update RevScope before importing</string>
     <string name="data_backup_too_old">Backup too old (version %1$d): it can\'t be restored in this version of RevScope</string>
+    <string name="data_backup_busy">The database is busy; try the backup again in a few seconds.</string>
 </resources>

@@ -27,6 +27,10 @@ private const val DB_FILE_NAME = "revscope.db"
 private const val DB_ENTRY_NAME = "revscope.db"
 private const val PREFS_ENTRY_NAME = "preferences.json"
 private const val IMPORT_TEMP_DIR_PREFIX = "backup_import_"
+internal const val MAX_EXPORT_ATTEMPTS = 3
+
+// Lo escrito en el WAL no viaja en el zip: solo se copia si el WAL está vacío bajo el lock.
+internal fun shouldCopy(walLength: Long): Boolean = walLength == 0L
 
 // ALL_MIGRATIONS inicia en 9 y Room no tiene fallback destructivo: versiones < 9 crashean al iniciar.
 internal const val MIN_RESTORABLE_DB_VERSION = 9
@@ -54,7 +58,6 @@ class BackupManager @Inject constructor(
 
     suspend fun export(target: OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            checkpointDatabase()
             writeZip(target)
             Result.success(Unit)
         } catch (e: CancellationException) {
@@ -103,20 +106,33 @@ class BackupManager @Inject constructor(
 
     private fun writeDatabaseEntry(zip: ZipOutputStream) {
         zip.putNextEntry(ZipEntry(DB_ENTRY_NAME))
-        copyDatabaseFileLocked(zip)
+        copyDatabaseWithEmptyWal(zip)
         zip.closeEntry()
     }
 
+    // El checkpoint no puede correr dentro de la transacción: entre ambos pueden entrar escrituras, así que se reintenta.
+    private fun copyDatabaseWithEmptyWal(zip: ZipOutputStream) {
+        repeat(MAX_EXPORT_ATTEMPTS) {
+            checkpointDatabase()
+            if (copyDatabaseFileIfWalEmpty(zip)) return
+        }
+        throw IllegalStateException(resolver.get(R.string.data_backup_busy))
+    }
+
     /** Sostiene una transacción exclusiva mientras copia el archivo para evitar una copia a medio escribir. */
-    private fun copyDatabaseFileLocked(zip: ZipOutputStream) {
+    private fun copyDatabaseFileIfWalEmpty(zip: ZipOutputStream): Boolean {
         val sdb = db.openHelper.writableDatabase
         sdb.beginTransaction()
         try {
+            if (!shouldCopy(walLength())) return false
             context.getDatabasePath(DB_FILE_NAME).inputStream().use { it.copyTo(zip) }
+            return true
         } finally {
             sdb.endTransaction()
         }
     }
+
+    private fun walLength(): Long = File(context.getDatabasePath(DB_FILE_NAME).path + "-wal").length()
 
     private suspend fun writePreferencesEntry(zip: ZipOutputStream) {
         val json = PreferencesBackupCodec.encode(settings.data.first())
