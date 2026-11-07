@@ -41,7 +41,7 @@ class MultimetroViewModelTest {
     private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
         com.revscope.core.obd.R::class.java,
         R::class.java,
-        resDirs = listOf("../../core/obd/src/main/res"),
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
     )
 
     @Before
@@ -78,7 +78,10 @@ class MultimetroViewModelTest {
         taller.repositorio.modelos.clear()
         val generica = vm().estado.value
         assertTrue(generica.plantilla!!.filas.all { it.color == null })
-        assertEquals(MapeoMultimetro.SIN_COLORES, generica.plantilla!!.origenColores)
+        assertEquals(
+            "Plantilla genérica típica, sin colores: los colores cambian con cada modelo",
+            generica.plantilla!!.origenColores,
+        )
     }
 
     @Test
@@ -140,6 +143,29 @@ class MultimetroViewModelTest {
     }
 
     @Test
+    fun `en inglés el aviso de guardar sin sesión explica que se abre una nueva`() = runTest(despachador) {
+        val ingles = com.revscope.core.uitesting.XmlStringResolver.en(
+            com.revscope.core.obd.R::class.java,
+            R::class.java,
+            resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+        )
+        val vm = MultimetroViewModel(
+            SavedStateHandle(mapOf(MultimetroViewModel.ARG_SENSOR to null)),
+            AsistenteMultimetro(taller.repositorio, { taller.entorno.vehiculoFlujo.value }, taller.registro, ingles),
+            taller.registro,
+            ingles,
+        )
+
+        val guardar = vm.estado.value.guardar
+
+        assertEquals("Save to new session", guardar.texto)
+        assertEquals(
+            "No session is open: one will be opened for Benelli TNT 150i. Enter at least one reading to save it.",
+            guardar.detalle,
+        )
+    }
+
+    @Test
     fun `editar un color y guardarlo lo deja en el cableado del modelo`() = runTest(despachador) {
         taller.repositorio.modelos[BENELLI.claveModelo!!] = MultimetroBenelli.conocimiento
         val vm = vm()
@@ -149,7 +175,7 @@ class MultimetroViewModelTest {
         vm.cambiarColor("Verde")
         vm.aceptarColor()
         assertTrue(vm.estado.value.colores.puedeGuardar)
-        assertEquals(MapeoMultimetro.COLORES_EDITADOS, vm.estado.value.plantilla!!.origenColores)
+        assertEquals("Colores editados por ti, sin guardar en el modelo", vm.estado.value.plantilla!!.origenColores)
 
         vm.guardarColores()
 

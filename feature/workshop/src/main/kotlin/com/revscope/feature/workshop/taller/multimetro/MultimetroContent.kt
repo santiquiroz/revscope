@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -47,6 +48,7 @@ import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.obd.taller.multimetro.FuncionCable
 import com.revscope.core.obd.taller.multimetro.ResultadoEcu
 import com.revscope.core.obd.taller.multimetro.SensorMultimetro
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.prueba.CuerpoDesplazable
 import com.revscope.feature.workshop.taller.TarjetaTaller
 import com.revscope.feature.workshop.taller.nivel
@@ -70,7 +72,7 @@ data class AccionesMultimetro(
 @Composable
 fun MultimetroContent(estado: MultimetroUi, acciones: AccionesMultimetro) {
     Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = "Multímetro", subtitulo = estado.vehiculo, onVolver = acciones.onVolver)
+        BarraConVolver(titulo = stringResource(R.string.workshop_multimetro_title), subtitulo = estado.vehiculo, onVolver = acciones.onVolver)
         val plantilla = estado.plantilla
         when {
             estado.error != null -> Box(Modifier.weight(1f).padding(16.dp), contentAlignment = Alignment.Center) {
@@ -91,7 +93,7 @@ private fun ColumnScope.Cargando() {
         modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
     ) {
         CircularProgressIndicator(color = RevScopeColors.Accent)
-        Text("Cargando la plantilla…", color = RevScopeColors.TextPrimary, style = RevScopeType.body)
+        Text(stringResource(R.string.workshop_multimetro_loading), color = RevScopeColors.TextPrimary, style = RevScopeType.body)
     }
 }
 
@@ -100,9 +102,9 @@ private fun ColumnScope.Cuerpo(estado: MultimetroUi, plantilla: PlantillaUi, acc
     CuerpoDesplazable {
         SelectorSensor(estado.sensor, estado.sensores, acciones.onSensor)
         TarjetaDondeMedir(plantilla)
-        Seccion("Medidas en ${plantilla.unidad}")
+        Seccion(stringResource(R.string.workshop_multimetro_readings_in, plantilla.unidad))
         MedicionesPlantilla(plantilla, acciones.onValor)
-        Seccion("Veredicto")
+        Seccion(stringResource(R.string.workshop_multimetro_verdict))
         estado.veredicto?.let { TarjetaVeredicto(it) } ?: SinMedidas()
         SeccionColores(estado.colores, acciones)
     }
@@ -115,7 +117,7 @@ private fun SelectorSensor(actual: SensorMultimetro, sensores: List<SensorMultim
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         sensores.forEach { s ->
             ChipSeleccion(
-                nombreCorto(s),
+                stringResource(nombreCorto(s)),
                 seleccionado = s == actual,
                 onClick = { onSensor(s) },
                 modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = s.titulo },
@@ -124,13 +126,13 @@ private fun SelectorSensor(actual: SensorMultimetro, sensores: List<SensorMultim
     }
 }
 
-internal fun nombreCorto(s: SensorMultimetro): String = when (s) {
-    SensorMultimetro.TPS -> "TPS"
-    SensorMultimetro.MAP -> "MAP"
-    SensorMultimetro.ECT -> "Temp. motor"
-    SensorMultimetro.IAT -> "Temp. aire"
-    SensorMultimetro.INYECTOR -> "Inyector"
-    SensorMultimetro.BATERIA -> "Batería"
+internal fun nombreCorto(s: SensorMultimetro): Int = when (s) {
+    SensorMultimetro.TPS -> R.string.workshop_multimetro_sensor_tps
+    SensorMultimetro.MAP -> R.string.workshop_multimetro_sensor_map
+    SensorMultimetro.ECT -> R.string.workshop_multimetro_sensor_ect
+    SensorMultimetro.IAT -> R.string.workshop_multimetro_sensor_iat
+    SensorMultimetro.INYECTOR -> R.string.workshop_multimetro_sensor_injector
+    SensorMultimetro.BATERIA -> R.string.workshop_multimetro_sensor_battery
 }
 
 @Composable
@@ -146,8 +148,7 @@ private fun TarjetaDondeMedir(plantilla: PlantillaUi) {
 private fun SinMedidas() {
     TarjetaTaller {
         Text(
-            "Escribe lo que marca el multímetro en cada cable: el veredicto de cada celda y el de todo el circuito " +
-                "aparecen al escribir.",
+            stringResource(R.string.workshop_multimetro_no_readings),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.body,
         )
@@ -168,7 +169,7 @@ private fun TarjetaVeredicto(v: VeredictoUi) {
 private fun ComparacionConEcu(c: ComparacionEcuUi) {
     val color = if (c.resultado == ResultadoEcu.COINCIDE) RevScopeColors.Success else RevScopeColors.Warning
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 4.dp)) {
-        Text("Contra lo que recibe la ECU", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+        Text(stringResource(R.string.workshop_multimetro_ecu_header), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
         FilaIcono(Icons.AutoMirrored.Filled.CompareArrows, color, c.texto)
         Text(c.origen, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
@@ -177,7 +178,7 @@ private fun ComparacionConEcu(c: ComparacionEcuUi) {
 @Composable
 private fun SeccionColores(colores: ColoresUi, acciones: AccionesMultimetro) {
     if (colores.cables.isEmpty()) return
-    Seccion("Colores de los cables")
+    Seccion(stringResource(R.string.workshop_multimetro_colors_header))
     TarjetaTaller {
         colores.cables.forEach { FilaColor(it, acciones.onPedirColor) }
         if (colores.editados) PieColores(colores, acciones.onGuardarColores)
@@ -189,13 +190,14 @@ private fun FilaColor(c: ColorCableUi, onEditar: (FuncionCable) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f)) {
             Text(c.etiqueta, color = RevScopeColors.TextPrimary, style = RevScopeType.label)
-            Text(c.color ?: "Sin color", color = RevScopeColors.TextSecondary, style = RevScopeType.body)
+            Text(c.color ?: stringResource(R.string.workshop_multimetro_no_color), color = RevScopeColors.TextSecondary, style = RevScopeType.body)
         }
+        val descripcion = stringResource(R.string.workshop_multimetro_edit_color_cd, c.etiqueta)
         TextButton(
             onClick = { onEditar(c.funcion) },
-            modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Editar el color de ${c.etiqueta}" },
+            modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = descripcion },
         ) {
-            Text("Editar", color = RevScopeColors.Accent, style = RevScopeType.label)
+            Text(stringResource(R.string.workshop_multimetro_edit), color = RevScopeColors.Accent, style = RevScopeType.label)
         }
     }
 }
@@ -204,8 +206,7 @@ private fun FilaColor(c: ColorCableUi, onEditar: (FuncionCable) -> Unit) {
 private fun PieColores(colores: ColoresUi, onGuardar: () -> Unit) {
     if (colores.modelo == null) {
         Text(
-            "Para guardar estos colores como plantilla, elige el modelo de referencia del vehículo en Perfiles. Mientras " +
-                "tanto se usan en esta medición.",
+            stringResource(R.string.workshop_multimetro_colors_no_model),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.body,
         )
@@ -213,7 +214,7 @@ private fun PieColores(colores: ColoresUi, onGuardar: () -> Unit) {
     }
     OutlinedButton(onClick = onGuardar, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
         Text(
-            "Guardar colores como plantilla de ${colores.modelo}",
+            stringResource(R.string.workshop_multimetro_save_colors_template, colores.modelo),
             color = RevScopeColors.Accent,
             style = RevScopeType.label,
             textAlign = TextAlign.Center,
@@ -226,13 +227,13 @@ private fun DialogoColor(d: DialogoColorUi, acciones: AccionesMultimetro) {
     AlertDialog(
         onDismissRequest = acciones.onCerrarDialogo,
         containerColor = RevScopeColors.SurfaceHigh,
-        title = { Text("Color de ${d.etiqueta}", color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
+        title = { Text(stringResource(R.string.workshop_multimetro_color_dialog_title, d.etiqueta), color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
         text = {
             OutlinedTextField(
                 value = d.texto,
                 onValueChange = acciones.onCambiarColor,
-                label = { Text("Color", style = RevScopeType.body) },
-                supportingText = { Text("Por ejemplo «Verde-amarillo». Vacío = sin color.", style = RevScopeType.bodySmall) },
+                label = { Text(stringResource(R.string.workshop_multimetro_color_label), style = RevScopeType.body) },
+                supportingText = { Text(stringResource(R.string.workshop_multimetro_color_hint), style = RevScopeType.bodySmall) },
                 singleLine = true,
                 textStyle = RevScopeType.body,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -249,12 +250,12 @@ private fun DialogoColor(d: DialogoColorUi, acciones: AccionesMultimetro) {
         },
         confirmButton = {
             TextButton(onClick = acciones.onAceptarColor, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Aceptar", color = RevScopeColors.Accent, style = RevScopeType.label)
+                Text(stringResource(R.string.workshop_multimetro_accept), color = RevScopeColors.Accent, style = RevScopeType.label)
             }
         },
         dismissButton = {
             TextButton(onClick = acciones.onCerrarDialogo, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Cancelar", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                Text(stringResource(R.string.workshop_multimetro_cancel), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
             }
         },
     )

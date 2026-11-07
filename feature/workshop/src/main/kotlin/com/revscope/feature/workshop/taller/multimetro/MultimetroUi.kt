@@ -64,7 +64,7 @@ data class ColoresUi(
 
 data class ColorCableUi(val funcion: FuncionCable, val etiqueta: String, val color: String?)
 
-data class GuardarUi(val habilitado: Boolean = false, val texto: String = "Guardar en la sesión", val detalle: String? = null)
+data class GuardarUi(val habilitado: Boolean = false, val texto: String = "", val detalle: String? = null)
 
 data class DialogoColorUi(val funcion: FuncionCable, val etiqueta: String, val texto: String)
 
