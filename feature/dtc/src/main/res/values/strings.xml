@@ -78,7 +78,7 @@
     <string name="dtc_clear_error">Error clearing codes</string>
     <string name="dtc_clear_confirmation_required">Confirm the code clear first.</string>
     <string name="dtc_no_recent_speed">There\'s no recent speed reading to confirm that the vehicle is stopped.</string>
-    <string name="dtc_vehicle_moving">The vehicle is moving at %1$s km/h. Stop before clearing the codes.</string>
+    <string name="dtc_vehicle_moving">The vehicle is moving at %1$s. Stop before clearing the codes.</string>
     <string name="dtc_readiness_warning">Readiness monitors will be incomplete: the vehicle may fail a safety inspection until drive cycles are completed.</string>
     <string name="dtc_clear_does_not_repair">Clearing codes doesn\'t repair anything. If the fault remains, the code will return.</string>
     <string name="dtc_freeze_frame_clear_saved">The freeze frame (engine state when the fault was stored) will be cleared from the ECU; it\'s saved in the session.</string>

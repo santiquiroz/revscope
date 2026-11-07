@@ -80,7 +80,14 @@ class DtcViewModelTest {
     )
 
     private fun nuevoVm(): DtcViewModel =
-        DtcViewModel(orchestrator, mockk<PidRegistry>(relaxed = true), registro, guias, resolver)
+        DtcViewModel(
+            orchestrator,
+            mockk<PidRegistry>(relaxed = true),
+            registro,
+            guias,
+            resolver,
+            com.revscope.core.common.units.UnitFormatter(com.revscope.core.common.units.UnitSystem.METRIC, resolver.locale),
+        )
 
     private fun vmConCodigos(): DtcViewModel = nuevoVm().also { it.readDtcCodes(connectionVm) }
 

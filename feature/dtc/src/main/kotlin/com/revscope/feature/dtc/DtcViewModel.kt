@@ -3,7 +3,7 @@ package com.revscope.feature.dtc
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.i18n.StringResolver
-import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.diagnostics.FreezeFrame
@@ -44,6 +44,7 @@ class DtcViewModel @Inject constructor(
     private val registro: RegistroTaller,
     private val guias: BaseConocimientoDtc,
     private val resolver: StringResolver,
+    private val units: UnitFormatter,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<DtcUiState>(DtcUiState.Idle)
@@ -84,6 +85,7 @@ class DtcViewModel @Inject constructor(
                     lecturas[ReglasBorradoDtc.PID_VELOCIDAD],
                     reloj(),
                     resolver,
+                    units,
                 )
                 _detalle.update { it.copy(bloqueoBorrado = motivo) }
             }
@@ -209,12 +211,7 @@ class DtcViewModel @Inject constructor(
         val label = definition?.let {
             if (resolver.locale.language == "en") it.name else it.nameEs
         } ?: reading.pid
-        val value = if (reading.value % 1.0 == 0.0) {
-            "${reading.value.toInt()}"
-        } else {
-            LocaleNumbers.decimal(reading.value, 1, resolver.locale)
-        }
-        return FreezeFrameItem(label = label, value = "$value ${reading.unit}")
+        return FreezeFrameItem(label = label, value = valorFreezeFrame(reading.value, reading.unit, units, resolver.locale))
     }
 
     private fun mensajeDeError(e: Throwable, porDefecto: Int = R.string.dtc_read_error): String =

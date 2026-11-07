@@ -94,6 +94,7 @@ class SemanticaDtcTest {
             registro,
             BaseConocimientoDtc({ GUIA_JSON }, resolver),
             resolver,
+            com.revscope.core.common.units.UnitFormatter(com.revscope.core.common.units.UnitSystem.METRIC, resolver.locale),
         )
         compose.setContent {
             RevScopeTheme { DtcScreen(onNavigateBack = onVolver, connectionVm = connectionVm, vm = vm) }
