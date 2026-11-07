@@ -31,6 +31,7 @@ object AnalizadorMapBaro {
             banda = bandas[ClavesBanda.MAP_KOEO_VS_BARO_KPA],
             comprobaciones = emptyList(),
             patron = PatronMapBaro.NORMAL,
+            etiquetas = fuentes.associate { it.origen to it.etiqueta(resolver) },
         )
         val comprobado = base.copy(comprobaciones = listOfNotNull(comprobacion(base, resolver)))
         return TextosMapBaro.resultado(comprobado.copy(patron = patron(comprobado)), resolver)

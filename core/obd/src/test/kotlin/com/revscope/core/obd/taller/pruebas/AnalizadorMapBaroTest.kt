@@ -55,7 +55,7 @@ class AnalizadorMapBaroTest {
         assertTrue(
             r.interpretacion,
             r.interpretacion.contains(
-                "The reference was the pressure estimated from GPS altitude (±3 kPa, weather and GPS altitude): 84.6 kPa. " +
+                "The reference was the pressure estimated from GPS altitude (±3 kPa, from weather and GPS altitude): 84.6 kPa. " +
                     "The difference is -14.6 kPa; with no vacuum, ",
             ),
         )
@@ -186,6 +186,10 @@ class AnalizadorMapBaroTest {
         assertEquals("MAP_BAJO", json.getString("patron"))
         assertEquals(70.0, json.getDouble("mapKpa"), 1e-9)
         assertEquals("ALTITUD_GPS", json.getJSONObject("referencia").getString("origen"))
+        assertEquals(
+            "Presión estimada por la altitud GPS (±3 kPa, por clima y altitud GPS)",
+            json.getJSONObject("referencia").getString("etiqueta").plano(),
+        )
         assertEquals(-14.6, json.getDouble("deltaKpa"), 0.05)
     }
 }

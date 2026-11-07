@@ -4,18 +4,6 @@
     <string name="obd_mapbaro_titulo_paso_contacto">Ignition on</string>
     <string name="obd_mapbaro_comprobacion_diferencia">MAP vs. barometric difference (plus ±%1$s from the source)</string>
 
-    <!-- MAP vs. barometric: reference sources -->
-    <string name="obd_mapbaro_origen_ecu_nombre">ECU PID 33</string>
-    <string name="obd_mapbaro_origen_ecu_nota">PID resolution</string>
-    <string name="obd_mapbaro_origen_ecu_en_frase">ECU PID 33</string>
-    <string name="obd_mapbaro_origen_telefono_nombre">Phone barometer</string>
-    <string name="obd_mapbaro_origen_telefono_nota">typical</string>
-    <string name="obd_mapbaro_origen_telefono_en_frase">the phone barometer</string>
-    <string name="obd_mapbaro_origen_altitud_nombre">Pressure estimated from GPS altitude</string>
-    <string name="obd_mapbaro_origen_altitud_nota">weather and GPS altitude</string>
-    <string name="obd_mapbaro_origen_altitud_en_frase">the pressure estimated from GPS altitude</string>
-    <string name="obd_mapbaro_origen_margen">%1$s (±%2$s, %3$s)</string>
-
     <!-- MAP vs. barometric: title -->
     <string name="obd_mapbaro_titulo_sin_datos">No MAP readings</string>
     <string name="obd_mapbaro_titulo_sin_referencia">MAP at %1$s, no barometric pressure to compare</string>
