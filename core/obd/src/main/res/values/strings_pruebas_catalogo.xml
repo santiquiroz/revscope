@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ControladorPruebaGuiada: rejections on start -->
+    <string name="obd_catalogo_rechazo_ya_en_curso">A guided test is already in progress: finish or cancel it</string>
+    <string name="obd_catalogo_rechazo_captura_activa">Stop the quick capture first</string>
+    <string name="obd_catalogo_rechazo_no_disponible">The “%1$s” test is not available yet</string>
+
+    <!-- ControladorPruebaGuiada: capture errors -->
+    <string name="obd_catalogo_error_iniciar_captura">Could not start the capture: %1$s</string>
+    <string name="obd_catalogo_moto_en_movimiento">Motorcycle moving (%1$s km/h): run the test with the motorcycle stopped</string>
+
+    <!-- ControladorPruebaGuiada: end/cancel reasons -->
+    <string name="obd_catalogo_motivo_enlace_perdido">Lost connection to the adapter</string>
+    <string name="obd_catalogo_motivo_captura_detenida_otra">The quick capture was stopped from another screen or the MCP</string>
+    <string name="obd_catalogo_motivo_captura_detenida">The capture stopped: %1$s</string>
+    <string name="obd_catalogo_motivo_usuario">Canceled by the user</string>
+
+    <!-- ControladorPruebaGuiada: rejected actions -->
+    <string name="obd_catalogo_fallo_sin_prueba_anterior">There is no previous test to repeat</string>
+    <string name="obd_catalogo_fallo_paso_graba_solo">This step records on its own: wait for the countdown to finish</string>
+    <string name="obd_catalogo_fallo_sin_prueba">No guided test is in progress</string>
+    <string name="obd_catalogo_fallo_sin_captura">The test capture is not active</string>
+
+    <!-- ControladorPruebaGuiada: voice / UI announcements -->
+    <string name="obd_catalogo_anuncio_sostener">Hold for %1$d seconds</string>
+    <string name="obd_catalogo_anuncio_grabando_tiempo">Recording for %1$d seconds.</string>
+    <string name="obd_catalogo_anuncio_posicionando">When in position, tap Ready.</string>
+    <string name="obd_catalogo_anuncio_paso">Step %1$d of %2$d. %3$s. %4$s. %5$s</string>
+    <string name="obd_catalogo_anuncio_terminada">Test finished. %1$s</string>
+    <string name="obd_catalogo_anuncio_cancelada">Test canceled</string>
+    <string name="obd_catalogo_anuncio_fallida">The test did not finish. %1$s</string>
+    <string name="obd_catalogo_error_analizar">Could not analyze the test</string>
+
+    <!-- CatalogoPruebas: step instructions (TPS sweep) -->
+    <string name="obd_catalogo_paso_tps_cerrado_1_instruccion">Release the throttle completely and do not touch it</string>
+    <string name="obd_catalogo_paso_tps_medio_instruccion">Move the throttle to halfway and hold it steady</string>
+    <string name="obd_catalogo_paso_tps_a_fondo_instruccion">Open the throttle fully and hold it</string>
+    <string name="obd_catalogo_paso_tps_cerrado_2_instruccion">Release the throttle completely again</string>
+    <string name="obd_catalogo_paso_tps_barrido_lento_instruccion">From closed to wide open and back, slowly and evenly</string>
+
+    <!-- CatalogoPruebas: step instructions (idle and return) -->
+    <string name="obd_catalogo_paso_minimo_instruccion">Do not touch the throttle: let the engine idle</string>
+    <string name="obd_catalogo_paso_retorno_instruccion">Rev to about 3,000 rpm and release abruptly</string>
+
+    <!-- CatalogoPruebas: step instructions (cold start) -->
+    <string name="obd_catalogo_paso_arranque_contacto_instruccion">Ignition on, engine off: do not start yet</string>
+    <string name="obd_catalogo_paso_arranque_instruccion">Start now, as you normally do</string>
+    <string name="obd_catalogo_paso_calentamiento_instruccion">Leave it idling without accelerating; you can finish before reaching 60 °C</string>
+
+    <!-- CatalogoPruebas: step instructions (battery and charging) -->
+    <string name="obd_catalogo_paso_bateria_contacto_instruccion">Ignition on, engine off: do not start yet</string>
+    <string name="obd_catalogo_paso_bateria_arranque_instruccion">Start now, as you normally do</string>
+    <string name="obd_catalogo_paso_bateria_minimo_instruccion">Leave it idling without accelerating</string>
+    <string name="obd_catalogo_paso_bateria_rpm_altas_instruccion">Rev in neutral to about 3,000–4,000 rpm and hold it</string>
+
+    <!-- CatalogoPruebas: step instructions (MAP vs barometric) -->
+    <string name="obd_catalogo_paso_mapbaro_contacto_instruccion">Ignition on, engine off: do not touch the throttle</string>
+
+    <!-- CatalogoPruebas: precondition texts not in strings_pruebas_precondicion.xml -->
+    <string name="obd_catalogo_precondicion_tps_motor_apagado_que_hacer">Turn off the engine and leave the ignition on: a wide-open throttle sweep with the engine running is not safe</string>
+    <string name="obd_catalogo_precondicion_tps_pid_no_disponible_que_hacer">Measure the TPS signal with the multimeter (TPS template)</string>
+    <string name="obd_catalogo_precondicion_minimo_rpm_no_disponible_que_hacer">Idle cannot be measured without RPM: check the link to the ECU</string>
+    <string name="obd_catalogo_precondicion_ect_nombre">Engine temperature</string>
+    <string name="obd_catalogo_precondicion_arranque_motor_apagado_que_hacer">Turn off the engine and leave the ignition on: the test starts before cranking</string>
+    <string name="obd_catalogo_precondicion_ect_no_disponible_que_hacer">Without it the warm-up cannot be tracked: measure the sensor with the multimeter (ECT template)</string>
+    <string name="obd_catalogo_precondicion_bateria_motor_apagado_que_hacer">Turn off the engine and leave the ignition on: the test measures the rest voltage before starting</string>
+    <string name="obd_catalogo_precondicion_mapbaro_motor_apagado_que_hacer">Turn off the engine and leave the ignition on: with the engine running there is vacuum and the MAP drops</string>
+    <string name="obd_catalogo_precondicion_mapbaro_pid_no_disponible_que_hacer">Measure the MAP signal with the multimeter (MAP template)</string>
+</resources>

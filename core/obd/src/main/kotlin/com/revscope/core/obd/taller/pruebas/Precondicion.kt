@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.pruebas
 
+import androidx.annotation.StringRes
 import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.R
@@ -43,13 +44,13 @@ sealed interface Precondicion {
         }
     }
 
-    data class MotorApagado(val queHacer: String) : Precondicion {
+    data class MotorApagado(@StringRes val queHacerRes: Int) : Precondicion {
         override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion {
             val rpm = ctx.reciente(ContextoPrueba.PID_RPM)?.value
                 ?: return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_motor_apagado_sin_rpm), cumple = true)
             if (rpm < 1.0) return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_motor_apagado_rpm_cero), cumple = true)
             val texto = resolver.get(R.string.obd_precondicion_motor_encendido, entero(rpm, resolver))
-            return ResultadoPrecondicion(texto, cumple = false, queHacer)
+            return ResultadoPrecondicion(texto, cumple = false, resolver.get(queHacerRes))
         }
     }
 
@@ -152,11 +153,18 @@ sealed interface Precondicion {
         }
     }
 
-    data class PidDisponible(val pid: String, val nombre: String, val alternativa: String) : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver) = if (ctx.soportado(pid)) {
-            ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_pid_disponible, nombre, pid), cumple = true)
-        } else {
-            ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_pid_no_disponible, nombre, pid), cumple = false, alternativa)
+    // [nombreRes], si está, manda sobre [nombre]: los nombres que son siglas (TPS, MAP) no se traducen.
+    data class PidDisponible(
+        val pid: String,
+        val nombre: String,
+        @StringRes val alternativaRes: Int,
+        @StringRes val nombreRes: Int? = null,
+    ) : Precondicion {
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion {
+            val visible = nombreRes?.let { resolver.get(it) } ?: nombre
+            if (ctx.soportado(pid)) return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_pid_disponible, visible, pid), cumple = true)
+            val texto = resolver.get(R.string.obd_precondicion_pid_no_disponible, visible, pid)
+            return ResultadoPrecondicion(texto, cumple = false, resolver.get(alternativaRes))
         }
     }
 }

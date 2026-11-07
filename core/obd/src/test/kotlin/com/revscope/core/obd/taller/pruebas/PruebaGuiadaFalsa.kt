@@ -21,7 +21,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import java.io.File
 
-private val resolver = XmlStringResolver.es(
+private val RESOLVER_ES = XmlStringResolver.es(
     com.revscope.core.obd.R::class.java,
     com.revscope.core.common.R::class.java,
     resDirs = listOf("src/main/res", "../common/src/main/res"),
@@ -109,6 +109,7 @@ class MontajePrueba(
     valorEn: (Long) -> Double = GuionBenelli::pct,
     voltajeEn: ((Long) -> Double)? = null,
     fuentes: FuentesAnalisis = FuentesAnalisis.NINGUNA,
+    resolver: com.revscope.core.common.i18n.StringResolver = RESOLVER_ES,
 ) {
     val epoch = 1_758_848_000_000L
     private val virtual = scope.testScheduler
