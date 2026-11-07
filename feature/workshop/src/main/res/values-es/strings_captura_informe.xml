@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workshop_can_capture_title">Captura CAN de ruta</string>
+    <string name="workshop_can_capture_before_you_go">Antes de salir</string>
+    <string name="workshop_can_capture_connect_adapter">Conecta el adaptador para capturar el bus</string>
+    <string name="workshop_can_capture_label">Etiqueta</string>
+    <string name="workshop_can_capture_label_hint">Va en el nombre de la captura, p. ej. «ruta_autopista»</string>
+    <string name="workshop_can_capture_in_progress">CAPTURANDO · %1$s</string>
+    <string name="workshop_can_capture_elapsed">%1$s de %2$s</string>
+    <string name="workshop_can_capture_frames">Tramas</string>
+    <string name="workshop_can_capture_overruns">Desbordes del adaptador</string>
+    <string name="workshop_can_capture_gps_speed">Velocidad GPS</string>
+    <string name="workshop_can_capture_saved">CAPTURA GUARDADA</string>
+    <string name="workshop_can_capture_read_from_pc">Léela desde el PC con leer_captura_can y leer_gps_captura_can.</string>
+    <string name="workshop_can_capture_failed">NO SE PUDO CAPTURAR</string>
+    <string name="workshop_can_capture_notice_no_trip">No se graba un viaje mientras capturas: el adaptador queda escuchando el bus y no sondea PIDs.</string>
+    <string name="workshop_can_capture_notice_auto_stop">Se detiene sola a los %1$s min. Sigue con la pantalla apagada mientras la app esté conectada.</string>
+    <string name="workshop_can_capture_notice_gps_privacy">Del GPS solo se guardan velocidad, precisión y rumbo, una vez por segundo; nunca la posición.</string>
+    <string name="workshop_can_capture_notice_no_location">Sin permiso de ubicación: la captura no tendrá velocidad GPS.</string>
+    <string name="workshop_can_capture_stop_and_save">Detener y guardar</string>
+    <string name="workshop_can_capture_start">Iniciar captura</string>
+    <string name="workshop_can_capture_speed_kmh">%1$d km/h</string>
+    <string name="workshop_can_capture_no_signal">sin señal</string>
+    <string name="workshop_can_capture_no_gps_samples">sin muestras GPS</string>
+    <plurals name="workshop_can_capture_gps_samples">
+        <item quantity="one">%1$d muestras GPS</item>
+        <item quantity="other">%1$d muestras GPS</item>
+    </plurals>
+    <plurals name="workshop_can_capture_summary">
+        <item quantity="one">%1$d tramas · %2$s · %3$s</item>
+        <item quantity="other">%1$d tramas · %2$s · %3$s</item>
+    </plurals>
+
+    <string name="workshop_report_title">Informe de taller</string>
+    <string name="workshop_report_share">Compartir</string>
+    <string name="workshop_report_print">Imprimir o PDF</string>
+    <string name="workshop_report_edit_interpretation">Editar interpretación</string>
+    <string name="workshop_report_technician_interpretation">Interpretación del técnico</string>
+    <string name="workshop_report_interpretation_note">Esta nota aparece separada de los hallazgos calculados por RevScope.</string>
+    <string name="workshop_report_interpretation">Interpretación</string>
+    <string name="workshop_report_save">Guardar</string>
+    <string name="workshop_report_cancel">Cancelar</string>
+    <string name="workshop_report_error_session_gone">La sesión ya no existe.</string>
+    <string name="workshop_report_error_save_interpretation">No se pudo guardar la interpretación.</string>
+    <string name="workshop_report_error_prepare_share">No se pudo preparar el informe para compartir.</string>
+    <string name="workshop_report_error_generate">No se pudo generar el informe.</string>
+    <string name="workshop_report_error_session_not_found">No se encontró la sesión para generar el informe.</string>
+</resources>
