@@ -1,7 +1,5 @@
 <resources>
     <string name="workshop_al_dia_title">Vehicle status</string>
-    <string name="workshop_al_dia_soat">Mandatory insurance (SOAT)</string>
-    <string name="workshop_al_dia_rtm">Roadworthiness inspection (RTM)</string>
     <string name="workshop_al_dia_simit">SIMIT</string>
     <string name="workshop_al_dia_mechanical_check">Mechanical check</string>
     <string name="workshop_al_dia_source_community">From the community</string>

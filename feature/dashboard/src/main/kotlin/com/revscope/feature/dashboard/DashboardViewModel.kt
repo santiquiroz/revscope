@@ -1,11 +1,14 @@
 package com.revscope.feature.dashboard
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.detect
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.db.entities.VehicleType
@@ -22,6 +25,7 @@ import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -46,7 +50,10 @@ class DashboardViewModel @Inject constructor(
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
     private val registry: PidRegistry,
     internal val resolver: StringResolver,
+    @ApplicationContext context: Context,
 ) : ViewModel() {
+
+    private val region = Region.detect(context)
 
     /** Nueva versión disponible en GitHub — null si estás al día o sin red. */
     val updateAvailable: StateFlow<com.revscope.core.obd.update.UpdateChecker.Update?> = updateChecker.available
@@ -208,6 +215,7 @@ class DashboardViewModel @Inject constructor(
         val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, now)
         val statuses = DocumentStatusCalculator.calculate(
             documents, overrideRules, now, aiFallbackRules = aiFallback, resolver = resolver,
+            region = region,
         )
         return DocumentStatusCalculator.bannerText(statuses, resolver)
     }

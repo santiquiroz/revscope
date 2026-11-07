@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeTheme
@@ -142,6 +143,7 @@ class SemanticaTallerTest {
                     mantenimientoNivel = DocumentStatusCalculator.Nivel.OK,
                     mantenimientoDetalle = "",
                     zoneBrief = null,
+                    region = Region.CO,
                     acciones = AccionesAlDia(onVolver = { volvio = true }),
                 )
             }

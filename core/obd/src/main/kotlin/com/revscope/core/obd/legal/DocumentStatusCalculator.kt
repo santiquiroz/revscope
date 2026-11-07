@@ -1,5 +1,6 @@
 package com.revscope.core.obd.legal
 
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.obd.R
@@ -57,15 +58,33 @@ object DocumentStatusCalculator {
         timeZoneId: String = "America/Bogota",
         aiFallbackRules: PicoYPlacaEngine.CityRules? = null,
         resolver: StringResolver,
+        region: Region,
     ): List<DocStatus> {
         val expiry = ExpiryContext(nowMs, timeZoneId, resolver)
-        return listOf(
-            expiryStatus(DocType.SOAT, R.string.obd_doc_title_soat, documents.soatExpiresAt, expiry),
-            expiryStatus(DocType.RTM, R.string.obd_doc_title_rtm, documents.rtmExpiresAt, expiry),
-            picoYPlacaStatus(documents, overrideRules, aiFallbackRules, nowMs, resolver),
+        val picoYPlaca = if (region == Region.CO) {
+            picoYPlacaStatus(documents, overrideRules, aiFallbackRules, nowMs, resolver)
+        } else {
+            null
+        }
+        return listOfNotNull(
+            expiryStatus(DocType.SOAT, insuranceTitleRes(region), documents.soatExpiresAt, expiry),
+            expiryStatus(DocType.RTM, inspectionTitleRes(region), documents.rtmExpiresAt, expiry),
+            picoYPlaca,
             expiryStatus(DocType.TODO_RIESGO, R.string.obd_doc_title_comprehensive, documents.insuranceExpiresAt, expiry),
             expiryStatus(DocType.LICENCIA, R.string.obd_doc_title_license, documents.licenseExpiresAt, expiry),
         )
+    }
+
+    fun insuranceTitleRes(region: Region): Int = when (region) {
+        Region.CO -> R.string.obd_doc_title_soat
+        Region.GB, Region.US, Region.OTHER -> R.string.obd_doc_title_insurance
+    }
+
+    fun inspectionTitleRes(region: Region): Int = when (region) {
+        Region.CO -> R.string.obd_doc_title_rtm
+        Region.GB -> R.string.obd_doc_title_mot
+        Region.US -> R.string.obd_doc_title_safety_inspection
+        Region.OTHER -> R.string.obd_doc_title_inspection
     }
 
     private class ExpiryContext(val nowMs: Long, val timeZoneId: String, val resolver: StringResolver)
