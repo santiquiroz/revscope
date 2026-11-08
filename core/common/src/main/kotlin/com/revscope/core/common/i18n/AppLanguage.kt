@@ -9,14 +9,23 @@ import android.os.LocaleList
 import java.util.Locale
 
 object AppLanguage {
-    val SUPPORTED = listOf("en", "es")
+    val SUPPORTED = listOf("en", "en-GB", "es")
 
     internal const val PREFS = "revscope_language"
     private const val KEY_TAG = "tag"
 
-    fun resolve(savedTag: String, systemLocale: Locale): Locale {
-        val language = if (savedTag.isEmpty()) systemLocale.language else Locale.forLanguageTag(savedTag).language
-        return Locale.forLanguageTag(SUPPORTED.firstOrNull { it == language } ?: SUPPORTED.first())
+    fun resolve(savedTag: String, systemLocale: Locale): Locale =
+        if (savedTag.isEmpty()) resolveSystem(systemLocale) else resolveSaved(savedTag)
+
+    private fun resolveSystem(systemLocale: Locale): Locale =
+        if (SUPPORTED.contains(systemLocale.language)) systemLocale else Locale.forLanguageTag(SUPPORTED.first())
+
+    private fun resolveSaved(savedTag: String): Locale {
+        val tag = Locale.forLanguageTag(savedTag).toLanguageTag()
+        val supported = SUPPORTED.firstOrNull { it.equals(tag, ignoreCase = true) }
+            ?: SUPPORTED.firstOrNull { it == Locale.forLanguageTag(tag).language }
+            ?: SUPPORTED.first()
+        return Locale.forLanguageTag(supported)
     }
 
     fun savedTag(context: Context): String =

@@ -45,8 +45,21 @@ class IdiomaSectionTest {
             }
         }
 
-        compose.onNodeWithText("English").performClick()
+        compose.onNodeWithText("English (US)").performClick()
 
         assertEquals(0, invocations)
+    }
+
+    @Test
+    fun `clicking English UK selects en-GB`() {
+        var selected: String? = null
+
+        compose.setContent {
+            IdiomaSection(tagActual = "en") { selected = it }
+        }
+
+        compose.onNodeWithText("English (UK)").performClick()
+
+        assertEquals("en-GB", selected)
     }
 }
