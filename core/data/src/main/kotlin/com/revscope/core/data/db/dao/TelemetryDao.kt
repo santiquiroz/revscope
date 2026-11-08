@@ -72,7 +72,7 @@ interface TelemetryDao {
     @Query(
         "SELECT * FROM telemetry_points " +
             "WHERE sessionId = :sessionId " +
-            "AND (timestamp > :afterTimestamp OR (timestamp = :afterTimestamp AND id > :afterId)) " +
+            "AND (timestamp > :afterTimestamp OR (timestamp = :afterTimestamp AND id > :afterId)) " + // i18n-ignore
             "ORDER BY timestamp ASC, id ASC LIMIT :pageSize"
     )
     suspend fun pageForSession(

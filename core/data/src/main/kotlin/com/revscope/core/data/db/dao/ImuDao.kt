@@ -41,7 +41,7 @@ interface ImuDao {
     @Query(
         "SELECT l.id AS lapId, MAX(ABS(i.gLat)) AS value FROM laps l " +
             "LEFT JOIN imu_points i ON i.sessionId = l.sessionId " +
-            "AND i.timestamp BETWEEN l.completedAt - l.timeMs AND l.completedAt " +
+            "AND i.timestamp BETWEEN l.completedAt - l.timeMs AND l.completedAt " + // i18n-ignore
             "WHERE l.sessionId = :sessionId GROUP BY l.id"
     )
     suspend fun lapMaxAbsLateralG(sessionId: Long): List<LapPeak>
@@ -49,7 +49,7 @@ interface ImuDao {
     @Query(
         "SELECT l.id AS lapId, MAX(ABS(i.leanDeg)) AS value FROM laps l " +
             "LEFT JOIN imu_points i ON i.sessionId = l.sessionId " +
-            "AND i.timestamp BETWEEN l.completedAt - l.timeMs AND l.completedAt " +
+            "AND i.timestamp BETWEEN l.completedAt - l.timeMs AND l.completedAt " + // i18n-ignore
             "WHERE l.sessionId = :sessionId GROUP BY l.id"
     )
     suspend fun lapMaxAbsLean(sessionId: Long): List<LapPeak>
@@ -87,7 +87,7 @@ interface ImuDao {
     @Query(
         "SELECT * FROM imu_points " +
             "WHERE sessionId = :sessionId " +
-            "AND (timestamp > :afterTimestamp OR (timestamp = :afterTimestamp AND id > :afterId)) " +
+            "AND (timestamp > :afterTimestamp OR (timestamp = :afterTimestamp AND id > :afterId)) " + // i18n-ignore
             "ORDER BY timestamp ASC, id ASC LIMIT :pageSize"
     )
     suspend fun pageForSession(
