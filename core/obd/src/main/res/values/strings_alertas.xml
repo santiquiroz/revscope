@@ -50,7 +50,7 @@
     <string name="obd_trip_saved">Trip saved</string>
     <string name="obd_trip_summary_channel">Trip summary</string>
     <string name="obd_trip_summary_format">%1$s · %2$s max · %3$d min</string>
-    <string name="obd_trip_summary_cost">$%1$s</string>
+    <string name="obd_trip_summary_cost">%1$s</string>
     <string name="obd_trip_summary_eco">Eco %1$d</string>
     <string name="obd_service_connecting">Connecting…</string>
     <string name="obd_service_connected_diagnosis">Connected to %1$s · no trip (diagnostics)</string>

@@ -22,6 +22,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.moneyFractionDigits
+import com.revscope.core.common.i18n.pricePerLiterInput
+import java.util.Currency
 
 private val BgColor = Color(0xFF0A0A0F)
 private val AccentColor = Color(0xFFE8FF00)
@@ -97,43 +102,60 @@ internal fun CombustibleCard(vm: SettingsViewModel) {
     val fuelPriceExtra by vm.fuelPriceExtra.collectAsState()
     val fuelPriceDiesel by vm.fuelPriceDiesel.collectAsState()
 
+    CombustibleContenido(
+        FuelPriceFormat(vm.fuelRegion, vm.fuelCurrency),
+        FuelPriceFields(fuelPriceCorriente, fuelPriceExtra, fuelPriceDiesel),
+        FuelPriceActions(vm::updateFuelPriceCorriente, vm::updateFuelPriceExtra, vm::updateFuelPriceDiesel, vm::saveFuelPrices),
+    )
+}
+
+internal data class FuelPriceFormat(val region: Region, val currency: Currency)
+
+internal data class FuelPriceFields(val corriente: String, val extra: String, val diesel: String)
+
+internal class FuelPriceActions(
+    val onCorriente: (String) -> Unit,
+    val onExtra: (String) -> Unit,
+    val onDiesel: (String) -> Unit,
+    val onSave: () -> Unit,
+)
+
+@Composable
+internal fun CombustibleContenido(format: FuelPriceFormat, fields: FuelPriceFields, actions: FuelPriceActions) {
+    val perLiter = pricePerLiterInput(format.region)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionTitle(stringResource(R.string.settings_fuel_section_title))
-        OutlinedTextField(
-            value = fuelPriceCorriente,
-            onValueChange = vm::updateFuelPriceCorriente,
-            label = { Text(stringResource(R.string.settings_fuel_regular_price), fontSize = 12.sp) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = settingsFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = fuelPriceExtra,
-            onValueChange = vm::updateFuelPriceExtra,
-            label = { Text(stringResource(R.string.settings_fuel_premium_price), fontSize = 12.sp) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = settingsFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = fuelPriceDiesel,
-            onValueChange = vm::updateFuelPriceDiesel,
-            label = { Text(stringResource(R.string.settings_fuel_diesel_price), fontSize = 12.sp) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = settingsFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
+        val regular = if (perLiter) R.string.settings_fuel_regular_price_liter else R.string.settings_fuel_regular_price
+        val premium = if (perLiter) R.string.settings_fuel_premium_price_liter else R.string.settings_fuel_premium_price
+        val diesel = if (perLiter) R.string.settings_fuel_diesel_price_liter else R.string.settings_fuel_diesel_price
+        FuelPriceField(fields.corriente, actions.onCorriente, regular, format.currency)
+        FuelPriceField(fields.extra, actions.onExtra, premium, format.currency)
+        FuelPriceField(fields.diesel, actions.onDiesel, diesel, format.currency)
         Text(
-            stringResource(R.string.settings_fuel_price_description),
+            stringResource(fuelPriceExplanation(format.region)),
             color = TextMutedColor,
             fontSize = 11.sp,
         )
         Button(
-            onClick = vm::saveFuelPrices,
+            onClick = actions.onSave,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
         ) { Text(stringResource(R.string.settings_fuel_save_prices), color = BgColor) }
     }
 }
+
+@Composable
+private fun FuelPriceField(value: String, onValueChange: (String) -> Unit, @StringRes label: Int, currency: Currency) {
+    val keyboard = if (moneyFractionDigits(currency) > 0) KeyboardType.Decimal else KeyboardType.Number
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(label, currency.currencyCode), fontSize = 12.sp) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+        colors = settingsFieldColors(),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+private fun fuelPriceExplanation(region: Region): Int =
+    if (region == Region.CO) R.string.settings_fuel_price_description else R.string.settings_fuel_price_hint

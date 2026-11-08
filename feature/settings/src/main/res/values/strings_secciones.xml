@@ -44,10 +44,6 @@
     <string name="settings_auto_trip_on_move">Start trip automatically when moving</string>
     <string name="settings_auto_trip_on_move_description">With the adapter connected and no active trip (after “End trip (stay connected)”), a trip starts when you maintain 10 km/h for 5 seconds.</string>
     <string name="settings_fuel_section_title">Fuel</string>
-    <string name="settings_fuel_regular_price">Regular price per gallon (COP)</string>
-    <string name="settings_fuel_premium_price">Premium price per gallon (COP)</string>
-    <string name="settings_fuel_diesel_price">Diesel price per gallon (COP)</string>
-    <string name="settings_fuel_price_description">The active vehicle’s fuel type determines the price used to estimate each trip’s cost. There is no current official online data.gov.co feed for municipal gasoline/diesel prices (see the code for details)—adjust this manually based on your station.</string>
     <string name="settings_fuel_save_prices">Save prices</string>
 
     <string name="settings_social_server_title">Collaborative server</string>

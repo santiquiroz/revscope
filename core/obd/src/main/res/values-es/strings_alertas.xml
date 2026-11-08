@@ -50,7 +50,7 @@
     <string name="obd_trip_saved">Viaje guardado</string>
     <string name="obd_trip_summary_channel">Resumen de viaje</string>
     <string name="obd_trip_summary_format">%1$s · %2$s máx · %3$d min</string>
-    <string name="obd_trip_summary_cost">$%1$s</string>
+    <string name="obd_trip_summary_cost">%1$s</string>
     <string name="obd_trip_summary_eco">Eco %1$d</string>
     <string name="obd_service_connecting">Conectando…</string>
     <string name="obd_service_connected_diagnosis">Conectado a %1$s · sin viaje (diagnóstico)</string>

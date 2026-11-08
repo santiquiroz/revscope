@@ -44,10 +44,6 @@
     <string name="settings_auto_trip_on_move">Iniciar viaje automáticamente al moverse</string>
     <string name="settings_auto_trip_on_move_description">Con el adaptador conectado y sin viaje (tras «Finalizar viaje (seguir conectado)»), abre uno al sostener 10 km/h durante 5 s.</string>
     <string name="settings_fuel_section_title">Combustible</string>
-    <string name="settings_fuel_regular_price">Precio galón corriente (COP)</string>
-    <string name="settings_fuel_premium_price">Precio galón extra (COP)</string>
-    <string name="settings_fuel_diesel_price">Precio galón diésel / ACPM (COP)</string>
-    <string name="settings_fuel_price_description">Se usa el precio del tipo de combustible del vehículo activo para estimar el costo de cada viaje. No hay fuente oficial en línea vigente en datos.gov.co para precios de gasolina/ACPM por municipio (ver detalle en el código) — ajusta manualmente según tu estación.</string>
     <string name="settings_fuel_save_prices">Guardar precios</string>
 
     <string name="settings_social_server_title">Servidor colaborativo</string>

@@ -3,13 +3,14 @@ package com.revscope.core.data.datastore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.revscope.core.common.i18n.Region
 import kotlinx.coroutines.flow.first
 
-/** Precios de combustible por tipo, en COP por galón. */
+/** Precios de combustible por tipo, por galón US en la moneda del usuario; null = sin precio. */
 data class FuelPrices(
-    val corriente: Double,
-    val extra: Double,
-    val diesel: Double,
+    val corriente: Double?,
+    val extra: Double?,
+    val diesel: Double?,
 )
 
 /**
@@ -28,24 +29,31 @@ object FuelPricePrefs {
     const val DEFAULT_EXTRA = 20_000.0
     const val DEFAULT_DIESEL = 10_500.0
 
+    private val CO_DEFAULTS = FuelPrices(DEFAULT_CORRIENTE, DEFAULT_EXTRA, DEFAULT_DIESEL)
+    private val NO_DEFAULTS = FuelPrices(null, null, null)
+
+    fun defaultsFor(region: Region): FuelPrices = if (region == Region.CO) CO_DEFAULTS else NO_DEFAULTS
+
     /**
      * Lee los 3 precios vigentes, migrando la key legada [PreferencesKeys.FUEL_PRICE_COP_PER_GALLON]
      * a [PreferencesKeys.FUEL_PRICE_CORRIENTE] la primera vez que se detecta. Idempotente
      * y segura ante llamadas concurrentes desde distintos módulos (SessionAggregator,
      * SettingsViewModel) — cada una repite la misma migración sin efecto si ya ocurrió.
+     * Solo Colombia tiene precios por defecto; fuera de CO un precio sin guardar es null.
      */
-    suspend fun read(settings: DataStore<Preferences>): FuelPrices {
+    suspend fun read(settings: DataStore<Preferences>, region: Region): FuelPrices {
         migrateLegacyIfNeeded(settings)
         val prefs = settings.data.first()
+        val defaults = defaultsFor(region)
         return FuelPrices(
-            corriente = prefs[PreferencesKeys.FUEL_PRICE_CORRIENTE] ?: DEFAULT_CORRIENTE,
-            extra = prefs[PreferencesKeys.FUEL_PRICE_EXTRA] ?: DEFAULT_EXTRA,
-            diesel = prefs[PreferencesKeys.FUEL_PRICE_DIESEL] ?: DEFAULT_DIESEL,
+            corriente = prefs[PreferencesKeys.FUEL_PRICE_CORRIENTE] ?: defaults.corriente,
+            extra = prefs[PreferencesKeys.FUEL_PRICE_EXTRA] ?: defaults.extra,
+            diesel = prefs[PreferencesKeys.FUEL_PRICE_DIESEL] ?: defaults.diesel,
         )
     }
 
     /** Precio aplicable para [fuelType] ("CORRIENTE" | "EXTRA" | "DIESEL"); null/desconocido cae a corriente. */
-    fun priceFor(prices: FuelPrices, fuelType: String?): Double = when (fuelType) {
+    fun priceFor(prices: FuelPrices, fuelType: String?): Double? = when (fuelType) {
         "EXTRA" -> prices.extra
         "DIESEL" -> prices.diesel
         else -> prices.corriente
