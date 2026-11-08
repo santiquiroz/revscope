@@ -53,6 +53,7 @@ object TripShareCard {
         val track: List<Pair<Double, Double>>,
         /** Carro: el lean no aplica y se omite del PNG aunque [maxLeanDeg] traiga dato. */
         val showLean: Boolean = true,
+        val best0to60mphMs: Long? = null,
     )
 
     fun render(context: Context, resolver: StringResolver, units: UnitFormatter, data: CardData): Uri? = runCatching {
@@ -107,7 +108,7 @@ object TripShareCard {
         add(resolver.get(R.string.trips_card_duration) to formatDuration(data.durationMs, resolver))
         add(resolver.get(R.string.trips_card_max_speed) to units.formatSpeed(data.maxSpeed.toDouble()))
         add(resolver.get(R.string.trips_card_max_rpm) to data.maxRpm.toString())
-        data.best0to100Ms?.let { add(cardSprintLabel(resolver, units) to "%.2fs".format(Locale.ROOT, it / 1000.0)) }
+        cardSprint(data, resolver, units)?.let { add(it) }
         data.maxLateralG?.let {
             add(resolver.get(R.string.trips_card_g_lat) to resolver.get(
                 R.string.trips_g_value,
@@ -127,12 +128,12 @@ object TripShareCard {
         }
     }.take(8)
 
-    private fun cardSprintLabel(resolver: StringResolver, units: UnitFormatter): String =
-        if (units.system == UnitSystem.METRIC) {
-            resolver.get(R.string.trips_card_0_100)
-        } else {
-            resolver.get(R.string.trips_units_card_sprint, units.formatSpeed(SPRINT_LONG_KMH))
-        }
+    private fun cardSprint(data: CardData, resolver: StringResolver, units: UnitFormatter): Pair<String, String>? {
+        val metric = units.system == UnitSystem.METRIC
+        val ms = (if (metric) data.best0to100Ms else data.best0to60mphMs) ?: return null
+        val label = resolver.get(if (metric) R.string.trips_card_0_100 else R.string.trips_card_0_60_mph)
+        return label to "%.2fs".format(Locale.ROOT, ms / 1000.0)
+    }
 
     private fun drawTrack(canvas: Canvas, track: List<Pair<Double, Double>>, x: Float, y: Float, w: Float, h: Float) {
         val midLatRad = Math.toRadians(track.map { it.first }.average())

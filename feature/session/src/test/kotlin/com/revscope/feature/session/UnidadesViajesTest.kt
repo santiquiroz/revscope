@@ -12,6 +12,7 @@ import com.revscope.core.designsystem.LocalUnitSystem
 import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -37,6 +38,8 @@ class UnidadesViajesTest {
         distanceKm = 38.4f,
         best0to60Ms = 4_500,
     )
+
+    private val conSprints = viaje.copy(best0to100Ms = 8_000, best0to60mphMs = 4_800)
 
     private fun montar(system: UnitSystem, content: @Composable () -> Unit) {
         compose.setContent {
@@ -83,22 +86,47 @@ class UnidadesViajesTest {
     }
 
     @Test
-    fun `en US el resumen de ruta y los sprints van en millas y mph`() {
-        montar(UnitSystem.US) {
-            val units = rememberUnitFormatter()
-            Text(routeSummary(12.3, 112.0, units))
-            Text(sprintLabel(R.string.trips_0_60, SPRINT_SHORT_KMH, units))
-            Text(sprintLabel(R.string.trips_0_100, SPRINT_LONG_KMH, units))
-        }
+    fun `en US el resumen de ruta va en millas y mph`() {
+        montar(UnitSystem.US) { Text(routeSummary(12.3, 112.0, rememberUnitFormatter())) }
 
         compose.onNodeWithText("GPS route — 7.6${NBSP}mi · max 70${NBSP}mph (GPS)").assertExists()
-        compose.onNodeWithText("🏁 0–37${NBSP}mph").assertExists()
-        compose.onNodeWithText("🏁 0–62${NBSP}mph").assertExists()
+    }
+
+    @Test
+    fun `en US el sprint es 0-60 mph con su tiempo y sin fila 0-100`() {
+        montar(UnitSystem.US) { SprintRow(conSprints, rememberUnitFormatter()) }
+
+        compose.onNodeWithText("🏁 0–60 mph").assertExists()
+        compose.onNodeWithText("4.80s").assertExists()
+        compose.onNodeWithText("🏁 0–60 km/h").assertDoesNotExist()
+        compose.onNodeWithText("🏁 0–100 km/h").assertDoesNotExist()
+        compose.onNodeWithText("8.00s").assertDoesNotExist()
+    }
+
+    @Test
+    fun `en UK sin tiempo en mph la fila muestra el vacio`() {
+        montar(UnitSystem.UK) { SprintRow(conSprints.copy(best0to60mphMs = null), rememberUnitFormatter()) }
+
+        compose.onNodeWithText("🏁 0–60 mph").assertExists()
+        compose.onNodeWithText("—").assertExists()
+    }
+
+    @Test
+    fun `en metrico se ven las dos filas en km por hora`() {
+        montar(UnitSystem.METRIC) { SprintRow(conSprints, rememberUnitFormatter()) }
+
+        compose.onNodeWithText("🏁 0–60 km/h").assertExists()
+        compose.onNodeWithText("4.50s").assertExists()
+        compose.onNodeWithText("🏁 0–100 km/h").assertExists()
+        compose.onNodeWithText("8.00s").assertExists()
+        compose.onNodeWithText("🏁 0–60 mph").assertDoesNotExist()
     }
 
     @Test
     fun `en US la comparacion muestra millas y mph`() {
-        val runA = SessionCompareViewModel.RunData(viaje, 50, null, null, emptyList(), emptyList())
+        val runA = SessionCompareViewModel.RunData(
+            viaje.copy(best0to60mphMs = 4_800), 50, null, null, emptyList(), emptyList(),
+        )
         val runB = SessionCompareViewModel.RunData(
             viaje.copy(maxSpeed = 80, distanceKm = 12.3f), 30, null, null, emptyList(), emptyList(),
         )
@@ -110,7 +138,9 @@ class UnidadesViajesTest {
         compose.onNodeWithText("50${NBSP}mph").assertExists()
         compose.onNodeWithText("31${NBSP}mph").assertExists()
         compose.onNodeWithText("19${NBSP}mph").assertExists()
-        compose.onNodeWithText("🏁 0–37${NBSP}mph").assertExists()
+        compose.onNodeWithText("🏁 0–60 mph").assertExists()
+        compose.onNodeWithText("4.80s").assertExists()
+        compose.onNodeWithText("4.50s").assertDoesNotExist()
     }
 
     @Test
@@ -130,13 +160,18 @@ class UnidadesViajesTest {
             lapCount = 0,
             bestLapMs = null,
             track = emptyList(),
+            best0to60mphMs = 4_800,
         )
 
-        val stats = TripShareCard.stats(data, en, UnitFormatter(UnitSystem.US, Locale.US)).toMap()
+        val us = TripShareCard.stats(data, en, UnitFormatter(UnitSystem.US, Locale.US)).toMap()
+        val metric = TripShareCard.stats(data, en, UnitFormatter(UnitSystem.METRIC, Locale.US)).toMap()
 
-        assertEquals("23.9${NBSP}mi", stats["DISTANCE"])
-        assertEquals("70${NBSP}mph", stats["MAX SPEED"])
-        assertEquals("8.00s", stats["0–62${NBSP}mph"])
+        assertEquals("23.9${NBSP}mi", us["DISTANCE"])
+        assertEquals("70${NBSP}mph", us["MAX SPEED"])
+        assertEquals("4.80s", us["0–60 mph"])
+        assertFalse(us.containsKey("0–100"))
+        assertEquals("8.00s", metric["0–100"])
+        assertFalse(metric.containsKey("0–60 mph"))
     }
 
     private companion object {

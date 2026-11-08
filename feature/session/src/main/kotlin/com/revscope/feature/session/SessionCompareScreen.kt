@@ -58,6 +58,8 @@ import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.data.db.entities.SessionEntity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.TimeUnit
@@ -102,6 +104,19 @@ fun SessionCompareScreen(
             )
         }
     }
+}
+
+@Composable
+private fun SprintCompareRow(a: SessionEntity, b: SessionEntity, metric: Boolean) {
+    val msA = if (metric) a.best0to60Ms else a.best0to60mphMs
+    val msB = if (metric) b.best0to60Ms else b.best0to60mphMs
+    CompareRow(
+        stringResource(if (metric) R.string.trips_0_60 else R.string.trips_0_60_mph),
+        msA?.let { "%.2fs".format(it / 1000.0) } ?: "—",
+        msB?.let { "%.2fs".format(it / 1000.0) } ?: "—",
+        // lower is better
+        highlightMax = -(msA ?: Long.MAX_VALUE).compareTo(msB ?: Long.MAX_VALUE),
+    )
 }
 
 // A y B no se distinguen solo por el color: A es continua y B discontinua.
@@ -169,14 +184,7 @@ internal fun CompareContent(
             stringResource(R.string.trips_max_rpm), "${runA.session.maxRpm}", "${runB.session.maxRpm}",
             highlightMax = runA.session.maxRpm.compareTo(runB.session.maxRpm),
         )
-        CompareRow(
-            sprintLabel(R.string.trips_0_60, SPRINT_SHORT_KMH, units),
-            runA.session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
-            runB.session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
-            // lower is better
-            highlightMax = -(runA.session.best0to60Ms ?: Long.MAX_VALUE)
-                .compareTo(runB.session.best0to60Ms ?: Long.MAX_VALUE),
-        )
+        SprintCompareRow(runA.session, runB.session, units.system == UnitSystem.METRIC)
         CompareRow(
             stringResource(R.string.trips_max_g_lat),
             runA.maxAbsG?.let { LocaleNumbers.decimal(it.toDouble(), 2, locale) } ?: "—",
