@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- British English overlay: only the keys whose wording differs from values/ (US English). -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- strings_alertas.xml -->
     <string name="obd_pico_placa_active">Warning: you entered %1$s and your number plate is restricted today until %2$d:00</string>
     <string name="obd_pico_placa_today">Warning: your number plate is restricted in %1$s today from %2$d:00 to %3$d:00</string>

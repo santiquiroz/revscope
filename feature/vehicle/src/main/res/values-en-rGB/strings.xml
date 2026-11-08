@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="vehicle_motorcycle">Motorbike</string>
     <string name="vehicle_license_plate">Number plate</string>
     <string name="vehicle_delete_profile_warning">This deletes the profile and its settings: PIDs, gears, number plate, and document expiry dates. You can’t undo this.</string>

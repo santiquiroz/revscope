@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- British English overlay: only the keys whose wording differs from values/ (US English). -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="map_maneuver_on_ramp">Take the slip road</string>
     <string name="map_search_save_favorite">Save favourite</string>
     <string name="map_recenter">Re-centre</string>
