@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Vehículo al día / mantenimiento -->
+    <string name="workshop_al_dia_plate_clipboard_label">Registration</string>
+    <string name="workshop_al_dia_plate_copied">Registration copied</string>
+    <string name="workshop_maintenance_default_tires_inspection">Tyres (inspection)</string>
+    <string name="workshop_hub_tool_maintenance_description">Oil, tyres, battery and other mileage-based items</string>
+
+    <!-- Conocimiento del modelo y referencias -->
+    <string name="workshop_modelo_color_unknown">Colour not recorded</string>
+    <string name="workshop_modelo_edit_color_cd">Edit colour of %1$s</string>
+    <string name="workshop_modelo_color_dialog_title">Colour of %1$s</string>
+    <string name="workshop_modelo_wire_color">Wire colour</string>
+    <string name="workshop_modelo_wire_color_hint">Leave blank if the colour isn\'t confirmed.</string>
+    <string name="workshop_ref_band_ground_drop">Earth voltage drop</string>
+
+    <!-- Multímetro -->
+    <string name="workshop_multimetro_colors_header">Wire colours</string>
+    <string name="workshop_multimetro_no_color">No colour</string>
+    <string name="workshop_multimetro_edit_color_cd">Edit colour of %1$s</string>
+    <string name="workshop_multimetro_colors_no_model">To save these colours as a template, choose the vehicle\'s reference model in Vehicle profiles. Until then, they\'re used for this reading only.</string>
+    <string name="workshop_multimetro_save_colors_template">Save colours as template for %1$s</string>
+    <string name="workshop_multimetro_color_dialog_title">Colour of %1$s</string>
+    <string name="workshop_multimetro_color_label">Colour</string>
+    <string name="workshop_multimetro_color_hint">For example, “Green-yellow”. Leave blank for no colour.</string>
+    <string name="workshop_multimetro_cell_invalid_long">Not a number: use a full stop or comma</string>
+    <string name="workshop_multimetro_colors_edited">Colours edited by you, not saved to the model</string>
+    <string name="workshop_multimetro_colors_generic">Typical generic template, no colours: wire colours vary by model</string>
+    <string name="workshop_multimetro_colors_source">Colours: %1$s</string>
+    <string name="workshop_multimetro_colors_saved">Colours saved to the %1$s template</string>
+    <string name="workshop_multimetro_colors_save_failed">Couldn\'t save the colours</string>
+
+    <!-- Pruebas guiadas -->
+    <string name="workshop_prueba_pantalla_cancelada">Test cancelled</string>
+    <string name="workshop_prueba_pantalla_analizando">Analysing the test…</string>
+    <string name="workshop_prueba_pantalla_aviso_detiene">Capture stops and the test isn\'t analysed.</string>
+    <string name="workshop_prueba_pantalla_comprobando">Checking the adapter and the motorbike…</string>
+
+    <!-- Revisión de salud -->
+    <string name="workshop_health_check_stage_battery">Analysing battery trend…</string>
+
+    <!-- Hub del taller -->
+    <string name="workshop_hub_vehicle_problem_motorcycle">What\'s wrong with the motorbike?</string>
+    <string name="workshop_hub_tool_gear_analyzer">Gear analyser</string>
+
+    <!-- Sesión -->
+    <string name="workshop_new_session_odometer_error">Enter the distance in kilometres using numbers only, for example 12345</string>
+</resources>
