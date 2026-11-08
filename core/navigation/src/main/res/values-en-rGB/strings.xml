@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- British English overlay: only the keys whose wording differs from values/ (US English). -->
+<resources>
+    <string name="nav_street_toward">%1$s towards %2$s</string>
+    <string name="nav_take_ramp">take the slip road</string>
+    <string name="nav_take_ramp_side">take the slip road %1$s</string>
+
+    <plurals name="nav_spoken_meters">
+        <item quantity="one">In %1$d metre</item>
+        <item quantity="other">In %1$d metres</item>
+    </plurals>
+    <plurals name="nav_spoken_kilometers">
+        <item quantity="one">In %1$d kilometre</item>
+        <item quantity="other">In %1$d kilometres</item>
+    </plurals>
+    <string name="nav_spoken_kilometers_decimal">In %1$s kilometres</string>
+</resources>
