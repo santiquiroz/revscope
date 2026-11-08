@@ -1,6 +1,9 @@
 package com.revscope.core.obd.catalogo
 
 import android.content.Context
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -49,8 +52,8 @@ class CatalogoPropietario internal constructor(
     }
 
     @Synchronized
-    fun guardarUsuario(entrada: EntradaCatalogo): String? {
-        ValidadorCatalogo.validar(entrada)?.let { return it }
+    fun guardarUsuario(entrada: EntradaCatalogo, resolver: StringResolver): String? {
+        ValidadorCatalogo.validar(entrada, resolver)?.let { return it }
         val actualizadas = usuario().filterNot { it.id == entrada.id } + entrada
         return try {
             archivoUsuario.parentFile?.mkdirs()
@@ -58,11 +61,14 @@ class CatalogoPropietario internal constructor(
             cacheUsuario = actualizadas
             null
         } catch (e: IOException) {
-            "no se pudo guardar el catálogo: ${e.message ?: "error de escritura"}"
+            noSePudoGuardar(e, R.string.obd_catalogo_val_error_escritura, resolver)
         } catch (e: SecurityException) {
-            "no se pudo guardar el catálogo: ${e.message ?: "acceso denegado"}"
+            noSePudoGuardar(e, R.string.obd_catalogo_val_acceso_denegado, resolver)
         }
     }
+
+    private fun noSePudoGuardar(e: Exception, @StringRes porDefecto: Int, resolver: StringResolver): String =
+        resolver.get(R.string.obd_catalogo_val_no_se_pudo_guardar, e.message ?: resolver.get(porDefecto))
 
     fun resumenPorMarca(): Map<String, Int> =
         todas().groupingBy { it.marca }.eachCount()
@@ -72,7 +78,7 @@ class CatalogoPropietario internal constructor(
         cacheUsuario?.let { return it }
         val entradas = if (archivoUsuario.isFile) {
             runCatching { CodecCatalogo.leer(archivoUsuario.readText()).second }
-                .getOrElse { throw IOException("no se pudo leer el catálogo del usuario", it) }
+                .getOrElse { throw IOException("no se pudo leer el catálogo del usuario", it) } // i18n-ignore
         } else {
             emptyList()
         }

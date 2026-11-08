@@ -10,6 +10,8 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.data.R
 import com.revscope.core.data.datastore.PreferencesKeys
 import org.json.JSONObject
 
@@ -56,13 +58,13 @@ object PreferencesBackupCodec {
         return root.toString()
     }
 
-    fun decode(json: String): Map<String, JSONObject> {
+    fun decode(json: String, resolver: StringResolver): Map<String, JSONObject> {
         val root = JSONObject(json)
         val entries = mutableMapOf<String, JSONObject>()
         root.keys().forEach { keyName ->
             val entry = root.getJSONObject(keyName)
             val type = entry.getString("type")
-            require(type in SUPPORTED_TYPES) { "Tipo de entrada no soportado: $type" }
+            require(type in SUPPORTED_TYPES) { resolver.get(R.string.data_unsupported_entry_type, type) }
             entries[keyName] = entry
         }
         return entries
@@ -80,8 +82,8 @@ object PreferencesBackupCodec {
         }
     }
 
-    suspend fun restore(json: String, settings: DataStore<Preferences>) =
-        apply(decode(json), settings)
+    suspend fun restore(json: String, settings: DataStore<Preferences>, resolver: StringResolver) =
+        apply(decode(json, resolver), settings)
 
     private fun deviceSecrets(preferences: Preferences): List<Preferences.Pair<*>> =
         DEVICE_SECRET_KEYS.mapNotNull { key -> currentPair(preferences, key) }

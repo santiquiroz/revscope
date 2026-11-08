@@ -15,9 +15,9 @@ object CodecPerfilCan {
 
     fun leer(json: String): Result<PerfilCan> = runCatching {
         valida(json.toByteArray(Charsets.UTF_8).size <= TAMANO_MAXIMO_BYTES) {
-            "tamaño: el perfil pasa de ${TAMANO_MAXIMO_BYTES / 1024} KB"
+            "tamaño: el perfil pasa de ${TAMANO_MAXIMO_BYTES / 1024} KB" // i18n-ignore
         }
-        val raiz = runCatching { JSONObject(json) }.getOrElse { throw IllegalArgumentException("json: no es un objeto JSON válido") }
+        val raiz = runCatching { JSONObject(json) }.getOrElse { throw IllegalArgumentException("json: no es un objeto JSON válido") } // i18n-ignore
         raiz.aPerfil()
     }
 
@@ -60,17 +60,17 @@ object CodecPerfilCan {
     private fun JSONObject.aPerfil(): PerfilCan {
         rechazaPersonales(this)
         val version = optInt("version", -1)
-        valida(version == VERSION) { "version: se esperaba $VERSION y vino ${opt("version")}" }
+        valida(version == VERSION) { "version: se esperaba $VERSION y vino ${opt("version")}" } // i18n-ignore
         val id = requerido("id")
-        valida(ID_PERFIL.matches(id)) { "id: '$id' no es un id de perfil válido" }
-        val vehiculo = optJSONObject("vehiculo") ?: throw IllegalArgumentException("vehiculo: falta")
+        valida(ID_PERFIL.matches(id)) { "id: '$id' no es un id de perfil válido" } // i18n-ignore
+        val vehiculo = optJSONObject("vehiculo") ?: throw IllegalArgumentException("vehiculo: falta") // i18n-ignore
         rechazaPersonales(vehiculo)
-        val arreglo = optJSONArray("senales") ?: throw IllegalArgumentException("senales: falta")
+        val arreglo = optJSONArray("senales") ?: throw IllegalArgumentException("senales: falta") // i18n-ignore
         val senales = (0 until arreglo.length()).map { i ->
-            val s = arreglo.optJSONObject(i) ?: throw IllegalArgumentException("senales[$i]: no es un objeto")
+            val s = arreglo.optJSONObject(i) ?: throw IllegalArgumentException("senales[$i]: no es un objeto") // i18n-ignore
             runCatching { s.aSenal() }.getOrElse { throw IllegalArgumentException("senales[$i].${it.message}") }
         }
-        valida(senales.map { it.clave }.toSet().size == senales.size) { "clave: hay señales repetidas" }
+        valida(senales.map { it.clave }.toSet().size == senales.size) { "clave: hay señales repetidas" } // i18n-ignore
         return PerfilCan(
             version = version,
             id = id,
@@ -93,16 +93,16 @@ object CodecPerfilCan {
 
     private fun JSONObject.aSenal(): SenalCan {
         val clave = requerido("clave")
-        valida(clave in ClavesSenal.todas) { "clave: '$clave' no es una clave conocida" }
+        valida(clave in ClavesSenal.todas) { "clave: '$clave' no es una clave conocida" } // i18n-ignore
         val id = requerido("id")
-        valida(ID_CAN.matches(id)) { "id: '$id' no es un ID CAN hexadecimal de 3 u 8 dígitos" }
+        valida(ID_CAN.matches(id)) { "id: '$id' no es un ID CAN hexadecimal de 3 u 8 dígitos" } // i18n-ignore
         val bitInicio = optInt("bitInicio", -1)
         val largo = optInt("largo", -1)
         valida(bitInicio in 0..63 && largo in 1..64 && bitInicio + largo <= 64) {
-            "bitInicio: el campo $bitInicio+$largo se sale de los bits 0..63"
+            "bitInicio: el campo $bitInicio+$largo se sale de los bits 0..63" // i18n-ignore
         }
         val tipo = enumDe<TipoSenal>("tipo", requerido("tipo"))
-        valida(tipo != TipoSenal.BANDERA || largo == 1) { "largo: una bandera ocupa 1 bit" }
+        valida(tipo != TipoSenal.BANDERA || largo == 1) { "largo: una bandera ocupa 1 bit" } // i18n-ignore
         return SenalCan(
             clave = clave,
             nombre = optString("nombre", clave),
@@ -125,10 +125,10 @@ object CodecPerfilCan {
 
     private inline fun <reified T : Enum<T>> enumDe(campo: String, texto: String): T =
         enumValues<T>().firstOrNull { it.name.equals(texto, ignoreCase = true) }
-            ?: throw IllegalArgumentException("$campo: '$texto' no es un valor válido")
+            ?: throw IllegalArgumentException("$campo: '$texto' no es un valor válido") // i18n-ignore
 
     private fun JSONObject.aValores(): Map<Long, String> = keys().asSequence().associate { crudo ->
-        val numero = crudo.toLongOrNull() ?: throw IllegalArgumentException("valores: '$crudo' no es un número")
+        val numero = crudo.toLongOrNull() ?: throw IllegalArgumentException("valores: '$crudo' no es un número") // i18n-ignore
         numero to optString(crudo)
     }
 
@@ -137,11 +137,11 @@ object CodecPerfilCan {
     private fun JSONArray.textos(): List<String> = (0 until length()).map { optString(it) }
 
     private fun JSONObject.requerido(campo: String): String =
-        optString(campo, "").takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("$campo: falta")
+        optString(campo, "").takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("$campo: falta") // i18n-ignore
 
     private fun rechazaPersonales(objeto: JSONObject) {
         CAMPOS_PERSONALES.firstOrNull { objeto.has(it) }?.let {
-            throw IllegalArgumentException("$it: un perfil compartible no lleva datos del vehículo concreto")
+            throw IllegalArgumentException("$it: un perfil compartible no lleva datos del vehículo concreto") // i18n-ignore
         }
     }
 

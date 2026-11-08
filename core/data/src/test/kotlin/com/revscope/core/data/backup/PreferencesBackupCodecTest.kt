@@ -11,7 +11,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.revscope.core.data.R
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,6 +25,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -34,6 +37,8 @@ class PreferencesBackupCodecTest {
     val tmp = TemporaryFolder()
 
     private val scope = CoroutineScope(Dispatchers.IO + Job())
+
+    private val res = XmlStringResolver.es(R::class.java)
 
     private val riderName = stringPreferencesKey("server_rider_name")
     private val secretKeys = listOf(
@@ -90,7 +95,7 @@ class PreferencesBackupCodecTest {
             riderName.name to "Del backup",
         )
 
-        PreferencesBackupCodec.restore(json, settings)
+        PreferencesBackupCodec.restore(json, settings, res)
 
         val restored = settings.data.first()
         assertEquals("mcp-local", restored[PreferencesKeys.MCP_TOKEN])
@@ -108,7 +113,7 @@ class PreferencesBackupCodecTest {
             PreferencesKeys.CLAUDE_API_KEY.name to "sk-ant-ajena",
         )
 
-        PreferencesBackupCodec.restore(json, settings)
+        PreferencesBackupCodec.restore(json, settings, res)
 
         val restored = settings.data.first()
         secretKeys.forEach { assertNull(it.name, restored[it]) }
@@ -126,7 +131,7 @@ class PreferencesBackupCodecTest {
         )
         val settings = newDataStore()
 
-        PreferencesBackupCodec.restore(PreferencesBackupCodec.encode(original), settings)
+        PreferencesBackupCodec.restore(PreferencesBackupCodec.encode(original), settings, res)
 
         val restored = settings.data.first()
         assertEquals(original.asMap(), restored.asMap())
@@ -155,7 +160,7 @@ class PreferencesBackupCodecTest {
             .put(PreferencesKeys.MCP_CLEAR_DTC_ENABLED.name, JSONObject().put("type", "boolean").put("value", true))
             .toString()
 
-        PreferencesBackupCodec.restore(json, settings)
+        PreferencesBackupCodec.restore(json, settings, res)
 
         val restored = settings.data.first()
         assertEquals(false, restored[PreferencesKeys.MCP_CONTROL_ENABLED])
@@ -164,15 +169,20 @@ class PreferencesBackupCodecTest {
 
     @Test(expected = Exception::class)
     fun `decode de JSON malformado lanza excepcion`() {
-        PreferencesBackupCodec.decode("{ no es json valido")
+        PreferencesBackupCodec.decode("{ no es json valido", res)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun `decode con tipo desconocido lanza excepcion`() {
         val json = JSONObject()
             .put("clave", JSONObject().put("type", "tipo_invalido").put("value", "valor"))
             .toString()
-        PreferencesBackupCodec.decode(json)
+        val error = assertThrows(IllegalArgumentException::class.java) { PreferencesBackupCodec.decode(json, res) }
+        assertEquals("Tipo de entrada no soportado: tipo_invalido", error.message)
+        val enIngles = assertThrows(IllegalArgumentException::class.java) {
+            PreferencesBackupCodec.decode(json, XmlStringResolver.en(R::class.java))
+        }
+        assertEquals("Unsupported entry type: tipo_invalido", enIngles.message)
     }
 
     @Test
@@ -188,7 +198,7 @@ class PreferencesBackupCodecTest {
         val settings = newDataStore()
 
         val json = PreferencesBackupCodec.encode(original)
-        val decoded = PreferencesBackupCodec.decode(json)
+        val decoded = PreferencesBackupCodec.decode(json, res)
         PreferencesBackupCodec.apply(decoded, settings)
 
         val restored = settings.data.first()

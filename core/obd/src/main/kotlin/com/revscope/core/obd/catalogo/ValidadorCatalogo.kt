@@ -1,5 +1,7 @@
 package com.revscope.core.obd.catalogo
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.diagnostics.uds.ClaseComando
 import com.revscope.core.obd.diagnostics.uds.ComandoHex
 
@@ -8,31 +10,41 @@ object ValidadorCatalogo {
     private val riesgos = setOf("bajo", "medio", "alto")
     private val headerValido = Regex("^[0-9A-F]{3}$")
 
-    fun validar(entrada: EntradaCatalogo): String? {
-        if (entrada.id.isBlank()) return "el id no puede estar vacío"
-        if (entrada.marca.isBlank()) return "la marca no puede estar vacía"
-        if (entrada.descripcion.isBlank()) return "la descripción no puede estar vacía"
-        if (entrada.tipo !in tipos) return "tipo inválido: debe ser lectura, escritura o rutina"
-        if (entrada.riesgo !in riesgos) return "riesgo inválido: debe ser bajo, medio o alto"
-        if (entrada.header != null && !headerValido.matches(entrada.header)) return "header inválido: usa tres dígitos hexadecimales en mayúsculas"
-        if (entrada.pasos.size !in 1..10) return "debe haber entre 1 y 10 pasos"
-        validarPasos(entrada)?.let { return it }
-        if (entrada.formula != null && FormulaCatalogo.evaluar(entrada.formula, List(26) { 0 }) == null) {
-            return "la fórmula no es válida o no produce un número finito"
-        }
-        return null
+    fun validar(entrada: EntradaCatalogo, resolver: StringResolver): String? =
+        errorCampos(entrada)?.let { resolver.get(it) }
+            ?: validarPasos(entrada, resolver)
+            ?: errorFormula(entrada)?.let { resolver.get(it) }
+
+    private fun errorCampos(entrada: EntradaCatalogo): Int? = when {
+        entrada.id.isBlank() -> R.string.obd_catalogo_val_id_vacio
+        entrada.marca.isBlank() -> R.string.obd_catalogo_val_marca_vacia
+        entrada.descripcion.isBlank() -> R.string.obd_catalogo_val_descripcion_vacia
+        entrada.tipo !in tipos -> R.string.obd_catalogo_val_tipo_invalido
+        entrada.riesgo !in riesgos -> R.string.obd_catalogo_val_riesgo_invalido
+        entrada.header != null && !headerValido.matches(entrada.header) -> R.string.obd_catalogo_val_header_invalido
+        entrada.pasos.size !in 1..10 -> R.string.obd_catalogo_val_cantidad_pasos
+        else -> null
     }
 
-    private fun validarPasos(entrada: EntradaCatalogo): String? {
+    private fun errorFormula(entrada: EntradaCatalogo): Int? =
+        R.string.obd_catalogo_val_formula_invalida.takeIf {
+            entrada.formula != null && FormulaCatalogo.evaluar(entrada.formula, List(26) { 0 }) == null
+        }
+
+    private fun validarPasos(entrada: EntradaCatalogo, resolver: StringResolver): String? {
         entrada.pasos.forEachIndexed { indice, paso ->
+            val numero = indice + 1
             val resultado = ComandoHex.validar(paso)
             val comando = resultado.getOrNull()
-                ?: return "paso ${indice + 1} inválido: ${resultado.exceptionOrNull()?.message ?: "comando no válido"}"
-            if (comando.clase == ClaseComando.BLOQUEADO) return "paso ${indice + 1} bloqueado"
+                ?: return resolver.get(R.string.obd_catalogo_val_paso_invalido, numero, motivo(resultado, resolver))
+            if (comando.clase == ClaseComando.BLOQUEADO) return resolver.get(R.string.obd_catalogo_val_paso_bloqueado, numero)
             if (entrada.esLectura && comando.clase != ClaseComando.LECTURA) {
-                return "paso ${indice + 1} no es de lectura"
+                return resolver.get(R.string.obd_catalogo_val_paso_no_lectura, numero)
             }
         }
         return null
     }
+
+    private fun motivo(resultado: Result<*>, resolver: StringResolver): String =
+        resultado.exceptionOrNull()?.message ?: resolver.get(R.string.obd_catalogo_val_comando_no_valido)
 }

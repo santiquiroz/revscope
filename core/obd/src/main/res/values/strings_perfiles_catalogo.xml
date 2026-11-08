@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ValidadorCatalogo / CatalogoPropietario: reasons returned to the MCP client when saving to the catalog -->
+    <string name="obd_catalogo_val_id_vacio">the id can\'t be empty</string>
+    <string name="obd_catalogo_val_marca_vacia">the brand can\'t be empty</string>
+    <string name="obd_catalogo_val_descripcion_vacia">the description can\'t be empty</string>
+    <string name="obd_catalogo_val_tipo_invalido">invalid type: must be lectura, escritura or rutina</string>
+    <string name="obd_catalogo_val_riesgo_invalido">invalid risk: must be bajo, medio or alto</string>
+    <string name="obd_catalogo_val_header_invalido">invalid header: use three uppercase hexadecimal digits</string>
+    <string name="obd_catalogo_val_cantidad_pasos">there must be between 1 and 10 steps</string>
+    <string name="obd_catalogo_val_formula_invalida">the formula isn\'t valid or doesn\'t produce a finite number</string>
+    <string name="obd_catalogo_val_paso_invalido">step %1$d invalid: %2$s</string>
+    <string name="obd_catalogo_val_comando_no_valido">invalid command</string>
+    <string name="obd_catalogo_val_paso_bloqueado">step %1$d blocked</string>
+    <string name="obd_catalogo_val_paso_no_lectura">step %1$d isn\'t a read</string>
+    <string name="obd_catalogo_val_no_se_pudo_guardar">couldn\'t save the catalog: %1$s</string>
+    <string name="obd_catalogo_val_error_escritura">write error</string>
+    <string name="obd_catalogo_val_acceso_denegado">access denied</string>
+</resources>
