@@ -40,8 +40,8 @@
     <string name="trips_avg_rpm">Avg RPM</string>
     <string name="trips_max_accel">Max throttle</string>
     <string name="trips_fuel_cost">Fuel cost</string>
-    <string name="trips_0_60">🏁 0–60</string>
-    <string name="trips_0_100">🏁 0–100</string>
+    <string name="trips_0_60">🏁 0–60 km/h</string>
+    <string name="trips_0_100">🏁 0–100 km/h</string>
     <string name="trips_route_summary">GPS route — %1$s · max %2$s (GPS)</string>
     <string name="trips_route_legend">blue = slow · yellow = medium · red = fast</string>
     <string name="trips_route_racing">racing line — red points = hard braking</string>

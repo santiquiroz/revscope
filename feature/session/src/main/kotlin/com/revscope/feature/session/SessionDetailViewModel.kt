@@ -555,6 +555,7 @@ class SessionDetailViewModel @Inject constructor(
                 bestLapMs = r.laps.minOfOrNull { it.timeMs },
                 track = r.gpsTrack,
                 showLean = isMotorcycle.value,
+                best0to60mphMs = s.best0to60mphMs,
             ),
         )
     }

@@ -71,6 +71,7 @@ import com.revscope.core.common.i18n.formatRegionalMoney
 import com.revscope.core.common.i18n.systemLocale
 import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
@@ -312,22 +313,8 @@ private fun ReportContent(
 
         DebriefCard(vm, onOpenAiValue)
 
-        if (session.best0to60Ms != null || session.best0to100Ms != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                StatCard(
-                    sprintLabel(R.string.trips_0_60, SPRINT_SHORT_KMH, units),
-                    session.best0to60Ms?.let { "%.2fs".format(Locale.ROOT, it / 1000.0) } ?: "—",
-                    Modifier.weight(1f),
-                )
-                StatCard(
-                    sprintLabel(R.string.trips_0_100, SPRINT_LONG_KMH, units),
-                    session.best0to100Ms?.let { "%.2fs".format(Locale.ROOT, it / 1000.0) } ?: "—",
-                    Modifier.weight(1f),
-                )
-            }
+        if (session.hasSprint()) {
+            SprintRow(session, units)
         }
 
         if (report.gpsTrack.size >= 2) {
@@ -521,16 +508,31 @@ internal fun SpeedTempRow(maxSpeedKmh: Int, avgSpeedKmh: Float, maxCoolantC: Int
     }
 }
 
-internal const val SPRINT_SHORT_KMH = 60.0
-internal const val SPRINT_LONG_KMH = 100.0
+private fun SessionEntity.hasSprint(): Boolean =
+    best0to60Ms != null || best0to100Ms != null || best0to60mphMs != null
 
 @Composable
-internal fun sprintLabel(@StringRes metricLabel: Int, kmh: Double, units: UnitFormatter): String =
-    if (units.system == UnitSystem.METRIC) {
-        stringResource(metricLabel)
-    } else {
-        stringResource(R.string.trips_units_sprint, units.formatSpeed(kmh))
+internal fun SprintRow(session: SessionEntity, units: UnitFormatter) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (units.system == UnitSystem.METRIC) {
+            SprintCard(R.string.trips_0_60, session.best0to60Ms, Modifier.weight(1f))
+            SprintCard(R.string.trips_0_100, session.best0to100Ms, Modifier.weight(1f))
+        } else {
+            SprintCard(R.string.trips_0_60_mph, session.best0to60mphMs, Modifier.weight(1f))
+        }
     }
+}
+
+@Composable
+private fun SprintCard(@StringRes label: Int, ms: Long?, modifier: Modifier) {
+    StatCard(stringResource(label), sprintTime(ms), modifier)
+}
+
+internal fun sprintTime(ms: Long?): String =
+    ms?.let { "%.2fs".format(Locale.ROOT, it / 1000.0) } ?: "—"
 
 @Composable
 internal fun routeSummary(distanceKm: Double, maxSpeedKmh: Double, units: UnitFormatter): String =
