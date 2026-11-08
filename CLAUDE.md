@@ -76,3 +76,12 @@ El repo trae el wrapper de Gradle 8.11.1; basta un JDK 17 o superior (en Windows
 - Funciones atómicas, complejidad ciclomática baja; sin comentarios de doc salvo el POR QUÉ no obvio.
 - TDD donde aplique; los cálculos de PIDs y la intelligence deben tener tests.
 - Commits en español, sin `Co-Authored-By`.
+
+## Idiomas
+
+- La app sale en inglés (`values/`, inglés de EE. UU.), español (`values-es/`) e inglés británico (`values-en-rGB/`, parcial: solo las claves con ortografía o vocabulario británico).
+- Todo texto que vea el usuario va a recursos con el prefijo del módulo (`obd_`, `workshop_`, `settings_`, `trips_`, `drive_`, `map_`, `nav_`…), en `values/` y `values-es/` a la vez; si la palabra cambia en Reino Unido (color, tire, license plate…), también en `values-en-rGB/`.
+- En Compose, `stringResource`; fuera de Compose (ViewModels, servicios, notificaciones, voz, MCP), `StringResolver` inyectado. En tests JVM, `XmlStringResolver.es(...)`/`.en(...)`.
+- Unidades con `UnitFormatter` (`rememberUnitFormatter()` en Compose): lo guardado sigue en métrico; `MetricUnits` convierte lecturas métricas. Moneda y precio del combustible con `Money.kt`; lo que depende del país (SOAT, pico y placa, SIMIT) con `Region.detect`.
+- Texto que no ve el usuario (comandos AT, JSON, SQL, logs, claves de DataStore): `// i18n-ignore` al final de esa línea.
+- Antes de commitear: `python scripts/i18n/hardcoded.py app core feature wear` → 0 y `python scripts/i18n/parity.py app core feature wear` → 0. Las capturas en español no cambian salvo que el cambio sea intencional.
