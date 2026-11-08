@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- British English overlay: only the keys whose wording differs from values/ (US English). -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="app_onboarding_vehicle_intro">Create it now and the app adapts: gauges, gears and alerts depending on whether it\'s a motorbike or a car.</string>
     <string name="app_onboarding_vehicle_motorcycle">Motorbike</string>
     <string name="app_onboarding_vehicle_plate">Number plate (optional)</string>

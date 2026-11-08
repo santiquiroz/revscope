@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- British English overlay: only the keys whose wording differs from values/ (US English). -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="nav_street_toward">%1$s towards %2$s</string>
     <string name="nav_take_ramp">take the slip road</string>
     <string name="nav_take_ramp_side">take the slip road %1$s</string>
