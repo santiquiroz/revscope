@@ -39,7 +39,7 @@
     <string name="trips_max_rpm">Max RPM</string>
     <string name="trips_avg_rpm">Avg RPM</string>
     <string name="trips_max_accel">Max throttle</string>
-    <string name="trips_fuel_cost">Fuel cost (COP)</string>
+    <string name="trips_fuel_cost">Fuel cost</string>
     <string name="trips_0_60">🏁 0–60</string>
     <string name="trips_0_100">🏁 0–100</string>
     <string name="trips_route_summary">GPS route — %1$s · max %2$s (GPS)</string>

@@ -6,7 +6,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.detect
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -256,7 +258,8 @@ class ObdSessionManager @Inject constructor(
         nuevoSumidero = { ArchivoCaptura(CsvShare.exportsDir(appContext)) },
         resolver = resolver,
     )
-    private val sessionAggregator = SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao)
+    private val sessionAggregator =
+        SessionAggregator(sessionDao, telemetryDao, imuDao, settings, gpsDao) { Region.detect(appContext) }
     private val odometerHistoryStore = OdometerHistoryStore(settings)
     private val odometerChecker = OdometerChecker(registry, odometerHistoryStore, sessionDao, resolver)
     val odometerCheck: StateFlow<OdometerChecker.Result?> = odometerChecker.lastResult

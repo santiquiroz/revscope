@@ -1,13 +1,21 @@
 package com.revscope.feature.settings
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.FuelPricePrefs
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.currencyFor
+import com.revscope.core.common.i18n.detect
+import com.revscope.core.common.i18n.moneyFractionDigits
+import com.revscope.core.common.i18n.systemLocale
+import com.revscope.core.common.i18n.toDisplayPrice
+import com.revscope.core.common.i18n.toStoredPerGallon
 import com.revscope.core.common.units.DistanceUnit
 import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.common.units.UnitSystem
@@ -60,6 +68,9 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.util.Currency
 import javax.inject.Inject
 import kotlin.math.roundToInt
 
@@ -128,13 +139,17 @@ class SettingsViewModel @Inject constructor(
     private val _redlineRpm = MutableStateFlow("10500")
     val redlineRpm: StateFlow<String> = _redlineRpm.asStateFlow()
 
-    private val _fuelPriceCorriente = MutableStateFlow(FuelPricePrefs.DEFAULT_CORRIENTE.toLong().toString())
+    val fuelRegion: Region = Region.detect(appContext)
+    val fuelCurrency: Currency = currencyFor(fuelRegion, systemLocale())
+    private val fuelDefaults = FuelPricePrefs.defaultsFor(fuelRegion)
+
+    private val _fuelPriceCorriente = MutableStateFlow(fuelPriceField(fuelDefaults.corriente))
     val fuelPriceCorriente: StateFlow<String> = _fuelPriceCorriente.asStateFlow()
 
-    private val _fuelPriceExtra = MutableStateFlow(FuelPricePrefs.DEFAULT_EXTRA.toLong().toString())
+    private val _fuelPriceExtra = MutableStateFlow(fuelPriceField(fuelDefaults.extra))
     val fuelPriceExtra: StateFlow<String> = _fuelPriceExtra.asStateFlow()
 
-    private val _fuelPriceDiesel = MutableStateFlow(FuelPricePrefs.DEFAULT_DIESEL.toLong().toString())
+    private val _fuelPriceDiesel = MutableStateFlow(fuelPriceField(fuelDefaults.diesel))
     val fuelPriceDiesel: StateFlow<String> = _fuelPriceDiesel.asStateFlow()
 
     private val _cameraAlertRadius = MutableStateFlow(radiusFieldValue(CameraAlertRadius.DEFAULT_M, units).toString())
@@ -308,10 +323,10 @@ class SettingsViewModel @Inject constructor(
                 _voltageMin.value = (prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: 11.8f).toString()
                 _redlineRpm.value = (prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: 10_500).toString()
                 _askVehicleOnStart.value = prefs[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true
-                val fuelPrices = FuelPricePrefs.read(settings)
-                _fuelPriceCorriente.value = fuelPrices.corriente.toLong().toString()
-                _fuelPriceExtra.value = fuelPrices.extra.toLong().toString()
-                _fuelPriceDiesel.value = fuelPrices.diesel.toLong().toString()
+                val fuelPrices = FuelPricePrefs.read(settings, fuelRegion)
+                _fuelPriceCorriente.value = fuelPriceField(fuelPrices.corriente)
+                _fuelPriceExtra.value = fuelPriceField(fuelPrices.extra)
+                _fuelPriceDiesel.value = fuelPriceField(fuelPrices.diesel)
                 _voiceTemperature.value = prefs[PreferencesKeys.VOICE_TEMPERATURE] ?: true
                 _voiceVoltage.value = prefs[PreferencesKeys.VOICE_VOLTAGE] ?: true
                 _voiceSpeedCameras.value = prefs[PreferencesKeys.VOICE_SPEED_CAMERAS] ?: true
@@ -492,20 +507,13 @@ class SettingsViewModel @Inject constructor(
 
     fun saveFuelPrices() {
         viewModelScope.launch {
-            val corriente = _fuelPriceCorriente.value.toDoubleOrNull()
-            val extra = _fuelPriceExtra.value.toDoubleOrNull()
-            val diesel = _fuelPriceDiesel.value.toDoubleOrNull()
-            if (!isValidFuelPrice(corriente) || !isValidFuelPrice(extra) || !isValidFuelPrice(diesel)) {
-                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_fuel_price_out_of_range))
+            val texts = listOf(_fuelPriceCorriente.value, _fuelPriceExtra.value, _fuelPriceDiesel.value)
+            val stored = fuelPricesToStore(texts, fuelRegion)
+            if (stored == null) {
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(invalidFuelPriceMessage(fuelRegion)))
                 return@launch
             }
-            val result = runCatching {
-                settings.edit {
-                    it[PreferencesKeys.FUEL_PRICE_CORRIENTE] = corriente!!
-                    it[PreferencesKeys.FUEL_PRICE_EXTRA] = extra!!
-                    it[PreferencesKeys.FUEL_PRICE_DIESEL] = diesel!!
-                }
-            }
+            val result = runCatching { settings.edit { prefs -> writeFuelPrices(prefs, stored) } }
             _lastSaveResult.value = if (result.isSuccess) {
                 SaveResult(true, stringResolver.get(R.string.settings_fuel_prices_updated))
             } else {
@@ -514,7 +522,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun isValidFuelPrice(price: Double?): Boolean = price != null && price in 1_000.0..50_000.0
+    private fun fuelPriceField(storedPerGallon: Double?): String =
+        fuelPriceFieldText(storedPerGallon, fuelRegion, fuelCurrency)
+
+    private fun writeFuelPrices(prefs: MutablePreferences, stored: List<Double?>) {
+        FUEL_PRICE_KEYS.zip(stored).forEach { (key, value) ->
+            if (value == null) prefs.remove(key) else prefs[key] = value
+        }
+    }
 
     fun saveAlertSettings() {
         viewModelScope.launch {
@@ -1121,3 +1136,36 @@ internal fun cameraDownloadDistance(units: UnitFormatter): Int =
 
 private fun subunitsPerDistanceUnit(units: UnitFormatter): Double =
     if (units.system == UnitSystem.METRIC) METERS_PER_KM else FEET_PER_MILE
+
+private val CO_FUEL_PRICE_RANGE = 1_000.0..50_000.0
+private val FUEL_PRICE_KEYS = listOf(
+    PreferencesKeys.FUEL_PRICE_CORRIENTE,
+    PreferencesKeys.FUEL_PRICE_EXTRA,
+    PreferencesKeys.FUEL_PRICE_DIESEL,
+)
+
+internal fun fuelPriceFieldText(storedPerGallon: Double?, region: Region, currency: Currency): String {
+    val display = storedPerGallon?.let { toDisplayPrice(it, region) } ?: return ""
+    val digits = moneyFractionDigits(currency)
+    if (digits == 0) return display.toLong().toString()
+    return BigDecimal(display).setScale(digits, RoundingMode.HALF_UP).toPlainString()
+}
+
+internal fun fuelPricesToStore(texts: List<String>, region: Region): List<Double?>? {
+    val prices = texts.map(::parseFuelPriceText)
+    val valid = texts.zip(prices).all { (text, price) -> isValidFuelPriceInput(text, price, region) }
+    return if (valid) prices.map { price -> price?.let { toStoredPerGallon(it, region) } } else null
+}
+
+internal fun invalidFuelPriceMessage(region: Region): Int =
+    if (region == Region.CO) R.string.settings_fuel_price_out_of_range else R.string.settings_fuel_price_invalid
+
+private fun parseFuelPriceText(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
+
+// Colombia keeps its mandatory 1 000–50 000 COP range; elsewhere an empty field means "no price".
+private fun isValidFuelPriceInput(text: String, price: Double?, region: Region): Boolean = when {
+    region == Region.CO -> price != null && price in CO_FUEL_PRICE_RANGE
+    text.isBlank() -> true
+    else -> price != null && price.isFinite() && price > 0.0
+}
+

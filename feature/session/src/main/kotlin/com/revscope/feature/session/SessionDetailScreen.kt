@@ -65,6 +65,10 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import androidx.annotation.StringRes
 import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.detect
+import com.revscope.core.common.i18n.formatRegionalMoney
+import com.revscope.core.common.i18n.systemLocale
 import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.common.units.UnitSystem
 import com.revscope.core.data.db.entities.VehicleProfileEntity
@@ -297,14 +301,9 @@ private fun ReportContent(
             StatCard(stringResource(R.string.trips_avg_rpm), report.avgRpm.toString(), Modifier.weight(1f))
             StatCard(stringResource(R.string.trips_max_accel), "${report.maxThrottlePct}%", Modifier.weight(1f))
         }
-        val fuelCostCop = session.fuelCostCop
-        if (fuelCostCop != null) {
-            StatCard(
-                stringResource(R.string.trips_fuel_cost),
-                "$${LocaleNumbers.decimal(fuelCostCop.toDouble(), 0, locale)}",
-                Modifier.fillMaxWidth(),
-            )
-        }
+        val context = LocalContext.current
+        val region = remember { Region.detect(context) }
+        FuelCostCard(session.fuelCostCop, region, systemLocale(), locale)
 
         val ecoScore = session.ecoScore
         if (ecoScore != null) {
@@ -587,6 +586,16 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
         Text(value, color = RevScopeColors.Accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         Text(label, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
     }
+}
+
+@Composable
+internal fun FuelCostCard(cost: Double?, region: Region, systemLocale: Locale, uiLocale: Locale) {
+    if (cost == null) return
+    StatCard(
+        stringResource(R.string.trips_fuel_cost),
+        formatRegionalMoney(cost, region, systemLocale, uiLocale),
+        Modifier.fillMaxWidth(),
+    )
 }
 
 /** Análisis IA del viaje: agregados locales → una llamada corta al proveedor configurado. */
