@@ -1,0 +1,6 @@
+<resources>
+    <string name="dtc_motorcycle_notes">Motorbike notes</string>
+    <string name="dtc_unrecognized_code_format">RevScope doesn\'t recognise this code format.</string>
+    <string name="dtc_mil_on">Engine warning light on</string>
+    <string name="dtc_mil_off">Engine warning light off</string>
+</resources>
