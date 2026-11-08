@@ -22,6 +22,7 @@ fun IdiomaSection(tagActual: String, onElegir: (String) -> Unit) {
     val opciones = listOf(
         "" to stringResource(R.string.settings_language_system),
         "en" to stringResource(R.string.settings_language_english),
+        "en-GB" to stringResource(R.string.settings_language_english_uk),
         "es" to stringResource(R.string.settings_language_spanish),
     )
 

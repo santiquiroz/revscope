@@ -3,6 +3,7 @@
     <string name="settings_section_language">Language and units</string>
     <string name="settings_entry_language">Language and units</string>
     <string name="settings_language_system">Phone language</string>
-    <string name="settings_language_english" translatable="false">English</string>
+    <string name="settings_language_english" translatable="false">English (US)</string>
+    <string name="settings_language_english_uk" translatable="false">English (UK)</string>
     <string name="settings_language_spanish" translatable="false">Español</string>
 </resources>
