@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_alertas_engine_sound_description">Synthesises the sound of a sports engine (or a funny one) following the real OBD2 RPM — plays through the speakers or the Bluetooth intercom. SoundRacer-style, without buying the adapter.</string>
+
+    <string name="settings_diagnostico_crash_subject_motorcycle">a possible motorbike accident</string>
+    <string name="settings_diagnostico_guard_description">With the motorbike off and parked nearby, the phone watches the OBD adapter: if it wakes up (someone turned the key), it sounds a loud alarm. Requires being within Bluetooth range (~10–30 m) — covers quick theft, not remote surveillance.</string>
+    <string name="settings_diagnostico_no_connection">Connect the adapter first (motorbike on).</string>
+
+    <string name="settings_fuel_regular_price_liter">Regular price per litre (%1$s)</string>
+    <string name="settings_fuel_premium_price_liter">Premium price per litre (%1$s)</string>
+    <string name="settings_fuel_diesel_price_liter">Diesel price per litre (%1$s)</string>
+    <string name="settings_fuel_price_description">The active vehicle’s fuel type determines the price used to estimate each trip’s cost. There is no current official online data.gov.co feed for municipal petrol/diesel prices (see the code for details)—adjust this manually based on your station.</string>
+
+    <string name="settings_search_keywords_vehicle">vehiculo|vehicle|garage|active profile|car|motorcycle|motorbike</string>
+    <string name="settings_search_keywords_fuel">fuel|petrol|gas|price|diesel|gallon|litre</string>
+    <string name="settings_entry_background_alerts_subtitle">Exact alarms and battery optimisation</string>
+
+    <string name="settings_mcp_workshop_writes_description">Clear codes by module (UDS 14), reset the ECU (UDS 11), run on-board tests (Mode 08), use manufacturer catalogue operations, and send raw sequences. Each write requires your tap on a notification; writes never run while the vehicle is moving, and flashing is blocked.</string>
+    <string name="settings_social_companion_description">When you arrive somewhere new, at home or abroad, it gives you a driving brief: fuel prices, tolls, restrictions, and what you need to drive there if you are outside your country. It checks the collaborative server first (free). If no one has reported that area and you have AI with web search, it generates a brief and shares it for the next traveller. Off by default (AI fallback costs money).</string>
+    <string name="settings_offline_map_delete_message">The downloaded map will be deleted. You can download it again at any time.</string>
+    <string name="settings_background_battery_optimized">✗ Battery optimisation is on—Samsung may put the app to sleep</string>
+    <string name="settings_background_battery_optimization">Battery optimisation</string>
+
+    <string name="settings_units_word_meters">metres</string>
+</resources>
