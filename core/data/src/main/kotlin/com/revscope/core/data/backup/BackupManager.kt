@@ -206,7 +206,7 @@ class BackupManager @Inject constructor(
     private fun decodePreferencesIfPresent(tempDir: File): Map<String, JSONObject>? {
         val prefsFile = entryFileIn(tempDir, PREFS_ENTRY_NAME)
         return if (prefsFile.exists()) {
-            PreferencesBackupCodec.decode(prefsFile.readText(Charsets.UTF_8))
+            PreferencesBackupCodec.decode(prefsFile.readText(Charsets.UTF_8), resolver)
         } else {
             null
         }

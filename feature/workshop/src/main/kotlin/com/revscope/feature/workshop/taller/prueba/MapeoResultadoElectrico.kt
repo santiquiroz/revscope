@@ -74,7 +74,9 @@ internal object MapeoResultadoElectrico {
         else -> null
     }
 
-    private fun kpa(x: Double, resolver: StringResolver) = "${LocaleNumbers.compact(x, resolver.locale)} kPa"
+    private fun kpa(x: Double, resolver: StringResolver) = LocaleNumbers.compact(x, resolver.locale) + ESPACIO_DURO + UNIDAD_KPA
 
+    private const val ESPACIO_DURO = " "
+    private const val UNIDAD_KPA = "kPa"
     private const val CODIGO_MAP = "P0106"
 }

@@ -45,7 +45,7 @@ class PerfilesCanRepositorio internal constructor(
     fun adoptar(id: String): PerfilCan {
         exigeIdValido(id)
         leerPropio(id)?.let { return it }
-        val base = incluido(id) ?: throw IllegalArgumentException("id: no hay un perfil incluido '$id'")
+        val base = incluido(id) ?: throw IllegalArgumentException("id: no hay un perfil incluido '$id'") // i18n-ignore
         val copia = base.copy(senales = base.senales.map { it.copy(estado = EstadoSenal.SIN_VERIFICAR) })
         guardar(copia)
         return copia
@@ -54,7 +54,7 @@ class PerfilesCanRepositorio internal constructor(
     @Synchronized
     fun marcarEstado(id: String, clave: String, estado: EstadoSenal): PerfilCan {
         val perfil = adoptar(id)
-        require(perfil.senales.any { it.clave == clave }) { "clave: el perfil '$id' no tiene la señal $clave" }
+        require(perfil.senales.any { it.clave == clave }) { "clave: el perfil '$id' no tiene la señal $clave" } // i18n-ignore
         val actualizado = perfil.copy(
             senales = perfil.senales.map { if (it.clave == clave) it.copy(estado = estado) else it },
         )
@@ -88,7 +88,7 @@ class PerfilesCanRepositorio internal constructor(
     private fun archivo(id: String) = File(carpeta, "$id.json")
 
     private fun exigeIdValido(id: String) =
-        require(CodecPerfilCan.ID_PERFIL.matches(id)) { "id: '$id' no es un id de perfil válido" }
+        require(CodecPerfilCan.ID_PERFIL.matches(id)) { "id: '$id' no es un id de perfil válido" } // i18n-ignore
 
     companion object {
         const val CARPETA = "perfiles_can"

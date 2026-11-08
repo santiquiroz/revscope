@@ -26,11 +26,11 @@ enum class DispositivoCaptura(val anchoDp: Int, val altoDp: Int, val densidad: S
     val sufijo: String get() = "w$anchoDp"
 
     fun calificadores(altoMinimoDp: Int = 0, idioma: String = "es"): String =
-        "$idioma-w${anchoDp}dp-h${maxOf(altoDp, altoMinimoDp)}dp-$densidad"
+        "$idioma-w${anchoDp}dp-h${maxOf(altoDp, altoMinimoDp)}dp-$densidad" // i18n-ignore
 }
 
 data class VarianteCaptura(val dispositivo: DispositivoCaptura, val escalaLetra: Float) {
-    val sufijo: String get() = "${dispositivo.sufijo}_fs${(escalaLetra * 100).toInt()}"
+    val sufijo: String get() = "${dispositivo.sufijo}_fs${(escalaLetra * 100).toInt()}" // i18n-ignore
 }
 
 val ESCALAS_LETRA = listOf(1.0f, 1.3f, 2.0f)

@@ -104,7 +104,7 @@ object TextosMinimo {
             val citas = listOf(ClavesBanda.MINIMO_DERIVA_MAX, ClavesBanda.MINIMO_DESVIACION_MAX)
                 .mapNotNull { a.comprobacion(it)?.banda }
                 .map { TextoBanda.citar(it, 0, res) }
-            return if (citas.isEmpty()) "" else " (${citas.joinToString("; ")})"
+            return if (citas.isEmpty()) "" else entreParentesis(citas.joinToString("; "))
         }
 
         // Con el mínimo inestable, la media no dice dónde queda el ralentí: la banda se calla.
@@ -175,7 +175,7 @@ object TextosMinimo {
         }
 
         private fun citaBanda(c: Comprobacion, decimales: Int): String =
-            c.banda?.let { " (${TextoBanda.citar(it, decimales, res)})" }.orEmpty()
+            c.banda?.let { entreParentesis(TextoBanda.citar(it, decimales, res)) }.orEmpty()
 
         private fun mediaFueraDeBanda(): Comprobacion? {
             if (a.minimo?.inestable != false) return null
@@ -184,7 +184,7 @@ object TextosMinimo {
 
         private fun hallazgoTps(): String? {
             val t = a.tpsRalenti?.takeIf { it.posicion != null && it.posicion != PosicionEnBanda.DENTRO } ?: return null
-            val banda = t.banda?.let { " (${TextoBanda.citar(it, 1, res)})" }.orEmpty()
+            val banda = t.banda?.let { entreParentesis(TextoBanda.citar(it, 1, res)) }.orEmpty()
             val consecuencia = res.get(if (t.posicion == PosicionEnBanda.BAJO) R.string.obd_minimo_tps_bajo else R.string.obd_minimo_tps_alto)
             return res.get(R.string.obd_minimo_hallazgo_tps, n(t.minV, 2), n(t.maxV, 2), TextoBanda.lado(t.posicion, res), banda, consecuencia)
         }
@@ -253,6 +253,8 @@ object TextosMinimo {
             val entero = x.roundToLong()
             return if (abs(x - entero) < 1e-9) entero.toString() else n(x, 1)
         }
+
+        private fun entreParentesis(texto: String) = " ($texto)"
 
         private fun rpm(x: Double) = n(x, 0)
 

@@ -1,5 +1,7 @@
 package com.revscope.core.obd.catalogo
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -39,10 +41,12 @@ class CatalogoPropietarioTest {
         val archivo = File(temporal.root, "usuario.json")
         val catalogo = catalogo(archivo, emptyList())
 
-        assertNull(catalogo.guardarUsuario(entrada()))
+        val res = XmlStringResolver.es(R::class.java)
+
+        assertNull(catalogo.guardarUsuario(entrada(), res))
         assertTrue(archivo.isFile)
         assertEquals("Torque", CatalogoPropietario({ null }, archivo).porId("mazda.test")?.descripcion)
-        assertNotNull(catalogo.guardarUsuario(entrada(id = "", descripcion = "inválida")))
+        assertNotNull(catalogo.guardarUsuario(entrada(id = "", descripcion = "inválida"), res))
     }
 
     private fun catalogo(file: File, entries: List<EntradaCatalogo>) =

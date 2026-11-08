@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="obd_catalogo_val_id_vacio">el id no puede estar vacío</string>
+    <string name="obd_catalogo_val_marca_vacia">la marca no puede estar vacía</string>
+    <string name="obd_catalogo_val_descripcion_vacia">la descripción no puede estar vacía</string>
+    <string name="obd_catalogo_val_tipo_invalido">tipo inválido: debe ser lectura, escritura o rutina</string>
+    <string name="obd_catalogo_val_riesgo_invalido">riesgo inválido: debe ser bajo, medio o alto</string>
+    <string name="obd_catalogo_val_header_invalido">header inválido: usa tres dígitos hexadecimales en mayúsculas</string>
+    <string name="obd_catalogo_val_cantidad_pasos">debe haber entre 1 y 10 pasos</string>
+    <string name="obd_catalogo_val_formula_invalida">la fórmula no es válida o no produce un número finito</string>
+    <string name="obd_catalogo_val_paso_invalido">paso %1$d inválido: %2$s</string>
+    <string name="obd_catalogo_val_comando_no_valido">comando no válido</string>
+    <string name="obd_catalogo_val_paso_bloqueado">paso %1$d bloqueado</string>
+    <string name="obd_catalogo_val_paso_no_lectura">paso %1$d no es de lectura</string>
+    <string name="obd_catalogo_val_no_se_pudo_guardar">no se pudo guardar el catálogo: %1$s</string>
+    <string name="obd_catalogo_val_error_escritura">error de escritura</string>
+    <string name="obd_catalogo_val_acceso_denegado">acceso denegado</string>
+</resources>

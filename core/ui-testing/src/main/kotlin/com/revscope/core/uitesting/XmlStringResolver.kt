@@ -38,28 +38,28 @@ class XmlStringResolver(
 
     fun get(name: String, vararg args: Any): String {
         val text = strings[name]
-            ?: throw IllegalArgumentException("Unknown string name: $name")
+            ?: throw IllegalArgumentException("Unknown string name: $name") // i18n-ignore
         return format(text, args)
     }
 
     fun plural(name: String, count: Int, vararg args: Any): String {
         val forms = plurals[name]
-            ?: throw IllegalArgumentException("Unknown plurals name: $name")
+            ?: throw IllegalArgumentException("Unknown plurals name: $name") // i18n-ignore
         val quantity = if (count == 1) "one" else "other"
         val text = forms[quantity] ?: forms["other"]
-            ?: throw IllegalArgumentException("Unknown plurals name: $name")
+            ?: throw IllegalArgumentException("Unknown plurals name: $name") // i18n-ignore
         return format(text, args)
     }
 
     override fun get(@StringRes id: Int, vararg args: Any): String {
         val name = stringIds[id]
-            ?: throw IllegalArgumentException("Unknown string id: $id")
+            ?: throw IllegalArgumentException("Unknown string id: $id") // i18n-ignore
         return get(name, *args)
     }
 
     override fun plural(@PluralsRes id: Int, count: Int, vararg args: Any): String {
         val name = pluralIds[id]
-            ?: throw IllegalArgumentException("Unknown plurals id: $id")
+            ?: throw IllegalArgumentException("Unknown plurals id: $id") // i18n-ignore
         return plural(name, count, *args)
     }
 
@@ -130,7 +130,7 @@ private fun parseStringsXml(
 
 private fun unescapeAndroid(raw: String): String {
     var text = raw
-    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) { // i18n-ignore
         text = text.substring(1, text.length - 1)
     }
     return text

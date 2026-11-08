@@ -1,6 +1,8 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.obd.R
 import com.revscope.core.obd.catalogo.CatalogoPropietario
+import com.revscope.core.uitesting.XmlStringResolver
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,6 +16,8 @@ class GuardarEnCatalogoToolTest {
     @get:Rule
     val temporal = TemporaryFolder()
 
+    private val res = XmlStringResolver.es(R::class.java)
+
     @Test
     fun `guarda entrada descubierta y aplica defaults`() = kotlinx.coroutines.test.runTest {
         val archivo = File(temporal.root, "catalogo.json")
@@ -25,7 +29,7 @@ class GuardarEnCatalogoToolTest {
             .put("pasos", org.json.JSONArray().put("22 21 21"))
             .put("descripcion", "DID descubierto")
 
-        val json = JSONObject(GuardarEnCatalogoTool(catalogo).call(JSONObject().put("entrada", entrada)))
+        val json = JSONObject(GuardarEnCatalogoTool(catalogo, res).call(JSONObject().put("entrada", entrada)))
         val guardada = catalogo.porId("descubierto.01")!!
 
         assertTrue(json.getBoolean("guardada"))
@@ -45,7 +49,7 @@ class GuardarEnCatalogoToolTest {
             .put("pasos", org.json.JSONArray().put("2E F1 90"))
             .put("descripcion", "DID")
 
-        val json = JSONObject(GuardarEnCatalogoTool(catalogo).call(JSONObject().put("entrada", entrada)))
+        val json = JSONObject(GuardarEnCatalogoTool(catalogo, res).call(JSONObject().put("entrada", entrada)))
 
         assertTrue(json.has("error"))
     }
