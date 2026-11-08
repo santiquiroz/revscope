@@ -986,7 +986,7 @@ class ObdSessionManager @Inject constructor(
 
     private suspend fun startTelemetry(bt: Transport, deviceName: String) {
         _odometerSupported.value = null
-        val negotiationResult = ProtocolNegotiator(bt).initialize().getOrElse { e ->
+        val negotiationResult = ProtocolNegotiator(bt, resolver).initialize().getOrElse { e ->
             Timber.e(e, "ObdSessionManager: protocol negotiation failed")
             // ECU unreachable right after a BT-level connect — never strand the socket/service
             runCatching { bt.disconnect() }

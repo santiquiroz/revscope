@@ -110,7 +110,7 @@ class DiagnosticRulesTest {
     fun `monitor incompleto avisa no listo para tecnomecanica`() {
         val status = ReadinessParser.ReadinessStatus(
             milOn = false, dtcCount = 0, isDiesel = false,
-            monitors = listOf(ReadinessParser.MonitorResult("Catalizador", true, false)),
+            monitors = listOf(ReadinessParser.MonitorResult(R.string.obd_diagnostico_monitor_catalyst, true, false)),
         )
         val ds = DiagnosticRules.evaluarReadiness(status, es)
         assertTrue(ds.any { it.nivel == DiagnosticRules.Nivel.ATENCION && it.titulo.contains("Catalizador") })
@@ -120,7 +120,7 @@ class DiagnosticRulesTest {
     fun `readiness completo es ok`() {
         val status = ReadinessParser.ReadinessStatus(
             milOn = false, dtcCount = 0, isDiesel = false,
-            monitors = listOf(ReadinessParser.MonitorResult("Catalizador", true, true)),
+            monitors = listOf(ReadinessParser.MonitorResult(R.string.obd_diagnostico_monitor_catalyst, true, true)),
         )
         val ds = DiagnosticRules.evaluarReadiness(status, es)
         assertTrue(ds.all { it.nivel == DiagnosticRules.Nivel.OK })
@@ -155,7 +155,7 @@ class DiagnosticRulesTest {
     fun `monitor no soportado se excluye del reporte`() {
         val status = ReadinessParser.ReadinessStatus(
             milOn = false, dtcCount = 0, isDiesel = false,
-            monitors = listOf(ReadinessParser.MonitorResult("Sistema EVAP", false, false)),
+            monitors = listOf(ReadinessParser.MonitorResult(R.string.obd_diagnostico_monitor_evap, false, false)),
         )
         val ds = DiagnosticRules.evaluarReadiness(status, es)
         assertTrue(ds.none { it.titulo.contains("EVAP") })

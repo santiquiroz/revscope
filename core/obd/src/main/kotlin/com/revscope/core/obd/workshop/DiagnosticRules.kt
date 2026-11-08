@@ -124,11 +124,11 @@ object DiagnosticRules {
         status.monitors.filter { it.soportado }.forEach { m ->
             add(
                 if (m.completo) Diagnosis(
-                    Nivel.OK, area, resolver.get(R.string.obd_diag_monitor_ready, m.nombre),
+                    Nivel.OK, area, resolver.get(R.string.obd_diag_monitor_ready, resolver.get(m.nombre)),
                     resolver.get(R.string.obd_diag_monitor_ready_cause),
                 )
                 else Diagnosis(
-                    Nivel.ATENCION, area, resolver.get(R.string.obd_diag_monitor_not_ready, m.nombre),
+                    Nivel.ATENCION, area, resolver.get(R.string.obd_diag_monitor_not_ready, resolver.get(m.nombre)),
                     resolver.get(R.string.obd_diag_monitor_not_ready_cause),
                 )
             )

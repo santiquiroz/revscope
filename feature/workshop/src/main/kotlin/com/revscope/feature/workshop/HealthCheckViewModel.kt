@@ -208,13 +208,13 @@ class HealthCheckViewModel @Inject constructor(
     }
 
     private fun detalleLecturaFallida(scan: DtcScan?, resolver: StringResolver): String =
-        if (scan != null && !scan.enlacePerdido) AvisoLecturaDtc.ACTIVOS_SIN_RESPUESTA
+        if (scan != null && !scan.enlacePerdido) AvisoLecturaDtc.activosSinRespuesta(resolver)
         else resolver.get(R.string.workshop_health_dtc_link_lost)
 
     private fun diagnosticoSinCodigos(scan: DtcScan?, resolver: StringResolver): DiagnosticRules.Diagnosis {
         val parcial = scan?.takeIf { it.serviciosFallidos.isNotEmpty() }
-        val titulo = parcial?.let(AvisoLecturaDtc::sinCodigos) ?: resolver.get(R.string.workshop_health_dtc_none)
-        val detalle = scan?.let(AvisoLecturaDtc::de) ?: resolver.get(R.string.workshop_health_dtc_memory_clear)
+        val titulo = parcial?.let { AvisoLecturaDtc.sinCodigos(it, resolver) } ?: resolver.get(R.string.workshop_health_dtc_none)
+        val detalle = scan?.let { AvisoLecturaDtc.de(it, resolver) } ?: resolver.get(R.string.workshop_health_dtc_memory_clear)
         return DiagnosticRules.Diagnosis(DiagnosticRules.Nivel.OK, resolver.get(R.string.workshop_health_dtc_area), titulo, detalle)
     }
 
