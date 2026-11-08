@@ -7,6 +7,10 @@ import androidx.room.Query
 import com.revscope.core.data.db.entities.TelemetryPointEntity
 import kotlinx.coroutines.flow.Flow
 
+data class TimedValue(val timestamp: Long, val value: Float)
+
+data class SeriesSpan(val count: Int, val firstTs: Long?, val lastTs: Long?)
+
 @Dao
 interface TelemetryDao {
 
@@ -49,6 +53,34 @@ interface TelemetryDao {
 
     @Query("SELECT COUNT(*) FROM telemetry_points WHERE sessionId = :sessionId")
     suspend fun countForSession(sessionId: Long): Int
+
+    // ── Lecturas acotadas del reporte y export paginado ─────────────────────
+
+    @Query(
+        "SELECT COUNT(*) AS count, MIN(timestamp) AS firstTs, MAX(timestamp) AS lastTs " +
+            "FROM telemetry_points WHERE sessionId = :sessionId AND pid = :pid"
+    )
+    suspend fun spanForSessionAndPid(sessionId: Long, pid: String): SeriesSpan
+
+    @Query(
+        "SELECT MIN(timestamp) AS timestamp, AVG(value) AS value FROM telemetry_points " +
+            "WHERE sessionId = :sessionId AND pid = :pid " +
+            "GROUP BY timestamp / :bucketMs ORDER BY timestamp ASC LIMIT :limit"
+    )
+    suspend fun avgBucketsForPid(sessionId: Long, pid: String, bucketMs: Long, limit: Int): List<TimedValue>
+
+    @Query(
+        "SELECT * FROM telemetry_points " +
+            "WHERE sessionId = :sessionId " +
+            "AND (timestamp > :afterTimestamp OR (timestamp = :afterTimestamp AND id > :afterId)) " +
+            "ORDER BY timestamp ASC, id ASC LIMIT :pageSize"
+    )
+    suspend fun pageForSession(
+        sessionId: Long,
+        afterTimestamp: Long,
+        afterId: Long,
+        pageSize: Int,
+    ): List<TelemetryPointEntity>
 
     // ── Tendencia de salud de batería ────────────────────────────────────────
 
