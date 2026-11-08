@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- British English overlay: only the keys whose wording differs from values/ (US English). -->
+<resources>
+    <!-- strings_alertas.xml -->
+    <string name="obd_pico_placa_active">Warning: you entered %1$s and your number plate is restricted today until %2$d:00</string>
+    <string name="obd_pico_placa_today">Warning: your number plate is restricted in %1$s today from %2$d:00 to %3$d:00</string>
+    <string name="obd_mil_alert">The engine warning light is on. Check the trouble codes.</string>
+    <string name="obd_error_ecu_init_failed">ECU initialisation failed: %1$s</string>
+
+    <!-- strings_conexion.xml -->
+    <string name="obd_catalog_save_failed">could not save the catalogue: %1$s</string>
+    <string name="obd_catalog_read_failed">could not read the user catalogue: %1$s</string>
+
+    <!-- strings_perfiles_catalogo.xml -->
+    <string name="obd_catalogo_val_no_se_pudo_guardar">couldn\'t save the catalogue: %1$s</string>
+
+    <!-- strings_dtc.xml -->
+    <string name="obd_session_mil_on">engine warning light on</string>
+    <string name="obd_session_mil_off">engine warning light off</string>
+    <string name="obd_session_symptom_mil_on">Engine warning light is on</string>
+
+    <!-- strings_pruebas_a.xml -->
+    <string name="obd_bateria_comprobacion_contacto_farola">Battery, ignition on (headlamp on)</string>
+    <string name="obd_bateria_aviso_farola">On many motorbikes the headlamp stays on with the ignition (AHO), and that lowers the voltage.</string>
+    <string name="obd_bateria_condicion_farola">with the headlamp on</string>
+    <string name="obd_bateria_veredicto_sin_carga_en_minimo">At idle it does not rise above rest: on small motorbikes this can be normal, but with the lights on the battery discharges.</string>
+    <string name="obd_minimo_compatibilidad">Consistent with poorly controlled idle: idle air valve or stepper motor, a dirty throttle body, a vacuum leak, or a TPS signal the ECU does not recognise as idle.</string>
+    <string name="obd_minimo_tps_bajo">the ECU may not recognise the idle position</string>
+
+    <!-- strings_pruebas_arranque.xml -->
+    <string name="obd_arranque_nota_aire">On air-cooled motorbikes, the “engine” sensor usually reads the cylinder head or the oil: it rises differently than coolant.</string>
+
+    <!-- strings_pruebas_catalogo.xml -->
+    <string name="obd_catalogo_moto_en_movimiento">Motorbike moving (%1$s km/h): run the test with the motorbike stopped</string>
+    <string name="obd_catalogo_motivo_usuario">Cancelled by the user</string>
+    <string name="obd_catalogo_anuncio_cancelada">Test cancelled</string>
+    <string name="obd_catalogo_error_analizar">Could not analyse the test</string>
+
+    <!-- strings_pruebas_precondicion.xml -->
+    <string name="obd_precondicion_luces">Headlamp and lights: on many motorbikes the headlamp stays on with the ignition (AHO)</string>
+    <string name="obd_precondicion_moto_detenida_sin_velocidad">Motorbike stopped (no speed data: confirm it yourself)</string>
+    <string name="obd_precondicion_moto_detenida">Motorbike stopped (0 km/h)</string>
+    <string name="obd_precondicion_moto_en_movimiento">Motorbike moving (%1$s km/h)</string>
+    <string name="obd_precondicion_moto_en_movimiento_que_hacer">Stop the motorbike: the test is done with it standing still</string>
+
+    <!-- strings_taller.xml -->
+    <string name="obd_multimeter_generic_no_colors">Typical generic template, no colours</string>
+    <string name="obd_pid_kline_explanation">K-line motorbike ECUs (e.g., Delphi MT05) expose few PIDs; RevScope shows only the PIDs the ECU announces.</string>
+
+    <!-- strings_units.xml -->
+    <plurals name="obd_units_spoken_kmh">
+        <item quantity="one">%1$d kilometre per hour</item>
+        <item quantity="other">%1$d kilometres per hour</item>
+    </plurals>
+    <plurals name="obd_units_spoken_meters">
+        <item quantity="one">%1$d metre</item>
+        <item quantity="other">%1$d metres</item>
+    </plurals>
+    <plurals name="obd_units_spoken_kilometers">
+        <item quantity="one">%1$s kilometre</item>
+        <item quantity="other">%1$s kilometres</item>
+    </plurals>
+
+    <!-- strings_workshop.xml -->
+    <string name="obd_doc_title_license">Driving licence</string>
+    <string name="obd_doc_pico_placa_motorcycles_exempt">Motorbikes exempt in %1$s</string>
+    <string name="obd_city_rules_motorcycles_exempt">" · motorbikes exempt"</string>
+    <string name="obd_diag_o2_switching_cause">The sensor is switching — healthy behaviour</string>
+    <plurals name="obd_diag_mil_on">
+        <item quantity="one">Engine warning light (MIL) on — %1$d code</item>
+        <item quantity="other">Engine warning light (MIL) on — %1$d codes</item>
+    </plurals>
+    <string name="obd_diag_mil_off">Engine warning light off</string>
+    <string name="obd_odometer_rolled_back">The odometer went backwards (%1$s km → %2$s km)</string>
+</resources>
