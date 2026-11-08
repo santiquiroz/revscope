@@ -159,7 +159,7 @@ class DtcReader(private val registry: PidRegistry) {
             throw e
         } catch (e: Exception) {
             enlaceCaido = true
-            errores += "$comando: sin respuesta del adaptador (${e.message ?: e.javaClass.simpleName})"
+            errores += "$comando: sin respuesta del adaptador (${e.message ?: e.javaClass.simpleName})" // i18n-ignore
             null
         }
     }

@@ -1,0 +1,28 @@
+<resources>
+    <string name="obd_diagnostico_monitor_misfire">Ignition (misfire)</string>
+    <string name="obd_diagnostico_monitor_fuel_system">Fuel system</string>
+    <string name="obd_diagnostico_monitor_components">Components</string>
+    <string name="obd_diagnostico_monitor_catalyst">Catalyst</string>
+    <string name="obd_diagnostico_monitor_heated_catalyst">Heated catalyst</string>
+    <string name="obd_diagnostico_monitor_evap">EVAP system</string>
+    <string name="obd_diagnostico_monitor_secondary_air">Secondary air</string>
+    <string name="obd_diagnostico_monitor_ac_refrigerant">A/C refrigerant</string>
+    <string name="obd_diagnostico_monitor_o2_sensor">O2 sensor</string>
+    <string name="obd_diagnostico_monitor_o2_heater">O2 sensor heater</string>
+    <string name="obd_diagnostico_monitor_egr_vvt">EGR/VVT</string>
+    <string name="obd_diagnostico_monitor_nmhc_catalyst">NMHC catalyst</string>
+    <string name="obd_diagnostico_monitor_nox_catalyst">NOx catalyst</string>
+    <string name="obd_diagnostico_monitor_boost_pressure">Boost pressure</string>
+    <string name="obd_diagnostico_monitor_exhaust_sensor">Exhaust gas sensor</string>
+    <string name="obd_diagnostico_monitor_pm_filter">Particulate filter</string>
+    <string name="obd_diagnostico_activos_sin_respuesta">The ECU didn\'t respond to the active-code request (03), so this doesn\'t confirm that there are no faults. Read the codes again.</string>
+    <string name="obd_diagnostico_enlace_perdido_al_final">The connection was lost at the end of the read; the freeze frame may be incomplete.</string>
+    <string name="obd_diagnostico_sin_codigos">No trouble codes reported for %1$s</string>
+    <string name="obd_diagnostico_servicios_sin_respuesta">The ECU didn\'t respond to these code requests: %1$s. Some ECUs don\'t support these requests; active codes were read.</string>
+    <string name="obd_diagnostico_servicio_activos">active</string>
+    <string name="obd_diagnostico_servicio_pendientes">pending</string>
+    <string name="obd_diagnostico_servicio_permanentes">permanent</string>
+    <string name="obd_diagnostico_conector_y">and</string>
+    <string name="obd_diagnostico_conector_ni">or</string>
+    <string name="obd_diagnostico_ecu_sin_respuesta">ECU not responding after AT SP 0: %1$s</string>
+</resources>

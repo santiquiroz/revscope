@@ -28,10 +28,10 @@ object ModuleDiscovery {
      * (varían por marca — etiqueta genérica + hex).
      */
     fun candidateHeaders(): List<Candidate> = buildList {
-        add(Candidate("7DF", "Difusión funcional (todas las ECU)"))
-        for (i in 0..7) add(Candidate("7E${i}", "ECU física 7E$i (motor/trans/ABS…)"))
+        add(Candidate("7DF", "Difusión funcional (todas las ECU)")) // i18n-ignore
+        for (i in 0..7) add(Candidate("7E${i}", "ECU física 7E$i (motor/trans/ABS…)")) // i18n-ignore
         listOf("700", "710", "720", "726", "730", "740", "745", "750", "760", "765", "770", "7A0", "7B0", "7C0")
-            .forEach { add(Candidate(it, "Módulo propietario $it")) }
+            .forEach { add(Candidate(it, "Módulo propietario $it")) } // i18n-ignore
     }
 
     /**

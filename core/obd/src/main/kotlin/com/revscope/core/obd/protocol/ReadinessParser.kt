@@ -1,5 +1,8 @@
 package com.revscope.core.obd.protocol
 
+import androidx.annotation.StringRes
+import com.revscope.core.obd.R
+
 /**
  * Parses Mode 01 PID 01 — MIL status, DTC count and I/M readiness monitors.
  * SAE J1979: A = MIL(bit7) + count(bits0-6); B = continuous monitors
@@ -8,7 +11,7 @@ package com.revscope.core.obd.protocol
  */
 object ReadinessParser {
 
-    data class MonitorResult(val nombre: String, val soportado: Boolean, val completo: Boolean)
+    data class MonitorResult(@StringRes val nombre: Int, val soportado: Boolean, val completo: Boolean)
 
     data class ReadinessStatus(
         val milOn: Boolean,
@@ -17,16 +20,33 @@ object ReadinessParser {
         val monitors: List<MonitorResult>,
     )
 
-    private val CONTINUOUS = listOf("Encendido (misfire)", "Sistema de combustible", "Componentes")
-
-    private val SPARK_MONITORS = listOf(
-        "Catalizador", "Catalizador calefactado", "Sistema EVAP", "Aire secundario",
-        "Refrigerante A/C", "Sensor O2", "Calefactor O2", "EGR/VVT",
+    private val CONTINUOUS = listOf(
+        R.string.obd_diagnostico_monitor_misfire,
+        R.string.obd_diagnostico_monitor_fuel_system,
+        R.string.obd_diagnostico_monitor_components,
     )
 
+    private val SPARK_MONITORS = listOf(
+        R.string.obd_diagnostico_monitor_catalyst,
+        R.string.obd_diagnostico_monitor_heated_catalyst,
+        R.string.obd_diagnostico_monitor_evap,
+        R.string.obd_diagnostico_monitor_secondary_air,
+        R.string.obd_diagnostico_monitor_ac_refrigerant,
+        R.string.obd_diagnostico_monitor_o2_sensor,
+        R.string.obd_diagnostico_monitor_o2_heater,
+        R.string.obd_diagnostico_monitor_egr_vvt,
+    )
+
+    // null = bit reservado por SAE J1979 en motores diésel
     private val DIESEL_MONITORS = listOf(
-        "Catalizador NMHC", "Catalizador NOx", "Reservado", "Presión de sobrealimentación",
-        "Reservado", "Sensor de gases", "Filtro de partículas", "EGR/VVT",
+        R.string.obd_diagnostico_monitor_nmhc_catalyst,
+        R.string.obd_diagnostico_monitor_nox_catalyst,
+        null,
+        R.string.obd_diagnostico_monitor_boost_pressure,
+        null,
+        R.string.obd_diagnostico_monitor_exhaust_sensor,
+        R.string.obd_diagnostico_monitor_pm_filter,
+        R.string.obd_diagnostico_monitor_egr_vvt,
     )
 
     fun parse(raw: String): ReadinessStatus? {
@@ -48,7 +68,7 @@ object ReadinessParser {
             }
             val names = if (isDiesel) DIESEL_MONITORS else SPARK_MONITORS
             names.forEachIndexed { i, nombre ->
-                if (nombre == "Reservado") return@forEachIndexed
+                if (nombre == null) return@forEachIndexed
                 add(MonitorResult(
                     nombre = nombre,
                     soportado = (c shr i) and 0x01 == 1,

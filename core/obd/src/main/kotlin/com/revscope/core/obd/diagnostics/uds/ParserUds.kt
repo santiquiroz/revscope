@@ -27,7 +27,7 @@ object ParserUds {
 
         val respuestas = tramas(raw, conHeaders)
         if (respuestas.isEmpty()) {
-            return listOf(RespuestaUds.SinRespuesta(null, "respuesta no reconocida: ${prepararLineas(raw).joinToString(" ")}"))
+            return listOf(RespuestaUds.SinRespuesta(null, "respuesta no reconocida: ${prepararLineas(raw).joinToString(" ")}")) // i18n-ignore
         }
         return respuestas.mapIndexedNotNull { indice, trama ->
             val respuesta = interpretarTrama(trama, servicioPedido)
@@ -43,28 +43,28 @@ object ParserUds {
     }
 
     fun nombreNrc(nrc: Int): String = when (nrc) {
-        0x10 -> "rechazo general"
-        0x11 -> "servicio no soportado"
-        0x12 -> "subfunción no soportada"
-        0x13 -> "longitud o formato incorrecto"
-        0x14 -> "respuesta demasiado larga"
-        0x21 -> "ocupado, repetir"
-        0x22 -> "condiciones no correctas"
-        0x24 -> "secuencia incorrecta"
-        0x31 -> "fuera de rango (DID/rutina inexistente)"
-        0x33 -> "acceso de seguridad denegado"
-        0x35 -> "clave inválida"
-        0x36 -> "demasiados intentos"
-        0x37 -> "espera obligatoria antes de reintentar"
-        0x70 -> "carga no aceptada"
-        0x72 -> "fallo de programación"
-        0x78 -> "respuesta pendiente"
-        0x7E -> "subfunción no soportada en la sesión activa"
-        0x7F -> "servicio no soportado en la sesión activa"
-        0x81 -> "RPM demasiado altas"
-        0x83 -> "motor en marcha"
-        0x88 -> "velocidad demasiado alta"
-        else -> "NRC 0x${nrc.toString(16).uppercase().padStart(2, '0')}"
+        0x10 -> "rechazo general" // i18n-ignore
+        0x11 -> "servicio no soportado" // i18n-ignore
+        0x12 -> "subfunción no soportada" // i18n-ignore
+        0x13 -> "longitud o formato incorrecto" // i18n-ignore
+        0x14 -> "respuesta demasiado larga" // i18n-ignore
+        0x21 -> "ocupado, repetir" // i18n-ignore
+        0x22 -> "condiciones no correctas" // i18n-ignore
+        0x24 -> "secuencia incorrecta" // i18n-ignore
+        0x31 -> "fuera de rango (DID/rutina inexistente)" // i18n-ignore
+        0x33 -> "acceso de seguridad denegado" // i18n-ignore
+        0x35 -> "clave inválida" // i18n-ignore
+        0x36 -> "demasiados intentos" // i18n-ignore
+        0x37 -> "espera obligatoria antes de reintentar" // i18n-ignore
+        0x70 -> "carga no aceptada" // i18n-ignore
+        0x72 -> "fallo de programación" // i18n-ignore
+        0x78 -> "respuesta pendiente" // i18n-ignore
+        0x7E -> "subfunción no soportada en la sesión activa" // i18n-ignore
+        0x7F -> "servicio no soportado en la sesión activa" // i18n-ignore
+        0x81 -> "RPM demasiado altas" // i18n-ignore
+        0x83 -> "motor en marcha" // i18n-ignore
+        0x88 -> "velocidad demasiado alta" // i18n-ignore
+        else -> "NRC 0x${nrc.toString(16).uppercase().padStart(2, '0')}" // i18n-ignore
     }
 
     fun hex(bytes: List<Int>): String =
@@ -80,7 +80,7 @@ object ParserUds {
 
     private fun motivoError(raw: String): String? {
         val lineas = prepararLineas(raw)
-        if (lineas.isEmpty()) return "sin respuesta"
+        if (lineas.isEmpty()) return "sin respuesta" // i18n-ignore
 
         val texto = lineas.joinToString(" ").replace(whitespace, " ")
         val compacto = texto.replace(whitespace, "")
@@ -173,7 +173,7 @@ object ParserUds {
 
     private fun interpretarTrama(trama: TramaRespuesta, servicioPedido: Int): RespuestaUds {
         val servicio = trama.payload.firstOrNull()
-            ?: return RespuestaUds.SinRespuesta(trama.header, "respuesta inesperada: ")
+            ?: return RespuestaUds.SinRespuesta(trama.header, "respuesta inesperada: ") // i18n-ignore
         return when {
             servicio == servicioPedido + 0x40 ->
                 RespuestaUds.Positiva(trama.header, servicioPedido, trama.payload.drop(1))
@@ -185,7 +185,7 @@ object ParserUds {
                     nombreNrc(trama.payload[2]),
                 )
             else ->
-                RespuestaUds.SinRespuesta(trama.header, "respuesta inesperada: ${hex(trama.payload)}")
+                RespuestaUds.SinRespuesta(trama.header, "respuesta inesperada: ${hex(trama.payload)}") // i18n-ignore
         }
     }
 

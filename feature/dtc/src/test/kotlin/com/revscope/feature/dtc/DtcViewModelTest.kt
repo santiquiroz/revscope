@@ -361,7 +361,7 @@ class DtcViewModelTest {
 
         val vm = vmConCodigos()
 
-        assertEquals(AvisoLecturaDtc.ACTIVOS_SIN_RESPUESTA, vm.detalle.value.avisoLectura)
+        assertEquals(AvisoLecturaDtc.activosSinRespuesta(resolver), vm.detalle.value.avisoLectura)
         assertNull(vm.detalle.value.sinCodigos)
     }
 

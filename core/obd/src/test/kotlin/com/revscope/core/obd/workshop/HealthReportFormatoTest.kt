@@ -1,5 +1,6 @@
 package com.revscope.core.obd.workshop
 
+import com.revscope.core.obd.R
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.protocol.ReadinessParser
 import com.revscope.core.obd.session.ObdSessionManager
@@ -119,9 +120,9 @@ class HealthReportFormatoTest {
             dtcCount = 1,
             isDiesel = false,
             monitors = listOf(
-                ReadinessParser.MonitorResult("Encendido (misfire)", soportado = true, completo = true),
-                ReadinessParser.MonitorResult("Sistema de combustible", soportado = true, completo = false),
-                ReadinessParser.MonitorResult("Catalizador", soportado = false, completo = true),
+                ReadinessParser.MonitorResult(R.string.obd_diagnostico_monitor_misfire, soportado = true, completo = true),
+                ReadinessParser.MonitorResult(R.string.obd_diagnostico_monitor_fuel_system, soportado = true, completo = false),
+                ReadinessParser.MonitorResult(R.string.obd_diagnostico_monitor_catalyst, soportado = false, completo = true),
             ),
         )
 
