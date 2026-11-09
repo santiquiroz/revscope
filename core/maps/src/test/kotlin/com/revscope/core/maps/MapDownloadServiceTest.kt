@@ -232,6 +232,20 @@ class MapDownloadServiceTest {
         assertTrue(partFiles(dir).isEmpty())
     }
 
+    @Test
+    fun `download publica Downloading de inmediato sin esperar a la corrutina`() = runBlocking {
+        val dir = tempMapsDir()
+        targetFile(dir).apply { parentFile?.mkdirs(); writeBytes(ByteArray(999) { 1 }) }
+        val service = service(dir, bytesSource = FakeMapBytesSource(totalBytes = 400L, chunkBytes = 100L, delayPerChunkMs = 50L))
+
+        service.download(allowCellular = true)
+
+        assertTrue("state should be Downloading immediately", service.state.value is MapDownloadState.Downloading)
+        val finalState = awaitState<MapDownloadState.Idle>(service)
+
+        assertEquals(400L, finalState.sizeBytes)
+    }
+
     private class RacingBytesSource : MapBytesSource {
         private val calls = AtomicInteger(0)
         val firstStarted = CompletableDeferred<Unit>()
