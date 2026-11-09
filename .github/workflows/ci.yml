@@ -45,7 +45,7 @@ jobs:
 
       # Roborazzi screenshots are recorded on Windows; they are verified locally with verifyRoborazziDebug, not on Linux CI (font rendering differs).
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --console=plain --stacktrace
+        run: ./gradlew testDebugUnitTest --continue --console=plain --stacktrace
 
       - name: Build debug APKs
         run: ./gradlew :app:assembleDebug :wear:assembleDebug --console=plain
