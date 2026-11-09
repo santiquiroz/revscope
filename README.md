@@ -9,7 +9,7 @@
 [![CI](https://github.com/santiquiroz/revscope/actions/workflows/ci.yml/badge.svg)](https://github.com/santiquiroz/revscope/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Android-8%2B-3DDC84?logo=android&logoColor=white)](docs/en/installation.md)
-[![Tests](https://img.shields.io/badge/tests-1700%2B-success)](docs/en/development.md)
+[![Tests](https://img.shields.io/badge/tests-2200%2B-success)](docs/en/development.md)
 [![Languages](https://img.shields.io/badge/languages-English%20%7C%20Espa%C3%B1ol-blue)](README.es.md)
 
 [📥 Download APK](https://github.com/santiquiroz/revscope/releases/latest) · [📲 Installation](docs/en/installation.md) · [📖 User manual](docs/en/user-manual.md) · [❓ FAQ](docs/en/faq.md)
