@@ -9,7 +9,7 @@ Telemetría en vivo, diagnóstico de taller, documentos al día, alertas por voz
 [![Release](https://img.shields.io/github/v/release/santiquiroz/revscope?color=E8FF00&label=versi%C3%B3n)](https://github.com/santiquiroz/revscope/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8%2B-3DDC84?logo=android&logoColor=white)](docs/instalacion.md)
 [![License](https://img.shields.io/badge/licencia-Apache%202.0-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1000%2B-success)](docs/desarrollo.md)
+[![Tests](https://img.shields.io/badge/tests-2200%2B-success)](docs/desarrollo.md)
 
 [📥 Descargar APK](https://github.com/santiquiroz/revscope/releases/latest) · [📲 Instalación](docs/instalacion.md) · [📖 Manual](docs/manual-usuario.md) · [❓ FAQ](docs/faq.md)
 
