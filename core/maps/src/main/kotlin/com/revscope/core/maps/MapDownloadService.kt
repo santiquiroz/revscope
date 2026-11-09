@@ -72,6 +72,7 @@ class MapDownloadService(
             val partFile = File(mapsDir, "$partPrefix-${attemptCounter.incrementAndGet()}")
             activePartFile = partFile
             downloadJob = scope.launch { runDownload(allowCellular, partFile) }
+            _state.value = MapDownloadState.Downloading(0f, 0L, EXPECTED_SIZE_BYTES)
         }
     }
 
