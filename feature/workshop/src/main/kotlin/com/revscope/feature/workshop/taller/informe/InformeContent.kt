@@ -26,11 +26,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.revscope.core.designsystem.BarraConVolver
 import com.revscope.core.designsystem.ErrorState
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.feature.workshop.R
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -40,7 +42,10 @@ fun InformeContent(
     vistaPrevia: @Composable (Modifier) -> Unit,
 ) {
     Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = estado.titulo, onVolver = acciones.onVolver)
+        BarraConVolver(
+            titulo = estado.titulo.ifEmpty { stringResource(R.string.workshop_report_title) },
+            onVolver = acciones.onVolver,
+        )
         ContenidoInforme(estado, acciones.onReintentar, vistaPrevia, Modifier.weight(1f))
         if (!estado.cargando && estado.error == null) AccionesExportacion(acciones)
     }
@@ -74,15 +79,15 @@ private fun AccionesExportacion(acciones: AccionesInforme) {
         ) {
             Button(onClick = acciones.onCompartir, modifier = Modifier.heightIn(min = 48.dp)) {
                 Icon(Icons.Filled.Share, contentDescription = null)
-                Text("Compartir", modifier = Modifier.padding(start = 8.dp))
+                Text(stringResource(R.string.workshop_report_share), modifier = Modifier.padding(start = 8.dp))
             }
             OutlinedButton(onClick = acciones.onImprimir, modifier = Modifier.heightIn(min = 48.dp)) {
                 Icon(Icons.Filled.Print, contentDescription = null)
-                Text("Imprimir o PDF", modifier = Modifier.padding(start = 8.dp))
+                Text(stringResource(R.string.workshop_report_print), modifier = Modifier.padding(start = 8.dp))
             }
             OutlinedButton(onClick = acciones.onEditarInterpretacion, modifier = Modifier.heightIn(min = 48.dp)) {
                 Icon(Icons.Filled.Edit, contentDescription = null)
-                Text("Editar interpretación", modifier = Modifier.padding(start = 8.dp))
+                Text(stringResource(R.string.workshop_report_edit_interpretation), modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -92,18 +97,24 @@ private fun AccionesExportacion(acciones: AccionesInforme) {
 private fun EditorInterpretacion(estado: InformeUi, acciones: AccionesInforme) {
     AlertDialog(
         onDismissRequest = acciones.onCancelarEdicion,
-        title = { Text("Interpretación del técnico", color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
+        title = {
+            Text(
+                stringResource(R.string.workshop_report_technician_interpretation),
+                color = RevScopeColors.TextPrimary,
+                style = RevScopeType.title,
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Esta nota aparece separada de los hallazgos calculados por RevScope.",
+                    stringResource(R.string.workshop_report_interpretation_note),
                     color = RevScopeColors.TextSecondary,
                     style = RevScopeType.body,
                 )
                 OutlinedTextField(
                     value = estado.borradorInterpretacion,
                     onValueChange = acciones.onCambiarInterpretacion,
-                    label = { Text("Interpretación") },
+                    label = { Text(stringResource(R.string.workshop_report_interpretation)) },
                     minLines = 4,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -111,12 +122,12 @@ private fun EditorInterpretacion(estado: InformeUi, acciones: AccionesInforme) {
         },
         confirmButton = {
             TextButton(onClick = acciones.onGuardarInterpretacion, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Guardar")
+                Text(stringResource(R.string.workshop_report_save))
             }
         },
         dismissButton = {
             TextButton(onClick = acciones.onCancelarEdicion, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Cancelar")
+                Text(stringResource(R.string.workshop_report_cancel))
             }
         },
         containerColor = RevScopeColors.Surface,

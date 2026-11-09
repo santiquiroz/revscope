@@ -1,8 +1,11 @@
 package com.revscope.core.obd.taller.pruebas
 
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.session.ObdSessionManager
-import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.referencia.BandaReferencia
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.NuevoEvento
@@ -50,6 +53,7 @@ class ControladorPruebaGuiada(
     private val definiciones: (TipoPrueba) -> DefinicionPrueba? = CatalogoPruebas::definicion,
     private val rafagaVoltaje: CapturaPrueba? = null,
     private val fuentes: FuentesAnalisis = FuentesAnalisis.NINGUNA,
+    internal val resolver: StringResolver,
 ) {
 
     @Inject
@@ -62,10 +66,11 @@ class ControladorPruebaGuiada(
         anunciador: AnunciadorTaller,
         @RafagaVoltaje rafagaVoltaje: CapturaPrueba,
         fuentes: FuentesAnalisis,
+        resolver: StringResolver,
     ) : this(
         captura, enlace, registro, repositorio, vehiculo, anunciador,
         CoroutineScope(SupervisorJob() + Dispatchers.Default), System::currentTimeMillis,
-        CatalogoPruebas::definicion, rafagaVoltaje, fuentes,
+        CatalogoPruebas::definicion, rafagaVoltaje, fuentes, resolver,
     )
 
     private class Ejecucion(
@@ -105,15 +110,15 @@ class ControladorPruebaGuiada(
     suspend fun iniciar(tipo: TipoPrueba, opciones: OpcionesPrueba = OpcionesPrueba()): Result<EstadoPrueba> =
         candado.withLock {
             rechazoAlIniciar(tipo)?.let { return@withLock Result.failure(IllegalStateException(it)) }
-            val definicion = checkNotNull(definiciones(tipo))
+            val definicion = checkNotNull(definiciones(tipo)).resuelta(resolver)
             ultimaSolicitud = tipo to opciones
-            val verificacion = EstadoPrueba.Verificando(tipo, definicion.precondiciones.map { it.evaluar(contexto()) })
+            val verificacion = EstadoPrueba.Verificando(tipo, definicion.precondiciones.map { it.evaluar(contexto(), resolver) })
             if (!verificacion.listas) return@withLock Result.success(publicar(verificacion))
             Result.success(arrancar(definicion, opciones))
         }
 
     suspend fun reintentar(): Result<EstadoPrueba> {
-        val (tipo, opciones) = ultimaSolicitud ?: return fallo("No hay una prueba anterior que repetir")
+        val (tipo, opciones) = ultimaSolicitud ?: return fallo(R.string.obd_catalogo_fallo_sin_prueba_anterior)
         return iniciar(tipo, opciones)
     }
 
@@ -124,7 +129,7 @@ class ControladorPruebaGuiada(
         when {
             e.progreso.fase == FasePaso.POSICIONANDO -> empezarASostener(e, t)
             e.paso.modo.terminaConToque -> cerrarPaso(e, t)
-            else -> return@withLock fallo("Este paso graba solo: espera a que termine la cuenta")
+            else -> return@withLock fallo(R.string.obd_catalogo_fallo_paso_graba_solo)
         }
         Result.success(estado.value)
     }
@@ -137,9 +142,10 @@ class ControladorPruebaGuiada(
         Result.success(publicarPaso(e, t))
     }
 
-    suspend fun cancelar(motivo: String = MOTIVO_USUARIO): EstadoPrueba = candado.withLock {
+    // Sin [motivo], la cancelación es del usuario.
+    suspend fun cancelar(motivo: String? = null): EstadoPrueba = candado.withLock {
         val e = ejecucion ?: return@withLock descartarSinEjecucion()
-        terminarPor(e, EstadoPrueba.Cancelada(e.tipo, motivo))
+        terminarPor(e, EstadoPrueba.Cancelada(e.tipo, motivo ?: resolver.get(R.string.obd_catalogo_motivo_usuario)))
     }
 
     // Con las manos en el acelerador la voz ayuda; en un taller ruidoso o de noche, se apaga a mitad de prueba.
@@ -164,9 +170,9 @@ class ControladorPruebaGuiada(
     private fun rechazoAlIniciar(tipo: TipoPrueba): String? {
         val definicion = definiciones(tipo)
         return when {
-            ejecucion != null -> "Ya hay una prueba guiada en curso: termínala o cancélala"
-            captura.activa() || rafagaVoltaje?.activa() == true -> "Detén la captura rápida primero"
-            definicion == null || capturaPara(definicion) == null -> "La prueba «${tipo.titulo}» todavía no está disponible"
+            ejecucion != null -> resolver.get(R.string.obd_catalogo_rechazo_ya_en_curso)
+            captura.activa() || rafagaVoltaje?.activa() == true -> resolver.get(R.string.obd_catalogo_rechazo_captura_activa)
+            definicion == null || capturaPara(definicion) == null -> resolver.get(R.string.obd_catalogo_rechazo_no_disponible, tipo.titulo(resolver))
             else -> null
         }
     }
@@ -185,7 +191,7 @@ class ControladorPruebaGuiada(
         val c = checkNotNull(capturaPara(definicion))
         val config = ConfigCaptura(pidsPara(definicion), definicion.duracionMaximaMs, vigilar = listOf(PID_VELOCIDAD), guiada = true)
         c.iniciar(config).onFailure {
-            return publicar(EstadoPrueba.Fallida(definicion.tipo, "No se pudo iniciar la captura: ${it.message}", reintentable = true))
+            return publicar(EstadoPrueba.Fallida(definicion.tipo, resolver.get(R.string.obd_catalogo_error_iniciar_captura, it.message.toString()), reintentable = true))
         }
         val ahora = relojMs()
         val e = Ejecucion("prueba-$ahora", definicion, opciones, ahora, c)
@@ -225,22 +231,26 @@ class ControladorPruebaGuiada(
     }
 
     private fun interrupcion(e: Ejecucion): EstadoPrueba? {
-        if (!enlace.conectado()) return EstadoPrueba.Fallida(e.tipo, MOTIVO_ENLACE_PERDIDO, reintentable = true)
+        if (!enlace.conectado()) return enlacePerdido(e.tipo)
         if (!e.captura.activa()) return porFinDeCaptura(e.tipo, e.captura.ultimoResumen.value?.motivoFin)
         val kmh = velocidadDesde(e.inicioEpochMs)?.takeIf { it > 0.0 } ?: return null
         return EstadoPrueba.Cancelada(
             e.tipo,
-            "Moto en movimiento (${FormatoTaller.numero(kmh, 0)} km/h): la prueba se hace con la moto detenida",
+            resolver.get(R.string.obd_catalogo_moto_en_movimiento, LocaleNumbers.decimal(kmh, 0, resolver.locale)),
         )
     }
 
     private fun porFinDeCaptura(tipo: TipoPrueba, motivo: String?): EstadoPrueba = when {
         motivo == null || motivo.startsWith(CapturaRapida.MOTIVO_ENLACE) ->
-            EstadoPrueba.Fallida(tipo, MOTIVO_ENLACE_PERDIDO, reintentable = true)
+            enlacePerdido(tipo)
         motivo.startsWith(PREFIJO_DETENIDA) ->
-            EstadoPrueba.Cancelada(tipo, "Se detuvo la captura rápida desde otra pantalla o el MCP")
-        else -> EstadoPrueba.Fallida(tipo, "La captura se detuvo: $motivo", reintentable = true)
+            EstadoPrueba.Cancelada(tipo, resolver.get(R.string.obd_catalogo_motivo_captura_detenida_otra))
+        else -> EstadoPrueba.Fallida(tipo, resolver.get(R.string.obd_catalogo_motivo_captura_detenida, motivo), reintentable = true)
     }
+
+    private fun motivoEnlacePerdido(): String = resolver.get(R.string.obd_catalogo_motivo_enlace_perdido)
+
+    private fun enlacePerdido(tipo: TipoPrueba) = EstadoPrueba.Fallida(tipo, motivoEnlacePerdido(), reintentable = true)
 
     private fun velocidadDesde(desdeEpochMs: Long): Double? {
         val lecturas = enlace.lecturas()
@@ -270,7 +280,7 @@ class ControladorPruebaGuiada(
 
     private fun empezarASostener(e: Ejecucion, t: Long) {
         e.progreso = e.progreso.copy(fase = FasePaso.SOSTENIENDO, faseDesdeMs = t)
-        anunciar(e, "Sostén ${segundos(e.paso.modo.limiteMs)} segundos")
+        anunciar(e, resolver.get(R.string.obd_catalogo_anuncio_sostener, segundos(e.paso.modo.limiteMs)))
         publicarPaso(e, t)
     }
 
@@ -294,7 +304,7 @@ class ControladorPruebaGuiada(
 
     // El enlace se cayó en un paso donde eso es un hallazgo: se cierra el paso donde llegó y se analiza.
     private fun seAnalizaElCorte(e: Ejecucion, final: EstadoPrueba): Boolean =
-        final is EstadoPrueba.Fallida && final.motivo == MOTIVO_ENLACE_PERDIDO && e.paso.clave in e.definicion.analizarSiSeCortaEn &&
+        final is EstadoPrueba.Fallida && final.motivo == motivoEnlacePerdido() && e.paso.clave in e.definicion.analizarSiSeCortaEn &&
             e.progreso.fase != FasePaso.POSICIONANDO
 
     private suspend fun analizarCorte(e: Ejecucion) {
@@ -311,11 +321,11 @@ class ControladorPruebaGuiada(
         val actual = vehiculo.actual()
         val datos = DatosPrueba(e.tipo, e.captura.muestrasActuales(), segmentos, e.opciones.vref, contextoAnalisis(e, actual, enlacePerdidoEn))
         val resultado = analizar(e.definicion, datos, bandas(actual))
-            ?: return anotarFallida(e, EstadoPrueba.Fallida(e.tipo, "No se pudo analizar la prueba", true), segmentos, resumen?.rutaCsv)
-        val evento = EventoPrueba.terminada(resultado, datos, resumen?.rutaCsv, e.opciones.origen)
+            ?: return anotarFallida(e, EstadoPrueba.Fallida(e.tipo, resolver.get(R.string.obd_catalogo_error_analizar), true), segmentos, resumen?.rutaCsv)
+        val evento = EventoPrueba.terminada(resultado, datos, resumen?.rutaCsv, e.opciones.origen, resolver)
         ultimoEvento = evento
         val eventoId = registro.anotar(evento)
-        anunciar(e, "Prueba terminada. ${resultado.titulo}")
+        anunciar(e, resolver.get(R.string.obd_catalogo_anuncio_terminada, resultado.titulo))
         publicar(EstadoPrueba.Terminada(resultado, eventoId, datos))
     }
 
@@ -325,33 +335,33 @@ class ControladorPruebaGuiada(
         if (final is EstadoPrueba.Fallida) {
             anotarFallida(e, final, e.progreso.segmentos, resumen?.rutaCsv)
         } else {
-            anunciar(e, "Prueba cancelada")
+            anunciar(e, resolver.get(R.string.obd_catalogo_anuncio_cancelada))
         }
         return publicar(final)
     }
 
     private suspend fun anotarFallida(e: Ejecucion, fallida: EstadoPrueba.Fallida, segmentos: List<SegmentoPaso>, rutaCsv: String?) {
         val datos = DatosPrueba(e.tipo, e.captura.muestrasActuales(), segmentos, e.opciones.vref)
-        registro.anotar(EventoPrueba.sinTerminar(fallida, datos, e.definicion.pasos.size, rutaCsv, e.opciones.origen))
-        anunciar(e, "La prueba no terminó. ${fallida.motivo}")
+        registro.anotar(EventoPrueba.sinTerminar(fallida, datos, e.definicion.pasos.size, rutaCsv, e.opciones.origen, resolver))
+        anunciar(e, resolver.get(R.string.obd_catalogo_anuncio_fallida, fallida.motivo))
         publicar(fallida)
     }
 
     private fun analizar(definicion: DefinicionPrueba, datos: DatosPrueba, bandas: Map<String, BandaReferencia>): ResultadoPrueba? =
-        runCatching { definicion.analizar(datos, bandas) }
+        runCatching { definicion.analizar(datos, bandas, resolver) }
             .onFailure { Timber.w(it, "Prueba guiada: el analizador de ${definicion.tipo} falló") }
             .getOrNull()
 
     private suspend fun contextoAnalisis(e: Ejecucion, actual: VehiculoTaller?, enlacePerdidoEn: String?) = ContextoAnalisis(
         tipoVehiculo = actual?.tipo ?: VehicleType.MOTORCYCLE,
-        ambiente = if (e.definicion.usaAmbiente) leerFuente("el ambiente del teléfono") { fuentes.ambiente() } else null,
+        ambiente = if (e.definicion.usaAmbiente) leerFuente("el ambiente del teléfono") { fuentes.ambiente() } else null, // i18n-ignore
         desfaseVoltaje = desfasePara(e.definicion),
         enlacePerdidoEn = enlacePerdidoEn,
     )
 
     private suspend fun desfasePara(definicion: DefinicionPrueba): DesfaseVoltaje {
         if (definicion.fuente != FuenteMuestras.VOLTAJE_ADAPTADOR) return DesfaseVoltaje.SIN_CALIBRAR
-        return leerFuente("el desfase del voltaje") { fuentes.desfaseVoltaje() } ?: DesfaseVoltaje.SIN_CALIBRAR
+        return leerFuente("el desfase del voltaje") { fuentes.desfaseVoltaje() } ?: DesfaseVoltaje.SIN_CALIBRAR // i18n-ignore
     }
 
     // Sin barómetro, sin ubicación o sin preferencias, la prueba se analiza igual: el resultado lo dice.
@@ -386,11 +396,12 @@ class ControladorPruebaGuiada(
     private fun anunciarPaso(e: Ejecucion) {
         val p = e.progreso
         val cierre = if (p.fase == FasePaso.POSICIONANDO) {
-            "Cuando esté en posición, toca Listo."
+            resolver.get(R.string.obd_catalogo_anuncio_posicionando)
         } else {
-            "Grabando ${segundos(e.paso.modo.limiteMs)} segundos."
+            resolver.get(R.string.obd_catalogo_anuncio_grabando_tiempo, segundos(e.paso.modo.limiteMs))
         }
-        anunciar(e, "Paso ${p.indice + 1} de ${e.definicion.pasos.size}. ${e.paso.titulo}. ${e.paso.instruccion}. $cierre")
+        val total = e.definicion.pasos.size
+        anunciar(e, resolver.get(R.string.obd_catalogo_anuncio_paso, p.indice + 1, total, e.paso.titulo, e.paso.instruccion, cierre))
     }
 
     private fun anunciar(e: Ejecucion, texto: String) {
@@ -407,16 +418,14 @@ class ControladorPruebaGuiada(
     private val ModoPaso.terminaConToque: Boolean
         get() = this is ModoPaso.GrabarHasta || this is ModoPaso.Accion
 
-    private fun <T> fallo(mensaje: String): Result<T> = Result.failure(IllegalStateException(mensaje))
+    private fun <T> fallo(@StringRes mensaje: Int): Result<T> = Result.failure(IllegalStateException(resolver.get(mensaje)))
 
     companion object {
         const val TICK_MS = 100L
         const val PID_VELOCIDAD = ContextoPrueba.PID_VELOCIDAD
-        const val MOTIVO_USUARIO = "Cancelada por el usuario"
-        const val MOTIVO_ENLACE_PERDIDO = "Se perdió el enlace con el adaptador"
-        const val MOTIVO_FIN_CAPTURA = "prueba guiada"
+        const val MOTIVO_FIN_CAPTURA = "prueba guiada" // i18n-ignore
         private const val PREFIJO_DETENIDA = "detenida"
-        private const val SIN_PRUEBA = "No hay una prueba guiada en curso"
-        private const val SIN_CAPTURA = "La captura de la prueba no está activa"
+        private val SIN_PRUEBA = R.string.obd_catalogo_fallo_sin_prueba
+        private val SIN_CAPTURA = R.string.obd_catalogo_fallo_sin_captura
     }
 }

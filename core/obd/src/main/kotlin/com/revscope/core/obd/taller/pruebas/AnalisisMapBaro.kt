@@ -27,6 +27,7 @@ data class AnalisisMapBaro(
     val banda: BandaReferencia?,
     val comprobaciones: List<Comprobacion>,
     val patron: PatronMapBaro,
+    val etiquetas: Map<OrigenBarometrica, String> = emptyMap(),
 ) : DetallePrueba {
 
     val deltaKpa: Double? get() = if (map != null && referencia != null) map.mediaKpa - referencia.kPa else null
@@ -65,7 +66,7 @@ data class AnalisisMapBaro(
     private fun referenciaJson(r: ReferenciaBarometrica) = JSONObject()
         .put("kPa", FormatoTaller.redondear(r.kPa, 2))
         .put("origen", r.origen.name)
-        .put("etiqueta", r.etiqueta)
+        .put("etiqueta", etiquetas[r.origen] ?: JSONObject.NULL)
         .put("incertidumbreKpa", r.incertidumbreKpa)
 
     private fun nulo(x: Double?): Any = x?.let { FormatoTaller.redondear(it, 2) } ?: JSONObject.NULL

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wear_bpm_label">♥ bpm</string>
+    <plurals name="wear_sent_count">
+        <item quantity="one">%1$d sent</item>
+        <item quantity="other">%1$d sent</item>
+    </plurals>
+</resources>

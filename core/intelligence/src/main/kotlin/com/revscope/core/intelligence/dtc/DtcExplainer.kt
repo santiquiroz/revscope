@@ -1,14 +1,16 @@
 package com.revscope.core.intelligence.dtc
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.intelligence.provider.AiProvider
 import com.revscope.core.intelligence.provider.AiRequest
+import com.revscope.core.intelligence.provider.withResponseLanguage
 import com.revscope.core.obd.model.ObdReading
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 
 private const val MAX_TOKENS = 350
-private const val SYSTEM_PROMPT = "Eres un mecánico experto que explica fallas de motor de forma clara y concisa."
+private const val SYSTEM_PROMPT = "Eres un mecánico experto que explica fallas de motor de forma clara y concisa." // i18n-ignore
 
 /**
  * Explains DTC fault codes in plain language using the user's configured AI provider
@@ -23,11 +25,15 @@ private const val SYSTEM_PROMPT = "Eres un mecánico experto que explica fallas 
  *
  * Falls back gracefully when no provider is configured or the call fails.
  *
+ * @param resolver Resolves the fallback texts and the prompt's response-language line.
  * @param providerProvider Suspend lambda that returns the active [AiProvider] or null.
  *                          Called on each [explain] invocation so provider/key changes
  *                          take effect without restarting the ViewModel.
  */
-class DtcExplainer(private val providerProvider: suspend () -> AiProvider?) {
+class DtcExplainer(
+    private val resolver: StringResolver,
+    private val providerProvider: suspend () -> AiProvider?,
+) {
 
     private val cache = ConcurrentHashMap<String, DtcExplanation>()
 
@@ -39,7 +45,7 @@ class DtcExplainer(private val providerProvider: suspend () -> AiProvider?) {
         cache[dtcCode]?.let { return it.copy(source = "cache") }
 
         val provider = providerProvider()
-            ?: return DtcExplanation.noApiKey(dtcCode)
+            ?: return DtcExplanation.noApiKey(dtcCode, resolver)
 
         val result = callProvider(provider, dtcCode, context, freezeFrame)
         cache[dtcCode] = result
@@ -62,44 +68,51 @@ class DtcExplainer(private val providerProvider: suspend () -> AiProvider?) {
             onSuccess = { text -> DtcExplanation(code = dtcCode, explanation = text.trim(), source = provider.providerId) },
             onFailure = { e ->
                 Timber.e(e, "DtcExplainer: API call failed for $dtcCode")
-                DtcExplanation.fallback(dtcCode)
+                DtcExplanation.fallback(dtcCode, resolver)
             },
         )
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         Timber.e(e, "DtcExplainer: API call failed for $dtcCode")
-        DtcExplanation.fallback(dtcCode)
+        DtcExplanation.fallback(dtcCode, resolver)
     }
 
     private fun buildUserMessage(
         dtcCode: String,
         context: List<ObdReading>,
         freezeFrame: List<Pair<String, String>>,
+    ): String = buildPromptBody(dtcCode, context, freezeFrame).withResponseLanguage(resolver)
+
+    private fun buildPromptBody(
+        dtcCode: String,
+        context: List<ObdReading>,
+        freezeFrame: List<Pair<String, String>>,
     ): String {
         val contextText = context
             .filter { it.unit.isNotEmpty() }
-            .joinToString("\n") { "  PID ${it.pid}: ${it.value} ${it.unit}" }
+            .joinToString("\n") { "  PID ${it.pid}: ${it.value} ${it.unit}" } // i18n-ignore
 
+        // Cuerpo del prompt: no es texto de interfaz, se queda en español.
         return buildString {
-            appendLine("Código de falla OBD-II: $dtcCode")
+            appendLine("Código de falla OBD-II: $dtcCode") // i18n-ignore
             if (contextText.isNotBlank()) {
-                appendLine("Lecturas actuales del sensor:")
+                appendLine("Lecturas actuales del sensor:") // i18n-ignore
                 appendLine(contextText)
             }
             if (freezeFrame.isNotEmpty()) {
-                // El freeze frame es la "caja negra": condiciones exactas al saltar la falla —
+                // El freeze frame es la caja negra: condiciones exactas al saltar la falla —
                 // distingue falla en frío vs caliente, ralentí vs bajo demanda.
-                appendLine("Condiciones capturadas AL MOMENTO de la falla (freeze frame):")
+                appendLine("Condiciones capturadas AL MOMENTO de la falla (freeze frame):") // i18n-ignore
                 freezeFrame.forEach { (label, value) -> appendLine("  $label: $value") }
             }
             appendLine()
             append(
-                "Explica este código en 2-3 oraciones para un conductor no técnico. " +
-                    "Incluye: (1) qué significa en lenguaje simple, " +
-                    "(2) causas probables según los sensores actuales" +
-                    (if (freezeFrame.isNotEmpty()) " y las condiciones del freeze frame (¿frío o caliente? ¿ralentí o bajo carga?)" else "") +
-                    ", (3) urgencia: seguro de conducir / revisar pronto / detener inmediatamente.",
+                "Explica este código en 2-3 oraciones para un conductor no técnico. " + // i18n-ignore
+                    "Incluye: (1) qué significa en lenguaje simple, " + // i18n-ignore
+                    "(2) causas probables según los sensores actuales" + // i18n-ignore
+                    (if (freezeFrame.isNotEmpty()) " y las condiciones del freeze frame (¿frío o caliente? ¿ralentí o bajo carga?)" else "") + // i18n-ignore
+                    ", (3) urgencia: seguro de conducir / revisar pronto / detener inmediatamente.", // i18n-ignore
             )
         }
     }

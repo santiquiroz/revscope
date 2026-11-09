@@ -1,7 +1,11 @@
 package com.revscope.feature.dtc
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
+import com.revscope.feature.dtc.R
+import kotlin.math.roundToInt
 
 data class ConfirmacionBorradoDtc(
     val codigos: List<String>,
@@ -35,43 +39,47 @@ fun permiteBorrarDesdeUi(rechazo: RechazoBorradoDtc?, declaraDetenido: Boolean):
     RechazoBorradoDtc.SinConfirmar, is RechazoBorradoDtc.EnMovimiento -> false
 }
 
-fun textoRechazoUi(rechazo: RechazoBorradoDtc): String = when (rechazo) {
-    RechazoBorradoDtc.SinConfirmar -> "Falta confirmar el borrado."
+fun textoRechazoUi(rechazo: RechazoBorradoDtc, resolver: StringResolver, units: UnitFormatter): String = when (rechazo) {
+    RechazoBorradoDtc.SinConfirmar -> resolver.get(R.string.dtc_clear_confirmation_required)
     RechazoBorradoDtc.SinVelocidadReciente ->
-        "No hay una lectura reciente de velocidad para comprobar que el vehículo está detenido."
+        resolver.get(R.string.dtc_no_recent_speed)
     is RechazoBorradoDtc.EnMovimiento ->
-        "El vehículo va a ${rechazo.kmh} km/h. Detente antes de borrar los códigos."
+        resolver.get(R.string.dtc_vehicle_moving, textoVelocidad(rechazo.kmh, units))
 }
 
-const val AVISO_READINESS_DTC =
-    "Los monitores de preparación (readiness) quedan incompletos: la revisión técnico-mecánica puede " +
-        "rechazar el vehículo hasta completar ciclos de manejo."
-const val AVISO_REAPARICION_DTC = "Borrar no repara nada: si la falla sigue, el código vuelve."
+// Espacio normal, no el duro del formatter: el texto en métrico queda idéntico al de antes.
+internal fun textoVelocidad(kmh: Int, units: UnitFormatter): String =
+    "${units.speed(kmh.toDouble()).roundToInt()} ${units.speedLabel()}"
 
-fun avisosBorradoDtc(freezeFrameEnSesion: Boolean): List<String> =
-    listOf(AVISO_READINESS_DTC, avisoFreezeFrame(freezeFrameEnSesion), AVISO_REAPARICION_DTC)
+fun avisosBorradoDtc(freezeFrameEnSesion: Boolean, resolver: StringResolver): List<String> =
+    listOf(
+        resolver.get(R.string.dtc_readiness_warning),
+        avisoFreezeFrame(freezeFrameEnSesion, resolver),
+        resolver.get(R.string.dtc_clear_does_not_repair),
+    )
 
-private fun avisoFreezeFrame(enSesion: Boolean): String =
-    if (enSesion) {
-        "El freeze frame (el estado del motor cuando se guardó la falla) se borra de la ECU; ya quedó guardado en la sesión."
-    } else {
-        "El freeze frame (el estado del motor cuando se guardó la falla) se pierde. Guarda antes la lectura en una sesión."
-    }
+private fun avisoFreezeFrame(enSesion: Boolean, resolver: StringResolver): String =
+    resolver.get(if (enSesion) R.string.dtc_freeze_frame_clear_saved else R.string.dtc_freeze_frame_clear_lost)
 
-fun textoResultadoBorrado(resultado: ResultadoBorradoUi): String = when {
+fun textoResultadoBorrado(resultado: ResultadoBorradoUi, resolver: StringResolver): String = when {
     resultado.rechazadoPorEcu ->
-        "La ECU rechazó el borrado (7F 04 22: condiciones no correctas). Muchas ECU solo borran con el motor " +
-            "apagado: apaga el motor, deja el contacto puesto y vuelve a intentarlo. Los códigos siguen guardados."
+        resolver.get(R.string.dtc_clear_rejected_by_ecu)
     !resultado.enviado ->
-        "No se pudo enviar el borrado: el adaptador no respondió. Vuelve a leer los códigos antes de intentarlo otra vez."
+        resolver.get(R.string.dtc_clear_send_failed)
     resultado.despues.isNotEmpty() ->
-        "Se envió el borrado, pero la ECU sigue reportando ${resultado.despues.joinToString()}: la falla sigue presente."
+        resolver.get(R.string.dtc_codes_still_reported, resultado.despues.joinToString())
     !resultado.despuesLeido ->
-        "Se envió el borrado, pero no se pudo releer la ECU para confirmarlo. Vuelve a leer los códigos."
-    else -> "Códigos borrados. Antes: ${textoAntes(resultado)}. Después: sin códigos activos."
+        resolver.get(R.string.dtc_clear_reread_failed)
+    else -> resolver.get(
+        R.string.dtc_codes_cleared_summary,
+        textoAntes(resultado, resolver),
+        resolver.get(R.string.dtc_no_active_codes),
+    )
 }
 
-private fun textoAntes(resultado: ResultadoBorradoUi): String =
-    if (resultado.antesLeido) codigosOSinCodigos(resultado.antes) else "no se pudieron leer"
+private fun textoAntes(resultado: ResultadoBorradoUi, resolver: StringResolver): String =
+    if (resultado.antesLeido) codigosOSinCodigos(resultado.antes, resolver)
+    else resolver.get(R.string.dtc_codes_not_read)
 
-private fun codigosOSinCodigos(codigos: List<String>): String = codigos.joinToString().ifEmpty { "sin códigos activos" }
+private fun codigosOSinCodigos(codigos: List<String>, resolver: StringResolver): String =
+    codigos.joinToString().ifEmpty { resolver.get(R.string.dtc_no_active_codes) }

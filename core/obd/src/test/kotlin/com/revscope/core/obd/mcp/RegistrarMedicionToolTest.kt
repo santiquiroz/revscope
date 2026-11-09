@@ -36,14 +36,20 @@ class RegistrarMedicionToolTest {
     private var ahora = 1_758_848_000_000L
     private var vehiculo: VehiculoTaller? = BENELLI
     private val repositorio = TallerRepositoryEnMemoria()
+    private val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
 
     private val registro by lazy {
         RegistroTaller(
             repositorio, { vehiculo }, HistorialChequeosEnMemoria(), AdjuntosTaller(File(carpeta.root, "taller")),
-            PidRegistry(TestPids.load()), { ahora++ },
+            PidRegistry(TestPids.load()),
+            resolver,
+            { ahora++ },
         )
     }
-    private val tool by lazy { RegistrarMedicionTool(AsistenteMultimetro(repositorio, { vehiculo }, registro)) }
+    private val tool by lazy { RegistrarMedicionTool(AsistenteMultimetro(repositorio, { vehiculo }, registro, resolver), resolver) }
 
     private fun benelliConColores() {
         repositorio.modelos[BENELLI.claveModelo!!] = ConocimientoModelo(

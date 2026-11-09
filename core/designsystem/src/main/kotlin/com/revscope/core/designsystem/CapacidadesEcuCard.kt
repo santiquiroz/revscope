@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun CapacidadesEcuCard(
@@ -40,16 +41,16 @@ fun CapacidadesEcuCard(
             ) {
                 Icon(Icons.Default.Memory, contentDescription = null, tint = RevScopeColors.Accent)
                 Text(
-                    "Capacidades de la ECU",
+                    stringResource(R.string.ds_ecu_capabilities),
                     color = RevScopeColors.TextPrimary,
                     style = RevScopeType.title,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
             }
-            DatoCapacidad("Protocolo", protocolo)
-            DatoCapacidad("PIDs anunciados", "${pids.size}", cifrasTabulares = true)
+            DatoCapacidad(stringResource(R.string.ds_protocol), protocolo)
+            DatoCapacidad(stringResource(R.string.ds_announced_pids), "${pids.size}", cifrasTabulares = true)
             ListaPidsPorRango(pidsPorRango)
-            DatoCapacidad("Tasa esperada", tasaEsperada)
+            DatoCapacidad(stringResource(R.string.ds_expected_rate), tasaEsperada)
             Text(explicacion, color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
     }
@@ -76,7 +77,7 @@ private fun ListaPidsPorRango(rangos: Map<String, List<String>>) {
     val anunciados = rangos.filterValues { it.isNotEmpty() }
     if (anunciados.isEmpty()) {
         Text(
-            "La ECU todavía no ha anunciado su mapa de PIDs.",
+            stringResource(R.string.ds_ecu_no_pid_map),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )

@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -77,13 +78,16 @@ internal fun ObdTripControls(
 @Composable
 private fun TripStatePill(estado: EstadoViaje, expandido: Boolean, onClick: () -> Unit) {
     val grabando = estado is EstadoViaje.Grabando
+    val estadoAcciones = stringResource(
+        if (expandido) R.string.drive_trip_actions_expanded else R.string.drive_trip_actions_collapsed,
+    )
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = RevScopeColors.SurfaceHigh,
         modifier = Modifier
             .heightIn(min = 48.dp)
-            .semantics { stateDescription = if (expandido) "acciones desplegadas" else "acciones plegadas" },
+            .semantics { stateDescription = estadoAcciones },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -91,7 +95,7 @@ private fun TripStatePill(estado: EstadoViaje, expandido: Boolean, onClick: () -
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             Text(
-                text = if (grabando) "● Grabando viaje" else "● Conectado · sin viaje",
+                text = stringResource(if (grabando) R.string.drive_trip_pill_recording else R.string.drive_trip_pill_connected),
                 color = if (grabando) RevScopeColors.Danger else RevScopeColors.Success,
                 style = RevScopeType.bodySmall,
                 fontWeight = FontWeight.Bold,
@@ -114,7 +118,7 @@ private fun IniciarViajeButton(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent),
     ) {
-        Text("Iniciar viaje", color = RevScopeColors.Background, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.drive_trip_start), color = RevScopeColors.Background, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -130,22 +134,23 @@ internal fun TripActions(
     var confirmarDesconexion by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (estado is EstadoViaje.Grabando) {
-            SecondaryButton("Finalizar viaje (seguir conectado)", RevScopeColors.Accent) { confirmarFinalizacion = true }
+            SecondaryButton(stringResource(R.string.drive_trip_end_stay_connected), RevScopeColors.Accent) {
+                confirmarFinalizacion = true
+            }
         }
         if (estado == EstadoViaje.EnlaceSinViaje) {
-            SecondaryButton("Iniciar viaje", RevScopeColors.Accent, onIniciar)
+            SecondaryButton(stringResource(R.string.drive_trip_start), RevScopeColors.Accent, onIniciar)
         }
-        SecondaryButton("Desconectar adaptador", RevScopeColors.Danger) {
+        SecondaryButton(stringResource(R.string.drive_disconnect_adapter), RevScopeColors.Danger) {
             if (estado is EstadoViaje.Grabando) confirmarDesconexion = true else onDesconectar()
         }
     }
     if (confirmarFinalizacion) {
         ConfirmarAccionViajeDialog(
-            titulo = "¿Finalizar el viaje?",
-            texto = "Se guarda el viaje y el adaptador sigue conectado: puedes leer códigos de falla " +
-                "o iniciar otro viaje sin reconectar.",
-            confirmar = "Finalizar viaje",
-            descartar = "Cancelar",
+            titulo = stringResource(R.string.drive_confirm_end_title),
+            texto = stringResource(R.string.drive_confirm_end_obd_text),
+            confirmar = stringResource(R.string.drive_confirm_end_action),
+            descartar = stringResource(R.string.drive_cancel),
             onConfirm = {
                 confirmarFinalizacion = false
                 onFinalizar()
@@ -155,10 +160,10 @@ internal fun TripActions(
     }
     if (confirmarDesconexion) {
         ConfirmarAccionViajeDialog(
-            titulo = "¿Desconectar el adaptador?",
-            texto = "También se cierra el viaje en curso; queda guardado en el historial.",
-            confirmar = "Desconectar",
-            descartar = "Cancelar",
+            titulo = stringResource(R.string.drive_confirm_disconnect_title),
+            texto = stringResource(R.string.drive_confirm_disconnect_text),
+            confirmar = stringResource(R.string.drive_disconnect),
+            descartar = stringResource(R.string.drive_cancel),
             onConfirm = {
                 confirmarDesconexion = false
                 onDesconectar()

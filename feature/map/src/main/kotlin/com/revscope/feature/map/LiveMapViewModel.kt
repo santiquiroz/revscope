@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.SunTimes
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.PotholeDao
@@ -87,6 +88,7 @@ class LiveMapViewModel @Inject constructor(
     private val savedPlaceDao: SavedPlaceDao,
     private val settings: DataStore<Preferences>,
     private val mapDownloadService: MapDownloadService,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     // ── Navegación paso a paso ───────────────────────────────────────────────
@@ -108,7 +110,7 @@ class LiveMapViewModel @Inject constructor(
             origin = LatLon(origin.lat, origin.lon),
             destination = LatLon(destination.lat, destination.lon),
         )
-        if (!started) _navigationError.value = "No se pudo iniciar la navegación"
+        if (!started) _navigationError.value = resolver.get(R.string.map_nav_start_failed)
     }
 
     /** Adaptador conectado sin viaje: se abre un viaje OBD; sin adaptador, uno GPS. */
@@ -125,7 +127,7 @@ class LiveMapViewModel @Inject constructor(
         // sí distingue ese caso de un no-op real (OBD Connecting/Connected — ver
         // ObdSessionManager.startGpsSession), que es cuando la nav arrancaría muda.
         if (sessionManager.currentSessionId.value == null && !sessionManager.isGpsSessionActive.value) {
-            _navigationError.value = "Esperando el GPS — reintentá en unos segundos"
+            _navigationError.value = resolver.get(R.string.map_nav_waiting_gps)
             return false
         }
         return true
@@ -314,7 +316,7 @@ class LiveMapViewModel @Inject constructor(
         raceArrivalState = nextState
         if (!shouldAnnounce) return
         val position = arrivalLedgerState.finishers[self?.name]?.order ?: return
-        navigationVoice.say("Llegaste, posición $position")
+        navigationVoice.say(resolver.get(R.string.map_race_arrival_voice, position))
     }
 
     private val _roomBusy = MutableStateFlow(false)
@@ -335,7 +337,7 @@ class LiveMapViewModel @Inject constructor(
     /** Propone mi destino fijado a toda la sala — botón "Compartir con la sala" del chip de ruta. */
     fun shareCurrentDestination() {
         val dest = _destination.value ?: return
-        roomClient.shareDestination(dest.lat, dest.lon, _destinationName.value ?: "Destino")
+        roomClient.shareDestination(dest.lat, dest.lon, _destinationName.value ?: resolver.get(R.string.map_feature_destination))
     }
 
     /** Radar hacia el que se dirige el vehículo (cono ±60°, <1 km) — null si ninguno aplica. */
@@ -446,7 +448,7 @@ class LiveMapViewModel @Inject constructor(
      * sola, vía [localMapFileExists]) y se avisa para que el usuario re-descargue en Ajustes. */
     fun onOfflineMapLoadFailed() {
         mapDownloadService.delete()
-        _offlineMapCorruptedMessage.value = "Mapa offline dañado — re-descargalo en Ajustes"
+        _offlineMapCorruptedMessage.value = resolver.get(R.string.map_offline_corrupted)
     }
 
     fun clearOfflineMapCorruptedMessage() {

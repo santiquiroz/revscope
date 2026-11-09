@@ -6,7 +6,7 @@ object ReductorSerie {
     const val MAX_PUNTOS = 400
 
     fun <T> reducir(puntos: List<T>, maximo: Int = MAX_PUNTOS, valor: (T) -> Double): List<T> {
-        require(maximo >= 2) { "Se necesitan al menos 2 puntos" }
+        require(maximo >= 2) { "Se necesitan al menos 2 puntos" } // i18n-ignore
         if (puntos.size <= maximo) return puntos
         val cubetas = maximo / 2
         return (0 until cubetas).flatMap { i ->

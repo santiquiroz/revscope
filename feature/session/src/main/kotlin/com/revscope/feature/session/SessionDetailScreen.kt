@@ -1,13 +1,12 @@
 package com.revscope.feature.session
 
-import com.revscope.core.designsystem.RevScopeType
-import com.revscope.core.designsystem.RevScopeColors
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import android.content.Intent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DirectionsCar
@@ -48,15 +46,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.revscope.core.data.db.entities.VehicleProfileEntity
-import com.revscope.core.obd.trip.EcoScoreCalculator
-import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -66,13 +63,25 @@ import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.detect
+import com.revscope.core.common.i18n.formatRegionalMoney
+import com.revscope.core.common.i18n.systemLocale
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.data.db.entities.SessionEntity
+import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.RevScopeType
+import com.revscope.core.designsystem.rememberUnitFormatter
+import com.revscope.core.obd.trip.EcoScoreCalculator
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-
-
-private val dateFormat = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale("es"))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,15 +112,15 @@ fun SessionDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Reporte de viaje", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.trips_trip_report), color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = RevScopeColors.TextPrimary)
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.trips_back), tint = RevScopeColors.TextPrimary)
                     }
                 },
                 actions = {
                     IconButton(onClick = { showVehicleDialog = true }) {
-                        Icon(Icons.Default.DirectionsCar, contentDescription = "Asignar vehículo", tint = RevScopeColors.Accent)
+                        Icon(Icons.Default.DirectionsCar, contentDescription = stringResource(R.string.trips_assign_vehicle), tint = RevScopeColors.Accent)
                     }
                     IconButton(onClick = {
                         scope.launch {
@@ -121,13 +130,13 @@ fun SessionDetailScreen(
                                     putExtra(Intent.EXTRA_STREAM, uri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(intent, "Compartir imagen del viaje"))
+                                context.startActivity(Intent.createChooser(intent, context.getString(R.string.trips_trip_image_share_chooser)))
                             }
                         }
                     }) {
                         Icon(
                             Icons.Outlined.PhotoCamera,
-                            contentDescription = "Compartir imagen del viaje",
+                            contentDescription = stringResource(R.string.trips_trip_image_share_chooser),
                             tint = RevScopeColors.TextPrimary,
                         )
                     }
@@ -144,7 +153,7 @@ fun SessionDetailScreen(
                                         putExtra(Intent.EXTRA_STREAM, uri)
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Compartir viaje"))
+                                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.trips_trip_share_chooser)))
                                 }
                             }
                         },
@@ -159,7 +168,7 @@ fun SessionDetailScreen(
             SessionDetailViewModel.UiState.Loading -> Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center,
-            ) { Text("Cargando…", color = RevScopeColors.TextSecondary) }
+            ) { Text(stringResource(R.string.trips_loading), color = RevScopeColors.TextSecondary) }
 
             is SessionDetailViewModel.UiState.NotFound -> Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -170,6 +179,7 @@ fun SessionDetailScreen(
                 report = s.report,
                 profiles = profiles,
                 vm = vm,
+                locale = LocalConfiguration.current.locales[0],
                 onOpenAiValue = onOpenAiValue,
                 modifier = Modifier.padding(innerPadding),
             )
@@ -194,7 +204,7 @@ private fun ExportMenuButton(
     val options = exportMenuOptions(report)
     Box {
         IconButton(onClick = { onExpandedChange(true) }) {
-            Icon(Icons.Default.Download, contentDescription = "Exportar…", tint = RevScopeColors.Accent)
+            Icon(Icons.Default.Download, contentDescription = stringResource(R.string.trips_export), tint = RevScopeColors.Accent)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
             options.forEach { option ->
@@ -208,7 +218,7 @@ private fun ExportMenuButton(
                 )
             }
             DropdownMenuItem(
-                text = { Text("Todo") },
+                text = { Text(stringResource(R.string.trips_export_all)) },
                 enabled = report != null,
                 onClick = {
                     onExpandedChange(false)
@@ -219,13 +229,14 @@ private fun ExportMenuButton(
     }
 }
 
+@Composable
 private fun exportMenuOptions(report: SessionDetailViewModel.TripReport?): List<ExportMenuOption> = listOf(
-    ExportMenuOption("Velocidad", SessionDetailViewModel.ExportMetric.VELOCIDAD, report?.speedSeries?.isNotEmpty() == true),
-    ExportMenuOption("RPM", SessionDetailViewModel.ExportMetric.RPM, report?.rpmSeries?.isNotEmpty() == true),
-    ExportMenuOption("Temperatura", SessionDetailViewModel.ExportMetric.TEMPERATURA, (report?.maxCoolantTemp ?: 0) > 0),
-    ExportMenuOption("Ritmo cardíaco", SessionDetailViewModel.ExportMetric.RITMO_CARDIACO, report?.hrSeries?.isNotEmpty() == true),
-    ExportMenuOption("IMU", SessionDetailViewModel.ExportMetric.IMU, report?.frictionPoints?.isNotEmpty() == true),
-    ExportMenuOption("GPS", SessionDetailViewModel.ExportMetric.GPS, report?.gpsTrack?.isNotEmpty() == true),
+    ExportMenuOption(stringResource(R.string.trips_export_speed), SessionDetailViewModel.ExportMetric.VELOCIDAD, report?.speedSeries?.isNotEmpty() == true),
+    ExportMenuOption(stringResource(R.string.trips_export_rpm), SessionDetailViewModel.ExportMetric.RPM, report?.rpmSeries?.isNotEmpty() == true),
+    ExportMenuOption(stringResource(R.string.trips_export_temp), SessionDetailViewModel.ExportMetric.TEMPERATURA, (report?.maxCoolantTemp ?: 0) > 0),
+    ExportMenuOption(stringResource(R.string.trips_export_heart), SessionDetailViewModel.ExportMetric.RITMO_CARDIACO, report?.hrSeries?.isNotEmpty() == true),
+    ExportMenuOption(stringResource(R.string.trips_export_imu), SessionDetailViewModel.ExportMetric.IMU, report?.frictionPoints?.isNotEmpty() == true),
+    ExportMenuOption(stringResource(R.string.trips_export_gps), SessionDetailViewModel.ExportMetric.GPS, report?.gpsTrack?.isNotEmpty() == true),
 )
 
 @Composable
@@ -233,6 +244,7 @@ private fun ReportContent(
     report: SessionDetailViewModel.TripReport,
     profiles: List<VehicleProfileEntity>,
     vm: SessionDetailViewModel,
+    locale: Locale,
     onOpenAiValue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -240,8 +252,10 @@ private fun ReportContent(
     val durationMs = (session.endedAt ?: System.currentTimeMillis()) - session.startedAt
     val durationMin = TimeUnit.MILLISECONDS.toMinutes(durationMs)
     val durationSec = TimeUnit.MILLISECONDS.toSeconds(durationMs) % 60
-    val assignedVehicleName = profiles.find { it.id == session.vehicleProfileId }?.name ?: "Sin vehículo"
+    val assignedVehicleName = profiles.find { it.id == session.vehicleProfileId }?.name ?: stringResource(R.string.trips_no_vehicle)
     val isMotorcycle by vm.isMotorcycle.collectAsState()
+    val sessionDateFormat = remember(locale) { SimpleDateFormat("dd MMM yyyy  HH:mm", locale) } // i18n-ignore
+    val units = rememberUnitFormatter()
 
     Column(
         modifier = modifier
@@ -251,14 +265,14 @@ private fun ReportContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            dateFormat.format(Date(session.startedAt)),
+            sessionDateFormat.format(Date(session.startedAt)),
             color = RevScopeColors.TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Text(assignedVehicleName, color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(
-            if (session.adapterName == "GPS") "Fuente: GPS" else session.adapterName,
+            if (session.adapterName == "GPS") stringResource(R.string.trips_trip_source_gps) else session.adapterName,
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
@@ -267,34 +281,30 @@ private fun ReportContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            StatCard("Duración", "%dm %02ds".format(durationMin, durationSec), Modifier.weight(1f))
-            StatCard("Distancia", "%.1f km".format(Locale("es"), session.distanceKm), Modifier.weight(1f))
-            StatCard("Puntos", report.totalPoints.toString(), Modifier.weight(1f))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            StatCard("Vel. máx", "${session.maxSpeed} km/h", Modifier.weight(1f))
-            StatCard("Vel. prom", "%.0f km/h".format(Locale("es"), report.avgSpeedKmh), Modifier.weight(1f))
-            StatCard("Temp máx", "${report.maxCoolantTemp}°C", Modifier.weight(1f))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            StatCard("RPM máx", report.maxRpm.toString(), Modifier.weight(1f))
-            StatCard("RPM prom", report.avgRpm.toString(), Modifier.weight(1f))
-            StatCard("Acel. máx", "${report.maxThrottlePct}%", Modifier.weight(1f))
-        }
-        val fuelCostCop = session.fuelCostCop
-        if (fuelCostCop != null) {
             StatCard(
-                "Costo combustible",
-                "$" + "%,.0f".format(Locale("es", "CO"), fuelCostCop),
-                Modifier.fillMaxWidth(),
+                stringResource(R.string.trips_duration),
+                stringResource(R.string.trips_duration_format, durationMin, durationSec),
+                Modifier.weight(1f),
             )
+            StatCard(
+                stringResource(R.string.trips_distance),
+                units.formatDistance(session.distanceKm.toDouble()),
+                Modifier.weight(1f),
+            )
+            StatCard(stringResource(R.string.trips_points), report.totalPoints.toString(), Modifier.weight(1f))
         }
+        SpeedTempRow(session.maxSpeed, report.avgSpeedKmh, report.maxCoolantTemp, units)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            StatCard(stringResource(R.string.trips_max_rpm), report.maxRpm.toString(), Modifier.weight(1f))
+            StatCard(stringResource(R.string.trips_avg_rpm), report.avgRpm.toString(), Modifier.weight(1f))
+            StatCard(stringResource(R.string.trips_max_accel), "${report.maxThrottlePct}%", Modifier.weight(1f))
+        }
+        val context = LocalContext.current
+        val region = remember { Region.detect(context) }
+        FuelCostCard(session.fuelCostCop, region, systemLocale(), locale)
 
         val ecoScore = session.ecoScore
         if (ecoScore != null) {
@@ -303,29 +313,13 @@ private fun ReportContent(
 
         DebriefCard(vm, onOpenAiValue)
 
-        if (session.best0to60Ms != null || session.best0to100Ms != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                StatCard(
-                    "🏁 0-60",
-                    session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
-                    Modifier.weight(1f),
-                )
-                StatCard(
-                    "🏁 0-100",
-                    session.best0to100Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
-                    Modifier.weight(1f),
-                )
-            }
+        if (session.hasSprint()) {
+            SprintRow(session, units)
         }
 
         if (report.gpsTrack.size >= 2) {
             Text(
-                "Recorrido GPS — %.1f km · máx %d km/h (GPS)".format(
-                    java.util.Locale("es"), report.gpsDistanceKm, report.gpsMaxSpeedKmh,
-                ),
+                routeSummary(report.gpsDistanceKm, report.gpsMaxSpeedKmh.toDouble(), units),
                 color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -339,7 +333,7 @@ private fun ReportContent(
                     .clip(RoundedCornerShape(12.dp)),
             )
             Text(
-                "azul = lento · amarillo = medio · rojo = rápido",
+                stringResource(R.string.trips_route_legend),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
@@ -352,7 +346,7 @@ private fun ReportContent(
                     .height(200.dp),
             )
             Text(
-                "racing line — puntos rojos = frenadas fuertes",
+                stringResource(R.string.trips_route_racing),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
@@ -360,7 +354,7 @@ private fun ReportContent(
 
         if (report.frictionPoints.isNotEmpty()) {
             Text(
-                "Círculo de fricción — agarre usado (rojo = frenando)",
+                stringResource(R.string.trips_friction_circle),
                 color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -372,7 +366,7 @@ private fun ReportContent(
                     .height(260.dp),
             )
             Text(
-                "anillos = 0.5G y 1.0G · arriba acelera · abajo frena · izq/der curvas",
+                stringResource(R.string.trips_friction_legend),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
@@ -383,10 +377,26 @@ private fun ReportContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                StatCard("G lat máx", report.maxLateralG?.let { "%.2f".format(it) } ?: "—", Modifier.weight(1f))
-                StatCard("Frenada máx", report.maxBrakingG?.let { "%.2f G".format(-it) } ?: "—", Modifier.weight(1f))
+                StatCard(
+                    stringResource(R.string.trips_max_g_lat),
+                    report.maxLateralG?.let { LocaleNumbers.decimal(it.toDouble(), 2, locale) } ?: "—",
+                    Modifier.weight(1f),
+                )
+                StatCard(
+                    stringResource(R.string.trips_max_braking),
+                    report.maxBrakingG?.let {
+                        stringResource(R.string.trips_g_value, LocaleNumbers.decimal((-it).toDouble(), 2, locale))
+                    } ?: "—",
+                    Modifier.weight(1f),
+                )
                 if (isMotorcycle) {
-                    StatCard("Lean máx", report.maxLeanDeg?.let { "%.0f°".format(it) } ?: "—", Modifier.weight(1f))
+                    StatCard(
+                        stringResource(R.string.trips_lean_max),
+                        report.maxLeanDeg?.let {
+                            stringResource(R.string.trips_lean_value, LocaleNumbers.decimal(it.toDouble(), 0, locale))
+                        } ?: "—",
+                        Modifier.weight(1f),
+                    )
                 }
             }
         }
@@ -395,15 +405,15 @@ private fun ReportContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                StatCard("♥ prom", report.avgBpm?.toString() ?: "—", Modifier.weight(1f))
-                StatCard("♥ máx", report.maxBpm?.toString() ?: "—", Modifier.weight(1f))
+                StatCard(stringResource(R.string.trips_avg_heart_short), report.avgBpm?.toString() ?: "—", Modifier.weight(1f))
+                StatCard(stringResource(R.string.trips_max_heart_short), report.maxBpm?.toString() ?: "—", Modifier.weight(1f))
             }
         }
 
         if (report.laps.isNotEmpty()) {
             val bestMs = report.laps.minOf { it.timeMs }
             Text(
-                "Vueltas (${report.laps.size})",
+                stringResource(R.string.trips_laps, report.laps.size),
                 color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -417,12 +427,16 @@ private fun ReportContent(
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Vuelta ${lap.lapNumber}", color = RevScopeColors.TextPrimary, fontSize = 13.sp)
+                        Text(stringResource(R.string.trips_lap_label, lap.lapNumber), color = RevScopeColors.TextPrimary, fontSize = 13.sp)
                         if (stat?.maxAbsG != null || (isMotorcycle && stat?.maxAbsLean != null) || stat?.maxBpm != null) {
                             Text(
                                 buildList {
-                                    stat.maxAbsG?.let { add("%.2fG".format(it)) }
-                                    if (isMotorcycle) stat.maxAbsLean?.let { add("%.0f° lean".format(it)) }
+                                    stat.maxAbsG?.let {
+                                        add(stringResource(R.string.trips_lap_g, LocaleNumbers.decimal(it.toDouble(), 2, locale)))
+                                    }
+                                    if (isMotorcycle) stat.maxAbsLean?.let {
+                                        add(stringResource(R.string.trips_lean_value, LocaleNumbers.decimal(it.toDouble(), 0, locale)))
+                                    }
                                     stat.maxBpm?.let { add("♥%.0f".format(it)) }
                                 }.joinToString(" · "),
                                 color = RevScopeColors.TextSecondary,
@@ -434,7 +448,7 @@ private fun ReportContent(
                     val seconds = (lap.timeMs % 60_000) / 1000
                     val hundredths = (lap.timeMs % 1000) / 10
                     Text(
-                        "%d:%02d.%02d".format(minutes, seconds, hundredths) +
+                        "%d:%02d.%02d".format(Locale.ROOT, minutes, seconds, hundredths) +
                             (if (lap.timeMs == bestMs) "  ★" else ""),
                         color = if (lap.timeMs == bestMs) Color(0xFF3DFF8E) else RevScopeColors.Accent,
                         fontSize = 13.sp,
@@ -446,7 +460,7 @@ private fun ReportContent(
 
         if (report.throttleGPoints.size >= 10) {
             Text(
-                "Acelerador vs fuerza G (tuning)",
+                stringResource(R.string.trips_throttle_g),
                 color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -458,24 +472,74 @@ private fun ReportContent(
                     .height(220.dp),
             )
             Text(
-                "x: % mariposa (PID 11) · y: G (+acelera / −frena) · banda diagonal sana = entrega pareja",
+                stringResource(R.string.trips_throttle_g_legend),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
         }
 
         if (report.rpmSeries.size >= 2) {
-            ChartSection("RPM durante el viaje", report.rpmSeries, unit = "RPM", durationMs = durationMs)
+            ChartSection(stringResource(R.string.trips_rpm_chart), report.rpmSeries, unit = "RPM", durationMs = durationMs)
         }
         if (report.speedSeries.size >= 2) {
-            ChartSection("Velocidad durante el viaje (km/h)", report.speedSeries, unit = "km/h", durationMs = durationMs)
+            ChartSection(
+                stringResource(R.string.trips_speed_chart, units.speedLabel()),
+                remember(report.speedSeries, units) { speedSeriesIn(report.speedSeries, units) },
+                unit = units.speedLabel(),
+                durationMs = durationMs,
+            )
         }
         if (report.hrSeries.size >= 2) {
-            ChartSection("♥ Pulso del piloto (bpm)", report.hrSeries, unit = "bpm", durationMs = durationMs)
+            ChartSection(stringResource(R.string.trips_heart_chart), report.hrSeries, unit = "bpm", durationMs = durationMs)
         }
         Spacer(Modifier.height(16.dp))
     }
 }
+
+@Composable
+internal fun SpeedTempRow(maxSpeedKmh: Int, avgSpeedKmh: Float, maxCoolantC: Int, units: UnitFormatter) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        StatCard(stringResource(R.string.trips_max_speed), units.formatSpeed(maxSpeedKmh.toDouble()), Modifier.weight(1f))
+        StatCard(stringResource(R.string.trips_avg_speed), units.formatSpeed(avgSpeedKmh.toDouble()), Modifier.weight(1f))
+        StatCard(stringResource(R.string.trips_max_temp), units.formatTemperature(maxCoolantC.toDouble()), Modifier.weight(1f))
+    }
+}
+
+private fun SessionEntity.hasSprint(): Boolean =
+    best0to60Ms != null || best0to100Ms != null || best0to60mphMs != null
+
+@Composable
+internal fun SprintRow(session: SessionEntity, units: UnitFormatter) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (units.system == UnitSystem.METRIC) {
+            SprintCard(R.string.trips_0_60, session.best0to60Ms, Modifier.weight(1f))
+            SprintCard(R.string.trips_0_100, session.best0to100Ms, Modifier.weight(1f))
+        } else {
+            SprintCard(R.string.trips_0_60_mph, session.best0to60mphMs, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun SprintCard(@StringRes label: Int, ms: Long?, modifier: Modifier) {
+    StatCard(stringResource(label), sprintTime(ms), modifier)
+}
+
+internal fun sprintTime(ms: Long?): String =
+    ms?.let { "%.2fs".format(Locale.ROOT, it / 1000.0) } ?: "—"
+
+@Composable
+internal fun routeSummary(distanceKm: Double, maxSpeedKmh: Double, units: UnitFormatter): String =
+    stringResource(R.string.trips_route_summary, units.formatDistance(distanceKm), units.formatSpeed(maxSpeedKmh))
+
+internal fun speedSeriesIn(seriesKmh: List<Float>, units: UnitFormatter): List<Float> =
+    seriesKmh.map { units.speed(it.toDouble()).toFloat() }
 
 @Composable
 private fun ChartSection(title: String, series: List<Float>, unit: String, durationMs: Long) {
@@ -502,7 +566,7 @@ private fun ChartSection(title: String, series: List<Float>, unit: String, durat
                 startAxis = VerticalAxis.rememberStart(title = unit),
                 bottomAxis = HorizontalAxis.rememberBottom(
                     valueFormatter = bottomFormatter,
-                    title = "tiempo (mm:ss)",
+                    title = stringResource(R.string.trips_time_axis),
                 ),
             ),
             modelProducer = modelProducer,
@@ -526,6 +590,16 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
     }
 }
 
+@Composable
+internal fun FuelCostCard(cost: Double?, region: Region, systemLocale: Locale, uiLocale: Locale) {
+    if (cost == null) return
+    StatCard(
+        stringResource(R.string.trips_fuel_cost),
+        formatRegionalMoney(cost, region, systemLocale, uiLocale),
+        Modifier.fillMaxWidth(),
+    )
+}
+
 /** Análisis IA del viaje: agregados locales → una llamada corta al proveedor configurado. */
 @Composable
 private fun DebriefCard(vm: SessionDetailViewModel, onOpenAiValue: () -> Unit) {
@@ -540,12 +614,12 @@ private fun DebriefCard(vm: SessionDetailViewModel, onOpenAiValue: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("🤖 Análisis IA", color = RevScopeColors.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.trips_ai_analysis), color = RevScopeColors.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             when (debrief) {
                 is SessionDetailViewModel.DebriefState.Generating ->
-                    Text("Generando…", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+                    Text(stringResource(R.string.trips_generating), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
                 else -> Text(
-                    if (debrief is SessionDetailViewModel.DebriefState.Ready) "Regenerar" else "Analizar",
+                    stringResource(if (debrief is SessionDetailViewModel.DebriefState.Ready) R.string.trips_regenerate else R.string.trips_analyze),
                     color = RevScopeColors.Accent,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -563,11 +637,11 @@ private fun DebriefCard(vm: SessionDetailViewModel, onOpenAiValue: () -> Unit) {
             is SessionDetailViewModel.DebriefState.Error -> Column(modifier = Modifier.padding(top = 8.dp)) {
                 Text(d.message, color = Color(0xFFFF5252), fontSize = 12.sp)
                 TextButton(onClick = onOpenAiValue, contentPadding = PaddingValues(0.dp)) {
-                    Text("Configurar IA", color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.trips_configure_ai), color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             else -> Text(
-                "Resumen y consejos de tu coach IA con los datos de este viaje, comparados con tu historial.",
+                stringResource(R.string.trips_ai_summary),
                 color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall,
                 modifier = Modifier.padding(top = 4.dp),
             )
@@ -585,7 +659,7 @@ private fun EcoCard(score: Int, desglose: EcoScoreCalculator.Desglose?) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Eco",
+                stringResource(R.string.trips_eco),
                 color = RevScopeColors.Accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -596,17 +670,17 @@ private fun EcoCard(score: Int, desglose: EcoScoreCalculator.Desglose?) {
         Spacer(Modifier.height(6.dp))
         if (desglose != null) {
             Text(
-                "Aceleradas bruscas: ${desglose.aceleradasBruscas}  ·  Frenadas bruscas: ${desglose.frenadasBruscas}",
+                stringResource(R.string.trips_eco_accel_brakes, desglose.aceleradasBruscas, desglose.frenadasBruscas),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
             Text(
-                "RPM alto sostenido: ${desglose.tiempoAltasRpmSeg} s  ·  Bonus crucero: +${desglose.bonusCrucero}",
+                stringResource(R.string.trips_eco_rpm_bonus, desglose.tiempoAltasRpmSeg, desglose.bonusCrucero),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
         } else {
-            Text("Desglose no disponible para este viaje", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+            Text(stringResource(R.string.trips_no_breakdown), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
         }
     }
 }
@@ -626,10 +700,10 @@ private fun VehiclePickerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = RevScopeColors.Surface,
-        title = { Text("Asignar vehículo", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
+        title = { Text(stringResource(R.string.trips_assign_vehicle_title), color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
         text = {
             if (profiles.isEmpty()) {
-                Text("No hay vehículos guardados", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
+                Text(stringResource(R.string.trips_no_saved_vehicles), color = RevScopeColors.TextSecondary, fontSize = 13.sp)
             } else {
                 Column {
                     profiles.forEach { profile ->
@@ -655,7 +729,7 @@ private fun VehiclePickerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
+                Text(stringResource(R.string.trips_close), color = RevScopeColors.TextSecondary, fontSize = 13.sp)
             }
         },
     )

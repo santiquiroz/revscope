@@ -2,11 +2,22 @@ package com.revscope.feature.workshop
 
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.workshop.DiagnosticRules
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MechanicChatContextBuilderTest {
+    private val resolverEs = XmlStringResolver.es(
+        R::class.java,
+        com.revscope.core.intelligence.R::class.java,
+        resDirs = listOf("src/main/res", "../../core/intelligence/src/main/res"),
+    )
+    private val resolverEn = XmlStringResolver.en(
+        R::class.java,
+        com.revscope.core.intelligence.R::class.java,
+        resDirs = listOf("src/main/res", "../../core/intelligence/src/main/res"),
+    )
 
     private fun emptyContext() = MechanicChatContextBuilder.VehicleContext(
         profileName = null,
@@ -22,7 +33,7 @@ class MechanicChatContextBuilderTest {
 
     @Test
     fun `system prompt sin perfil describe vehiculos genericos y contexto sin datos`() {
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(emptyContext())
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(emptyContext(), resolverEs)
 
         assertTrue(prompt.contains("especializado en vehículos"))
         assertTrue(prompt.contains("Perfil: sin configurar"))
@@ -36,9 +47,11 @@ class MechanicChatContextBuilderTest {
     fun `system prompt distingue motos de carros`() {
         val motoPrompt = MechanicChatContextBuilder.buildSystemPrompt(
             emptyContext().copy(profileType = "MOTORCYCLE"),
+            resolverEs,
         )
         val carroPrompt = MechanicChatContextBuilder.buildSystemPrompt(
             emptyContext().copy(profileType = "CAR"),
+            resolverEs,
         )
 
         assertTrue(motoPrompt.contains("especializado en motos"))
@@ -54,7 +67,7 @@ class MechanicChatContextBuilderTest {
             odometroKm = 12345.0,
         )
 
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context)
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context, resolverEs)
 
         assertTrue(prompt.contains("Perfil: Kawasaki Ninja 400 (motos), combustible EXTRA, odómetro app: 12,345 km"))
     }
@@ -66,7 +79,7 @@ class MechanicChatContextBuilderTest {
             lecturas = mapOf("0C" to ObdReading("0C", 3200.0, "rpm")),
         )
 
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context)
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context, resolverEs)
 
         assertTrue(prompt.contains("Conexión: desconectado"))
         assertTrue(!prompt.contains("RPM"))
@@ -84,7 +97,7 @@ class MechanicChatContextBuilderTest {
             ),
         )
 
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context)
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context, resolverEs)
 
         assertTrue(prompt.contains("conectado — RPM 3200 rpm, Temp 89 °C, Trim largo B1 -1.5 %"))
     }
@@ -93,7 +106,7 @@ class MechanicChatContextBuilderTest {
     fun `conexion conectada sin lecturas aun`() {
         val context = emptyContext().copy(conectado = true, lecturas = emptyMap())
 
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context)
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context, resolverEs)
 
         assertTrue(prompt.contains("Conexión: conectado — sin lecturas aún"))
     }
@@ -107,7 +120,7 @@ class MechanicChatContextBuilderTest {
             ),
         )
 
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context)
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context, resolverEs)
 
         assertTrue(prompt.contains("Último chequeo: Sin códigos de falla (OK); Voltaje 13.8V (OK)"))
     }
@@ -121,7 +134,7 @@ class MechanicChatContextBuilderTest {
             ),
         )
 
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context)
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context, resolverEs)
 
         assertTrue(prompt.contains("45 km, eco 78"))
         assertTrue(prompt.contains("12 km, eco sin dato"))
@@ -131,9 +144,16 @@ class MechanicChatContextBuilderTest {
     fun `mantenimiento proximo pasa el texto tal cual`() {
         val context = emptyContext().copy(mantenimientoProximo = "Aceite en 420 km")
 
-        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context)
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(context, resolverEs)
 
         assertTrue(prompt.contains("Mantenimiento: Aceite en 420 km"))
+    }
+
+    @Test
+    fun `system prompt termina con la instruccion de respuesta en ingles`() {
+        val prompt = MechanicChatContextBuilder.buildSystemPrompt(emptyContext(), resolverEn)
+
+        assertTrue(prompt.endsWith("Write your entire answer in English."))
     }
 
     @Test

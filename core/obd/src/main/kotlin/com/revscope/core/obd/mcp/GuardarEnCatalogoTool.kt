@@ -1,5 +1,6 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.catalogo.CatalogoPropietario
 import com.revscope.core.obd.catalogo.EntradaCatalogo
 import org.json.JSONArray
@@ -8,6 +9,7 @@ import javax.inject.Inject
 
 class GuardarEnCatalogoTool @Inject constructor(
     private val catalogo: CatalogoPropietario,
+    private val resolver: StringResolver,
 ) : McpTool {
     override val name = "guardar_en_catalogo"
     override val description =
@@ -45,7 +47,7 @@ class GuardarEnCatalogoTool @Inject constructor(
     override suspend fun call(arguments: JSONObject): String {
         val json = arguments.optJSONObject("entrada") ?: return error("falta el objeto entrada")
         val entrada = entrada(json, arguments.optBoolean("verificado", false))
-        val motivo = catalogo.guardarUsuario(entrada)
+        val motivo = catalogo.guardarUsuario(entrada, resolver)
         if (motivo != null) return error(motivo)
         return JSONObject().put("guardada", true).put("id", entrada.id).toString()
     }

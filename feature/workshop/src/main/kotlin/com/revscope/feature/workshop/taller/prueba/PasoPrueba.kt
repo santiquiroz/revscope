@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -30,13 +31,14 @@ import com.revscope.core.designsystem.IndicadorPasos
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.TarjetaTaller
 
-internal const val TEXTO_REPETIR_PASO = "Repetir paso"
+internal val TEXTO_REPETIR_PASO = R.string.workshop_prueba_repetir_paso
 
 @Composable
 internal fun ColumnScope.PasoPrueba(paso: PasoUi, estado: PruebaGuiadaUi, acciones: AccionesPrueba) {
-    BarraPrueba(estado.titulo, estado.vehiculo, acciones.onPedirCancelar)
+    BarraPrueba(estado.titulo(), estado.vehiculo, acciones.onPedirCancelar)
     CuerpoDesplazable {
         IndicadorPasos(actual = paso.indice, total = paso.total, titulo = paso.titulo)
         Instruccion(paso)
@@ -101,9 +103,9 @@ private fun MiniGrafica(paso: PasoUi) {
         if (paso.grafica.tieneDatos) {
             GraficaSerie(paso.grafica, alto = 160.dp)
         } else {
-            Text("Esperando muestras del adaptador…", color = RevScopeColors.TextSecondary, style = RevScopeType.body)
+            Text(stringResource(R.string.workshop_prueba_esperando_muestras), color = RevScopeColors.TextSecondary, style = RevScopeType.body)
         }
-        paso.leyendaGrafica.forEach { Text("Banda $it", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall) }
+        paso.leyendaGrafica.forEach { Text(stringResource(R.string.workshop_prueba_leyenda_banda, it), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall) }
     }
 }
 
@@ -114,7 +116,7 @@ private fun AccionesSecundarias(voz: Boolean, acciones: AccionesPrueba) {
             val lado = with(LocalDensity.current) { 18.sp.toDp() }
             Icon(Icons.Filled.Replay, contentDescription = null, tint = RevScopeColors.Accent, modifier = Modifier.size(lado))
             Spacer(Modifier.width(8.dp))
-            Text(TEXTO_REPETIR_PASO, color = RevScopeColors.Accent, style = RevScopeType.label)
+            Text(stringResource(TEXTO_REPETIR_PASO), color = RevScopeColors.Accent, style = RevScopeType.label)
         }
         FilaVoz(voz, acciones.onVoz)
     }

@@ -6,10 +6,13 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import com.revscope.core.designsystem.DESCRIPCION_VOLVER
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.legal.DocumentStatusCalculator
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.workshop.DiagnosticRules
@@ -22,17 +25,40 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaTallerTest {
+    private val resolverEs = XmlStringResolver.es(
+        R::class.java,
+        ObdR::class.java,
+        DesignSystemR::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res", "../../core/designsystem/src/main/res"),
+    )
 
     @get:Rule
     val compose = createComposeRule()
 
     @Test
     fun `cada nivel de documento tiene texto propio ademas del color`() {
-        assertEquals(NivelConTexto(NivelEstado.FALLA, "Vencido"), nivelDocumento(DocumentStatusCalculator.Nivel.VENCIDO))
-        assertEquals("Sin configurar", nivelDocumento(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR).texto)
+        val vencido = nivelDocumento(DocumentStatusCalculator.Nivel.VENCIDO)
+        assertEquals(NivelEstado.FALLA, vencido.nivel)
+        assertEquals("Vencido", resolverEs.get(vencido.textoRes))
+        val sinConfigurar = nivelDocumento(DocumentStatusCalculator.Nivel.SIN_CONFIGURAR)
+        assertEquals("Sin configurar", resolverEs.get(sinConfigurar.textoRes))
         assertEquals(NivelEstado.ATENCION, nivelDiagnostico(DiagnosticRules.Nivel.ATENCION))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun `el chequeo muestra su introduccion en ingles`() {
+        compose.setContent {
+            RevScopeTheme {
+                HealthCheckContent(HealthCheckViewModel.UiState.Idle, AccionesChequeo())
+            }
+        }
+
+        compose.onNodeWithText(
+            "One tap and RevScope checks trouble codes, readiness monitors for your safety inspection, fuel mixture, O2 sensor, battery, and temperature.",
+        ).assertIsDisplayed()
     }
 
     @Test
@@ -44,7 +70,7 @@ class SemanticaTallerTest {
             }
         }
 
-        compose.onNodeWithText("Falla").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(DesignSystemR.string.ds_state_failure)).assertIsDisplayed()
     }
 
     @Test
@@ -64,8 +90,8 @@ class SemanticaTallerTest {
         }
 
         compose.onNodeWithText("Sensor O2 B1S1").assertIsDisplayed()
-        compose.onNodeWithText("Sin dato").assertIsDisplayed()
-        compose.onNodeWithText("No disponible en esta ECU").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(DesignSystemR.string.ds_state_no_data)).assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(R.string.workshop_health_check_unavailable_ecu)).assertIsDisplayed()
     }
 
     @Test
@@ -76,14 +102,16 @@ class SemanticaTallerTest {
                 LiveMixtureContent(
                     readings = emptyMap(),
                     definition = registry::getDefinition,
-                    disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, registry) },
+                    disponibilidad = { pid, nombre -> DisponibilidadPid.resolver(pid, nombre, registry, resolverEs) },
                 )
             }
         }
 
-        compose.onNodeWithText("Fuel trim corto B1").assertIsDisplayed()
-        compose.onAllNodesWithText("No disponible en esta ECU")[0].assertIsDisplayed()
-        compose.onNodeWithText("Esta ECU no reporta fuel trim corto b1 (PID 06).").assertIsDisplayed()
+        compose.onNodeWithText(resolverEs.get(R.string.workshop_mixture_fuel_trim_short_b1)).assertIsDisplayed()
+        compose.onAllNodesWithText(resolverEs.get(R.string.workshop_mixture_unavailable_ecu))[0].assertIsDisplayed()
+        compose.onNodeWithText(
+            resolverEs.get(R.string.workshop_mixture_unsupported_reason, "fuel trim corto b1", "06"),
+        ).assertIsDisplayed()
     }
 
     @Test
@@ -98,7 +126,7 @@ class SemanticaTallerTest {
             }
         }
 
-        compose.onNodeWithText("Reintentar").performClick()
+        compose.onNodeWithText(resolverEs.get(DesignSystemR.string.ds_retry)).performClick()
 
         assertEquals(1, escaneos)
     }
@@ -115,13 +143,14 @@ class SemanticaTallerTest {
                     mantenimientoNivel = DocumentStatusCalculator.Nivel.OK,
                     mantenimientoDetalle = "",
                     zoneBrief = null,
+                    region = Region.CO,
                     acciones = AccionesAlDia(onVolver = { volvio = true }),
                 )
             }
         }
 
-        compose.onNodeWithText("Ir a perfiles").assertIsDisplayed()
-        compose.onNodeWithContentDescription(DESCRIPCION_VOLVER).performClick()
+        compose.onNodeWithText(resolverEs.get(R.string.workshop_al_dia_open_profiles)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(resolverEs.get(DesignSystemR.string.ds_back)).performClick()
 
         assertTrue(volvio)
     }

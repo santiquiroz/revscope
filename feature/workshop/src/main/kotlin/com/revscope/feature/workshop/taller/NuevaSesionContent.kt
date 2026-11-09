@@ -25,8 +25,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
@@ -38,7 +41,10 @@ import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.conCifrasTabulares
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.feature.workshop.R
 import com.revscope.core.obd.taller.sesion.Sintoma
+import com.revscope.core.obd.taller.sesion.etiqueta
 
 data class AccionesNuevaSesion(
     val onVolver: () -> Unit = {},
@@ -54,20 +60,32 @@ data class AccionesNuevaSesion(
 
 @Composable
 fun NuevaSesionContent(estado: NuevaSesionEstado, acciones: AccionesNuevaSesion) {
+    val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     Column(Modifier.fillMaxSize().background(RevScopeColors.Background)) {
-        BarraConVolver(titulo = "Nueva sesión", subtitulo = estado.vehiculo, onVolver = acciones.onVolver)
+        BarraConVolver(titulo = stringResource(R.string.workshop_new_session_title), subtitulo = estado.vehiculo, onVolver = acciones.onVolver)
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.weight(1f),
         ) {
-            item(key = "sintomas") { SeccionSintomas(estado.sintomas, acciones.onSintoma) }
+            item(key = "sintomas") { SeccionSintomas(estado.sintomas, acciones.onSintoma, resolver) }
             item(key = "texto") {
-                CampoTexto("Descripción", "Qué notas, en tus palabras.", estado.sintomasTexto, acciones.onSintomasTexto)
+                CampoTexto(
+                    stringResource(R.string.workshop_new_session_description),
+                    stringResource(R.string.workshop_new_session_description_hint),
+                    estado.sintomasTexto,
+                    acciones.onSintomasTexto,
+                )
             }
             item(key = "odometro") { CampoOdometro(estado, acciones.onOdometro) }
             item(key = "notas") {
-                CampoTexto("Notas", "Repuestos cambiados, arreglos previos…", estado.notas, acciones.onNotas)
+                CampoTexto(
+                    stringResource(R.string.workshop_new_session_notes),
+                    stringResource(R.string.workshop_new_session_notes_hint),
+                    estado.notas,
+                    acciones.onNotas,
+                )
             }
             item(key = "base") { SeccionBase(estado, acciones.onBase) }
             estado.error?.let { item(key = "error") { TextoError(it) } }
@@ -79,13 +97,13 @@ fun NuevaSesionContent(estado: NuevaSesionEstado, acciones: AccionesNuevaSesion)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SeccionSintomas(elegidos: Set<Sintoma>, onSintoma: (Sintoma) -> Unit) {
+private fun SeccionSintomas(elegidos: Set<Sintoma>, onSintoma: (Sintoma) -> Unit, resolver: com.revscope.core.common.i18n.StringResolver) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        EncabezadoSeccion("Síntomas")
-        Text("Marca todos los que apliquen.", color = RevScopeColors.TextSecondary, style = RevScopeType.body)
+        EncabezadoSeccion(stringResource(R.string.workshop_session_symptoms))
+        Text(stringResource(R.string.workshop_new_session_symptoms_hint), color = RevScopeColors.TextSecondary, style = RevScopeType.body)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Sintoma.entries.forEach { sintoma ->
-                ChipSeleccion(sintoma.etiqueta, seleccionado = sintoma in elegidos, onClick = { onSintoma(sintoma) })
+                ChipSeleccion(sintoma.etiqueta(resolver), seleccionado = sintoma in elegidos, onClick = { onSintoma(sintoma) })
             }
         }
     }
@@ -112,13 +130,13 @@ private const val LINEAS_TEXTO = 3
 private fun CampoOdometro(estado: NuevaSesionEstado, onCambio: (String) -> Unit) {
     val ayuda = when {
         estado.errorOdometro != null -> estado.errorOdometro
-        estado.odometroDeEcu -> "Leído de la ECU; corrígelo si el tablero dice otra cosa."
-        else -> "Opcional."
+        estado.odometroDeEcu -> stringResource(R.string.workshop_new_session_odometer_ecu_hint)
+        else -> stringResource(R.string.workshop_new_session_optional)
     }
     OutlinedTextField(
         value = estado.odometro,
         onValueChange = onCambio,
-        label = { Text("Odómetro (km)", style = RevScopeType.body) },
+        label = { Text(stringResource(R.string.workshop_new_session_odometer), style = RevScopeType.body) },
         supportingText = { Text(ayuda, style = RevScopeType.bodySmall) },
         isError = estado.errorOdometro != null,
         singleLine = true,
@@ -145,11 +163,10 @@ private fun coloresCampo() = OutlinedTextFieldDefaults.colors(
 @Composable
 private fun SeccionBase(estado: NuevaSesionEstado, onBase: (Long?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.selectableGroup()) {
-        EncabezadoSeccion("Chequeo base para comparar")
+        EncabezadoSeccion(stringResource(R.string.workshop_new_session_baseline_title))
         if (estado.bases.isEmpty()) {
             Text(
-                "No hay chequeos de salud anteriores de este vehículo. La sesión se abre sin base; si corres un chequeo " +
-                    "dentro de la sesión, la próxima podrá compararse con él.",
+                stringResource(R.string.workshop_new_session_no_baselines),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.body,
             )
@@ -158,7 +175,11 @@ private fun SeccionBase(estado: NuevaSesionEstado, onBase: (Long?) -> Unit) {
         estado.bases.forEach { base ->
             OpcionBase(base.fecha, base.resumen, estado.baseElegida == base.id) { onBase(base.id) }
         }
-        OpcionBase("Sin chequeo base", "No comparar con un chequeo anterior", estado.baseElegida == null) { onBase(null) }
+        OpcionBase(
+            stringResource(R.string.workshop_new_session_no_baseline),
+            stringResource(R.string.workshop_new_session_no_baseline_description),
+            estado.baseElegida == null,
+        ) { onBase(null) }
     }
 }
 
@@ -198,7 +219,7 @@ private fun TextoError(mensaje: String) {
 private fun BarraAbrir(estado: NuevaSesionEstado, onAbrir: () -> Unit) {
     Surface(color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.navigationBarsPadding().padding(16.dp)) {
-            val texto = if (estado.abriendo) "Abriendo…" else "Abrir sesión"
+            val texto = stringResource(if (estado.abriendo) R.string.workshop_new_session_opening else R.string.workshop_new_session_open)
             BotonPrincipalTaller(texto, onClick = onAbrir, habilitado = estado.puedeAbrir)
         }
     }
@@ -209,23 +230,22 @@ private fun DialogoCerrarAnterior(anterior: SesionPorCerrar, acciones: AccionesN
     AlertDialog(
         onDismissRequest = acciones.onCancelarCierre,
         containerColor = RevScopeColors.SurfaceHigh,
-        title = { Text("Ya hay una sesión abierta", color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
+        title = { Text(stringResource(R.string.workshop_new_session_previous_title), color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
         text = {
             Text(
-                "«${anterior.titulo}», abierta el ${anterior.desde}. Para abrir esta se cierra la anterior; su línea " +
-                    "de tiempo se conserva y puedes verla en Sesiones anteriores.",
+                stringResource(R.string.workshop_new_session_previous_message, anterior.titulo, anterior.desde),
                 color = RevScopeColors.TextPrimary,
                 style = RevScopeType.body,
             )
         },
         confirmButton = {
             TextButton(onClick = acciones.onConfirmarCierre, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Cerrar la anterior y abrir esta", color = RevScopeColors.Accent, style = RevScopeType.label)
+                Text(stringResource(R.string.workshop_new_session_close_previous), color = RevScopeColors.Accent, style = RevScopeType.label)
             }
         },
         dismissButton = {
             TextButton(onClick = acciones.onCancelarCierre, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Cancelar", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                Text(stringResource(R.string.workshop_action_cancel), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
             }
         },
     )

@@ -35,14 +35,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.Context
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.AndroidStringResolver
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.designsystem.CapacidadesEcuCard
+import com.revscope.core.designsystem.rememberUnitFormatter
+import com.revscope.core.common.units.fromMetric
+import com.revscope.core.common.units.labelForMetric
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import kotlinx.coroutines.launch
@@ -83,6 +91,11 @@ fun SensorGraphScreen(
     val capacidades by connectionVm.capacidadesEcu.collectAsState()
     val currentDef = vm.availablePids.find { it.pid == selectedPid }
     val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
+    val locale = LocalConfiguration.current.locales[0]
+    val units = rememberUnitFormatter()
+    val unidadMetrica = currentDef?.unit.orEmpty()
+    val unidadMostrada = units.labelForMetric(unidadMetrica)
     val scope = rememberCoroutineScope()
     // Fresh producer per PID: cancelling a runTransaction mid-flight (old code keyed
     // the effect on `history`) leaves Vico with an empty partial → crash on next update.
@@ -102,7 +115,7 @@ fun SensorGraphScreen(
                     lineSeries {
                         series(
                             x = points.map { (it.timestamp - startMs) / 1000.0 },
-                            y = points.map { it.value },
+                            y = points.map { units.fromMetric(it.value, unidadMetrica) },
                         )
                     }
                 }
@@ -116,22 +129,29 @@ fun SensorGraphScreen(
             .background(RevScopeColors.Background),
     ) {
         BarraConVolver(
-            titulo = if (modoCaptura) "Captura rápida" else "Sensores",
+            titulo = stringResource(if (modoCaptura) R.string.sensors_title_fast_capture else R.string.sensors_title),
             onVolver = onNavigateBack,
             acciones = {
                 IconButton(onClick = { modoCaptura = !modoCaptura }) {
                     Icon(
                         if (modoCaptura) Icons.Default.ShowChart else Icons.Default.Speed,
-                        contentDescription = if (modoCaptura) "Volver a la gráfica" else "Captura rápida",
+                        contentDescription = stringResource(
+                            if (modoCaptura) R.string.sensors_content_description_back_to_graph
+                            else R.string.sensors_content_description_fast_capture,
+                        ),
                         tint = RevScopeColors.Accent,
                     )
                 }
                 if (!modoCaptura) {
                     IconButton(
-                        onClick = { scope.launch { exportSensorHistory(context, currentDef, history) } },
+                        onClick = { scope.launch { exportSensorHistory(context, currentDef, history, resolver) } },
                         enabled = currentDef != null && history.isNotEmpty(),
                     ) {
-                        Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = RevScopeColors.Accent)
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = stringResource(R.string.sensors_content_description_export_csv),
+                            tint = RevScopeColors.Accent,
+                        )
                     }
                 }
             },
@@ -159,7 +179,11 @@ fun SensorGraphScreen(
                 pids = capacidades.pidsAnunciados,
                 pidsPorRango = capacidades.pidsPorRango,
                 tasaEsperada = capacidades.tasaMedidaHz?.let {
-                    "Medida: %.1f Hz por PID · %s".format(it, capacidades.tasaEsperada)
+                    stringResource(
+                        R.string.sensors_measured_expected_rate,
+                        LocaleNumbers.decimal(it, 1, locale),
+                        capacidades.tasaEsperada,
+                    )
                 } ?: capacidades.tasaEsperada,
                 explicacion = capacidades.explicacion,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -191,13 +215,14 @@ fun SensorGraphScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = latestReading?.value?.let { "%.1f".format(it) } ?: "--",
+                        text = latestReading?.value?.let { LocaleNumbers.decimal(units.fromMetric(it, unidadMetrica), 1, locale) }
+                            ?: stringResource(R.string.sensors_no_sensor_reading),
                         fontSize = 40.sp,
                         fontWeight = FontWeight.Bold,
                         color = RevScopeColors.Accent,
                     )
                     Text(
-                        text = currentDef.unit,
+                        text = unidadMostrada,
                         fontSize = 16.sp,
                         color = RevScopeColors.TextSecondary,
                         modifier = Modifier.padding(bottom = 6.dp),
@@ -211,10 +236,10 @@ fun SensorGraphScreen(
                 CartesianChartHost(
                     chart = rememberCartesianChart(
                         rememberLineCartesianLayer(),
-                        startAxis = VerticalAxis.rememberStart(title = currentDef?.unit),
+                        startAxis = VerticalAxis.rememberStart(title = currentDef?.let { unidadMostrada }),
                         bottomAxis = HorizontalAxis.rememberBottom(
                             valueFormatter = ElapsedTimeFormatter,
-                            title = "tiempo (mm:ss)",
+                            title = stringResource(R.string.sensors_time_axis),
                         ),
                     ),
                     modelProducer = modelProducer,
@@ -231,7 +256,7 @@ fun SensorGraphScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        "Esperando datos del sensor…",
+                        stringResource(R.string.sensors_graph_waiting_sensor_data),
                         color = RevScopeColors.TextSecondary,
                         fontSize = 13.sp,
                     )
@@ -245,6 +270,7 @@ private suspend fun exportSensorHistory(
     context: Context,
     def: PidDefinition?,
     history: List<ObdReading>,
+    resolver: StringResolver,
 ) {
     if (def == null || history.isEmpty()) return
     CsvShare.shareCsv(
@@ -261,5 +287,6 @@ private suspend fun exportSensorHistory(
                 def.unit,
             )
         },
+        resolver = resolver,
     )
 }

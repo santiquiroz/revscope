@@ -24,12 +24,14 @@ android {
 
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+    implementation(project(":core:common"))
     implementation(libs.ferrostar.core)
     implementation(libs.coroutines.android)
     // Solo la anotación: este módulo no necesita el grafo de Hilt, solo declararse inyectable.
     implementation(libs.javax.inject)
     implementation(libs.timber)
     testImplementation(libs.junit)
+    testImplementation(project(":core:ui-testing"))
     // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
     testImplementation(libs.org.json)
     androidTestImplementation(libs.androidx.test.ext)

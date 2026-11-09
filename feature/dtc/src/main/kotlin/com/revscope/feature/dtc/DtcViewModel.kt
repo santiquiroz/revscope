@@ -2,8 +2,9 @@ package com.revscope.feature.dtc
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.intelligence.IntelligenceOrchestrator
-import com.revscope.core.obd.diagnostics.AvisoLecturaDtc
 import com.revscope.core.obd.diagnostics.DtcScan
 import com.revscope.core.obd.diagnostics.FreezeFrame
 import com.revscope.core.obd.diagnostics.RechazoBorradoDtc
@@ -14,6 +15,7 @@ import com.revscope.core.obd.taller.dtc.BaseConocimientoDtc
 import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
+import com.revscope.feature.dtc.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -41,6 +43,8 @@ class DtcViewModel @Inject constructor(
     private val registry: PidRegistry,
     private val registro: RegistroTaller,
     private val guias: BaseConocimientoDtc,
+    private val resolver: StringResolver,
+    private val units: UnitFormatter,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<DtcUiState>(DtcUiState.Idle)
@@ -77,7 +81,12 @@ class DtcViewModel @Inject constructor(
         if (velocidadObservada != null) return
         velocidadObservada = viewModelScope.launch {
             connectionVm.readings.collect { lecturas ->
-                val motivo = motivoBorradoDeshabilitado(lecturas[ReglasBorradoDtc.PID_VELOCIDAD], reloj())
+                val motivo = motivoBorradoDeshabilitado(
+                    lecturas[ReglasBorradoDtc.PID_VELOCIDAD],
+                    reloj(),
+                    resolver,
+                    units,
+                )
                 _detalle.update { it.copy(bloqueoBorrado = motivo) }
             }
         }
@@ -95,7 +104,7 @@ class DtcViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val sesion = registro.marcarPaso(clave, marcado)
-            if (sesion == null) avisar("No se pudo guardar el paso: la sesión ya no está abierta")
+            if (sesion == null) avisar(resolver.get(R.string.dtc_save_step_session_closed))
             _detalle.update { it.copy(sesion = sesionDtcUi(sesion)) }
         }
     }
@@ -105,16 +114,16 @@ class DtcViewModel @Inject constructor(
         if (_detalle.value.guardandoEnSesion) return
         _detalle.update { it.copy(guardandoEnSesion = true) }
         viewModelScope.launch {
-            registro.abrirSesion(solicitudDesdeLectura(scan))
+            registro.abrirSesion(solicitudDesdeLectura(scan, resolver))
                 .onSuccess { sesion ->
                     val anotada = registro.anotarLecturaDtc(scan) != null
                     val conPasos = trasladarPasosSinSesion() ?: sesion
                     _detalle.update {
                         it.copy(sesion = sesionDtcUi(conPasos), lecturaEnSesion = anotada, pasosSinSesion = emptySet())
                     }
-                    avisar("Lectura guardada en la sesión «${sesion.titulo}»")
+                    avisar(resolver.get(R.string.dtc_reading_saved_to_session, sesion.titulo))
                 }
-                .onFailure { e -> avisar(e.message ?: "No se pudo abrir la sesión") }
+                .onFailure { e -> avisar(e.message ?: resolver.get(R.string.dtc_open_session_failed)) }
             _detalle.update { it.copy(guardandoEnSesion = false) }
         }
     }
@@ -156,14 +165,14 @@ class DtcViewModel @Inject constructor(
 
     private fun mostrarLectura(scan: DtcScan) {
         ultimaLectura = scan
-        val codigos = agruparPorCodigo(scan.todos, guias::guia)
+        val codigos = agruparPorCodigo(scan.todos, guias::guia, resolver)
         _detalle.update {
             it.copy(
-                mil = milUi(scan),
+                mil = milUi(scan, resolver),
                 freezeFrame = freezeFrameUi(scan.freezeFrame),
                 guiasAbiertas = guiasAbiertasAlLeer(codigos),
-                avisoLectura = AvisoLecturaDtc.de(scan),
-                sinCodigos = AvisoLecturaDtc.sinCodigos(scan),
+                avisoLectura = avisoLectura(scan, resolver),
+                sinCodigos = textoSinCodigos(scan, resolver),
             )
         }
         _state.value = DtcUiState.HasCodes(codigos)
@@ -198,14 +207,16 @@ class DtcViewModel @Inject constructor(
     }
 
     private fun freezeFrameItem(reading: ObdReading): FreezeFrameItem {
-        val label = registry.getDefinition(reading.pid)?.nameEs ?: reading.pid
-        val value = if (reading.value % 1.0 == 0.0) "${reading.value.toInt()}" else "%.1f".format(reading.value)
-        return FreezeFrameItem(label = label, value = "$value ${reading.unit}")
+        val definition = registry.getDefinition(reading.pid)
+        val label = definition?.let {
+            if (resolver.locale.language == "en") it.name else it.nameEs
+        } ?: reading.pid
+        return FreezeFrameItem(label = label, value = valorFreezeFrame(reading.value, reading.unit, units, resolver.locale))
     }
 
-    private fun mensajeDeError(e: Throwable, porDefecto: String = "Error leyendo los códigos"): String =
-        if (e is IllegalStateException && e.message == "Not connected") "Conecta el adaptador primero"
-        else e.message ?: porDefecto
+    private fun mensajeDeError(e: Throwable, porDefecto: Int = R.string.dtc_read_error): String =
+        if (e is IllegalStateException && e.message == "Not connected") resolver.get(R.string.dtc_connect_adapter_first) // i18n-ignore
+        else e.message ?: resolver.get(porDefecto)
 
     private fun rechazoConfirmado(connectionVm: ConnectionViewModel, ahoraMs: Long): RechazoBorradoDtc? =
         ReglasBorradoDtc.evaluar(
@@ -222,7 +233,7 @@ class DtcViewModel @Inject constructor(
                     _state.value = DtcUiState.Borrado(resultadoBorradoUi(borrado))
                     viewModelScope.launch { registro.anotarBorradoDtc(borrado) }
                 }
-                .onFailure { e -> _state.value = DtcUiState.Error(mensajeDeError(e, "Error borrando los códigos")) }
+                .onFailure { e -> _state.value = DtcUiState.Error(mensajeDeError(e, R.string.dtc_clear_error)) }
         }
     }
 
@@ -252,7 +263,7 @@ class DtcViewModel @Inject constructor(
         if (marcado) pasos + clave else pasos - clave
 
     private companion object {
-        const val LEASE_OWNER = "ui:dtc"
-        const val FUENTE_SIN_CLAVE = "no_key"
+        const val LEASE_OWNER = "ui:dtc" // i18n-ignore
+        const val FUENTE_SIN_CLAVE = "no_key" // i18n-ignore
     }
 }

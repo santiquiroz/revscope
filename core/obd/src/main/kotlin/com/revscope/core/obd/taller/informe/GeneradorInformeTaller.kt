@@ -1,8 +1,10 @@
 package com.revscope.core.obd.taller.informe
 
 import android.content.Context
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.dtc.BaseConocimientoDtc
 import com.revscope.core.obd.taller.sesion.AnalizadorSesion
 import com.revscope.core.obd.taller.sesion.TallerRepository
@@ -13,6 +15,7 @@ import javax.inject.Inject
 
 class GeneradorInformeTaller @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val resolver: StringResolver,
     private val repositorio: TallerRepository,
     private val vehiculos: VehicleProfileDao,
     private val analizador: AnalizadorSesion,
@@ -28,7 +31,7 @@ class GeneradorInformeTaller @Inject constructor(
         val conocimiento = claveModelo?.let { repositorio.conocimiento(it) }
         val vehiculo = perfil ?: VehiculoTaller(
             sesion.vehiculoId,
-            "Vehículo #${sesion.vehiculoId}",
+            resolver.get(R.string.obd_report_unknown_vehicle, sesion.vehiculoId),
             claveModelo,
             conocimiento?.tipo ?: VehicleType.MOTORCYCLE,
         )
@@ -47,5 +50,5 @@ class GeneradorInformeTaller @Inject constructor(
 
     private fun versionInstalada(): String = runCatching {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
-    }.getOrNull()?.takeIf(String::isNotBlank) ?: "desconocida"
+    }.getOrNull()?.takeIf(String::isNotBlank) ?: resolver.get(R.string.obd_report_unknown_app_version)
 }

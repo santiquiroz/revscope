@@ -29,7 +29,7 @@ object OsmCameraSource {
             "node[\"highway\"=\"speed_camera\"]($around);" +
             "way[\"highway\"=\"speed_camera\"]($around);" +
             "relation[\"type\"=\"enforcement\"][\"enforcement\"=\"maxspeed\"]($around);" +
-            ");out center;"
+            ");out center;" // i18n-ignore
     }
 
     private fun fetchOverpassJson(query: String): String {

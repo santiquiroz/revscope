@@ -14,7 +14,7 @@ object Candump {
         val segundos = epochMs / 1000
         val micros = (epochMs % 1000) * 1000
         val datos = trama.datos.joinToString("") { "%02X".format(it) }
-        return "($segundos.${"%06d".format(micros)}) $interfaz ${IdCan.texto(trama.id, trama.extendido)}#$datos"
+        return "($segundos.${"%06d".format(micros)}) $interfaz ${IdCan.texto(trama.id, trama.extendido)}#$datos" // i18n-ignore
     }
 
     fun parsear(linea: String): LineaCandump? {

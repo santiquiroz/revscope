@@ -37,6 +37,7 @@ dependencies {
     // org.json existe en el runtime de Android pero no en el classpath de tests JVM.
     testImplementation(libs.org.json)
     testImplementation(libs.coroutines.test)
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

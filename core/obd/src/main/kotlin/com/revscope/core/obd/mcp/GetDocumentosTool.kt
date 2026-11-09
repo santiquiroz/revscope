@@ -1,12 +1,17 @@
 package com.revscope.core.obd.mcp
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.detect
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.legal.DocumentStatusCalculator
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.session.ObdSessionManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
@@ -17,6 +22,8 @@ class GetDocumentosTool @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val settings: DataStore<Preferences>,
     private val aiRulesSource: RestrictionRulesSource,
+    private val resolver: StringResolver,
+    @ApplicationContext private val context: Context,
 ) : McpTool {
 
     override val name = "get_documentos"
@@ -34,7 +41,10 @@ class GetDocumentosTool @Inject constructor(
         val aiFallback = profile.picoPlacaCity
             ?.takeIf { DocumentStatusCalculator.needsAiFallback(it, overrideRules, now) }
             ?.let { runCatching { aiRulesSource.rulesForCity(it) }.getOrNull() }
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
+        val statuses = DocumentStatusCalculator.calculate(
+            documents, overrideRules, now, aiFallbackRules = aiFallback, resolver = resolver,
+            region = Region.detect(context),
+        )
         return JSONObject()
             .put(
                 "documentos",

@@ -1,10 +1,14 @@
 package com.revscope.feature.dashboard
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.detect
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.entities.VehicleProfileEntity
 import com.revscope.core.data.db.entities.VehicleType
@@ -21,6 +25,7 @@ import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.viewmodel.ConnectionViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -44,7 +49,11 @@ class DashboardViewModel @Inject constructor(
     private val aiRulesSource: RestrictionRulesSource,
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
     private val registry: PidRegistry,
+    internal val resolver: StringResolver,
+    @ApplicationContext context: Context,
 ) : ViewModel() {
+
+    private val region = Region.detect(context)
 
     /** Nueva versión disponible en GitHub — null si estás al día o sin red. */
     val updateAvailable: StateFlow<com.revscope.core.obd.update.UpdateChecker.Update?> = updateChecker.available
@@ -62,7 +71,7 @@ class DashboardViewModel @Inject constructor(
     val redlineRpm: Int get() = alertsEngine.currentRedlineRpm
 
     fun disponibilidad(pid: String, nombre: String): DisponibilidadPid =
-        DisponibilidadPid.resolver(pid, nombre, registry)
+        DisponibilidadPid.resolver(pid, nombre, registry, resolver)
 
     /**
      * Big speedometer source while connected via OBD: true = GPS_SPEED, false = PID 0D.
@@ -76,6 +85,16 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             settings.edit { prefs -> prefs[PreferencesKeys.SPEED_SOURCE_GPS] = useGps }
         }
+    }
+
+    val avisoBus: StateFlow<String?> = sessionManager.avisoBus
+    private var ultimoAvisoBus: String? = null
+
+    /** true solo la primera vez que llega cada aviso del bus: volver al tablero no lo repite. */
+    fun esAvisoBusNuevo(aviso: String): Boolean {
+        if (aviso == ultimoAvisoBus) return false
+        ultimoAvisoBus = aviso
+        return true
     }
 
     /** True mientras el usuario nunca configuró un adaptador — el dashboard prioriza viaje GPS y mapa. */
@@ -95,7 +114,7 @@ class DashboardViewModel @Inject constructor(
 
     /**
      * D2: hero mode del dashboard (viaje GPS + mapa por delante de los gauges) cuando el
-     * usuario eligió "sin adaptador" en el wizard O nunca vinculó uno — inferencia por
+     * usuario eligió «sin adaptador» en el wizard O nunca vinculó uno — inferencia por
      * ausencia de [PreferencesKeys.ADAPTER_ADDRESS] — y no hay conexión OBD activa.
      */
     val gpsHeroMode: StateFlow<Boolean> = combine(
@@ -123,7 +142,7 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    /** Thin contextual banner ("⚠ SOAT vencido · Pico y placa hasta las 20:00"); null when all clear. */
+    /** Thin contextual banner (p. ej. «⚠ SOAT vencido · Pico y placa hasta las 20:00»); null when all clear. */
     val alDiaBanner: StateFlow<String?> = combine(
         sessionManager.activeProfile,
         settings.data.map { it[PreferencesKeys.LICENSE_EXPIRES_AT] },
@@ -194,8 +213,11 @@ class DashboardViewModel @Inject constructor(
         val documents = DocumentStatusCalculator.fromProfile(profile, licenseExpiresAt)
         val now = System.currentTimeMillis()
         val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, now)
-        val statuses = DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
-        return DocumentStatusCalculator.bannerText(statuses)
+        val statuses = DocumentStatusCalculator.calculate(
+            documents, overrideRules, now, aiFallbackRules = aiFallback, resolver = resolver,
+            region = region,
+        )
+        return DocumentStatusCalculator.bannerText(statuses, resolver)
     }
 
     private suspend fun aiFallbackFor(

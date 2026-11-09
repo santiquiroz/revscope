@@ -6,6 +6,7 @@ import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.intelligence.provider.AiProviderFactory
 import com.revscope.core.intelligence.provider.AiRequest
 import com.revscope.core.obd.connection.ConnectionState
@@ -42,6 +43,7 @@ class MechanicChatViewModel @Inject constructor(
     private val healthReportDao: HealthReportDao,
     private val sessionDao: SessionDao,
     private val maintenanceDao: MaintenanceDao,
+    private val stringResolver: StringResolver,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MechanicChatUiState())
@@ -73,7 +75,7 @@ class MechanicChatViewModel @Inject constructor(
             _state.value = _state.value.copy(hasProvider = false)
             return
         }
-        systemPrompt = MechanicChatContextBuilder.buildSystemPrompt(buildVehicleContext())
+        systemPrompt = MechanicChatContextBuilder.buildSystemPrompt(buildVehicleContext(), stringResolver)
         _state.value = _state.value.copy(hasProvider = true)
     }
 
@@ -111,7 +113,9 @@ class MechanicChatViewModel @Inject constructor(
 
     private fun appendSystemError() {
         _state.value = _state.value.copy(
-            messages = _state.value.messages + MechanicChatMessage.SystemError(ERROR_MESSAGE),
+            messages = _state.value.messages + MechanicChatMessage.SystemError(
+                stringResolver.get(R.string.workshop_mechanic_chat_error),
+            ),
             isSending = false,
         )
     }
@@ -168,7 +172,7 @@ class MechanicChatViewModel @Inject constructor(
         if (items.isEmpty()) return null
         val odometro = odometroYaCalculado ?: odometroActualPara(profile)
         val estados = MaintenanceCalculator.calculate(odometro, items)
-        return MaintenanceCalculator.detalleTexto(estados)
+        return MaintenanceCalculator.detalleTexto(estados, stringResolver)
     }
 
     /** Rethrows [CancellationException] instead of swallowing it, unlike [kotlin.runCatching]. */
@@ -187,6 +191,5 @@ class MechanicChatViewModel @Inject constructor(
     private companion object {
         const val MAX_TOKENS = 800
         const val RECENT_TRIPS_LIMIT = 3
-        const val ERROR_MESSAGE = "No se pudo consultar — revisa tu proveedor de IA en Ajustes"
     }
 }

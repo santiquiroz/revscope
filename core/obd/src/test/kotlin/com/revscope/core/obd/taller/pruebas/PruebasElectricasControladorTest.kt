@@ -115,7 +115,7 @@ class PruebasElectricasControladorTest {
         advanceTimeBy(300)
 
         val fallida = m.controlador.estado.value as EstadoPrueba.Fallida
-        assertEquals(ControladorPruebaGuiada.MOTIVO_ENLACE_PERDIDO, fallida.motivo)
+        assertEquals("Se perdió el enlace con el adaptador", fallida.motivo)
         assertTrue(fallida.reintentable)
     }
 

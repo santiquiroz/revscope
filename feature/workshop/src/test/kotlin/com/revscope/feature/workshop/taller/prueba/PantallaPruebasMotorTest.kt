@@ -12,7 +12,7 @@ import org.junit.Test
 
 class PantallaPruebasMotorTest {
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
 
     private fun paso(e: EstadoPrueba.EnPaso, serie: SerieVivo) =
         (pantalla.fase(EntradaPantalla(e, serieVivo = serie, bandas = PruebasMotorBenelli.bandas)) as FasePantalla.Paso).paso
@@ -40,7 +40,7 @@ class PantallaPruebasMotorTest {
 
         assertEquals("41 °C", p.vivo!!.principal.plano())
         assertEquals("Últimos 10 s, en °C", p.tituloGrafica)
-        assertEquals(TextosPrueba.ACCION_TERMINAR, p.accionPrincipal)
+        assertEquals("Terminar", p.accionPrincipal)
         assertTrue(p.grafica.bandas.isEmpty())
         // 40-41 °C no se estira a toda la altura: la escala abarca al menos 10 °C.
         assertEquals(10.0, p.grafica.rangoY!!.endInclusive - p.grafica.rangoY!!.start, 1e-9)

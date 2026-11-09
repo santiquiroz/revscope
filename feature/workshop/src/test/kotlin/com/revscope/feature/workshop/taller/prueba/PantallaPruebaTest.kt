@@ -13,7 +13,7 @@ import org.junit.Test
 
 class PantallaPruebaTest {
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
 
     private fun paso(indice: Int, fase: FasePaso, restanteMs: Long?) =
         (pantalla.fase(EntradaPantalla(BarridoBenelli.enPaso(indice, fase, restanteMs), serieVivo = BarridoBenelli.serieMedio(), bandas = BarridoBenelli.bandas)) as FasePantalla.Paso).paso
@@ -28,7 +28,7 @@ class PantallaPruebaTest {
 
     @Test
     fun `solo las pruebas del catálogo disponible se pueden abrir`() {
-        val parcial = PantallaPrueba(CatalogoPruebas::definicion, listOf(TipoPrueba.TPS_BARRIDO))
+        val parcial = PantallaPrueba(CatalogoPruebas::definicion, listOf(TipoPrueba.TPS_BARRIDO), resolverPrueba())
 
         val fase = parcial.fase(EntradaPantalla(EstadoPrueba.Inactiva)) as FasePantalla.Elegir
 
@@ -64,7 +64,7 @@ class PantallaPruebaTest {
         val p = paso(1, FasePaso.POSICIONANDO, null)
 
         assertEquals(2 to 5, p.indice to p.total)
-        assertEquals(TextosPrueba.ACCION_LISTO, p.accionPrincipal)
+        assertEquals("Listo, lo estoy sosteniendo", p.accionPrincipal)
         assertNull(p.restanteS)
         assertEquals("Paso 2 de 5: Medio. Posiciona el acelerador y toca Listo", p.anuncio)
         assertTrue(p.confirmarAlCancelar)

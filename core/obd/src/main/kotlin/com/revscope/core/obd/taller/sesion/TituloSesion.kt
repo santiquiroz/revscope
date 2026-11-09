@@ -1,14 +1,17 @@
 package com.revscope.core.obd.taller.sesion
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
+
 object TituloSesion {
 
-    const val POR_DEFECTO = "Diagnóstico"
     private const val MAX_CARACTERES = 80
 
-    fun de(solicitud: SolicitudSesion): String =
+    fun de(solicitud: SolicitudSesion, resolver: StringResolver): String =
         listOfNotNull(
             solicitud.titulo,
-            solicitud.sintomas.minByOrNull { it.ordinal }?.etiqueta,
+            solicitud.sintomas.minByOrNull { it.ordinal }?.etiqueta(resolver),
             solicitud.sintomasTexto.lineSequence().firstOrNull(),
-        ).map { it.trim() }.firstOrNull { it.isNotEmpty() }?.take(MAX_CARACTERES) ?: POR_DEFECTO
+        ).map { it.trim() }.firstOrNull { it.isNotEmpty() }?.take(MAX_CARACTERES)
+            ?: resolver.get(R.string.obd_session_default_title)
 }

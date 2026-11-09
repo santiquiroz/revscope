@@ -1,5 +1,6 @@
 package com.revscope.core.maps
 
+import com.revscope.core.uitesting.XmlStringResolver
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -7,6 +8,22 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+
+private val mapStyleResolver = XmlStringResolver.es(com.revscope.core.maps.R::class.java)
+
+private fun MapStyleProvider.styleJson(
+    tilesUrl: String?,
+    dark: Boolean,
+    rasterFallback: Boolean = true,
+    layersJson: String? = null,
+): String = MapStyleProvider.styleJson(
+    tilesUrl = tilesUrl,
+    dark = dark,
+    rasterFallback = rasterFallback,
+    layersJson = layersJson,
+    resolver = mapStyleResolver,
+)
+
 
 private const val TILES_URL = "pmtiles://https://x/y.pmtiles"
 

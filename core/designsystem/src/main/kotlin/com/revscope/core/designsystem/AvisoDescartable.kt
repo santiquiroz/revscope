@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +39,7 @@ fun AvisoDescartable(
             modifier = Modifier.weight(1f).padding(vertical = 10.dp),
         )
         IconButton(onClick = onDescartar) {
-            Icon(Icons.Default.Close, contentDescription = "Cerrar aviso", tint = RevScopeColors.TextSecondary)
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.ds_close_notice), tint = RevScopeColors.TextSecondary)
         }
     }
 }

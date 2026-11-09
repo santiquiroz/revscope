@@ -1,7 +1,14 @@
 package com.revscope.core.maps
 
+import com.revscope.core.uitesting.XmlStringResolver
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 
 private const val POLL_INTERVAL_MS = 10L
 private const val POLL_TIMEOUT_MS = 5_000L
@@ -25,7 +33,7 @@ class MapDownloadServiceTest {
 
         assertTrue(finalState.exists)
         assertEquals(400L, finalState.sizeBytes)
-        assertFalse(partFile(dir).exists())
+        assertTrue(partFiles(dir).isEmpty())
         assertTrue(targetFile(dir).isFile)
     }
 
@@ -63,7 +71,22 @@ class MapDownloadServiceTest {
         val state = awaitState<MapDownloadState.Error>(service)
 
         assertTrue(state.message.isNotBlank())
-        assertFalse(partFile(dir).exists())
+        assertTrue(partFiles(dir).isEmpty())
+    }
+
+    @Test
+    fun `error de red sin mensaje usa el texto por defecto en ingles cuando el idioma es ingles`() = runBlocking {
+        val dir = tempMapsDir()
+        val service = service(
+            dir,
+            bytesSource = FakeMapBytesSource(totalBytes = 100L, failWith = IOException()),
+            resolver = XmlStringResolver.en(R::class.java),
+        )
+
+        service.download(allowCellular = true)
+        val state = awaitState<MapDownloadState.Error>(service)
+
+        assertEquals("Network error while downloading the offline map", state.message)
     }
 
     @Test
@@ -80,7 +103,7 @@ class MapDownloadServiceTest {
         val state = awaitState<MapDownloadState.Error>(service)
 
         assertTrue(state.message.isNotBlank())
-        assertFalse(partFile(dir).exists())
+        assertTrue(partFiles(dir).isEmpty())
     }
 
     @Test
@@ -94,7 +117,7 @@ class MapDownloadServiceTest {
 
         assertTrue(finalState.exists)
         assertEquals(400L, finalState.sizeBytes)
-        assertFalse(partFile(dir).exists())
+        assertTrue(partFiles(dir).isEmpty())
     }
 
     @Test
@@ -107,7 +130,7 @@ class MapDownloadServiceTest {
         val finalState = awaitState<MapDownloadState.Idle>(service)
 
         assertEquals(400L, finalState.sizeBytes)
-        assertFalse(partFile(dir).exists())
+        assertTrue(partFiles(dir).isEmpty())
     }
 
     @Test
@@ -142,7 +165,7 @@ class MapDownloadServiceTest {
         val state = awaitState<MapDownloadState.Error>(service)
 
         assertTrue(state.message.isNotBlank())
-        assertFalse(partFile(dir).exists())
+        assertTrue(partFiles(dir).isEmpty())
     }
 
     @Test
@@ -154,7 +177,7 @@ class MapDownloadServiceTest {
         val state = awaitState<MapDownloadState.Error>(service)
 
         assertTrue(state.message.isNotBlank())
-        assertFalse(partFile(dir).exists())
+        assertTrue(partFiles(dir).isEmpty())
     }
 
     @Test
@@ -188,12 +211,75 @@ class MapDownloadServiceTest {
         service.cancel()
     }
 
+    @Test
+    fun `la limpieza tardia de un intento cancelado no borra el part del intento nuevo`() = runBlocking {
+        val dir = tempMapsDir()
+        val source = RacingBytesSource()
+        val service = service(dir, bytesSource = source)
+
+        service.download(allowCellular = true)
+        source.firstStarted.await()
+        service.cancel()
+        service.download(allowCellular = true)
+
+        val finalState = withTimeout(POLL_TIMEOUT_MS) {
+            while ((service.state.value as? MapDownloadState.Idle)?.exists != true) delay(POLL_INTERVAL_MS)
+            service.state.value as MapDownloadState.Idle
+        }
+        assertTrue(source.secondFileSurvived)
+        assertEquals(RacingBytesSource.SECOND_SIZE.toLong(), finalState.sizeBytes)
+        assertTrue(targetFile(dir).readBytes().all { it == RacingBytesSource.SECOND_BYTE })
+        assertTrue(partFiles(dir).isEmpty())
+    }
+
+    private class RacingBytesSource : MapBytesSource {
+        private val calls = AtomicInteger(0)
+        val firstStarted = CompletableDeferred<Unit>()
+        private val firstJob = CompletableDeferred<Job>()
+        private val secondStarted = CompletableDeferred<Unit>()
+
+        @Volatile
+        var secondFileSurvived = false
+
+        override suspend fun download(
+            url: String,
+            destination: File,
+            onProgress: (bytesDownloaded: Long, totalBytes: Long) -> Unit,
+        ) {
+            if (calls.incrementAndGet() == 1) firstAttempt(destination) else secondAttempt(destination, onProgress)
+        }
+
+        // Escritura bloqueante que ignora el cancel hasta que el segundo intento ya arrancó: su
+        // catch(CancellationException) corre recién después.
+        private suspend fun firstAttempt(destination: File) {
+            firstJob.complete(currentCoroutineContext()[Job]!!)
+            destination.writeBytes(ByteArray(10) { 1 })
+            firstStarted.complete(Unit)
+            withContext(NonCancellable) { secondStarted.await() }
+            currentCoroutineContext().ensureActive()
+        }
+
+        private suspend fun secondAttempt(destination: File, onProgress: (Long, Long) -> Unit) {
+            destination.writeBytes(ByteArray(SECOND_SIZE) { SECOND_BYTE })
+            secondStarted.complete(Unit)
+            firstJob.await().join()
+            secondFileSurvived = destination.isFile && destination.length() == SECOND_SIZE.toLong()
+            onProgress(SECOND_SIZE.toLong(), SECOND_SIZE.toLong())
+        }
+
+        companion object {
+            const val SECOND_SIZE = 300
+            const val SECOND_BYTE: Byte = 2
+        }
+    }
+
     private fun service(
         dir: File,
         isOnWifi: () -> Boolean = { true },
         bytesSource: MapBytesSource,
         usableSpaceBytes: () -> Long = { Long.MAX_VALUE / 2 },
-    ) = MapDownloadService(dir, isOnWifi, bytesSource, usableSpaceBytes)
+        resolver: com.revscope.core.common.i18n.StringResolver = XmlStringResolver.es(R::class.java),
+    ) = MapDownloadService(dir, isOnWifi, bytesSource, usableSpaceBytes, resolver)
 
     private fun tempMapsDir(): File =
         File.createTempFile("maps-test", "").apply {
@@ -203,6 +289,8 @@ class MapDownloadServiceTest {
         }
 
     private fun partFile(dir: File) = File(dir, "${MapStyleProvider.PMTILES_FILE_NAME}.part")
+    private fun partFiles(dir: File): List<File> =
+        dir.listFiles { f -> f.name.startsWith("${MapStyleProvider.PMTILES_FILE_NAME}.part") }?.toList().orEmpty()
     private fun targetFile(dir: File) = File(dir, MapStyleProvider.PMTILES_FILE_NAME)
 
     private suspend inline fun <reified T : MapDownloadState> awaitState(service: MapDownloadService): T =
@@ -219,7 +307,7 @@ class MapDownloadServiceTest {
 
     private suspend fun awaitPartFileGone(dir: File) {
         withTimeout(POLL_TIMEOUT_MS) {
-            while (partFile(dir).exists()) delay(POLL_INTERVAL_MS)
+            while (partFiles(dir).isNotEmpty()) delay(POLL_INTERVAL_MS)
         }
     }
 }

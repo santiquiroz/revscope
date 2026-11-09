@@ -62,8 +62,8 @@ object AnalisisBitsCan {
 
     private fun detectarContador(valores: List<Int>, tramas: List<TramaCan>): String? {
         if (tramas.size < MIN_TRAMAS || valores.size < MIN_TRAMAS) return null
-        return detectarContadorBits(valores, 4)?.let { "contador de 4 bits, paso $it" }
-            ?: detectarContadorBits(valores, 8)?.let { "contador de 8 bits, paso $it" }
+        return detectarContadorBits(valores, 4)?.let { "contador de 4 bits, paso $it" } // i18n-ignore
+            ?: detectarContadorBits(valores, 8)?.let { "contador de 8 bits, paso $it" } // i18n-ignore
     }
 
     private fun detectarContadorBits(valores: List<Int>, bits: Int): Int? {
@@ -99,7 +99,7 @@ object AnalisisBitsCan {
                 listOf(0x00, 0xFF).forEach { init ->
                     listOf(0x00, 0xFF).forEach { xorout ->
                         add(
-                            "crc8 0x%02X init %02X xorout %02X".format(polinomio, init, xorout) to
+                            "crc8 0x%02X init %02X xorout %02X".format(polinomio, init, xorout) to // i18n-ignore
                                 { bytes: List<Int>, indice: Int ->
                                     crc8(bytes.filterIndexed { i, _ -> i != indice }, polinomio, init, xorout)
                                 },

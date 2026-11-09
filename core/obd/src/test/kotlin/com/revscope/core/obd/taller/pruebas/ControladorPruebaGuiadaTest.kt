@@ -5,6 +5,7 @@ import com.revscope.core.obd.taller.pruebas.AnalizadorBarridoTps.Pasos
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.Veredicto
 import com.revscope.core.obd.telemetry.captura.CapturaRapida
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -20,7 +21,15 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
+private const val ENLACE_PERDIDO = "Se perdió el enlace con el adaptador"
+
 class ControladorPruebaGuiadaTest {
+
+    private val ingles = XmlStringResolver.en(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
 
     @get:Rule
     val carpeta = TemporaryFolder()
@@ -128,6 +137,19 @@ class ControladorPruebaGuiadaTest {
     }
 
     @Test
+    fun `en ingles anuncia el paso con su instruccion y el cierre`() = runTest {
+        val m = MontajePrueba(this, carpeta.root, resolver = ingles)
+
+        m.iniciarTps()
+        val anuncio = m.voz.dichos.single()
+
+        assertTrue(anuncio, anuncio.startsWith("Step 1 of 5. "))
+        assertTrue(anuncio, anuncio.endsWith(". Release the throttle completely and do not touch it. When in position, tap Ready."))
+        m.controlador.cancelar()
+        assertEquals("Test canceled", m.voz.dichos.last())
+    }
+
+    @Test
     fun `el paso que graba solo no acepta listo y arranca grabando`() = runTest {
         val m = montaje()
         m.iniciarTps()
@@ -215,7 +237,7 @@ class ControladorPruebaGuiadaTest {
         advanceTimeBy(150)
         val fallida = m.controlador.estado.first { it is EstadoPrueba.Fallida } as EstadoPrueba.Fallida
 
-        assertEquals(ControladorPruebaGuiada.MOTIVO_ENLACE_PERDIDO, fallida.motivo)
+        assertEquals(ENLACE_PERDIDO, fallida.motivo)
         assertTrue(fallida.reintentable)
         val evento = m.repositorio.eventos(sesion.id).single { it.tipo == TipoEvento.PRUEBA_GUIADA }
         assertEquals("Barrido del TPS sin terminar", evento.titulo)
@@ -238,7 +260,7 @@ class ControladorPruebaGuiadaTest {
         advanceTimeBy(150)
         val fallida = m.controlador.estado.first { it is EstadoPrueba.Fallida } as EstadoPrueba.Fallida
 
-        assertEquals(ControladorPruebaGuiada.MOTIVO_ENLACE_PERDIDO, fallida.motivo)
+        assertEquals(ENLACE_PERDIDO, fallida.motivo)
         assertFalse("la prueba suelta la captura", m.captura.activa())
     }
 
@@ -276,7 +298,7 @@ class ControladorPruebaGuiadaTest {
         runCurrent()
 
         assertEquals("Ya hay una prueba guiada en curso: termínala o cancélala", segunda.exceptionOrNull()?.message)
-        assertEquals(ControladorPruebaGuiada.MOTIVO_USUARIO, (cancelada as EstadoPrueba.Cancelada).motivo)
+        assertEquals("Cancelada por el usuario", (cancelada as EstadoPrueba.Cancelada).motivo)
         assertFalse(m.captura.activa())
         assertTrue(m.repositorio.eventos(sesion.id).none { it.tipo == TipoEvento.PRUEBA_GUIADA })
         assertEquals(EstadoPrueba.Inactiva, m.controlador.cerrar())

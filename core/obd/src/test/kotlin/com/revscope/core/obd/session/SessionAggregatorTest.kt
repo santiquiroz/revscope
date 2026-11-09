@@ -1,7 +1,9 @@
 package com.revscope.core.obd.session
 
 import com.revscope.core.data.db.entities.GpsPointEntity
+import com.revscope.core.obd.trip.FuelCostCalculator
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -50,6 +52,19 @@ class SessionAggregatorTest {
         val points = (0..3).map { i -> gpsPoint(i * 1_000L, 6.2442 + i * 0.001, -75.5812, 40f) }
         val motion = SessionAggregator.gpsFallbackMotion(points)
         assertEquals(0.333, motion.distanceKm.toDouble(), 0.01)
+    }
+
+    @Test
+    fun `without a fuel price the trip keeps liters but has no cost`() {
+        val fuel = SessionAggregator.tripFuel(FuelCostCalculator.FuelResult(2.0, 0.0, false), pricePerGallon = null)
+        assertEquals(2.0, fuel.liters, 1e-9)
+        assertNull(fuel.cost)
+    }
+
+    @Test
+    fun `with a fuel price the trip keeps its cost`() {
+        val fuel = SessionAggregator.tripFuel(FuelCostCalculator.FuelResult(2.0, 8_453.0, false), 16_000.0)
+        assertEquals(8_453.0, fuel.cost!!, 1e-9)
     }
 
     @Test

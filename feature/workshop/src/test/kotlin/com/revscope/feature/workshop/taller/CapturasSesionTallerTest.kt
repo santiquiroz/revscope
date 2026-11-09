@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller
 
+import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import com.revscope.core.designsystem.SelectorVehiculo
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.VehiculoEnEncabezado
@@ -10,17 +11,21 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class CapturasSesionTallerTest {
 
     private val selector = VehiculoEnEncabezado("Benelli TNT 150i", esMoto = true, estadoEnlace = "conectado", colorEstado = RevScopeColors.Success)
 
     private fun hub(abierta: Boolean, conexion: ConnectionState) =
-        ResumenHub.de(CasoBenelli.datosHub(abierta), conexion, verTodas = false, zona = BOGOTA)
+        ResumenHub.de(
+            CasoBenelli.datosHub(abierta), conexion, verTodas = false, zona = BOGOTA, locale = Locale("es"),
+            capacidades = CapacidadesEcu.desde(null, emptySet(), com.revscope.feature.workshop.taller.prueba.resolverPrueba()),
+        )
 
     @Test
     fun hubConSesionConectado() = MatrizCaptura.pantalla("TallerHubContent_sesion_conectado", altoMinimoDp = 4400) {

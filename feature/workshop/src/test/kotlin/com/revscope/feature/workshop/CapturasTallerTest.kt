@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop
 
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.obd.legal.DocumentStatusCalculator.DocStatus
 import com.revscope.core.obd.legal.DocumentStatusCalculator.DocType
 import com.revscope.core.obd.legal.DocumentStatusCalculator.Nivel
@@ -33,6 +34,7 @@ class CapturasTallerTest {
             mantenimientoNivel = Nivel.ATENCION,
             mantenimientoDetalle = "Cambio de aceite en 300 km",
             zoneBrief = null,
+            region = Region.CO,
             acciones = AccionesAlDia(),
         )
     }

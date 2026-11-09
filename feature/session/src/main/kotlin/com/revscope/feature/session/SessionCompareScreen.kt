@@ -2,6 +2,7 @@ package com.revscope.feature.session
 
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
@@ -41,6 +42,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,16 +57,16 @@ import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.data.db.entities.SessionEntity
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos
 
 private val RunAColor = Color(0xFFE8FF00)
 private val RunBColor = Color(0xFF3D8BFF)
-
-private val dateFormat = SimpleDateFormat("dd MMM HH:mm", Locale("es"))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,10 +79,10 @@ fun SessionCompareScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Comparar viajes", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.trips_compare_trips), color = RevScopeColors.TextPrimary, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = RevScopeColors.TextPrimary)
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.trips_back), tint = RevScopeColors.TextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = RevScopeColors.Surface),
@@ -90,7 +93,7 @@ fun SessionCompareScreen(
         when (val s = state) {
             SessionCompareViewModel.UiState.Loading -> Box(
                 Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center,
-            ) { Text("Cargando…", color = RevScopeColors.TextSecondary) }
+            ) { Text(stringResource(R.string.trips_loading), color = RevScopeColors.TextSecondary) }
 
             is SessionCompareViewModel.UiState.Error -> Box(
                 Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center,
@@ -101,6 +104,19 @@ fun SessionCompareScreen(
             )
         }
     }
+}
+
+@Composable
+private fun SprintCompareRow(a: SessionEntity, b: SessionEntity, metric: Boolean) {
+    val msA = if (metric) a.best0to60Ms else a.best0to60mphMs
+    val msB = if (metric) b.best0to60Ms else b.best0to60mphMs
+    CompareRow(
+        stringResource(if (metric) R.string.trips_0_60 else R.string.trips_0_60_mph),
+        msA?.let { "%.2fs".format(it / 1000.0) } ?: "—",
+        msB?.let { "%.2fs".format(it / 1000.0) } ?: "—",
+        // lower is better
+        highlightMax = -(msA ?: Long.MAX_VALUE).compareTo(msB ?: Long.MAX_VALUE),
+    )
 }
 
 // A y B no se distinguen solo por el color: A es continua y B discontinua.
@@ -117,12 +133,15 @@ private fun lineasComparacion(): LineCartesianLayer.LineProvider = LineCartesian
 )
 
 @Composable
-private fun CompareContent(
+internal fun CompareContent(
     runA: SessionCompareViewModel.RunData,
     runB: SessionCompareViewModel.RunData,
     showLean: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalConfiguration.current.locales[0]
+    val dateFormat = remember(locale) { SimpleDateFormat("dd MMM HH:mm", locale) } // i18n-ignore
+    val units = rememberUnitFormatter()
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -132,60 +151,58 @@ private fun CompareContent(
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                "A · ${dateFormat.format(Date(runA.session.startedAt))}",
+                stringResource(R.string.trips_compare_run_a, dateFormat.format(Date(runA.session.startedAt))),
                 color = RunAColor, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
             Text(
-                "B · ${dateFormat.format(Date(runB.session.startedAt))}",
+                stringResource(R.string.trips_compare_run_b, dateFormat.format(Date(runB.session.startedAt))),
                 color = RunBColor, fontSize = 13.sp, fontWeight = FontWeight.Bold,
             )
         }
 
-        CompareRow("Duración", runA.durationLabel(), runB.durationLabel())
+        CompareRow(stringResource(R.string.trips_duration), runA.durationLabel(), runB.durationLabel())
         CompareRow(
-            "Distancia",
-            "%.1f km".format(runA.session.distanceKm), "%.1f km".format(runB.session.distanceKm),
+            stringResource(R.string.trips_distance),
+            units.formatDistance(runA.session.distanceKm.toDouble()),
+            units.formatDistance(runB.session.distanceKm.toDouble()),
             highlightMax = runA.session.distanceKm.compareTo(runB.session.distanceKm),
         )
         CompareRow(
-            "Vel. máx", "${runA.session.maxSpeed}", "${runB.session.maxSpeed}",
+            stringResource(R.string.trips_max_speed),
+            units.formatSpeed(runA.session.maxSpeed.toDouble()),
+            units.formatSpeed(runB.session.maxSpeed.toDouble()),
             highlightMax = runA.session.maxSpeed.compareTo(runB.session.maxSpeed),
         )
         CompareRow(
-            "Vel. prom", "${runA.avgSpeedKmh}", "${runB.avgSpeedKmh}",
+            stringResource(R.string.trips_avg_speed),
+            units.formatSpeed(runA.avgSpeedKmh.toDouble()),
+            units.formatSpeed(runB.avgSpeedKmh.toDouble()),
             highlightMax = runA.avgSpeedKmh.compareTo(runB.avgSpeedKmh),
         )
         CompareRow(
-            "RPM máx", "${runA.session.maxRpm}", "${runB.session.maxRpm}",
+            stringResource(R.string.trips_max_rpm), "${runA.session.maxRpm}", "${runB.session.maxRpm}",
             highlightMax = runA.session.maxRpm.compareTo(runB.session.maxRpm),
         )
+        SprintCompareRow(runA.session, runB.session, units.system == UnitSystem.METRIC)
         CompareRow(
-            "0-60",
-            runA.session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
-            runB.session.best0to60Ms?.let { "%.2fs".format(it / 1000.0) } ?: "—",
-            // lower is better
-            highlightMax = -(runA.session.best0to60Ms ?: Long.MAX_VALUE)
-                .compareTo(runB.session.best0to60Ms ?: Long.MAX_VALUE),
-        )
-        CompareRow(
-            "G lat máx",
-            runA.maxAbsG?.let { "%.2f".format(it) } ?: "—",
-            runB.maxAbsG?.let { "%.2f".format(it) } ?: "—",
+            stringResource(R.string.trips_max_g_lat),
+            runA.maxAbsG?.let { LocaleNumbers.decimal(it.toDouble(), 2, locale) } ?: "—",
+            runB.maxAbsG?.let { LocaleNumbers.decimal(it.toDouble(), 2, locale) } ?: "—",
             highlightMax = (runA.maxAbsG ?: 0f).compareTo(runB.maxAbsG ?: 0f),
         )
         if (showLean) {
             CompareRow(
-                "Lean máx",
-                runA.maxLean?.let { "%.0f°".format(it) } ?: "—",
-                runB.maxLean?.let { "%.0f°".format(it) } ?: "—",
+                stringResource(R.string.trips_lean_max),
+                runA.maxLean?.let { stringResource(R.string.trips_lean_value, LocaleNumbers.decimal(it.toDouble(), 0, locale)) } ?: "—",
+                runB.maxLean?.let { stringResource(R.string.trips_lean_value, LocaleNumbers.decimal(it.toDouble(), 0, locale)) } ?: "—",
                 highlightMax = (runA.maxLean ?: 0f).compareTo(runB.maxLean ?: 0f),
             )
         }
 
         if (runA.speedSeries.size >= 2 && runB.speedSeries.size >= 2) {
             Text(
-                "Velocidad: A en línea continua amarilla, B en línea discontinua azul",
+                stringResource(R.string.trips_compare_speed_legend),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
             )
@@ -193,8 +210,8 @@ private fun CompareContent(
             LaunchedEffect(runA, runB) {
                 producer.runTransaction {
                     lineSeries {
-                        series(y = runA.speedSeries.map { it })
-                        series(y = runB.speedSeries.map { it })
+                        series(y = speedSeriesIn(runA.speedSeries, units))
+                        series(y = speedSeriesIn(runB.speedSeries, units))
                     }
                 }
             }
@@ -203,10 +220,10 @@ private fun CompareContent(
             CartesianChartHost(
                 chart = rememberCartesianChart(
                     rememberLineCartesianLayer(lineProvider = lineasComparacion()),
-                    startAxis = VerticalAxis.rememberStart(title = "km/h"),
+                    startAxis = VerticalAxis.rememberStart(title = units.speedLabel()),
                     bottomAxis = HorizontalAxis.rememberBottom(
                         valueFormatter = elapsedFractionFormatter(sampleCount, referenceDurationMs),
-                        title = "tiempo (mm:ss)",
+                        title = stringResource(R.string.trips_time_axis),
                     ),
                 ),
                 modelProducer = producer,
@@ -215,7 +232,7 @@ private fun CompareContent(
         }
 
         if (runA.track.size >= 2 && runB.track.size >= 2) {
-            Text("Trazados superpuestos", color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
+            Text(stringResource(R.string.trips_superimposed_tracks), color = RevScopeColors.TextSecondary, style = RevScopeType.bodySmall)
             OverlayTrackMap(
                 trackA = runA.track,
                 trackB = runB.track,
@@ -229,9 +246,11 @@ private fun CompareContent(
 private fun SessionCompareViewModel.RunData.durationMs(): Long =
     (session.endedAt ?: session.startedAt) - session.startedAt
 
+@Composable
 private fun SessionCompareViewModel.RunData.durationLabel(): String {
     val ms = durationMs()
-    return "%dm %02ds".format(
+    return stringResource(
+        R.string.trips_duration_format,
         TimeUnit.MILLISECONDS.toMinutes(ms),
         TimeUnit.MILLISECONDS.toSeconds(ms) % 60,
     )

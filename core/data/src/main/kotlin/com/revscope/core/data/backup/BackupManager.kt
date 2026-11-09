@@ -4,6 +4,8 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.data.R
 import com.revscope.core.data.db.AppDatabase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -18,12 +20,23 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import timber.log.Timber
 
 private const val DB_FILE_NAME = "revscope.db"
 private const val DB_ENTRY_NAME = "revscope.db"
 private const val PREFS_ENTRY_NAME = "preferences.json"
 private const val IMPORT_TEMP_DIR_PREFIX = "backup_import_"
+internal const val MAX_EXPORT_ATTEMPTS = 3
+
+// Lo escrito en el WAL no viaja en el zip: solo se copia si el WAL está vacío bajo el lock.
+internal fun shouldCopy(walLength: Long): Boolean = walLength == 0L
+
+// ALL_MIGRATIONS inicia en 9 y Room no tiene fallback destructivo: versiones < 9 crashean al iniciar.
+internal const val MIN_RESTORABLE_DB_VERSION = 9
+
+internal fun isRestorableVersion(imported: Int, current: Int): Boolean =
+    imported in MIN_RESTORABLE_DB_VERSION..current
 
 /**
  * Copia de seguridad completa: base de datos Room (checkpoint WAL → un solo archivo)
@@ -40,11 +53,11 @@ class BackupManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val db: AppDatabase,
     private val settings: DataStore<Preferences>,
+    private val resolver: StringResolver,
 ) {
 
     suspend fun export(target: OutputStream): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            checkpointDatabase()
             writeZip(target)
             Result.success(Unit)
         } catch (e: CancellationException) {
@@ -61,10 +74,11 @@ class BackupManager @Inject constructor(
             val currentVersion = db.openHelper.readableDatabase.version
             extractZip(source, tempDir)
             val dbFile = entryFileIn(tempDir, DB_ENTRY_NAME)
-            require(dbFile.exists()) { "El archivo no contiene una base de datos válida" }
+            require(dbFile.exists()) { resolver.get(R.string.data_invalid_database_file) }
             validateImportedVersion(dbFile, currentVersion)
+            val decodedPrefs = decodePreferencesIfPresent(tempDir)
             replaceDatabaseFile(dbFile)
-            restorePreferencesIfPresent(tempDir)
+            applyPreferencesIfPresent(decodedPrefs)
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -80,7 +94,7 @@ class BackupManager @Inject constructor(
 
     /** Fuerza el contenido del WAL de vuelta al archivo principal para que el zip lo capture entero. */
     private fun checkpointDatabase() {
-        db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
+        db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() } // i18n-ignore
     }
 
     private suspend fun writeZip(target: OutputStream) {
@@ -92,20 +106,33 @@ class BackupManager @Inject constructor(
 
     private fun writeDatabaseEntry(zip: ZipOutputStream) {
         zip.putNextEntry(ZipEntry(DB_ENTRY_NAME))
-        copyDatabaseFileLocked(zip)
+        copyDatabaseWithEmptyWal(zip)
         zip.closeEntry()
     }
 
+    // El checkpoint no puede correr dentro de la transacción: entre ambos pueden entrar escrituras, así que se reintenta.
+    private fun copyDatabaseWithEmptyWal(zip: ZipOutputStream) {
+        repeat(MAX_EXPORT_ATTEMPTS) {
+            checkpointDatabase()
+            if (copyDatabaseFileIfWalEmpty(zip)) return
+        }
+        throw IllegalStateException(resolver.get(R.string.data_backup_busy))
+    }
+
     /** Sostiene una transacción exclusiva mientras copia el archivo para evitar una copia a medio escribir. */
-    private fun copyDatabaseFileLocked(zip: ZipOutputStream) {
+    private fun copyDatabaseFileIfWalEmpty(zip: ZipOutputStream): Boolean {
         val sdb = db.openHelper.writableDatabase
         sdb.beginTransaction()
         try {
+            if (!shouldCopy(walLength())) return false
             context.getDatabasePath(DB_FILE_NAME).inputStream().use { it.copyTo(zip) }
+            return true
         } finally {
             sdb.endTransaction()
         }
     }
+
+    private fun walLength(): Long = File(context.getDatabasePath(DB_FILE_NAME).path + "-wal").length()
 
     private suspend fun writePreferencesEntry(zip: ZipOutputStream) {
         val json = PreferencesBackupCodec.encode(settings.data.first())
@@ -134,7 +161,9 @@ class BackupManager @Inject constructor(
     private fun entryFileIn(targetDir: File, entryName: String): File {
         val outFile = File(targetDir, entryName)
         val boundary = targetDir.canonicalPath + File.separator
-        require(outFile.canonicalPath.startsWith(boundary)) { "Entrada de zip inválida: $entryName" }
+        require(outFile.canonicalPath.startsWith(boundary)) {
+            resolver.get(R.string.data_invalid_zip_entry, entryName)
+        }
         return outFile
     }
 
@@ -144,8 +173,11 @@ class BackupManager @Inject constructor(
             null,
             SQLiteDatabase.OPEN_READONLY,
         ).use { it.version }
-        require(importedVersion in 1..currentVersion) {
-            "Versión de base de datos incompatible ($importedVersion) — actualiza RevScope antes de importar"
+        require(importedVersion >= MIN_RESTORABLE_DB_VERSION) {
+            resolver.get(R.string.data_backup_too_old, importedVersion)
+        }
+        require(isRestorableVersion(importedVersion, currentVersion)) {
+            resolver.get(R.string.data_incompatible_database_version, importedVersion)
         }
     }
 
@@ -171,10 +203,23 @@ class BackupManager @Inject constructor(
         if (file.exists()) file.delete()
     }
 
-    private suspend fun restorePreferencesIfPresent(tempDir: File) {
+    private fun decodePreferencesIfPresent(tempDir: File): Map<String, JSONObject>? {
         val prefsFile = entryFileIn(tempDir, PREFS_ENTRY_NAME)
-        if (prefsFile.exists()) {
-            PreferencesBackupCodec.restore(prefsFile.readText(Charsets.UTF_8), settings)
+        return if (prefsFile.exists()) {
+            PreferencesBackupCodec.decode(prefsFile.readText(Charsets.UTF_8), resolver)
+        } else {
+            null
+        }
+    }
+
+    private suspend fun applyPreferencesIfPresent(decodedPrefs: Map<String, JSONObject>?) {
+        if (decodedPrefs == null) return
+        try {
+            PreferencesBackupCodec.apply(decodedPrefs, settings)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.e(e, "BackupManager: error al aplicar preferencias tras restaurar base de datos")
         }
     }
 }

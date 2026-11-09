@@ -18,11 +18,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.designsystem.RevScopeColors
+import com.revscope.core.designsystem.rememberUnitFormatter
+import com.revscope.feature.dashboard.R
+import java.util.Locale
 import kotlin.math.abs
 
 private const val BOOST_MIN = -30f
@@ -42,16 +48,12 @@ fun BoostBar(
         label = "boost_bar"
     )
 
-    val label = when {
-        boostKpa == null -> "—"
-        boostKpa > 0f -> "+%.1f kPa".format(boostKpa)
-        boostKpa < 0f -> "%.1f kPa".format(boostKpa)
-        else -> "0 kPa"
-    }
+    val units = rememberUnitFormatter()
+    val label = boostKpa?.let { textoBoost(it, units, Locale.getDefault()) } ?: "—"
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "BOOST",
+            text = stringResource(R.string.drive_gauge_boost),
             fontSize = 12.sp,
             color = RevScopeColors.TextSecondary,
         )
@@ -115,5 +117,16 @@ fun BoostBar(
             fontWeight = FontWeight.Medium,
             color = if (boostKpa != null && boostKpa > 0f) RevScopeColors.Warning else RevScopeColors.TextSecondary,
         )
+    }
+}
+
+// Locale por defecto, como el String.format de antes: las capturas en español se grabaron con punto decimal.
+internal fun textoBoost(boostKpa: Float, units: UnitFormatter, locale: Locale): String {
+    val valor = LocaleNumbers.decimal(units.pressure(abs(boostKpa).toDouble()), 1, locale)
+    val unidad = units.pressureLabel()
+    return when {
+        boostKpa > 0f -> "+$valor $unidad"
+        boostKpa < 0f -> "-$valor $unidad"
+        else -> "0 $unidad"
     }
 }

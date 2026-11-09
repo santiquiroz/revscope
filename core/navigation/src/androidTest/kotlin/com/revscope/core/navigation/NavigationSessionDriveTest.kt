@@ -1,6 +1,10 @@
 package com.revscope.core.navigation
 
+import android.content.res.Configuration
 import androidx.test.platform.app.InstrumentationRegistry
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,6 +18,7 @@ import uniffi.ferrostar.WaypointKind
 import uniffi.ferrostar.advanceLocationSimulation
 import uniffi.ferrostar.createRouteFromOsrmRoute
 import uniffi.ferrostar.locationSimulationFromRoute
+import java.util.Locale
 
 /**
  * Recorre la ruta completa con el simulador de ubicación de Ferrostar y comprueba que la
@@ -116,9 +121,23 @@ class NavigationSessionDriveTest {
     fun la_frase_que_se_dice_al_arrancar_es_una_instruccion_de_verdad() {
         val primero = drive().first()
 
-        val frase = ManeuverSpeech.spoken(primero.maneuver!!, primero.distanceToManeuverM)
+        val metric = UnitFormatter(UnitSystem.METRIC, Locale("es"))
+        val frase = ManeuverSpeech.spoken(primero.maneuver!!, primero.distanceToManeuverM, spanish(), metric)
         assertTrue("debe hablar de distancia: $frase", frase.startsWith("En ") || frase.startsWith("Ahora"))
         assertFalse("no puede quedar una preposición colgando: $frase", frase.trimEnd().endsWith(" en"))
+    }
+
+    /** Fijo en español: las aserciones de abajo miran la frase en español. */
+    private fun spanish(): StringResolver {
+        val base = InstrumentationRegistry.getInstrumentation().targetContext
+        val config = Configuration(base.resources.configuration).apply { setLocale(Locale("es")) }
+        val context = base.createConfigurationContext(config)
+        return object : StringResolver {
+            override val locale: Locale = Locale("es")
+            override fun get(id: Int, vararg args: Any): String = context.getString(id, *args)
+            override fun plural(id: Int, count: Int, vararg args: Any): String =
+                context.resources.getQuantityString(id, count, *args)
+        }
     }
 
     private fun waypoint(at: LatLon) =

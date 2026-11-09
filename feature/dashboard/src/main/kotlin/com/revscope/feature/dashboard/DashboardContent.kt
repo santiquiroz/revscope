@@ -22,6 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -37,7 +41,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -50,6 +56,7 @@ import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
 import com.revscope.core.designsystem.conCifrasTabulares
+import com.revscope.core.intelligence.efficiency.DriveStyle
 import com.revscope.core.intelligence.efficiency.TripScore
 import com.revscope.core.obd.session.EstadoViaje
 import com.revscope.feature.dashboard.gauges.BoostBar
@@ -93,6 +100,7 @@ internal data class EstadoConducirUi(
     val lecturas: LecturasConducir = LecturasConducir(),
     val escalas: EscalasConducir = EscalasConducir(),
     val puntaje: TripScore = TripScore.empty(),
+    val indicadoresBus: IndicadoresBus = IndicadoresBus(),
 ) {
     val gaugesAtenuados: Boolean get() = viajeGpsActivo || modoGpsHero
     val avisarSinAdaptador: Boolean get() = viajeGpsActivo && !modoGpsHero
@@ -216,7 +224,7 @@ internal fun DashboardGaugesContent(estado: EstadoConducirUi, onAlternarFuenteVe
         MotivoGauge(lecturas.motivoRpm)
         if (estado.avisarSinAdaptador) {
             Text(
-                "RPM, temperatura, marcha y boost necesitan un adaptador OBD2",
+                stringResource(R.string.drive_needs_adapter),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.bodySmall,
                 textAlign = TextAlign.Center,
@@ -237,6 +245,7 @@ internal fun DashboardGaugesContent(estado: EstadoConducirUi, onAlternarFuenteVe
                 PanelTemperatura(estado, atenuado, Modifier.weight(0.6f))
             }
         }
+        if (estado.indicadoresBus.visible) FilaIndicadoresBus(estado.indicadoresBus)
         BoostBar(
             boostKpa = lecturas.boost,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp).then(atenuado),
@@ -308,7 +317,7 @@ private fun GpsTripButton(isActive: Boolean, onStart: () -> Unit, onStop: () -> 
         ),
     ) {
         Text(
-            text = if (isActive) "Finalizar viaje GPS" else "Iniciar viaje GPS",
+            text = stringResource(if (isActive) R.string.drive_gps_trip_end else R.string.drive_gps_trip_start),
             color = RevScopeColors.Background,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -316,10 +325,10 @@ private fun GpsTripButton(isActive: Boolean, onStart: () -> Unit, onStop: () -> 
     }
     if (confirmarFin) {
         ConfirmarAccionViajeDialog(
-            titulo = "¿Finalizar el viaje?",
-            texto = "El viaje GPS se guarda en el historial.",
-            confirmar = "Finalizar viaje",
-            descartar = "Seguir grabando",
+            titulo = stringResource(R.string.drive_confirm_end_title),
+            texto = stringResource(R.string.drive_confirm_end_gps_text),
+            confirmar = stringResource(R.string.drive_confirm_end_action),
+            descartar = stringResource(R.string.drive_keep_recording),
             onConfirm = {
                 confirmarFin = false
                 onStop()
@@ -336,7 +345,7 @@ private fun OpenMapButton(onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.SurfaceHigh),
     ) {
-        Text(text = "Ver mapa", color = RevScopeColors.TextPrimary, fontWeight = FontWeight.Bold)
+        Text(text = stringResource(R.string.drive_view_map), color = RevScopeColors.TextPrimary, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -353,7 +362,7 @@ internal fun ConfigureAdapterCta(onClick: () -> Unit, modifier: Modifier = Modif
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RevScopeColors.Accent)
             Text(
-                "RPM, temperatura, marcha y boost necesitan un adaptador OBD2.",
+                stringResource(R.string.drive_needs_adapter_sentence),
                 color = RevScopeColors.TextSecondary,
                 style = RevScopeType.body,
                 modifier = Modifier.weight(1f),
@@ -365,7 +374,7 @@ internal fun ConfigureAdapterCta(onClick: () -> Unit, modifier: Modifier = Modif
         ) {
             // Con letra al 200 % en 360 dp no cabe entero: se achica un poco antes que partirse.
             TextoAjustable(
-                texto = "Configurar adaptador",
+                texto = stringResource(R.string.drive_configure_adapter),
                 estilo = RevScopeType.label,
                 color = RevScopeColors.Accent,
                 minimo = 10.sp,
@@ -393,19 +402,23 @@ internal fun UpdateBanner(version: String, onDownload: () -> Unit, onDismiss: ()
     ) {
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f).padding(top = 10.dp)) {
-                Text("Nueva versión $version disponible", color = RevScopeColors.Accent, style = RevScopeType.label)
                 Text(
-                    "Descárgala para actualizar",
+                    stringResource(R.string.drive_update_available, version),
+                    color = RevScopeColors.Accent,
+                    style = RevScopeType.label,
+                )
+                Text(
+                    stringResource(R.string.drive_update_download_hint),
                     color = RevScopeColors.TextSecondary,
                     style = RevScopeType.bodySmall,
                 )
             }
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Descartar aviso", tint = RevScopeColors.TextSecondary)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.drive_update_dismiss), tint = RevScopeColors.TextSecondary)
             }
         }
         TextButton(onClick = onDownload, modifier = Modifier.align(Alignment.End).padding(end = 4.dp)) {
-            Text("Descargar", color = RevScopeColors.Accent, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.drive_update_download), color = RevScopeColors.Accent, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -421,13 +434,22 @@ internal fun TripScoreBar(tripScore: TripScore) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = driveStyleIcon(tripScore.style),
+                contentDescription = null,
+                tint = RevScopeColors.TextPrimary,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = stringResource(tripScore.style.labelRes),
+                style = RevScopeType.label,
+                color = RevScopeColors.TextPrimary,
+            )
+        }
         Text(
-            text = "${tripScore.style.emoji} ${tripScore.style.label}",
-            style = RevScopeType.label,
-            color = RevScopeColors.TextPrimary,
-        )
-        Text(
-            text = "Puntaje: ${tripScore.overall}/100",
+            text = stringResource(R.string.drive_score, tripScore.overall),
             style = RevScopeType.label.conCifrasTabulares(),
             fontWeight = FontWeight.Bold,
             color = RevScopeColors.Accent,
@@ -435,16 +457,25 @@ internal fun TripScoreBar(tripScore: TripScore) {
     }
 }
 
+internal fun driveStyleIcon(style: DriveStyle): ImageVector = when (style) {
+    DriveStyle.ECO -> Icons.Default.Eco
+    DriveStyle.NORMAL -> Icons.Default.DirectionsCar
+    DriveStyle.SPORT -> Icons.Default.Speed
+    DriveStyle.AGGRESSIVE -> Icons.Default.LocalFireDepartment
+}
+
 /** Fuente de la velocidad bajo el velocímetro: toca para alternar entre la ECU y el GPS. */
 @Composable
 private fun SpeedSourceChip(useGps: Boolean, onToggle: () -> Unit) {
+    val descripcion = stringResource(R.string.drive_speed_source)
+    val estado = stringResource(if (useGps) R.string.drive_speed_source_gps else R.string.drive_speed_source_obd)
     ChipSeleccion(
         texto = if (useGps) "GPS" else "OBD",
         seleccionado = useGps,
         onClick = onToggle,
         modifier = Modifier.semantics {
-            contentDescription = "Fuente de la velocidad"
-            stateDescription = if (useGps) "GPS del teléfono" else "ECU por OBD"
+            contentDescription = descripcion
+            stateDescription = estado
         },
     )
 }

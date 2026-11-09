@@ -1,5 +1,7 @@
 package com.revscope.core.obd.session
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
 import com.revscope.core.obd.telemetry.GatedTransport
@@ -18,6 +20,7 @@ import org.junit.Test
 import java.io.IOException
 
 class DiagnosticLeaseTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     private val diagnostico = setOf("0101", "03", "07", "0A")
 
@@ -37,7 +40,7 @@ class DiagnosticLeaseTest {
     fun `durante la concesion no hay comandos de sondeo entre los del diagnostico`() = runTest {
         val fake = fakeElm()
         val gate = PollingGate()
-        val lease = DiagnosticLease(gate)
+        val lease = DiagnosticLease(gate, resolver)
         val polled = GatedTransport(fake, gate)
         val polling = launch { PidScheduler(polled, registry()).observeReadings().collect {} }
         val insistentes = List(2) { launch { while (true) polled.exchange("010D\r") } }
@@ -58,7 +61,7 @@ class DiagnosticLeaseTest {
     fun `el sondeo se reanuda tras la concesion`() = runTest {
         val fake = fakeElm()
         val gate = PollingGate()
-        val lease = DiagnosticLease(gate)
+        val lease = DiagnosticLease(gate, resolver)
         val polling = launch { PidScheduler(GatedTransport(fake, gate), registry()).observeReadings().collect {} }
         advanceTimeBy(500)
 
@@ -75,7 +78,7 @@ class DiagnosticLeaseTest {
     fun `timeout del bloque devuelve failure y libera el canal`() = runTest {
         val fake = fakeElm()
         val gate = PollingGate()
-        val lease = DiagnosticLease(gate)
+        val lease = DiagnosticLease(gate, resolver)
 
         val resultado = lease.run(fake, "ui:dtc", timeoutMs = 1_000) { delay(5_000) }
         GatedTransport(fake, gate).exchange("010C\r")
@@ -88,7 +91,7 @@ class DiagnosticLeaseTest {
     fun `cancelar el llamador reanuda el sondeo`() = runTest {
         val fake = fakeElm()
         val gate = PollingGate()
-        val lease = DiagnosticLease(gate)
+        val lease = DiagnosticLease(gate, resolver)
 
         val llamador = launch { lease.run(fake, "mcp:get_dtc") { delay(10_000) } }
         runCurrent()
@@ -100,7 +103,7 @@ class DiagnosticLeaseTest {
 
     @Test
     fun `sin transporte devuelve failure sin tocar el canal`() = runTest {
-        val resultado = DiagnosticLease(PollingGate()).run<Unit>(null, "ui:dtc") { error("no debe correr") }
+        val resultado = DiagnosticLease(PollingGate(), resolver).run<Unit>(null, "ui:dtc") { error("no debe correr") }
 
         assertTrue(resultado.exceptionOrNull() is IllegalStateException)
     }
@@ -109,7 +112,7 @@ class DiagnosticLeaseTest {
     fun `una IOException del enlace sale como failure`() = runTest {
         val fake = fakeElm().apply { fallarDespuesDe(0) }
 
-        val resultado = DiagnosticLease(PollingGate()).run(fake, "ui:dtc") { bt -> bt.exchange("03\r") }
+        val resultado = DiagnosticLease(PollingGate(), resolver).run(fake, "ui:dtc") { bt -> bt.exchange("03\r") }
 
         assertTrue(resultado.exceptionOrNull() is IOException)
         assertTrue(resultado.exceptionOrNull() !is CancellationException)

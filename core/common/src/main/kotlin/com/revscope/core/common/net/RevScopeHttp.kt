@@ -10,5 +10,5 @@ object RevScopeHttp {
     // Overpass y las políticas de OSM también piden identificar la app y un contacto.
     const val USER_AGENT = "RevScope/" + BuildConfig.APP_VERSION_NAME + " (+" + CONTACT_URL + ")"
 
-    fun userAgent(version: String): String = "RevScope/$version (+$CONTACT_URL)"
+    fun userAgent(version: String): String = "RevScope/$version (+$CONTACT_URL)" // i18n-ignore
 }

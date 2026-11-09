@@ -1,11 +1,15 @@
 package com.revscope.feature.workshop
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.stateInSafe
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.detect
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.MaintenanceDao
 import com.revscope.core.data.db.dao.SessionDao
@@ -17,6 +21,7 @@ import com.revscope.core.obd.legal.RestrictionRulesSource
 import com.revscope.core.obd.session.ObdSessionManager
 import com.revscope.core.obd.trip.MaintenanceCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -43,12 +48,19 @@ class AlDiaViewModel @Inject constructor(
     private val sessionDao: SessionDao,
     private val aiRulesSource: RestrictionRulesSource,
     zoneBriefHolder: com.revscope.core.obd.service.ZoneBriefHolder,
+    private val stringResolver: StringResolver,
+    @ApplicationContext context: Context,
 ) : ViewModel() {
+
+    private val region = Region.detect(context)
 
     /** Último brief de zona del compañero de viaje — null si aún no hay. */
     val zoneBrief: StateFlow<com.revscope.core.obd.service.ZoneBriefHolder.ZoneBrief?> = zoneBriefHolder.brief
 
     val activeProfile: StateFlow<VehicleProfileEntity?> = sessionManager.activeProfile
+
+    fun maintenanceDetail(estados: List<MaintenanceCalculator.ItemStatus>): String =
+        MaintenanceCalculator.detalleTexto(estados, stringResolver)
 
     private val profileIdFlow: Flow<Long?> = activeProfile.map { it?.id }
 
@@ -99,7 +111,10 @@ class AlDiaViewModel @Inject constructor(
         val documents = DocumentStatusCalculator.fromProfile(profile, license)
         val now = System.currentTimeMillis()
         val aiFallback = aiFallbackFor(profile.picoPlacaCity, overrideRules, now)
-        return DocumentStatusCalculator.calculate(documents, overrideRules, now, aiFallbackRules = aiFallback)
+        return DocumentStatusCalculator.calculate(
+            documents, overrideRules, now, aiFallbackRules = aiFallback, resolver = stringResolver,
+            region = region,
+        )
     }
 
     private suspend fun aiFallbackFor(

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_common_cancel">Cancel</string>
+    <string name="settings_mcp_allow_control">Allow MCP remote control (trips, sampling, capture)</string>
+    <string name="settings_mcp_control_description">The PC can end and start trips, change sampling, and take quick captures (finalizar_viaje, iniciar_viaje, set_muestreo, iniciar_captura, detener_captura). Use only on trusted networks: the token is sent unencrypted over Wi-Fi.</string>
+    <string name="settings_mcp_allow_clear_codes">Allow clearing codes via MCP</string>
+    <string name="settings_mcp_clear_codes_description">borrar_dtc requires the vehicle to be stopped and your tap on the notification, and resets readiness monitors: an inspection station may reject the vehicle until you complete drive cycles.</string>
+    <string name="settings_mcp_allow_workshop_writes">Allow workshop writes via MCP</string>
+    <string name="settings_mcp_workshop_writes_description">Clear codes by module (UDS 14), reset the ECU (UDS 11), run on-board tests (Mode 08), use manufacturer catalog operations, and send raw sequences. Each write requires your tap on a notification; writes never run while the vehicle is moving, and flashing is blocked.</string>
+    <string name="settings_mcp_permissions_not_backed_up">These permissions are not included in backups: restoring a backup never enables them.</string>
+    <string name="settings_mcp_bypass_label">Skip confirmations (bypass)</string>
+    <string name="settings_mcp_bypass_description">MCP writes run without asking you. Bypass turns off automatically when the MCP server stops.</string>
+    <string name="settings_mcp_bypass_confirm_title">Allow writes without confirmation?</string>
+    <string name="settings_mcp_bypass_warning">Any client with the MCP token could clear codes, reset modules, and send manufacturer commands to the ECU without your approval. A wrong command can leave a module unusable until it is serviced by a dealer. The stopped-vehicle safeguards and flash blocking remain active.</string>
+    <string name="settings_mcp_enable_bypass">Enable bypass</string>
+
+    <string name="settings_ai_section_title">Artificial intelligence</string>
+    <string name="settings_ai_provider_description">Provider used to explain DTCs and local information. Without an API key, these features appear without AI explanations.</string>
+    <string name="settings_ai_api_key_label">API key for %1$s</string>
+    <string name="settings_ai_model_label">Model (blank = %1$s)</string>
+    <string name="settings_ai_model_hint_nodo">the model loaded in Nodo</string>
+    <string name="settings_ai_model_hint_server">depends on your server</string>
+    <string name="settings_ai_base_url_nodo">Base URL (blank = %1$s)</string>
+    <string name="settings_ai_base_url_custom">Base URL (LM Studio, DeepSeek, Groq, OpenRouter…)</string>
+    <string name="settings_ai_provider_label">AI provider</string>
+    <string name="settings_ai_save">Save AI settings</string>
+    <string name="settings_ai_testing">Testing…</string>
+    <string name="settings_ai_test_connection">Test connection</string>
+    <string name="settings_ai_show_benefits">See what an API key can do</string>
+    <string name="settings_ai_provider_anthropic">Claude (Anthropic)</string>
+    <string name="settings_ai_provider_openai">OpenAI</string>
+    <string name="settings_ai_provider_gemini">Gemini (Google)</string>
+    <string name="settings_ai_provider_nodo">Nodo (this phone)</string>
+    <string name="settings_ai_provider_custom">OpenAI-compatible (LM Studio, DeepSeek, Groq, OpenRouter…)</string>
+
+    <string name="settings_vehicle_section_title">Vehicle</string>
+    <string name="settings_vehicle_active">Active vehicle: %1$s</string>
+    <string name="settings_vehicle_none">None</string>
+    <string name="settings_vehicle_ask_on_start">Ask for vehicle at startup</string>
+    <string name="settings_tools_section_title">Tools</string>
+    <string name="settings_vehicle_profiles">Vehicle profiles</string>
+    <string name="settings_keep_screen_on">Keep screen on</string>
+    <string name="settings_keep_screen_on_description">While driving with the dashboard open. Turning this off saves battery when using a car mount.</string>
+    <string name="settings_auto_trip_on_move">Start trip automatically when moving</string>
+    <string name="settings_auto_trip_on_move_description">With the adapter connected and no active trip (after “End trip (stay connected)”), a trip starts when you maintain 10 km/h for 5 seconds.</string>
+    <string name="settings_fuel_section_title">Fuel</string>
+    <string name="settings_fuel_save_prices">Save prices</string>
+
+    <string name="settings_social_server_title">Collaborative server</string>
+    <string name="settings_social_server_description">Optional. Connect the app to a RevScope server to share spaces, go on group rides, and create ghost rides. The app works the same without it. Use the public server, one for your group, or host your own (github.com/santiquiroz/revscope-server). Leave this blank to use none.</string>
+    <string name="settings_social_server_url">Server URL (e.g., https://my-server:8080)</string>
+    <string name="settings_social_rider_name">Your nickname (group rides and ghosts)</string>
+    <string name="settings_social_server_token">Token (only if the server asks for one—leave blank otherwise)</string>
+    <string name="settings_social_save_server">Save server</string>
+    <string name="settings_social_companion_title">Trip companion</string>
+    <string name="settings_social_companion_description">When you arrive somewhere new, at home or abroad, it gives you a driving brief: fuel prices, tolls, restrictions, and what you need to drive there if you are outside your country. It checks the collaborative server first (free). If no one has reported that area and you have AI with web search, it generates a brief and shares it for the next traveler. Off by default (AI fallback costs money).</string>
+    <string name="settings_social_companion_enabled">Enable trip companion</string>
+    <string name="settings_social_voice_brief">Announce on arrival</string>
+    <string name="settings_social_voice_brief_description">Notifies you when the brief is ready; details appear in the notification.</string>
+
+    <string name="settings_map_section_title">Map</string>
+    <string name="settings_offline_map_size">~913 MB</string>
+    <string name="settings_offline_map_gigabytes">%1$s GB</string>
+    <string name="settings_offline_map_title">Offline map of Colombia (%1$s)</string>
+    <string name="settings_offline_map_ready">Offline map ready</string>
+    <string name="settings_offline_map_downloaded">Downloaded · %1$s · %2$s</string>
+    <string name="settings_offline_map_unknown_date">unknown date</string>
+    <string name="settings_offline_map_delete">Delete</string>
+    <string name="settings_offline_map_not_downloaded">Not downloaded</string>
+    <string name="settings_offline_map_download">Download</string>
+    <string name="settings_offline_map_downloading">Downloading… %1$d%%</string>
+    <string name="settings_offline_map_cancel">Cancel</string>
+    <string name="settings_offline_map_retry">Retry</string>
+    <string name="settings_offline_map_download_title">Download offline map</string>
+    <string name="settings_offline_map_no_wifi">No Wi-Fi</string>
+    <string name="settings_offline_map_download_wifi_message">The offline map of Colombia (%1$s) will be downloaded.</string>
+    <string name="settings_offline_map_download_mobile_message">No Wi-Fi—use mobile data? (%1$s)</string>
+    <string name="settings_offline_map_use_mobile_data">Use mobile data</string>
+    <string name="settings_offline_map_delete_title">Delete offline map</string>
+    <string name="settings_offline_map_delete_message">The downloaded map will be deleted. You can download it again anytime.</string>
+
+    <string name="settings_sampling_section_title">OBD sampling</string>
+    <string name="settings_sampling_description">How often sensors are read during normal use. To read one or a few sensors as quickly as possible (pedal, throttle), use Workshop → Sensors → Quick capture.</string>
+    <string name="settings_sampling_capture_duration">Quick capture: maximum duration</string>
+    <string name="settings_sampling_minutes">%1$d min</string>
+    <string name="settings_sampling_no_capture">Last measured rate: no captures yet in this session.</string>
+    <string name="settings_sampling_rate_item">%1$s %2$s Hz</string>
+    <string name="settings_sampling_latency"> · p50 latency %1$s ms</string>
+    <string name="settings_sampling_last_rate">Last measured rate: %1$s%2$s</string>
+    <string name="settings_sampling_note_standard">Default: RPM and speed every 100 ms, temperatures and trims every 2 s</string>
+    <string name="settings_sampling_note_battery">Uses less battery and generates less heat</string>
+    <string name="settings_sampling_note_maximum">The adapter sets the actual rate; uses more battery and generates more heat</string>
+
+    <string name="settings_background_section_title">Background notifications</string>
+    <string name="settings_background_description">The 5:30 a.m. notification (Pico y placa, documents nearing expiration) needs the system to let the app wake up. If it arrives late or only when you open the app, check these two permissions.</string>
+    <string name="settings_background_exact_allowed">✓ Exact alarms allowed</string>
+    <string name="settings_background_exact_blocked">✗ Exact alarms blocked—the notification may be delayed</string>
+    <string name="settings_background_battery_unrestricted">✓ No battery restrictions</string>
+    <string name="settings_background_battery_optimized">✗ Battery optimization is on—Samsung may put the app to sleep</string>
+    <string name="settings_background_allow_exact_alarms">Allow exact alarms</string>
+    <string name="settings_background_battery_optimization">Battery optimization</string>
+    <string name="settings_background_test_toast">Test notification in 15 seconds</string>
+    <string name="settings_background_test_button">Test notification (15 s)</string>
+</resources>

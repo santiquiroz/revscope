@@ -27,11 +27,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.i18n.AndroidStringResolver
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -47,6 +50,8 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.revscope.core.designsystem.ChipSeleccion
 import com.revscope.core.obd.workshop.DiagnosticRules
+import com.revscope.core.common.i18n.LocaleNumbers
+import java.util.Locale
 
 private val AccentColor = Color(0xFFE8FF00)
 private val SurfaceColor = Color(0xFF12121A)
@@ -67,20 +72,20 @@ private const val O2_MIN_VOLTS = 0.0
 private const val O2_TICK_STEP = 0.2
 private const val HEALTHY_CROSSINGS_PER_MIN = 8
 
-private val VoltAxisFormatter = object : CartesianValueFormatter {
+private fun voltAxisFormatter(locale: Locale) = object : CartesianValueFormatter {
     override fun format(
         context: CartesianMeasuringContext,
         value: Double,
         verticalAxisPosition: Axis.Position.Vertical?,
-    ): CharSequence = "%.1fV".format(value)
+    ): CharSequence = "${LocaleNumbers.decimal(value, 1, locale)}V"
 }
 
-private val SecondsAxisFormatter = object : CartesianValueFormatter {
+private fun secondsAxisFormatter(locale: Locale) = object : CartesianValueFormatter {
     override fun format(
         context: CartesianMeasuringContext,
         value: Double,
         verticalAxisPosition: Axis.Position.Vertical?,
-    ): CharSequence = "%.0fs".format(value)
+    ): CharSequence = "${LocaleNumbers.decimal(value, 0, locale)}s"
 }
 
 @Composable
@@ -97,6 +102,7 @@ fun O2WaveScreen(
     val availableSensors by viewModel.availableSensors.collectAsState()
     val samples by viewModel.samples.collectAsState()
     val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
     val modelProducer = remember(selectedPid) { CartesianChartModelProducer() }
 
     LaunchedEffect(selectedPid) {
@@ -118,10 +124,10 @@ fun O2WaveScreen(
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = TextColor)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(com.revscope.core.designsystem.R.string.ds_back), tint = TextColor)
             }
             Text(
-                "Onda del sensor O2",
+                stringResource(R.string.workshop_o2_wave_title),
                 color = TextColor,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
@@ -131,11 +137,11 @@ fun O2WaveScreen(
                 onClick = { viewModel.exportWindow(context) },
                 enabled = samples.size >= 2,
             ) {
-                Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = AccentColor)
+                Icon(Icons.Default.Download, contentDescription = stringResource(R.string.workshop_o2_wave_export_csv), tint = AccentColor)
             }
         }
         Text(
-            "Últimos 60 s de voltaje del sensor — motor encendido y en marcha mínima estable.",
+            stringResource(R.string.workshop_o2_wave_description),
             color = TextMutedColor,
             fontSize = 13.sp,
             modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
@@ -148,14 +154,14 @@ fun O2WaveScreen(
 
         if (samples.size < 2) {
             Text(
-                "Esperando datos del sensor O2 ${SENSOR_LABELS[selectedPid] ?: selectedPid}… (requiere conexión y motor encendido)",
+                stringResource(R.string.workshop_o2_wave_waiting, SENSOR_LABELS[selectedPid] ?: selectedPid),
                 color = TextMutedColor,
                 fontSize = 13.sp,
             )
         } else {
-            O2Chart(modelProducer)
+            O2Chart(modelProducer, locale)
             Text(
-                "Umbral de conmutación: 0.45V · pobre <0.2V · rica >0.8V",
+                stringResource(R.string.workshop_o2_wave_threshold),
                 color = TextMutedColor,
                 fontSize = 11.sp,
                 modifier = Modifier.padding(top = 4.dp),
@@ -163,21 +169,25 @@ fun O2WaveScreen(
 
             val crossings = viewModel.crossingsPerMinute()
             Text(
-                "Cruces por 0.45V: %.0f/min (sensor sano: >$HEALTHY_CROSSINGS_PER_MIN/min)".format(crossings),
+                stringResource(
+                    R.string.workshop_o2_wave_crossings,
+                    LocaleNumbers.decimal(crossings, 0, locale),
+                    HEALTHY_CROSSINGS_PER_MIN,
+                ),
                 color = TextColor,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(top = 8.dp),
             )
 
-            val diagnosis = remember(samples) { DiagnosticRules.evaluarO2(samples.map { it.value }) }
+            val diagnosis = remember(samples, context) { DiagnosticRules.evaluarO2(samples.map { it.value }, AndroidStringResolver(context)) }
             DiagnosisChip(diagnosis)
         }
     }
 }
 
 @Composable
-private fun O2Chart(modelProducer: CartesianChartModelProducer) {
+private fun O2Chart(modelProducer: CartesianChartModelProducer, locale: Locale) {
     CartesianChartHost(
         chart = rememberCartesianChart(
             rememberLineCartesianLayer(
@@ -185,12 +195,12 @@ private fun O2Chart(modelProducer: CartesianChartModelProducer) {
             ),
             startAxis = VerticalAxis.rememberStart(
                 title = "V",
-                valueFormatter = VoltAxisFormatter,
+                valueFormatter = voltAxisFormatter(locale),
                 itemPlacer = VerticalAxis.ItemPlacer.step({ O2_TICK_STEP }),
             ),
             bottomAxis = HorizontalAxis.rememberBottom(
-                valueFormatter = SecondsAxisFormatter,
-                title = "segundos",
+                valueFormatter = secondsAxisFormatter(locale),
+                title = stringResource(R.string.workshop_o2_wave_seconds),
             ),
         ),
         modelProducer = modelProducer,
@@ -214,5 +224,9 @@ private fun SensorSelector(sensors: List<String>, selected: String, onSelect: (S
 
 @Composable
 private fun SensorChip(pid: String, selected: Boolean, onClick: () -> Unit) {
-    ChipSeleccion(texto = "O2 ${SENSOR_LABELS[pid] ?: pid}", seleccionado = selected, onClick = onClick)
+    ChipSeleccion(
+        texto = stringResource(R.string.workshop_o2_wave_sensor_label, SENSOR_LABELS[pid] ?: pid),
+        seleccionado = selected,
+        onClick = onClick,
+    )
 }

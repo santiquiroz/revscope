@@ -1,5 +1,7 @@
 package com.revscope.core.obd.protocol
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.Transport
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -17,7 +19,7 @@ import timber.log.Timber
  *   6. AT SP 0 — auto-detect OBD protocol
  *   7. 01 00 — verify ECU is responsive; parse supported PIDs bitmask
  */
-class ProtocolNegotiator(private val transport: Transport) {
+class ProtocolNegotiator(private val transport: Transport, private val resolver: StringResolver) {
 
     companion object {
         // Cheap clones need over a second to reboot after AT Z before accepting commands
@@ -71,7 +73,7 @@ class ProtocolNegotiator(private val transport: Transport) {
         if (ResponseParser.isUnableToConnect(pids00Response) ||
             ResponseParser.isNoData(pids00Response)
         ) {
-            error("ECU not responding after AT SP 0: $pids00Response")
+            error(resolver.get(R.string.obd_diagnostico_ecu_sin_respuesta, pids00Response))
         }
 
         val supportedPids = mutableSetOf<String>()

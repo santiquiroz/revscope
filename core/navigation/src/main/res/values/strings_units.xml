@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spoken distance before a maneuver. Units are spoken as words, never abbreviated. -->
+    <plurals name="nav_spoken_meters">
+        <item quantity="one">In %1$d meter</item>
+        <item quantity="other">In %1$d meters</item>
+    </plurals>
+    <plurals name="nav_spoken_feet">
+        <item quantity="one">In %1$d foot</item>
+        <item quantity="other">In %1$d feet</item>
+    </plurals>
+    <plurals name="nav_spoken_kilometers">
+        <item quantity="one">In %1$d kilometer</item>
+        <item quantity="other">In %1$d kilometers</item>
+    </plurals>
+    <plurals name="nav_spoken_miles">
+        <item quantity="one">In %1$d mile</item>
+        <item quantity="other">In %1$d miles</item>
+    </plurals>
+    <!-- %1$s = distance with one decimal, e.g. "1.2" -->
+    <string name="nav_spoken_kilometers_decimal">In %1$s kilometers</string>
+    <string name="nav_spoken_miles_decimal">In %1$s miles</string>
+</resources>

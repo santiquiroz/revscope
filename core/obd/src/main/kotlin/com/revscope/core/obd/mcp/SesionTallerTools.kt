@@ -5,6 +5,7 @@ import com.revscope.core.obd.taller.sesion.AnalizadorSesion
 import com.revscope.core.obd.taller.sesion.OrigenEvento
 import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.taller.sesion.SesionTaller
+import com.revscope.core.obd.taller.sesion.etiqueta
 import com.revscope.core.obd.taller.sesion.Sintoma
 import com.revscope.core.obd.taller.sesion.SolicitudSesion
 import com.revscope.core.obd.taller.sesion.TallerRepository

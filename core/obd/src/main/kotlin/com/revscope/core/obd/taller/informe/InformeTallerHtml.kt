@@ -1,6 +1,8 @@
 package com.revscope.core.obd.taller.informe
 
-import com.revscope.core.obd.taller.FormatoTaller
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.sesion.Veredicto
 import java.time.Instant
 import java.time.ZoneId
@@ -9,139 +11,180 @@ import java.util.Locale
 
 object InformeTallerHtml {
 
-    fun render(informe: InformeTaller): String = buildString {
-        append("<!doctype html><html lang=\"es\"><head><meta charset=\"utf-8\">")
-        append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
-        append("<title>").append(escapar(informe.titulo)).append(" · RevScope</title><style>")
+    fun render(informe: InformeTaller, resolver: StringResolver): String = buildString {
+        append("<!doctype html><html lang=\"").append(escapar(resolver.locale.language)).append("\"><head><meta charset=\"utf-8\">") // i18n-ignore
+        append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">") // i18n-ignore
+        append("<title>").append(escapar(resolver.get(R.string.obd_report_document_title, informe.titulo))).append("</title><style>")
         append(CSS)
         append("</style></head><body><main>")
-        append(encabezado(informe))
-        append(conclusion(informe))
-        append(multimetro(informe))
-        append(ecu(informe))
-        append(comparacion(informe))
-        append(interpretacion(informe))
-        append(repuestos(informe))
-        append(guia(informe))
-        append(pendientes(informe))
-        append(fuentes(informe))
+        append(encabezado(informe, resolver))
+        append(conclusion(informe, resolver))
+        append(multimetro(informe, resolver))
+        append(ecu(informe, resolver))
+        append(comparacion(informe, resolver))
+        append(interpretacion(informe, resolver))
+        append(repuestos(informe, resolver))
+        append(guia(informe, resolver))
+        append(pendientes(informe, resolver))
+        append(fuentes(informe, resolver))
         append("</main></body></html>")
     }
 
-    private fun encabezado(i: InformeTaller): String = seccion("informe", "Informe de taller") {
-        "<p class=\"fecha\">${e(fecha(i.generadoEn))}</p>" +
+    private fun encabezado(i: InformeTaller, resolver: StringResolver): String =
+        seccion("informe", resolver.get(R.string.obd_report_title), resolver) {
+        "<p class=\"fecha\">${e(fecha(i.generadoEn, resolver))}</p>" + // i18n-ignore
             "<h2>${e(i.titulo)}</h2>" +
-            "<div class=\"ficha\">" +
-            celda("Vehículo", i.vehiculo) + celda("Código leído", i.codigo) +
-            celda("Síntomas", i.sintomas) + celda("Cómo se midió", i.comoSeMidio) +
+            "<div class=\"ficha\">" + // i18n-ignore
+            celda(resolver.get(R.string.obd_report_vehicle), i.vehiculo) +
+            celda(resolver.get(R.string.obd_report_code_read), i.codigo) +
+            celda(resolver.get(R.string.obd_report_symptoms), i.sintomas) +
+            celda(resolver.get(R.string.obd_report_how_measured), i.comoSeMidio) +
             "</div>"
     }
 
-    private fun conclusion(i: InformeTaller): String = seccion("conclusion", "Conclusión") {
-        insignia(i.conclusion.veredicto) + "<p class=\"principal\">${e(i.conclusion.frase)}</p>" +
-            ifVacio(i.conclusion.cables, "Sin mediciones de cable registradas.") { cables ->
-                "<div class=\"mosaico\">" + cables.joinToString("") { cable ->
-                    "<article class=\"cable\"><strong>${e(cable.etiqueta)}</strong><span>${e(cable.valor)}</span>${insignia(cable.veredicto)}</article>"
+    private fun conclusion(i: InformeTaller, resolver: StringResolver): String =
+        seccion("conclusion", resolver.get(R.string.obd_report_conclusion), resolver) {
+        insignia(i.conclusion.veredicto, resolver) + "<p class=\"principal\">${e(i.conclusion.frase)}</p>" + // i18n-ignore
+            ifVacio(i.conclusion.cables, resolver.get(R.string.obd_report_no_wire_measurements)) { cables ->
+                "<div class=\"mosaico\">" + cables.joinToString("") { cable -> // i18n-ignore
+                    "<article class=\"cable\"><strong>${e(cable.etiqueta)}</strong><span>${e(cable.valor)}</span>${insignia(cable.veredicto, resolver)}</article>" // i18n-ignore
                 } + "</div>"
             }
     }
 
-    private fun multimetro(i: InformeTaller): String = seccion("multimetro", "Medición con multímetro") {
-        ifVacio(i.mediciones, "No se registraron mediciones con multímetro.") { mediciones ->
+    private fun multimetro(i: InformeTaller, resolver: StringResolver): String =
+        seccion("multimetro", resolver.get(R.string.obd_report_multimeter_measurement), resolver) {
+        ifVacio(i.mediciones, resolver.get(R.string.obd_report_no_multimeter_measurements)) { mediciones ->
             val pesas = mediciones.map { m ->
-                PesaGrafica(m.cable, m.valor, m.bandaMin, m.bandaMax, m.unidad, origen(m.referencia))
+                PesaGrafica(m.cable, m.valor, m.bandaMin, m.bandaMax, m.unidad, origen(m.referencia, resolver))
             }
-            GraficaSvg.pesas(pesas) + tabla(
-                encabezados = listOf("Sensor", "Cable", "Condición", "Medido", "Estado", "Referencia y origen"),
+            GraficaSvg.pesas(pesas, resolver = resolver) + tabla(
+                encabezados = listOf(
+                    R.string.obd_report_sensor,
+                    R.string.obd_report_wire,
+                    R.string.obd_report_condition,
+                    R.string.obd_report_measured,
+                    R.string.obd_report_status,
+                    R.string.obd_report_reference_source,
+                ).map { resolver.get(it) },
                 filas = mediciones.map { m ->
-                    listOf(m.sensor, m.cable, m.condicion, valor(m.valor, m.unidad), estadoMedicion(m.estado), m.referencia)
+                    listOf(m.sensor, m.cable, m.condicion, valor(m.valor, m.unidad, resolver), estadoMedicion(m.estado, resolver), m.referencia)
                 },
             )
         }
     }
 
-    private fun ecu(i: InformeTaller): String = seccion("ecu", "Lo que registró la ECU") {
-        val pruebas = ifVacio(i.pruebas, "No se registraron pruebas guiadas.") { lista ->
+    private fun ecu(i: InformeTaller, resolver: StringResolver): String =
+        seccion("ecu", resolver.get(R.string.obd_report_ecu_title), resolver) {
+        val pruebas = ifVacio(i.pruebas, resolver.get(R.string.obd_report_no_guided_tests)) { lista ->
             lista.joinToString("") { prueba ->
-                "<article class=\"prueba\"><h3>${e(prueba.titulo)}</h3>${insignia(prueba.veredicto)}" +
-                    "<p>${e(prueba.resumen)}</p>" + pasos(prueba) +
-                    prueba.series.takeIf(List<*>::isNotEmpty)?.let { GraficaSvg.lineas(it, prueba.tramos) }.orEmpty() + "</article>"
+                "<article class=\"prueba\"><h3>${e(prueba.titulo)}</h3>${insignia(prueba.veredicto, resolver)}" + // i18n-ignore
+                    "<p>${e(prueba.resumen)}</p>" + pasos(prueba, resolver) +
+                    prueba.series.takeIf(List<*>::isNotEmpty)?.let {
+                        GraficaSvg.lineas(it, prueba.tramos, resolver = resolver)
+                    }.orEmpty() + "</article>"
             }
         }
-        pruebas + "<h3>Línea de tiempo</h3>" + lineaTiempo(i)
+        pruebas + "<h3>${e(resolver.get(R.string.obd_report_timeline))}</h3>" + lineaTiempo(i, resolver)
     }
 
-    private fun pasos(prueba: PruebaInforme): String = ifVacio(prueba.pasos, "Sin tabla por paso.") { pasos ->
+    private fun pasos(prueba: PruebaInforme, resolver: StringResolver): String =
+        ifVacio(prueba.pasos, resolver.get(R.string.obd_report_no_step_table)) { pasos ->
         tabla(
-            encabezados = listOf("Paso", "Posición", "Voltaje aproximado"),
+            encabezados = listOf(
+                R.string.obd_report_step,
+                R.string.obd_report_position,
+                R.string.obd_report_approx_voltage,
+            ).map { resolver.get(it) },
             filas = pasos.map { paso ->
                 listOf(
                     paso.nombre,
-                    paso.porcentaje?.let { "${FormatoTaller.numero(it, 1)} %" } ?: "—",
-                    paso.voltios?.let { "≈${FormatoTaller.numero(it, 2)} V" } ?: "—",
+                    paso.porcentaje?.let { "${LocaleNumbers.decimal(it, 1, resolver.locale)} %" } ?: "—",
+                    paso.voltios?.let { "≈${LocaleNumbers.decimal(it, 2, resolver.locale)} V" } ?: "—",
                 )
             },
         )
     }
 
-    private fun lineaTiempo(i: InformeTaller): String = ifVacio(i.lineaTiempo, "La sesión no tiene eventos.") { eventos ->
-        "<ol class=\"linea-tiempo\">" + eventos.joinToString("") { evento ->
-            "<li><time>${e(hora(evento.instante))}</time><div><strong>${icono(evento.veredicto)} ${e(evento.titulo)}</strong>" +
-                "<span>${e(evento.tipo)} · ${e(textoVeredicto(evento.veredicto))}</span><p>${e(evento.resumen)}</p></div></li>"
+    private fun lineaTiempo(i: InformeTaller, resolver: StringResolver): String =
+        ifVacio(i.lineaTiempo, resolver.get(R.string.obd_report_no_events)) { eventos ->
+        "<ol class=\"linea-tiempo\">" + eventos.joinToString("") { evento -> // i18n-ignore
+            "<li><time>${e(hora(evento.instante))}</time><div><strong>${icono(evento.veredicto)} ${e(evento.titulo)}</strong>" + // i18n-ignore
+                "<span>${e(evento.tipo)} · ${e(textoVeredicto(evento.veredicto, resolver))}</span><p>${e(evento.resumen)}</p></div></li>" // i18n-ignore
         } + "</ol>"
     }
 
-    private fun comparacion(i: InformeTaller): String = seccion("comparacion", "Comparación con el chequeo anterior") {
-        ifVacio(i.comparacion, "No hay un chequeo anterior comparable.") { filas ->
+    private fun comparacion(i: InformeTaller, resolver: StringResolver): String =
+        seccion("comparacion", resolver.get(R.string.obd_report_comparison_title), resolver) {
+        ifVacio(i.comparacion, resolver.get(R.string.obd_report_no_comparable_check)) { filas ->
             tabla(
-                encabezados = listOf("Métrica", "Anterior", "Ahora", "Cambio", "Referencia"),
-                filas = filas.map { listOf(it.metrica.etiqueta, it.base, it.ahora, it.cambio, it.referencia ?: "—") },
+                encabezados = listOf(
+                    R.string.obd_report_metric,
+                    R.string.obd_report_previous,
+                    R.string.obd_report_now,
+                    R.string.obd_report_change,
+                    R.string.obd_report_reference,
+                ).map { resolver.get(it) },
+                filas = filas.map { listOf(it.metrica.etiqueta(resolver), it.base, it.ahora, it.cambio, it.referencia ?: "—") },
             )
         }
     }
 
-    private fun interpretacion(i: InformeTaller): String = seccion("interpretacion", "Interpretación") {
-        val automatica = ifVacio(i.interpretacionAutomatica, "Sin interpretación automática adicional.") { puntos ->
+    private fun interpretacion(i: InformeTaller, resolver: StringResolver): String =
+        seccion("interpretacion", resolver.get(R.string.obd_report_interpretation), resolver) {
+        val automatica = ifVacio(i.interpretacionAutomatica, resolver.get(R.string.obd_report_no_automatic_interpretation)) { puntos ->
             "<ul>" + puntos.joinToString("") { "<li>${e(it)}</li>" } + "</ul>"
         }
-        automatica + "<h3>Interpretación del técnico</h3><p class=\"texto-libre\">${e(i.interpretacionTecnico.ifBlank { "Sin anotación del técnico." })}</p>"
+        automatica + "<h3>${e(resolver.get(R.string.obd_report_technician_interpretation))}</h3><p class=\"texto-libre\">${e(i.interpretacionTecnico.ifBlank { resolver.get(R.string.obd_report_no_technician_note) })}</p>" // i18n-ignore
     }
 
-    private fun repuestos(i: InformeTaller): String = seccion("repuestos", "¿Es el repuesto correcto?") {
-        ifVacio(i.repuestos, "No hay repuestos documentados para este modelo.") { repuestos ->
+    private fun repuestos(i: InformeTaller, resolver: StringResolver): String =
+        seccion("repuestos", resolver.get(R.string.obd_report_parts_title), resolver) {
+        ifVacio(i.repuestos, resolver.get(R.string.obd_report_no_parts)) { repuestos ->
             tabla(
-                encabezados = listOf("Rol", "Referencia", "Descripción", "Tipo", "Aviso", "Fuente"),
+                encabezados = listOf(
+                    R.string.obd_report_role,
+                    R.string.obd_report_reference,
+                    R.string.obd_report_description,
+                    R.string.obd_report_type,
+                    R.string.obd_report_notice,
+                    R.string.obd_report_source,
+                ).map { resolver.get(it) },
                 filas = repuestos.map { listOf(it.rol, it.referencia, it.descripcion, it.tipo, it.nota, it.fuente) },
-            ) + "<p class=\"aviso\">Confirma la referencia y el número de chasis antes de comprar; un genérico puede no ser equivalente.</p>"
+            ) + "<p class=\"aviso\">${e(resolver.get(R.string.obd_report_verify_part_warning))}</p>" // i18n-ignore
         }
     }
 
-    private fun guia(i: InformeTaller): String = seccion("guia", "Qué revisar, en orden") {
-        ifVacio(i.pasosGuia, "No quedan pasos de la guía por marcar.") { pasos ->
+    private fun guia(i: InformeTaller, resolver: StringResolver): String =
+        seccion("guia", resolver.get(R.string.obd_report_guide_title), resolver) {
+        ifVacio(i.pasosGuia, resolver.get(R.string.obd_report_no_guide_steps)) { pasos ->
             "<ol>" + pasos.joinToString("") { "<li><strong>${e(it.titulo)}</strong><p>${e(it.detalle)}</p></li>" } + "</ol>"
         }
     }
 
-    private fun pendientes(i: InformeTaller): String = seccion("pendientes", "Pendiente por confirmar") {
-        ifVacio(i.pendientes, "No hay pendientes registrados.") { pendientes ->
+    private fun pendientes(i: InformeTaller, resolver: StringResolver): String =
+        seccion("pendientes", resolver.get(R.string.obd_report_pending_title), resolver) {
+        ifVacio(i.pendientes, resolver.get(R.string.obd_report_no_pending_items)) { pendientes ->
             "<ul>" + pendientes.joinToString("") { "<li>${e(it)}</li>" } + "</ul>"
         }
     }
 
-    private fun fuentes(i: InformeTaller): String = seccion("fuentes", "Fuentes") {
-        val lista = ifVacio(i.fuentes, "No se adjuntaron fuentes externas.") { fuentes ->
+    private fun fuentes(i: InformeTaller, resolver: StringResolver): String =
+        seccion("fuentes", resolver.get(R.string.obd_report_sources_title), resolver) {
+        val lista = ifVacio(i.fuentes, resolver.get(R.string.obd_report_no_external_sources)) { fuentes ->
             "<ul>" + fuentes.joinToString("") { fuente -> "<li>${fuente(fuente)}</li>" } + "</ul>"
         }
-        lista + "<p class=\"aviso\"><strong>Valores típicos salvo que se indique fuente.</strong> Generado con RevScope v${e(i.versionApp)}.</p>"
+        lista + "<p class=\"aviso\"><strong>${e(resolver.get(R.string.obd_report_typical_values_footer))}</strong> " + // i18n-ignore
+            "${e(resolver.get(R.string.obd_report_generated_with, i.versionApp))}</p>"
     }
 
     private fun fuente(fuente: FuenteInforme): String {
         val url = fuente.url?.takeIf(::urlSegura)
-        return if (url == null) e(fuente.nombre) else "<a href=\"${atributo(url)}\">${e(fuente.nombre)}</a>"
+        return if (url == null) e(fuente.nombre) else "<a href=\"${atributo(url)}\">${e(fuente.nombre)}</a>" // i18n-ignore
     }
 
     private fun tabla(encabezados: List<String>, filas: List<List<String>>): String =
-        "<div class=\"tabla-wrap\"><table><thead><tr>" + encabezados.joinToString("") { "<th>${e(it)}</th>" } +
+        "<div class=\"tabla-wrap\"><table><thead><tr>" + encabezados.joinToString("") { "<th>${e(it)}</th>" } + // i18n-ignore
             "</tr></thead><tbody>" + filas.joinToString("") { fila ->
             "<tr>" + fila.joinToString("") { "<td>${e(it)}</td>" } + "</tr>"
         } + "</tbody></table></div>"
@@ -149,8 +192,8 @@ object InformeTallerHtml {
     private fun celda(etiqueta: String, valor: String) =
         "<div><dt>${e(etiqueta)}</dt><dd>${e(valor)}</dd></div>"
 
-    private fun insignia(veredicto: Veredicto) =
-        "<span class=\"insignia ${veredicto.name.lowercase(Locale.ROOT)}\">${icono(veredicto)} ${e(textoVeredicto(veredicto))}</span>"
+    private fun insignia(veredicto: Veredicto, resolver: StringResolver) =
+        "<span class=\"insignia ${veredicto.name.lowercase(Locale.ROOT)}\">${icono(veredicto)} ${e(textoVeredicto(veredicto, resolver))}</span>" // i18n-ignore
 
     private fun icono(veredicto: Veredicto) = when (veredicto) {
         Veredicto.OK -> "✓"
@@ -159,38 +202,45 @@ object InformeTallerHtml {
         Veredicto.INFO -> "ⓘ"
     }
 
-    private fun textoVeredicto(veredicto: Veredicto) = when (veredicto) {
-        Veredicto.OK -> "Dentro de referencia"
-        Veredicto.ATENCION -> "Atención"
-        Veredicto.FALLA -> "Fuera de referencia"
-        Veredicto.INFO -> "Información"
+    private fun textoVeredicto(veredicto: Veredicto, resolver: StringResolver) = when (veredicto) {
+        Veredicto.OK -> resolver.get(R.string.obd_report_verdict_ok)
+        Veredicto.ATENCION -> resolver.get(R.string.obd_report_verdict_attention)
+        Veredicto.FALLA -> resolver.get(R.string.obd_report_verdict_failure)
+        Veredicto.INFO -> resolver.get(R.string.obd_report_verdict_info)
     }
 
-    private fun estadoMedicion(estado: String) = when (estado) {
-        "DENTRO" -> "✓ Dentro"
-        "BAJO" -> "✕ Bajo"
-        "ALTO" -> "✕ Alto"
-        else -> "ⓘ Sin referencia"
+    private fun estadoMedicion(estado: String, resolver: StringResolver) = when (estado) {
+        "DENTRO" -> "✓ ${resolver.get(R.string.obd_report_measurement_within)}"
+        "BAJO" -> "✕ ${resolver.get(R.string.obd_report_measurement_low)}"
+        "ALTO" -> "✕ ${resolver.get(R.string.obd_report_measurement_high)}"
+        else -> "ⓘ ${resolver.get(R.string.obd_report_no_reference)}"
     }
 
-    private fun origen(referencia: String): String = when {
-        referencia.contains("Fuente", ignoreCase = true) -> referencia.substringAfter("Fuente", "Fuente").trim(':', ' ')
-        referencia.contains("Editado por ti", ignoreCase = true) -> "Editado por ti"
-        else -> "Típico"
+    private fun origen(referencia: String, resolver: StringResolver): String = when {
+        referencia.contains(resolver.get(R.string.obd_report_source_prefix), ignoreCase = true) ->
+            referencia.substringAfter(resolver.get(R.string.obd_report_source_prefix), "").trim(':', ' ')
+        referencia.contains(resolver.get(R.string.obd_report_edited_by_you), ignoreCase = true) ->
+            resolver.get(R.string.obd_report_edited_by_you)
+        else -> resolver.get(R.string.obd_report_typical)
     }
 
-    private fun valor(valor: Double, unidad: String) =
-        "${FormatoTaller.numero(valor, if (unidad == "V") 2 else 1)} $unidad".trim()
+    private fun valor(valor: Double, unidad: String, resolver: StringResolver) =
+        "${LocaleNumbers.decimal(valor, if (unidad == "V") 2 else 1, resolver.locale)} $unidad".trim() // i18n-ignore
 
-    private fun fecha(instante: Long): String = FORMATO_FECHA.format(Instant.ofEpochMilli(instante).atZone(ZoneId.systemDefault()))
+    private fun fecha(instante: Long, resolver: StringResolver): String {
+        val pattern = if (resolver.locale.language == "es") "d 'de' MMMM 'de' yyyy, HH:mm" else "MMM d, yyyy, h:mm a" // i18n-ignore
+        return DateTimeFormatter.ofPattern(pattern, resolver.locale).format(
+            Instant.ofEpochMilli(instante).atZone(ZoneId.systemDefault()),
+        )
+    }
 
     private fun hora(instante: Long): String = FORMATO_HORA.format(Instant.ofEpochMilli(instante).atZone(ZoneId.systemDefault()))
 
-    private fun seccion(id: String, titulo: String, contenido: () -> String) =
-        "<section id=\"$id\"><h1>${e(titulo)}</h1>${contenido()}</section>"
+    private fun seccion(id: String, titulo: String, resolver: StringResolver, contenido: () -> String) =
+        "<section id=\"$id\"><h1>${e(titulo)}</h1>${contenido()}</section>" // i18n-ignore
 
     private fun <T> ifVacio(lista: List<T>, mensaje: String, contenido: (List<T>) -> String): String =
-        if (lista.isEmpty()) "<p class=\"vacio\">${e(mensaje)}</p>" else contenido(lista)
+        if (lista.isEmpty()) "<p class=\"vacio\">${e(mensaje)}</p>" else contenido(lista) // i18n-ignore
 
     private fun urlSegura(url: String): Boolean = url.startsWith("https://") || url.startsWith("http://")
 
@@ -205,7 +255,6 @@ object InformeTallerHtml {
         .replace("\"", "&quot;")
         .replace("'", "&#39;")
 
-    private val FORMATO_FECHA = DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy, HH:mm", Locale.forLanguageTag("es-CO"))
     private val FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.ROOT)
 
     private const val CSS = """

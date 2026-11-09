@@ -73,7 +73,7 @@ object AiResponseParsers {
         val detail = errorBody
             ?.let { extractApiErrorMessage(it) }
             ?.take(MAX_ERROR_DETAIL_CHARS)
-        return if (detail == null) "$providerTag HTTP $code" else "$providerTag HTTP $code: $detail"
+        return if (detail == null) "$providerTag HTTP $code" else "$providerTag HTTP $code: $detail" // i18n-ignore: diagnóstico técnico
     }
 
     private fun extractApiErrorMessage(body: String): String? = runCatching {

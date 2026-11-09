@@ -4,9 +4,11 @@ import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidRegistry
 import com.revscope.core.obd.pid.TestPids
+import com.revscope.core.obd.R
 import com.revscope.core.obd.session.DiagnosticLease
 import com.revscope.core.obd.telemetry.PollingGate
 import com.revscope.core.obd.testing.FakeElmTransport
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -21,6 +23,7 @@ import org.junit.Test
 
 class CapturaRapidaTest {
 
+    private val resolver = XmlStringResolver.es(R::class.java)
     private val registry = PidRegistry(TestPids.load()).apply { setSupportedPids(setOf("0C", "0D", "05", "11", "49", "4A")) }
 
     private class EnlaceFalso(
@@ -87,6 +90,7 @@ class CapturaRapidaTest {
             gate = gate,
             registry = registry,
             nuevoSumidero = { sumidero },
+            resolver = resolver,
             dispositivo = { dispositivo },
             relojNanos = { testScheduler.currentTime * 1_000_000 },
             relojEpochMs = { 1_790_000_000_000L + testScheduler.currentTime },
@@ -160,7 +164,7 @@ class CapturaRapidaTest {
         m.captura.iniciar(pedal).getOrThrow()
         advanceTimeBy(100)
 
-        val lectura = DiagnosticLease(m.gate).run(fake, "mcp:get_dtc") { bt -> bt.exchange("03\r", 1_000) }
+        val lectura = DiagnosticLease(m.gate, resolver).run(fake, "mcp:get_dtc") { bt -> bt.exchange("03\r", 1_000) }
         advanceTimeBy(100)
         m.captura.detener()
 

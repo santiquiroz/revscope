@@ -17,17 +17,17 @@ private val googleFontsProvider = GoogleFont.Provider(
 
 internal val SpaceGrotesk = FontFamily(
     Font(
-        googleFont = GoogleFont("Space Grotesk"),
+        googleFont = GoogleFont("Space Grotesk"), // i18n-ignore
         fontProvider = googleFontsProvider,
         weight = FontWeight.Normal
     ),
     Font(
-        googleFont = GoogleFont("Space Grotesk"),
+        googleFont = GoogleFont("Space Grotesk"), // i18n-ignore
         fontProvider = googleFontsProvider,
         weight = FontWeight.Medium
     ),
     Font(
-        googleFont = GoogleFont("Space Grotesk"),
+        googleFont = GoogleFont("Space Grotesk"), // i18n-ignore
         fontProvider = googleFontsProvider,
         weight = FontWeight.Bold
     )

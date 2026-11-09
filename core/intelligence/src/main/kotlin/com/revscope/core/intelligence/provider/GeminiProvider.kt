@@ -16,7 +16,7 @@ class GeminiProvider(
 ) : AiProvider {
 
     override val providerId: String = "gemini"
-    override val displayName: String = "Gemini (Google)"
+    override val displayName: String = "Gemini (Google)" // i18n-ignore: nombre de marca
     override val supportsWebSearch: Boolean = true
 
     override suspend fun complete(request: AiRequest): Result<String> = withContext(Dispatchers.IO) {

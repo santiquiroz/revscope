@@ -1,3 +1,5 @@
+> 🇬🇧 [Read in English](en/user-manual.md)
+
 # Manual de usuario
 
 > Índice: [Selector de vehículo](#selector-de-vehículo) · [Conducir](#conducir) · [Mapa](#mapa) · [Taller](#taller) · [Viajes](#viajes) · [Ajustes](#ajustes)
@@ -33,6 +35,7 @@ Contenido, de arriba hacia abajo:
 - **Gauge de RPM**, con el borde de toda la pantalla iluminándose como *shift light*: color acento cuando llegas al 95% de la línea roja configurada para el vehículo activo, y rojo pleno al cruzarla.
 - **Velocímetro**, con un chip debajo que indica la fuente: **OBD** o **GPS** (con ✓ cuando usa GPS). Se puede tocar para alternar manualmente entre la velocidad que reporta el ECU y la del GPS del celular — útil si el adaptador da lecturas erráticas o para comparar con el [comparador de velocímetros](#taller) de Taller.
 - **Marcha calculada**, **temperatura del motor** y **barra de boost** (turbo), lado a lado. Si la ECU no anuncia el PID necesario, el indicador muestra **«—»** y el motivo en vez de inventar un cero; por ejemplo, nunca presenta **0 °C** como si fuera una lectura real.
+- **Pata, embrague y kill switch** (solo con un [perfil CAN](#datos-del-bus-can) que tenga esas señales verificadas): una fila discreta debajo de la marcha con **Pata arriba / Pata abajo**, **Embrague / Embrague suelto** y **Kill RUN / Kill OFF**. Con la pata abajo y el motor en marcha la pastilla se pone roja: **¡Pata abajo!**. Si una señal deja de llegar, su pastilla desaparece en vez de quedarse con el último estado. Cuando el bus deja de mandar una señal o el adaptador no permite escucharlo, aparece una vez un aviso abajo ("No llegan datos del bus para Marcha; usando la estimación") y el tablero vuelve a la lectura de siempre.
 - **Barra de puntaje del viaje**: un estilo de conducción (con emoji y etiqueta, ej. "🌿 Eco", "🔥 Agresivo") calculado en vivo por el motor de eficiencia, junto con un **Puntaje** 0-100.
 - Sin adaptador (modo solo GPS), una tarjeta explica que RPM, temperatura, marcha y boost necesitan un adaptador OBD2, con el botón **Configurar adaptador**.
 
@@ -127,6 +130,24 @@ La acción **Restablecer a Típico** elimina tu ajuste y vuelve a la banda típi
 - **Mantenimiento** — ítems por kilometraje (aceite, llantas, batería, kit de arrastre en motos…) con el odómetro del vehículo editable, barra de progreso del intervalo y botón "Registrar servicio" por ítem.
 - **Verificación de kilometraje** — lee el odómetro real reportado por el ECU (solo vehículos que lo expongan por OBD2 estándar) y guarda un histórico para detectar manipulación: alerta si el odómetro retrocede o si avanza mucho menos que la distancia GPS registrada por la app.
 - **Comparar velocímetros** — velocidad del OBD contra la del GPS lado a lado, en vivo, con el promedio acumulado de la sesión — para medir cuánto sobre-marca tu velocímetro de fábrica.
+
+
+#### Datos del bus CAN
+
+Muchas motos y carros con CAN publican solos datos que el OBD estándar no da, como la marcha real (también con el motor apagado o en neutro), la pata lateral, el embrague o el kill switch. Un **perfil CAN** le dice a RevScope cómo leerlos. La app trae incluido el de la **TVS Apache RTR 160 4V**.
+
+Para usarlo, abre **Perfiles de vehículo**, toca el vehículo para editarlo y baja hasta la tarjeta **Datos del bus CAN**:
+
+1. En **Perfil CAN** elige el perfil de tu modelo (o **Ninguno** para no usar el bus).
+2. En **Cómo se leen los datos** elige el modo:
+   - **Estándar** — como hoy, sin cambios: solo el OBD estándar. Es lo que se usa sin perfil.
+   - **Combinado** (recomendado, se elige solo al poner un perfil) — el OBD estándar más escuchas cortas del bus tras cada ronda de lecturas.
+   - **Solo bus** — escucha el bus todo el tiempo; los datos que no estén en el perfil dejan de leerse.
+3. Prueba cada señal en vivo. Todo perfil entra con sus señales **Sin verificar** y ninguna se usa hasta que la confirmes en tu vehículo. Toca **Probar en vivo** junto a la señal: la pantalla muestra el valor en grande mientras haces lo que indica ("Mueve la pata lateral y mira si cambia"). Si sigue lo que haces, toca **Sí, coincide** y la señal queda **Verificada ✓**; si no, **No, no coincide** y queda sin verificar. Abajo, en letra pequeña, va de dónde sale el dato (por ejemplo `ID 500 · byte 4 · sin escala`). La prueba necesita el adaptador conectado, la llave en ON y un vehículo CAN; si falta algo, la pantalla lo dice y los botones quedan apagados.
+
+En **Avanzado: fuente por señal** puedes elegir de dónde sale cada dato: **Automática** (el bus si la señal está verificada; si no, el OBD; si no, el cálculo de siempre), **OBD**, **Bus**, **GPS** (solo para la velocidad) o **Calculada** (solo para la marcha, la estimada por RPM y velocidad). Elegir GPS para la velocidad es lo mismo que el chip **GPS** del velocímetro de Conducir: cambiar uno cambia el otro.
+
+Las lecturas del bus llegan con los mismos nombres que las del OBD, así que el tablero, los viajes, las alertas y el MCP las usan sin cambios. Si una señal del bus deja de llegar (llave OFF y ON, reconexión), deja de mostrarse y RevScope vuelve a la fuente estándar: nunca muestra un dato viejo como si fuera actual. Con un protocolo que no es CAN el perfil se ignora sin errores.
 
 ## Viajes
 

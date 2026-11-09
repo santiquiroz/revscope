@@ -1,0 +1,7 @@
+<resources>
+    <string name="maps_download_blocked">Descarga bloqueada: conectate a WiFi o permití datos móviles en Ajustes</string>
+    <string name="maps_insufficient_space">Espacio insuficiente para descargar el mapa offline</string>
+    <string name="maps_download_network_error">Error de red descargando el mapa offline</string>
+    <string name="maps_download_finalize_failed">No se pudo finalizar la descarga del mapa offline</string>
+    <string name="maps_osm_attribution">© OpenStreetMap contributors</string>
+</resources>

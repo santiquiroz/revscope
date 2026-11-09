@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_fuel_regular_price">Regular price per gallon (%1$s)</string>
+    <string name="settings_fuel_premium_price">Premium price per gallon (%1$s)</string>
+    <string name="settings_fuel_diesel_price">Diesel price per gallon (%1$s)</string>
+    <string name="settings_fuel_regular_price_liter">Regular price per liter (%1$s)</string>
+    <string name="settings_fuel_premium_price_liter">Premium price per liter (%1$s)</string>
+    <string name="settings_fuel_diesel_price_liter">Diesel price per liter (%1$s)</string>
+    <string name="settings_fuel_price_description">The active vehicle’s fuel type determines the price used to estimate each trip’s cost. There is no current official online data.gov.co feed for municipal gasoline/diesel prices (see the code for details)—adjust this manually based on your station.</string>
+    <string name="settings_fuel_price_hint">Enter what you pay at your station.</string>
+    <string name="settings_fuel_price_invalid">Enter prices greater than zero, or leave them empty</string>
+</resources>

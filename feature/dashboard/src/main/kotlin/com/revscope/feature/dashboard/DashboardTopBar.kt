@@ -1,5 +1,6 @@
 package com.revscope.feature.dashboard
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,21 +21,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.common.i18n.LocaleNumbers
 import com.revscope.core.designsystem.FranjaSelectorVehiculo
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
 import com.revscope.core.designsystem.conCifrasTabulares
 import com.revscope.core.obd.connection.ConnectionState
+import java.util.Locale
 
-internal enum class EnlaceAdaptador(val descripcion: String) {
-    CONECTADO("Adaptador conectado"),
-    CONECTANDO("Conectando al adaptador"),
-    ERROR("Error de enlace con el adaptador"),
-    SIN_ADAPTADOR("Sin adaptador conectado"),
+internal enum class EnlaceAdaptador(@StringRes val descripcion: Int) {
+    CONECTADO(R.string.drive_link_connected),
+    CONECTANDO(R.string.drive_link_connecting),
+    ERROR(R.string.drive_link_error),
+    SIN_ADAPTADOR(R.string.drive_link_none),
 }
 
 internal fun enlaceAdaptador(estado: ConnectionState): EnlaceAdaptador = when (estado) {
@@ -98,16 +102,28 @@ private fun BarraConducir(
         },
         navigationIcon = {
             IconButton(onClick = onAdaptador) {
-                Icon(iconoEnlace(enlace), contentDescription = enlace.descripcion, tint = colorEnlace(enlace))
+                Icon(
+                    iconoEnlace(enlace),
+                    contentDescription = stringResource(enlace.descripcion),
+                    tint = colorEnlace(enlace),
+                )
             }
         },
         actions = {
             voltaje?.let { VoltajeBateria(it) }
             IconButton(onClick = onModoPista) {
-                Icon(Icons.Default.Flag, contentDescription = "Modo Pista", tint = RevScopeColors.TextSecondary)
+                Icon(
+                    Icons.Default.Flag,
+                    contentDescription = stringResource(R.string.drive_track_mode),
+                    tint = RevScopeColors.TextSecondary,
+                )
             }
             IconButton(onClick = onAjustes) {
-                Icon(Icons.Default.Settings, contentDescription = "Ajustes", tint = RevScopeColors.TextSecondary)
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.drive_settings),
+                    tint = RevScopeColors.TextSecondary,
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = RevScopeColors.Surface),
@@ -117,7 +133,9 @@ private fun BarraConducir(
 @Composable
 private fun VoltajeBateria(voltios: Double) {
     Text(
-        text = "%.1f V".format(voltios),
+        // Locale por defecto (igual que el String.format de antes): la unidad y su número se
+        // convierten en la tarea de unidades; las capturas en español se grabaron con punto.
+        text = LocaleNumbers.decimal(voltios, 1, Locale.getDefault()) + " V",
         style = RevScopeType.bodySmall.conCifrasTabulares(),
         color = if (voltios < VOLTAJE_BAJO) RevScopeColors.Danger else RevScopeColors.TextSecondary,
         maxLines = 1,

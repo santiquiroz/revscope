@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MAP vs. barometric: steps and check -->
+    <string name="obd_mapbaro_titulo_paso_contacto">Ignition on</string>
+    <string name="obd_mapbaro_comprobacion_diferencia">MAP vs. barometric difference (plus ±%1$s from the source)</string>
+
+    <!-- MAP vs. barometric: title -->
+    <string name="obd_mapbaro_titulo_sin_datos">No MAP readings</string>
+    <string name="obd_mapbaro_titulo_sin_referencia">MAP at %1$s, no barometric pressure to compare</string>
+    <string name="obd_mapbaro_titulo_map_bajo">MAP reads %1$s below barometric pressure</string>
+    <string name="obd_mapbaro_titulo_map_alto">MAP reads %1$s above barometric pressure</string>
+    <string name="obd_mapbaro_titulo_no_concluyente">MAP close to barometric pressure, inconclusive</string>
+    <string name="obd_mapbaro_titulo_normal">MAP matches barometric pressure</string>
+
+    <!-- MAP vs. barometric: interpretation -->
+    <string name="obd_mapbaro_interp_sin_datos">No MAP readings (PID 0B) arrived with the ignition on, so there is nothing to compare.</string>
+    <string name="obd_mapbaro_interp_map">With the engine off, MAP read %1$s (%2$s).</string>
+    <string name="obd_mapbaro_sin_referencia">No reference barometric pressure: the ECU did not report PID 33, the phone has no barometer and there was no GPS altitude.</string>
+    <string name="obd_mapbaro_banda_tipica">≤ %1$s, %2$s</string>
+    <string name="obd_mapbaro_frase_referencia">The reference was %1$s: %2$s. The difference is %3$s; with no vacuum, %4$s is expected, plus ±%5$s from the source.</string>
+    <string name="obd_mapbaro_frase_equivalencia">%1$s equals atmospheric pressure at an altitude of about %2$s.</string>
+    <string name="obd_mapbaro_veredicto_bajo">Reads low: consistent with a miscalibrated MAP sensor (P0106) or a low 5&#160;V reference. The MAP shares that reference with the TPS: if the TPS also reads low, check the shared reference.</string>
+    <string name="obd_mapbaro_veredicto_alto">Reads high: consistent with a miscalibrated MAP sensor (P0106), a high signal (P0108) or an open sensor ground.</string>
+    <string name="obd_mapbaro_veredicto_normal">Matches within the band: the MAP reads pressure correctly with the engine off.</string>
+    <string name="obd_mapbaro_nota_ecu">Many ECUs compute barometric pressure from the MAP sensor itself when the ignition is turned on: a match does not rule out a miscalibrated MAP.</string>
+    <string name="obd_mapbaro_no_concluyente_contraste">Matches %1$s but not %2$s: with references that disagree, no conclusion is possible.</string>
+    <string name="obd_mapbaro_no_concluyente_incertidumbre">The difference exceeds the typical band but fits within the source uncertainty: this reference cannot settle it.</string>
+
+    <!-- MAP vs. barometric: findings -->
+    <string name="obd_mapbaro_hallazgo_diferencia">MAP reads %1$s %2$s barometric pressure (tolerance ±%3$s)</string>
+    <string name="obd_mapbaro_hallazgo_variacion">MAP varied by %1$s with the engine off: unstable signal, consistent with a loose connection</string>
+    <string name="obd_mapbaro_hallazgo_contraste">Against %1$s (%2$s), MAP reads %3$s %4$s: outside ±%5$s</string>
+
+    <!-- MAP vs. barometric: next step -->
+    <string name="obd_mapbaro_siguiente_sin_datos">Check that the adapter is still connected and that the ECU reports MAP (PID 0B)</string>
+    <string name="obd_mapbaro_siguiente_sin_referencia">Turn on phone location (for GPS altitude) or use a phone with a barometer, then repeat the test</string>
+    <string name="obd_mapbaro_siguiente_medir_map">Measure the MAP 5&#160;V reference, ground and signal with the multimeter (MAP template)</string>
+    <string name="obd_mapbaro_siguiente_repetir_barometro">Repeat with the phone barometer or the ECU barometric pressure (PID 33): both are more accurate references than altitude</string>
+    <string name="obd_mapbaro_siguiente_contrastar">To rule out a miscalibrated MAP, repeat the test with a phone that has a barometer</string>
+
+    <!-- MAP vs. barometric: measurements -->
+    <string name="obd_mapbaro_medida_map">MAP with the engine off: %1$s (%2$s)</string>
+    <string name="obd_mapbaro_medida_baro">Barometric: %1$s · %2$s</string>
+    <string name="obd_mapbaro_medida_baro_sin_fuente">Barometric: no source</string>
+    <string name="obd_mapbaro_medida_diferencia">Difference: %1$s (tolerance ±%2$s with the source)</string>
+    <string name="obd_mapbaro_medida_altitud">MAP equals an altitude of about %1$s</string>
+    <string name="obd_mapbaro_medida_contraste">Cross-check: %1$s %2$s (difference %3$s)</string>
+
+    <!-- MAP vs. barometric: formatting -->
+    <plurals name="obd_mapbaro_rango_estable">
+        <item quantity="one">stable over %1$d reading</item>
+        <item quantity="other">stable over %1$d readings</item>
+    </plurals>
+    <plurals name="obd_mapbaro_rango">
+        <item quantity="one">%1$s to %2$s, %3$d reading</item>
+        <item quantity="other">%1$s to %2$s, %3$d readings</item>
+    </plurals>
+    <string name="obd_mapbaro_miles">%1$d,%2$03d</string>
+</resources>

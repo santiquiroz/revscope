@@ -1,5 +1,8 @@
 package com.revscope.core.obd.taller.dtc
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
+
 object GuiaDePrueba {
 
     fun textoReal(): String =
@@ -7,7 +10,7 @@ object GuiaDePrueba {
             "${BaseConocimientoDtc.ASSET_GUIA} no está en el classpath de tests"
         }.bufferedReader().use { it.readText() }
 
-    fun baseReal() = BaseConocimientoDtc(::textoReal)
+    fun baseReal() = BaseConocimientoDtc(::textoReal, XmlStringResolver.es(R::class.java))
 
     fun conEntradas(vararg entradas: String): String = """
         {"version": 1, "fuenteDescripciones": "SAE J2012", "aviso": "Orientación general",

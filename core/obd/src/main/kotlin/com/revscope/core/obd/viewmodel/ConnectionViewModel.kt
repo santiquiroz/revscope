@@ -65,7 +65,7 @@ class ConnectionViewModel @Inject constructor(
 
     fun disconnect() = manager.disconnect()
 
-    /** Starts a GPS-only trip ("viaje sin adaptador") — no Bluetooth link required. */
+    /** Starts a GPS-only trip ("viaje sin adaptador") — no Bluetooth link required. */ // i18n-ignore
     fun startGpsTrip() = manager.startGpsSession()
 
     fun stopGpsTrip() = manager.stopGpsSession()

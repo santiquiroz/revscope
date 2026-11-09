@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.db.dao.VehicleProfileDao
@@ -27,6 +28,7 @@ class VehiclePickerViewModel @Inject constructor(
     private val profileDao: VehicleProfileDao,
     private val settings: DataStore<Preferences>,
     private val sessionManager: ObdSessionManager,
+    val resolver: StringResolver,
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()

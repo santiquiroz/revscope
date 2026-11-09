@@ -1,11 +1,14 @@
 package com.revscope.feature.workshop.taller.informe
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.informe.GeneradorInformeTaller
 import com.revscope.core.obd.taller.informe.InformeTallerHtml
 import com.revscope.core.obd.taller.sesion.TallerRepository
+import com.revscope.feature.workshop.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -27,9 +30,10 @@ class InformeViewModel @Inject constructor(
     guardado: SavedStateHandle,
     private val generador: GeneradorInformeTaller,
     private val repositorio: TallerRepository,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
-    private val sesionId = checkNotNull(guardado.get<Long>(ARG_SESION)) { "Falta el argumento $ARG_SESION" }
+    private val sesionId = checkNotNull(guardado.get<Long>(ARG_SESION)) { "Falta el argumento $ARG_SESION" } // i18n-ignore
     private val mutableEstado = MutableStateFlow(InformeUi())
     private val archivos = Channel<File>(Channel.BUFFERED)
     val estado: StateFlow<InformeUi> = mutableEstado.asStateFlow()
@@ -60,12 +64,12 @@ class InformeViewModel @Inject constructor(
         viewModelScope.launch {
             val sesion = runCatching { repositorio.sesion(sesionId) }.getOrNull()
             if (sesion == null) {
-                mutableEstado.update { it.copy(error = "La sesión ya no existe.") }
+                mostrarError(R.string.workshop_report_error_session_gone)
                 return@launch
             }
             runCatching { repositorio.actualizarSesion(sesion.copy(interpretacion = texto)) }
                 .onSuccess { cargar() }
-                .onFailure { mutableEstado.update { it.copy(error = "No se pudo guardar la interpretación.") } }
+                .onFailure { mostrarError(R.string.workshop_report_error_save_interpretation) }
         }
     }
 
@@ -74,7 +78,7 @@ class InformeViewModel @Inject constructor(
         viewModelScope.launch {
             val archivo = withContext(Dispatchers.IO) { escribir(directorio, html) }
             if (archivo == null) {
-                mutableEstado.update { it.copy(mensaje = "No se pudo preparar el informe para compartir.") }
+                mutableEstado.update { it.copy(mensaje = resolver.get(R.string.workshop_report_error_prepare_share)) }
             } else {
                 archivos.send(archivo)
             }
@@ -92,15 +96,19 @@ class InformeViewModel @Inject constructor(
 
     private suspend fun estadoCargado(): InformeUi {
         val informe = runCatching { generador.generar(sesionId) }
-            .getOrElse { return InformeUi(cargando = false, error = "No se pudo generar el informe.") }
-            ?: return InformeUi(cargando = false, error = "No se encontró la sesión para generar el informe.")
+            .getOrElse { return errorDeCarga(R.string.workshop_report_error_generate) }
+            ?: return errorDeCarga(R.string.workshop_report_error_session_not_found)
         return InformeUi(
             cargando = false,
             titulo = informe.titulo,
-            html = InformeTallerHtml.render(informe),
+            html = InformeTallerHtml.render(informe, resolver),
             interpretacion = informe.interpretacionTecnico,
         )
     }
+
+    private fun mostrarError(@StringRes mensaje: Int) = mutableEstado.update { it.copy(error = resolver.get(mensaje)) }
+
+    private fun errorDeCarga(@StringRes mensaje: Int) = InformeUi(cargando = false, error = resolver.get(mensaje))
 
     companion object {
         const val ARG_SESION = "sesionId"

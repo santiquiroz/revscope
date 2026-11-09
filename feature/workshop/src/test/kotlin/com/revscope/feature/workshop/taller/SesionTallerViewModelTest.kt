@@ -80,6 +80,7 @@ class SesionTallerViewModelTest {
             taller.registro,
             taller.analizador,
             taller.entorno,
+            PruebaStringResolver.es(),
         ).also { vm -> backgroundScope.launch { vm.estado.collect {} } }
 
     @Test
@@ -146,7 +147,7 @@ class SesionTallerViewModelTest {
         vm.pedirEliminacion()
         assertEquals(DialogoSesion.ELIMINAR, vm.estado.value.ui.dialogo)
         assertEquals(LoQueSeBorra(eventos = 2, adjuntos = 1), vm.estado.value.loQueSeBorra)
-        assertEquals(3, AvisosEliminacion.de(vm.estado.value.loQueSeBorra).size)
+        assertEquals(3, AvisosEliminacion.de(vm.estado.value.loQueSeBorra, PruebaStringResolver.es()).size)
 
         vm.confirmarEliminacion()
         // El borrado de la carpeta de adjuntos corre en Dispatchers.IO: se espera en tiempo real.
@@ -242,5 +243,13 @@ class SesionTallerViewModelTest {
         assertFalse(ui.comparacionExpandida)
         vm.pedirNota()
         assertFalse("pedir la nota cierra la hoja", vm.estado.value.ui.hojaAgregar)
+    }
+
+    @Test
+    fun `el aviso de eliminación se localiza al inglés`() {
+        assertEquals(
+            "The symptoms, notes, comparison, and 6 events will be lost from the timeline.",
+            AvisosEliminacion.de(LoQueSeBorra(eventos = 6, adjuntos = 0), PruebaStringResolver.en()).first(),
+        )
     }
 }

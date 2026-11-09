@@ -1,5 +1,6 @@
 package com.revscope.feature.workshop.taller.multimetro
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.multimetro.Cable
 import com.revscope.core.obd.taller.multimetro.ContextoMultimetro
 import com.revscope.core.obd.taller.multimetro.EvaluadorCelda
@@ -11,6 +12,7 @@ import com.revscope.core.obd.taller.multimetro.SensorMultimetro
 import com.revscope.core.obd.taller.multimetro.VeredictoCombinado
 import com.revscope.core.obd.taller.multimetro.VeredictoMultimetro
 import com.revscope.core.obd.taller.referencia.BandaReferencia
+import com.revscope.feature.workshop.R
 
 object LectorDecimal {
     // Coma o punto: el teclado decimal del teléfono en español escribe coma.
@@ -19,34 +21,40 @@ object LectorDecimal {
 
 internal object MapeoMultimetro {
 
-    const val COLORES_EDITADOS = "Colores editados por ti, sin guardar en el modelo"
     // En los bornes de la batería y entre los terminales del inyector no hay un cable que identificar por color.
     private val SIN_CABLES_DE_COLOR = setOf(SensorMultimetro.BATERIA, SensorMultimetro.INYECTOR)
 
-    const val SIN_COLORES = "Plantilla genérica típica, sin colores: los colores cambian con cada modelo"
-
-    fun ui(l: LocalMultimetro): MultimetroUi {
-        val ctx = l.contexto ?: return MultimetroUi(cargando = l.cargando, error = l.error, sensor = l.sensor, mensaje = l.mensaje)
-        val plantilla = plantillaEfectiva(ctx, l.colores)
+    fun ui(l: LocalMultimetro, resolver: StringResolver): MultimetroUi {
+        val ctx = l.contexto ?: return sinContexto(l, resolver)
+        val plantilla = plantillaEfectiva(ctx, l.colores, resolver)
         val lecturas = lecturas(plantilla, l.textos)
-        val veredicto = lecturas.takeIf { it.isNotEmpty() }?.let { VeredictoMultimetro.combinar(plantilla, it, ctx.bandas, ctx.ecu) }
+        val veredicto = lecturas.takeIf { it.isNotEmpty() }
+            ?.let { VeredictoMultimetro.combinar(plantilla, it, ctx.bandas, ctx.ecu, resolver) }
         return MultimetroUi(
             cargando = false,
             error = l.error,
             vehiculo = ctx.vehiculo?.nombre,
             sensor = l.sensor,
-            plantilla = plantillaUi(plantilla, l.textos, ctx.bandas, veredicto, editados(ctx, l.colores)),
+            plantilla = plantillaUi(plantilla, l.textos, ctx.bandas, veredicto, editados(ctx, l.colores), resolver),
             veredicto = veredicto?.let(::veredictoUi),
             colores = coloresUi(ctx, plantilla, l.colores),
-            guardar = guardarUi(ctx, lecturas.isNotEmpty(), l.ocupado),
+            guardar = guardarUi(ctx, lecturas.isNotEmpty(), l.ocupado, resolver),
             dialogoColor = l.dialogoColor,
             mensaje = l.mensaje,
         )
     }
 
-    fun plantillaEfectiva(ctx: ContextoMultimetro, colores: Map<FuncionCable, String?>): PlantillaCableado {
+    private fun sinContexto(l: LocalMultimetro, resolver: StringResolver) = MultimetroUi(
+        cargando = l.cargando,
+        error = l.error,
+        sensor = l.sensor,
+        guardar = GuardarUi(texto = resolver.get(R.string.workshop_multimetro_save_session)),
+        mensaje = l.mensaje,
+    )
+
+    fun plantillaEfectiva(ctx: ContextoMultimetro, colores: Map<FuncionCable, String?>, resolver: StringResolver): PlantillaCableado {
         if (!editados(ctx, colores)) return ctx.plantilla
-        return ResolutorPlantilla.conColores(ctx.plantilla, colores, COLORES_EDITADOS)
+        return ResolutorPlantilla.conColores(ctx.plantilla, colores, resolver.get(R.string.workshop_multimetro_colors_edited))
     }
 
     fun lecturas(plantilla: PlantillaCableado, textos: Map<Pair<FuncionCable, String>, String>): List<LecturaMultimetro> =
@@ -65,23 +73,29 @@ internal object MapeoMultimetro {
         bandas: Map<String, BandaReferencia>,
         veredicto: VeredictoCombinado?,
         editados: Boolean,
+        resolver: StringResolver,
     ) = PlantillaUi(
         titulo = p.titulo,
         dondeMedir = p.dondeMedir,
-        origenColores = when {
-            p.sensor in SIN_CABLES_DE_COLOR -> origenSinCables(p.sensor)
-            editados -> COLORES_EDITADOS
-            p.fuenteColores != null -> "Colores: ${p.fuenteColores}"
-            else -> SIN_COLORES
-        },
+        origenColores = origenColores(p, editados, resolver),
         unidad = p.unidad,
         condiciones = p.condiciones.map { it.etiqueta },
-        filas = p.cables.map { fila(p, it, textos, bandas, veredicto) },
+        filas = p.cables.map { fila(p, it, textos, bandas, veredicto, resolver) },
     )
 
-    private fun origenSinCables(sensor: SensorMultimetro): String =
-        if (sensor == SensorMultimetro.BATERIA) "Bandas típicas de una batería de 12 V de plomo-ácido: compáralas con el manual"
-        else "Banda típica de un inyector de alta impedancia: compárala con el manual"
+    private fun origenColores(p: PlantillaCableado, editados: Boolean, resolver: StringResolver): String {
+        val fuente = p.fuenteColores
+        return when {
+            p.sensor in SIN_CABLES_DE_COLOR -> resolver.get(origenSinCables(p.sensor))
+            editados -> resolver.get(R.string.workshop_multimetro_colors_edited)
+            fuente != null -> resolver.get(R.string.workshop_multimetro_colors_source, fuente)
+            else -> resolver.get(R.string.workshop_multimetro_colors_generic)
+        }
+    }
+
+    private fun origenSinCables(sensor: SensorMultimetro): Int =
+        if (sensor == SensorMultimetro.BATERIA) R.string.workshop_multimetro_battery_bands
+        else R.string.workshop_multimetro_injector_band
 
     private fun fila(
         p: PlantillaCableado,
@@ -89,6 +103,7 @@ internal object MapeoMultimetro {
         textos: Map<Pair<FuncionCable, String>, String>,
         bandas: Map<String, BandaReferencia>,
         veredicto: VeredictoCombinado?,
+        resolver: StringResolver,
     ): FilaCableUi {
         val filaMedida = lecturas(p, textos).filter { it.funcion == cable.funcion }.associate { it.condicion to it.valor }
         val celdas = p.condiciones.map { condicion ->
@@ -100,7 +115,7 @@ internal object MapeoMultimetro {
                 etiquetaCondicion = condicion.etiqueta,
                 texto = texto,
                 estado = evaluada?.estado,
-                referencia = evaluada?.referencia ?: referenciaEsperada(p, cable, condicion.clave, filaMedida, bandas),
+                referencia = evaluada?.referencia ?: referenciaEsperada(p, cable, condicion.clave, filaMedida, bandas, resolver),
                 invalido = texto.isNotBlank() && LectorDecimal.leer(texto) == null,
                 aplica = cable.esperado(condicion.clave) != null,
             )
@@ -115,9 +130,10 @@ internal object MapeoMultimetro {
         condicion: String,
         fila: Map<String, Double>,
         bandas: Map<String, BandaReferencia>,
+        resolver: StringResolver,
     ): String? {
         if (cable.esperado(condicion) == null) return null
-        return EvaluadorCelda.evaluar(p, LecturaMultimetro(cable.funcion, condicion, 0.0, p.unidad), fila, bandas).referencia
+        return EvaluadorCelda.evaluar(p, LecturaMultimetro(cable.funcion, condicion, 0.0, p.unidad), fila, bandas, resolver).referencia
     }
 
     private fun veredictoUi(v: VeredictoCombinado) = VeredictoUi(
@@ -133,17 +149,23 @@ internal object MapeoMultimetro {
         modelo = ctx.modelo?.nombre,
     )
 
-    private fun guardarUi(ctx: ContextoMultimetro, hayLecturas: Boolean, ocupado: Boolean): GuardarUi {
+    private fun guardarUi(ctx: ContextoMultimetro, hayLecturas: Boolean, ocupado: Boolean, resolver: StringResolver): GuardarUi {
         val sesion = ctx.sesion
-        val vehiculo = ctx.vehiculo ?: return GuardarUi(false, "Guardar en la sesión", "Elige el vehículo activo para guardar la medición.")
+        val enSesion = resolver.get(R.string.workshop_multimetro_save_session)
+        val vehiculo = ctx.vehiculo
+            ?: return GuardarUi(false, enSesion, resolver.get(R.string.workshop_multimetro_choose_vehicle))
         val puede = hayLecturas && !ocupado
-        val pista = if (hayLecturas) null else "Escribe al menos una medida para guardarla."
+        val pista = if (hayLecturas) null else resolver.get(R.string.workshop_multimetro_enter_reading_hint)
         return when {
-            sesion != null -> GuardarUi(puede, "Guardar en la sesión", listOfNotNull("Sesión abierta: ${sesion.titulo}.", pista).joinToString(" "))
+            sesion != null -> GuardarUi(
+                puede,
+                enSesion,
+                listOfNotNull(resolver.get(R.string.workshop_multimetro_session_open, sesion.titulo), pista).joinToString(" "),
+            )
             else -> GuardarUi(
                 puede,
-                "Guardar en una sesión nueva",
-                listOfNotNull("No hay una sesión abierta: se abre una para ${vehiculo.nombre}.", pista).joinToString(" "),
+                resolver.get(R.string.workshop_multimetro_save_new_session),
+                listOfNotNull(resolver.get(R.string.workshop_multimetro_session_will_open, vehiculo.nombre), pista).joinToString(" "),
             )
         }
     }

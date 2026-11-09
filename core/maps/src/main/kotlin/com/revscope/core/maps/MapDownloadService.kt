@@ -10,10 +10,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.revscope.core.common.i18n.StringResolver
 import java.io.File
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Gestiona el `.pmtiles` offline de Colombia en disco: descarga streaming con progreso, borrado
@@ -21,7 +23,7 @@ import java.nio.file.StandardCopyOption
  * WiFi real) llega en T4/T5 — acá el constructor solo pide dependencias explícitas para poder
  * testear todo sin Android ni red real (ver [MapBytesSource]).
  *
- * Descarga a `colombia.pmtiles.part` en el mismo directorio y hace un rename atómico al
+ * Descarga a `colombia.pmtiles.part-<intento>` en el mismo directorio y hace un rename atómico al
  * completar: nunca expone un archivo parcial con el nombre final. Un `.part` huérfano de un
  * intento anterior (p. ej. app matada a mitad) se borra al arrancar la siguiente descarga — v1
  * no soporta resume por rangos.
@@ -31,6 +33,7 @@ class MapDownloadService(
     private val isOnWifi: () -> Boolean,
     private val bytesSource: MapBytesSource = OkHttpMapBytesSource(),
     private val usableSpaceBytes: () -> Long = { mapsDir.usableSpace },
+    private val resolver: StringResolver,
 ) {
 
     companion object {
@@ -43,7 +46,8 @@ class MapDownloadService(
     }
 
     private val targetFile = File(mapsDir, MapStyleProvider.PMTILES_FILE_NAME)
-    private val partFile = File(mapsDir, "${MapStyleProvider.PMTILES_FILE_NAME}.part")
+    private val partPrefix = "${MapStyleProvider.PMTILES_FILE_NAME}.part"
+    private val attemptCounter = AtomicInteger(0)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -55,6 +59,7 @@ class MapDownloadService(
     // solo el intento "vigente" logra publicar.
     private val lock = Any()
     private var downloadJob: Job? = null
+    private var activePartFile: File? = null
     private var lastEmittedPercent = -1
 
     private val _state = MutableStateFlow<MapDownloadState>(idleStateFromDisk())
@@ -64,16 +69,16 @@ class MapDownloadService(
     fun download(allowCellular: Boolean) {
         synchronized(lock) {
             if (downloadJob?.isActive == true) return
-            downloadJob = scope.launch { runDownload(allowCellular) }
+            val partFile = File(mapsDir, "$partPrefix-${attemptCounter.incrementAndGet()}")
+            activePartFile = partFile
+            downloadJob = scope.launch { runDownload(allowCellular, partFile) }
         }
     }
 
     /** Corta la descarga en curso (no-op si no había ninguna) y borra el `.part`. */
     fun cancel() {
         synchronized(lock) {
-            downloadJob?.cancel()
-            downloadJob = null
-            partFile.delete()
+            cancelActiveAttempt()
             _state.value = idleStateFromDisk()
         }
     }
@@ -81,9 +86,7 @@ class MapDownloadService(
     /** Borra el mapa ya descargado (y cualquier `.part` residual) y corta una descarga activa. */
     fun delete() {
         synchronized(lock) {
-            downloadJob?.cancel()
-            downloadJob = null
-            partFile.delete()
+            cancelActiveAttempt()
             targetFile.delete()
             _state.value = idleStateFromDisk()
         }
@@ -97,26 +100,44 @@ class MapDownloadService(
         }
     }
 
-    private suspend fun runDownload(allowCellular: Boolean) {
+    // Llamar con `lock` tomado. Cada intento tiene su propio .part: la limpieza tardía de un
+    // intento cancelado nunca toca el archivo del intento nuevo.
+    private fun cancelActiveAttempt() {
+        downloadJob?.cancel()
+        downloadJob = null
+        activePartFile?.delete()
+        activePartFile = null
+        deleteInactiveParts()
+    }
+
+    // .part huérfanos (app matada a mitad, intentos cancelados) — v1 no hace resume.
+    private fun deleteInactiveParts() {
+        synchronized(lock) {
+            mapsDir.listFiles { f -> f.name.startsWith(partPrefix) && f != activePartFile }
+                ?.forEach { it.delete() }
+        }
+    }
+
+    private suspend fun runDownload(allowCellular: Boolean, partFile: File) {
         val myJob = currentCoroutineContext()[Job]
         mapsDir.mkdirs()
-        partFile.delete() // .part huérfano de un intento anterior — v1 no hace resume.
+        deleteInactiveParts()
         if (MapDownloadDecider.shouldBlockOnCellular(allowCellular, isOnWifi())) {
             publishState(
                 myJob,
-                MapDownloadState.Error("Descarga bloqueada: conectate a WiFi o permití datos móviles en Ajustes"),
+                MapDownloadState.Error(resolver.get(R.string.maps_download_blocked)),
             )
             return
         }
         if (!MapDownloadDecider.canStart(usableSpaceBytes(), EXPECTED_SIZE_BYTES)) {
-            publishState(myJob, MapDownloadState.Error("Espacio insuficiente para descargar el mapa offline"))
+            publishState(myJob, MapDownloadState.Error(resolver.get(R.string.maps_insufficient_space)))
             return
         }
         lastEmittedPercent = -1
         publishState(myJob, MapDownloadState.Downloading(0f, 0L, EXPECTED_SIZE_BYTES))
         try {
             bytesSource.download(PMTILES_URL, partFile) { downloaded, total -> emitProgress(myJob, downloaded, total) }
-            promote(myJob)
+            promote(myJob, partFile)
         } catch (e: CancellationException) {
             partFile.delete()
             throw e
@@ -124,7 +145,7 @@ class MapDownloadService(
             partFile.delete()
             publishState(
                 myJob,
-                MapDownloadState.Error(e.message?.takeIf { it.isNotBlank() } ?: "Error de red descargando el mapa offline"),
+                MapDownloadState.Error(e.message?.takeIf { it.isNotBlank() } ?: resolver.get(R.string.maps_download_network_error)),
             )
         }
     }
@@ -138,12 +159,12 @@ class MapDownloadService(
         publishState(myJob, MapDownloadState.Downloading(progress, bytesDownloaded, totalBytes))
     }
 
-    private fun promote(myJob: Job?) {
-        when (MapDownloadDecider.promoteOutcome(renameOk = promoteAtomically())) {
+    private fun promote(myJob: Job?, partFile: File) {
+        when (MapDownloadDecider.promoteOutcome(renameOk = promoteAtomically(partFile))) {
             MapDownloadPromoteOutcome.PROMOTED -> publishState(myJob, idleStateFromDisk())
             MapDownloadPromoteOutcome.RENAME_FAILED -> {
                 partFile.delete()
-                publishState(myJob, MapDownloadState.Error("No se pudo finalizar la descarga del mapa offline"))
+                publishState(myJob, MapDownloadState.Error(resolver.get(R.string.maps_download_finalize_failed)))
             }
         }
     }
@@ -154,14 +175,14 @@ class MapDownloadService(
      * promovía. `Files.move` con ATOMIC_MOVE + REPLACE_EXISTING da atomicidad y reemplazo en
      * ambas plataformas.
      */
-    private fun promoteAtomically(): Boolean = try {
-        moveReplacingTarget()
+    private fun promoteAtomically(partFile: File): Boolean = try {
+        moveReplacingTarget(partFile)
         true
     } catch (e: Exception) {
         false
     }
 
-    private fun moveReplacingTarget() {
+    private fun moveReplacingTarget(partFile: File) {
         try {
             Files.move(
                 partFile.toPath(),
@@ -173,13 +194,13 @@ class MapDownloadService(
             // Algún filesystem no soporta ATOMIC_MOVE + REPLACE_EXISTING juntas en la misma
             // llamada — Files.move lo documenta como UnsupportedOperationException, pero hay
             // providers que tiran IllegalArgumentException por combos de opciones: cubrir ambas.
-            moveAtomicThenManualReplace()
+            moveAtomicThenManualReplace(partFile)
         } catch (e: UnsupportedOperationException) {
-            moveAtomicThenManualReplace()
+            moveAtomicThenManualReplace(partFile)
         }
     }
 
-    private fun moveAtomicThenManualReplace() {
+    private fun moveAtomicThenManualReplace(partFile: File) {
         try {
             Files.move(partFile.toPath(), targetFile.toPath(), StandardCopyOption.ATOMIC_MOVE)
         } catch (e: FileAlreadyExistsException) {

@@ -7,6 +7,7 @@ import com.revscope.core.obd.taller.referencia.PosicionEnBanda
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.Veredicto
 import com.revscope.core.obd.telemetry.captura.MuestraCaptura
+import com.revscope.core.uitesting.XmlStringResolver
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,6 +17,16 @@ import org.junit.Test
 
 class AnalizadorMapBaroTest {
 
+    private val resolver = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
+    private val ingles = XmlStringResolver.en(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
     private val moto = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
 
     private fun datos(map: (Int) -> Double?, baroEcu: Double? = null, ambiente: LecturasAmbiente? = null): DatosPrueba {
@@ -34,7 +45,39 @@ class AnalizadorMapBaroTest {
         )
     }
 
-    private fun resultado(d: DatosPrueba) = AnalizadorMapBaro.analizar(d, moto).plano()
+    private fun resultado(d: DatosPrueba) = AnalizadorMapBaro.analizar(d, moto, resolver).plano()
+
+    @Test
+    fun `en inglés la referencia cita su fuente, la diferencia y la banda esperada`() {
+        val r = AnalizadorMapBaro.analizar(datos({ 70.0 }, ambiente = LecturasAmbiente(altitudGpsM = 1_500.0)), moto, ingles).plano()
+
+        assertEquals("MAP reads 14.6 kPa below barometric pressure", r.titulo)
+        assertTrue(
+            r.interpretacion,
+            r.interpretacion.contains(
+                "The reference was the pressure estimated from GPS altitude (±3 kPa, from weather and GPS altitude): 84.6 kPa. " +
+                    "The difference is -14.6 kPa; with no vacuum, ",
+            ),
+        )
+        assertTrue(r.interpretacion, r.interpretacion.contains("plus ±3 kPa from the source."))
+        assertTrue(r.interpretacion, r.interpretacion.contains("at an altitude of about 3,000 m."))
+        assertTrue(r.hallazgos.toString(), r.hallazgos.contains("MAP reads 14.6 kPa below barometric pressure (tolerance ±6 kPa)"))
+    }
+
+    @Test
+    fun `en español la redacción sigue igual, con la referencia y la altitud con espacio de miles`() {
+        val r = resultado(datos({ 70.0 }, ambiente = LecturasAmbiente(altitudGpsM = 1_500.0)))
+
+        assertEquals("El MAP marca 14,6 kPa por debajo de la barométrica", r.titulo)
+        assertTrue(
+            r.interpretacion,
+            r.interpretacion.contains(
+                "La referencia fue la presión estimada por la altitud GPS (±3 kPa, por clima y altitud GPS): 84,6 kPa. " +
+                    "La diferencia es de -14,6 kPa; sin vacío se espera ",
+            ),
+        )
+        assertTrue(r.interpretacion, r.interpretacion.contains("equivalen a la presión atmosférica a unos 3 000 m de altitud."))
+    }
 
     @Test
     fun `70 kPa contra 84,6 estimada por la altitud queda fuera de banda aun con la incertidumbre`() {
@@ -138,11 +181,15 @@ class AnalizadorMapBaroTest {
 
     @Test
     fun `el detalle guarda el MAP, la referencia con su origen y la diferencia`() {
-        val json = JSONObject(AnalizadorMapBaro.analizar(datos({ 70.0 }, ambiente = LecturasAmbiente(altitudGpsM = 1_500.0)), moto).detalle.json().toString())
+        val json = JSONObject(AnalizadorMapBaro.analizar(datos({ 70.0 }, ambiente = LecturasAmbiente(altitudGpsM = 1_500.0)), moto, resolver).detalle.json().toString())
 
         assertEquals("MAP_BAJO", json.getString("patron"))
         assertEquals(70.0, json.getDouble("mapKpa"), 1e-9)
         assertEquals("ALTITUD_GPS", json.getJSONObject("referencia").getString("origen"))
+        assertEquals(
+            "Presión estimada por la altitud GPS (±3 kPa, por clima y altitud GPS)",
+            json.getJSONObject("referencia").getString("etiqueta").plano(),
+        )
         assertEquals(-14.6, json.getDouble("deltaKpa"), 0.05)
     }
 }

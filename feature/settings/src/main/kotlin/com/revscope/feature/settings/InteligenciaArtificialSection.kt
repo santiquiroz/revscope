@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.text.KeyboardOptions
 import com.revscope.core.intelligence.provider.AI_PROVIDER_CUSTOM
 import com.revscope.core.intelligence.provider.AI_PROVIDER_NODO
@@ -48,23 +49,27 @@ internal fun InteligenciaArtificialCard(vm: SettingsViewModel, onOpenAiValue: ()
     val aiTesting by vm.aiTesting.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Inteligencia artificial")
+        SectionTitle(stringResource(R.string.settings_ai_section_title))
         Text(
-            "Proveedor usado para explicar códigos DTC e información local. Sin API key, " +
-                "esas funciones se muestran sin explicación de IA.",
+            stringResource(R.string.settings_ai_provider_description),
             color = TextMutedColor,
             fontSize = 12.sp,
         )
         if (aiApiKey.isBlank()) {
             TextButton(onClick = onOpenAiValue) {
-                Text("Ver qué ganás con una key", color = AccentColor)
+                Text(stringResource(R.string.settings_ai_show_benefits), color = AccentColor)
             }
         }
         AiProviderDropdown(selected = aiProvider, onSelected = vm::updateAiProvider)
         OutlinedTextField(
             value = aiApiKey,
             onValueChange = vm::updateAiApiKey,
-            label = { Text("API key de ${aiProviderLabel(aiProvider)}", fontSize = 12.sp) },
+            label = {
+                Text(
+                    stringResource(R.string.settings_ai_api_key_label, aiProviderLabel(aiProvider)),
+                    fontSize = 12.sp,
+                )
+            },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -74,7 +79,12 @@ internal fun InteligenciaArtificialCard(vm: SettingsViewModel, onOpenAiValue: ()
         OutlinedTextField(
             value = aiModel,
             onValueChange = vm::updateAiModel,
-            label = { Text("Modelo (vacío = ${aiModelHint(aiProvider)})", fontSize = 12.sp) },
+            label = {
+                Text(
+                    stringResource(R.string.settings_ai_model_label, aiModelHint(aiProvider)),
+                    fontSize = 12.sp,
+                )
+            },
             singleLine = true,
             colors = settingsFieldColors(),
             modifier = Modifier.fillMaxWidth(),
@@ -85,8 +95,11 @@ internal fun InteligenciaArtificialCard(vm: SettingsViewModel, onOpenAiValue: ()
                 onValueChange = vm::updateAiCustomBaseUrl,
                 label = {
                     Text(
-                        if (aiProvider == AI_PROVIDER_NODO) "Base URL (vacío = $NODO_BASE_URL_POR_DEFECTO)"
-                        else "Base URL (LM Studio, DeepSeek, Groq, OpenRouter…)",
+                        if (aiProvider == AI_PROVIDER_NODO) {
+                            stringResource(R.string.settings_ai_base_url_nodo, NODO_BASE_URL_POR_DEFECTO)
+                        } else {
+                            stringResource(R.string.settings_ai_base_url_custom)
+                        },
                         fontSize = 12.sp,
                     )
                 },
@@ -102,36 +115,49 @@ internal fun InteligenciaArtificialCard(vm: SettingsViewModel, onOpenAiValue: ()
             Button(
                 onClick = vm::saveAiSettings,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-            ) { Text("Guardar configuración de IA", color = BgColor) }
+            ) { Text(stringResource(R.string.settings_ai_save), color = BgColor) }
             Button(
                 onClick = vm::testAiConnection,
                 enabled = !aiTesting,
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceHighColor),
-            ) { Text(if (aiTesting) "Probando…" else "Probar conexión", color = TextPrimaryColor) }
+            ) {
+                Text(
+                    stringResource(
+                        if (aiTesting) R.string.settings_ai_testing else R.string.settings_ai_test_connection,
+                    ),
+                    color = TextPrimaryColor,
+                )
+            }
         }
     }
 }
 
 private val AiProviderOptions = listOf(
-    "anthropic" to "Claude (Anthropic)",
-    "openai" to "OpenAI",
-    "gemini" to "Gemini (Google)",
-    AI_PROVIDER_NODO to "Nodo (este teléfono)",
-    AI_PROVIDER_CUSTOM to "Compatible OpenAI (LM Studio, DeepSeek, Groq, OpenRouter…)",
+    "anthropic" to R.string.settings_ai_provider_anthropic,
+    "openai" to R.string.settings_ai_provider_openai,
+    "gemini" to R.string.settings_ai_provider_gemini,
+    AI_PROVIDER_NODO to R.string.settings_ai_provider_nodo,
+    AI_PROVIDER_CUSTOM to R.string.settings_ai_provider_custom,
 )
 
 private val AiModelHints = mapOf(
     "anthropic" to "claude-haiku-4-5-20251001",
     "openai" to "gpt-5-mini",
     "gemini" to "gemini-flash-latest",
-    AI_PROVIDER_NODO to "el que tengas cargado en Nodo",
-    AI_PROVIDER_CUSTOM to "según tu servidor",
 )
 
-private fun aiProviderLabel(provider: String): String =
-    AiProviderOptions.firstOrNull { it.first == provider }?.second ?: provider
+@Composable
+private fun aiProviderLabel(provider: String): String {
+    val labelRes = AiProviderOptions.firstOrNull { it.first == provider }?.second
+    return if (labelRes == null) provider else stringResource(labelRes)
+}
 
-private fun aiModelHint(provider: String): String = AiModelHints[provider].orEmpty()
+@Composable
+private fun aiModelHint(provider: String): String = when (provider) {
+    AI_PROVIDER_NODO -> stringResource(R.string.settings_ai_model_hint_nodo)
+    AI_PROVIDER_CUSTOM -> stringResource(R.string.settings_ai_model_hint_server)
+    else -> AiModelHints[provider].orEmpty()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,7 +172,7 @@ private fun AiProviderDropdown(selected: String, onSelected: (String) -> Unit) {
             value = aiProviderLabel(selected),
             onValueChange = {},
             readOnly = true,
-            label = { Text("Proveedor de IA", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.settings_ai_provider_label), fontSize = 12.sp) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -157,9 +183,9 @@ private fun AiProviderDropdown(selected: String, onSelected: (String) -> Unit) {
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            AiProviderOptions.forEach { (id, label) ->
+            AiProviderOptions.forEach { (id, labelRes) ->
                 DropdownMenuItem(
-                    text = { Text(label) },
+                    text = { Text(stringResource(labelRes)) },
                     onClick = {
                         onSelected(id)
                         expanded = false

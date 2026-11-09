@@ -12,6 +12,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -30,7 +32,7 @@ class SemanticaInformeTest {
 
     @Before
     fun pantallaAngostaConLetraGrande() {
-        RuntimeEnvironment.setQualifiers("w360dp-h915dp-xhdpi")
+        RuntimeEnvironment.setQualifiers("es-w360dp-h915dp-xhdpi")
         RuntimeEnvironment.setFontScale(2f)
     }
 
@@ -59,7 +61,10 @@ class SemanticaInformeTest {
 
         compose.onNodeWithText("Informe de taller").assertIsDisplayed()
         compose.onNodeWithText("Vista previa del informe").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Volver").assertAreaMinima().performClick()
+        compose.onNodeWithContentDescription(
+            XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res"))
+                .get(DesignSystemR.string.ds_back),
+        ).assertAreaMinima().performClick()
         compose.onNodeWithText("Compartir").assertIsDisplayed().assertAreaMinima().performClick()
         compose.onNodeWithText("Imprimir o PDF").assertIsDisplayed().assertAreaMinima().performClick()
         compose.onNodeWithText("Editar interpretación").assertIsDisplayed().assertAreaMinima().performClick()

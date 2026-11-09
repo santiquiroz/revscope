@@ -1,5 +1,7 @@
 package com.revscope.core.obd.escucha
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.session.ObdSessionManager
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +44,7 @@ class CapturaRutaCan internal constructor(
     private val servicio: ServicioEscuchaCan,
     private val repositorio: CapturasCanRepositorio,
     private val gps: MuestreadorGpsCaptura,
+    private val resolver: StringResolver,
     private val ahora: () -> Long,
     private val scope: CoroutineScope,
 ) {
@@ -52,8 +55,9 @@ class CapturaRutaCan internal constructor(
         servicio: ServicioEscuchaCan,
         repositorio: CapturasCanRepositorio,
         gps: MuestreadorGpsCaptura,
+        resolver: StringResolver,
     ) : this(
-        sessionManager, servicio, repositorio, gps,
+        sessionManager, servicio, repositorio, gps, resolver,
         System::currentTimeMillis, CoroutineScope(SupervisorJob() + Dispatchers.Default),
     )
 
@@ -88,8 +92,9 @@ class CapturaRutaCan internal constructor(
 
     // El estado no sirve de guarda: un rechazo lo pasa a Fallo mientras la captura sigue.
     private fun motivoRechazo(): String? = when {
-        trabajo?.isActive == true -> YA_CAPTURANDO
-        sessionManager.connectionState.value !is ConnectionState.Connected -> SIN_CONEXION
+        trabajo?.isActive == true -> resolver.get(R.string.obd_capture_route_already_active)
+        sessionManager.connectionState.value !is ConnectionState.Connected ->
+            resolver.get(R.string.obd_capture_route_not_connected)
         else -> servicio.motivoRechazo()
     }
 
@@ -103,7 +108,7 @@ class CapturaRutaCan internal constructor(
         val muestras = withContext(NonCancellable) { gps.detener() }
         _estado.value = resultado.fold(
             onSuccess = { guardar(it, rebasar(muestras, inicio, it.inicioEpochMs)) },
-            onFailure = { EstadoCapturaRuta.Fallo(it.message ?: "no se pudo capturar el bus CAN") },
+            onFailure = { EstadoCapturaRuta.Fallo(it.message ?: resolver.get(R.string.obd_capture_route_failed)) },
         )
     }
 
@@ -132,7 +137,7 @@ class CapturaRutaCan internal constructor(
             val final = captura.copy(origen = CapturaCan.ORIGEN_APP, muestrasGps = muestras.size)
             repositorio.guardar(final, muestras)
             EstadoCapturaRuta.Terminada(final.id, final.totalTramas, muestras.size, final.duracionMs)
-        }.getOrElse { EstadoCapturaRuta.Fallo(it.message ?: "no se pudo guardar la captura") }
+        }.getOrElse { EstadoCapturaRuta.Fallo(it.message ?: resolver.get(R.string.obd_capture_route_save_failed)) }
 
     // El GPS arranca antes que el monitor; sus tiempos se pasan al inicio real de la captura.
     private fun rebasar(muestras: List<MuestraGps>, inicioGps: Long, inicioCaptura: Long): List<MuestraGps> =
@@ -141,8 +146,6 @@ class CapturaRutaCan internal constructor(
     companion object {
         const val MAX_RUTA_MS = 15 * 60 * 1_000L
         const val ETIQUETA_POR_DEFECTO = "ruta"
-        const val SIN_CONEXION = "vehículo no conectado"
-        const val YA_CAPTURANDO = "ya hay una captura de ruta en curso"
         private const val INTERVALO_ESTADO_MS = 500L
     }
 }

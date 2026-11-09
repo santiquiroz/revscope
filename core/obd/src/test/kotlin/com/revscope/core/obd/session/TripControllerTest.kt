@@ -1,5 +1,7 @@
 package com.revscope.core.obd.session
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.NonCancellable
@@ -16,8 +18,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TripControllerTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
-    private class Harness(scope: CoroutineScope) {
+    private class Harness(scope: CoroutineScope, resolver: com.revscope.core.common.i18n.StringResolver) {
         val eventos = mutableListOf<String>()
         var siguienteId = 1L
         val publicadas = mutableListOf<Long?>()
@@ -41,12 +44,13 @@ class TripControllerTest {
                     publicadas += id
                     eventos += "publish:$id:motivo=${controller.ultimoMotivoFin.value}"
                 },
+                resolver = resolver,
                 clock = { 1_000L },
             )
         }
     }
 
-    private fun TestScope.harness() = Harness(backgroundScope)
+    private fun TestScope.harness() = Harness(backgroundScope, resolver)
 
     @Test
     fun `conectar arranca viaje como en v1_19`() = runTest {

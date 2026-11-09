@@ -1,8 +1,11 @@
 package com.revscope.core.obd.taller.pruebas
 
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.session.ObdSessionManager
-import com.revscope.core.obd.taller.FormatoTaller
 
 data class ContextoPrueba(
     val conectado: Boolean,
@@ -27,45 +30,51 @@ data class ContextoPrueba(
 data class ResultadoPrecondicion(val texto: String, val cumple: Boolean, val queHacer: String? = null, val aviso: Boolean = false)
 
 sealed interface Precondicion {
-    fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion
+    fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion
 
     data object AdaptadorConectado : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba) = if (ctx.conectado) {
-            ResultadoPrecondicion("Adaptador conectado", cumple = true)
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver) = if (ctx.conectado) {
+            ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_adaptador_conectado), cumple = true)
         } else {
-            ResultadoPrecondicion("Sin adaptador conectado", cumple = false, "Conecta el adaptador y pon el contacto")
+            ResultadoPrecondicion(
+                resolver.get(R.string.obd_precondicion_sin_adaptador),
+                cumple = false,
+                resolver.get(R.string.obd_precondicion_sin_adaptador_que_hacer),
+            )
         }
     }
 
-    data class MotorApagado(val queHacer: String) : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
+    data class MotorApagado(@StringRes val queHacerRes: Int) : Precondicion {
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion {
             val rpm = ctx.reciente(ContextoPrueba.PID_RPM)?.value
-                ?: return ResultadoPrecondicion("Motor apagado (sin lectura de RPM)", cumple = true)
-            if (rpm < 1.0) return ResultadoPrecondicion("Motor apagado (RPM = 0)", cumple = true)
-            return ResultadoPrecondicion("Motor encendido (${FormatoTaller.numero(rpm, 0)} rpm)", cumple = false, queHacer)
+                ?: return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_motor_apagado_sin_rpm), cumple = true)
+            if (rpm < 1.0) return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_motor_apagado_rpm_cero), cumple = true)
+            val texto = resolver.get(R.string.obd_precondicion_motor_encendido, entero(rpm, resolver))
+            return ResultadoPrecondicion(texto, cumple = false, resolver.get(queHacerRes))
         }
     }
 
     data class MotorEncendido(val minRpm: Double = MIN_RPM_ENCENDIDO) : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion {
+            val encender = resolver.get(R.string.obd_precondicion_encender)
             val rpm = ctx.reciente(ContextoPrueba.PID_RPM)?.value
-                ?: return ResultadoPrecondicion("Sin lectura de RPM", cumple = false, ENCENDER)
-            if (rpm > minRpm) return ResultadoPrecondicion("Motor encendido (${FormatoTaller.numero(rpm, 0)} rpm)", cumple = true)
-            return ResultadoPrecondicion("Motor apagado o a punto de apagarse (${FormatoTaller.numero(rpm, 0)} rpm)", cumple = false, ENCENDER)
+                ?: return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_sin_rpm), cumple = false, encender)
+            val cifra = entero(rpm, resolver)
+            if (rpm > minRpm) return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_motor_encendido, cifra), cumple = true)
+            return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_motor_apagandose, cifra), cumple = false, encender)
         }
 
         private companion object {
             const val MIN_RPM_ENCENDIDO = 400.0
-            const val ENCENDER = "Enciende el motor y déjalo en mínimo sin tocar el acelerador"
         }
     }
 
     // La ECU no informa la marcha por OBD: lo confirma el técnico.
     data object EnNeutro : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba) = ResultadoPrecondicion(
-            "Caja en neutro: confírmalo tú (la ECU no lo informa)",
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver) = ResultadoPrecondicion(
+            resolver.get(R.string.obd_precondicion_neutro),
             cumple = true,
-            "Vas a acelerar hasta unas 3 000 rpm: pon la caja en neutro antes de empezar",
+            resolver.get(R.string.obd_precondicion_neutro_que_hacer),
             aviso = true,
         )
     }
@@ -75,52 +84,55 @@ sealed interface Precondicion {
     data object MotorFrio : Precondicion {
         const val DIFERENCIA_MAX_C = 5.0
 
-        override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion {
             val ect = ctx.reciente(PID_ECT)?.value
             val iat = ctx.reciente(PID_IAT)?.value
-            if (ect == null || iat == null) return sinTemperaturas()
-            val medidas = "motor ${grados(ect)}, aire ${grados(iat)}"
-            if (ect - iat < DIFERENCIA_MAX_C) return ResultadoPrecondicion("Motor frío ($medidas)", cumple = true)
+            if (ect == null || iat == null) return sinTemperaturas(resolver)
+            val medidas = resolver.get(R.string.obd_precondicion_temperaturas, grados(ect, resolver), grados(iat, resolver))
+            if (ect - iat < DIFERENCIA_MAX_C) {
+                return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_motor_frio, medidas), cumple = true)
+            }
             return ResultadoPrecondicion(
-                "Motor tibio ($medidas): la prueba seguirá como «arranque tibio»",
+                resolver.get(R.string.obd_precondicion_motor_tibio, medidas),
                 cumple = true,
-                "Para un arranque en frío de verdad, repítela tras el reposo de la noche (≥ 6 h, típico)",
+                resolver.get(R.string.obd_precondicion_motor_tibio_que_hacer),
                 aviso = true,
             )
         }
 
-        private fun sinTemperaturas() = ResultadoPrecondicion(
-            "Sin lectura de la temperatura del motor o del aire",
+        private fun sinTemperaturas(resolver: StringResolver) = ResultadoPrecondicion(
+            resolver.get(R.string.obd_precondicion_sin_temperaturas),
             cumple = true,
-            "Se decidirá con el paso de contacto; si la ECU no las reporta, el resultado no dirá si estaba frío",
+            resolver.get(R.string.obd_precondicion_sin_temperaturas_que_hacer),
             aviso = true,
         )
 
-        private fun grados(x: Double) = "${FormatoTaller.numero(x, 0)} °C"
+        private fun grados(x: Double, resolver: StringResolver) = entero(x, resolver) + ESPACIO_DURO + GRADOS_C
 
         private const val PID_ECT = "05"
         private const val PID_IAT = "0F"
+        private const val GRADOS_C = "°C"
     }
 
     // No se puede leer si la farola está prendida: se avisa para que el voltaje en reposo se lea con esa carga.
     data object LucesConContacto : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba) = ResultadoPrecondicion(
-            "Farola y luces: en muchas motos la farola queda encendida con el contacto (AHO)",
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver) = ResultadoPrecondicion(
+            resolver.get(R.string.obd_precondicion_luces),
             cumple = true,
-            "El voltaje en reposo baja por eso y la banda lo tiene en cuenta; en un carro, apaga las luces antes de empezar",
+            resolver.get(R.string.obd_precondicion_luces_que_hacer),
             aviso = true,
         )
     }
 
     // Sin PID 33 la prueba sigue con el barómetro del teléfono o la altitud GPS, que es una estimación.
     data object BarometricaDisponible : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba) = if (ctx.soportado(PID_BARO)) {
-            ResultadoPrecondicion("Presión barométrica de la ECU disponible (PID $PID_BARO)", cumple = true)
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver) = if (ctx.soportado(PID_BARO)) {
+            ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_baro_disponible, PID_BARO), cumple = true)
         } else {
             ResultadoPrecondicion(
-                "La ECU no informa la presión barométrica (PID $PID_BARO)",
+                resolver.get(R.string.obd_precondicion_baro_no_disponible, PID_BARO),
                 cumple = true,
-                "Se usará el barómetro del teléfono o, si no tiene, la altitud GPS (estimada, ±3 kPa): activa la ubicación",
+                resolver.get(R.string.obd_precondicion_baro_que_hacer),
                 aviso = true,
             )
         }
@@ -129,23 +141,34 @@ sealed interface Precondicion {
     }
 
     data object MotoDetenida : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba): ResultadoPrecondicion {
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion {
             val kmh = ctx.velocidadKmh()
-                ?: return ResultadoPrecondicion("Moto detenida (sin dato de velocidad: confírmalo tú)", cumple = true)
-            if (kmh <= 0.0) return ResultadoPrecondicion("Moto detenida (0 km/h)", cumple = true)
+                ?: return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_moto_detenida_sin_velocidad), cumple = true)
+            if (kmh <= 0.0) return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_moto_detenida), cumple = true)
             return ResultadoPrecondicion(
-                "Moto en movimiento (${FormatoTaller.numero(kmh, 0)} km/h)",
+                resolver.get(R.string.obd_precondicion_moto_en_movimiento, entero(kmh, resolver)),
                 cumple = false,
-                "Detén la moto: la prueba se hace con la moto quieta",
+                resolver.get(R.string.obd_precondicion_moto_en_movimiento_que_hacer),
             )
         }
     }
 
-    data class PidDisponible(val pid: String, val nombre: String, val alternativa: String) : Precondicion {
-        override fun evaluar(ctx: ContextoPrueba) = if (ctx.soportado(pid)) {
-            ResultadoPrecondicion("$nombre disponible en esta ECU (PID $pid)", cumple = true)
-        } else {
-            ResultadoPrecondicion("$nombre no disponible en esta ECU (PID $pid)", cumple = false, alternativa)
+    // [nombreRes], si está, manda sobre [nombre]: los nombres que son siglas (TPS, MAP) no se traducen.
+    data class PidDisponible(
+        val pid: String,
+        val nombre: String,
+        @StringRes val alternativaRes: Int,
+        @StringRes val nombreRes: Int? = null,
+    ) : Precondicion {
+        override fun evaluar(ctx: ContextoPrueba, resolver: StringResolver): ResultadoPrecondicion {
+            val visible = nombreRes?.let { resolver.get(it) } ?: nombre
+            if (ctx.soportado(pid)) return ResultadoPrecondicion(resolver.get(R.string.obd_precondicion_pid_disponible, visible, pid), cumple = true)
+            val texto = resolver.get(R.string.obd_precondicion_pid_no_disponible, visible, pid)
+            return ResultadoPrecondicion(texto, cumple = false, resolver.get(alternativaRes))
         }
     }
 }
+
+private const val ESPACIO_DURO = " "
+
+private fun entero(x: Double, resolver: StringResolver) = LocaleNumbers.decimal(x, 0, resolver.locale)

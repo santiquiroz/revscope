@@ -27,6 +27,7 @@ class GetViajeDetalleTool @Inject constructor(
             .put("velocidadMaxKmh", session.maxSpeed)
             .put("rpmMax", session.maxRpm)
             .put("mejor0a60Ms", session.best0to60Ms ?: JSONObject.NULL)
+            .put("mejor0a60mphMs", session.best0to60mphMs ?: JSONObject.NULL)
             .put("mejor0a100Ms", session.best0to100Ms ?: JSONObject.NULL)
             .put("combustibleLitros", session.fuelLiters ?: JSONObject.NULL)
             .put("costoCombustibleCop", session.fuelCostCop ?: JSONObject.NULL)

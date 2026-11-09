@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- values-en-rGB es un overlay parcial a propósito (solo ortografía y vocabulario británico): el resto cae a values/. El español sí se exige completo. -->
+    <issue id="MissingTranslation">
+        <ignore regexp="is not translated in &quot;en&quot;" />
+    </issue>
+</lint>

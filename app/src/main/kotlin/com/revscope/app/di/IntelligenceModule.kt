@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.data.secure.SecureKeyStore
 import com.revscope.core.intelligence.IntelligenceCapability
@@ -49,7 +50,8 @@ object IntelligenceModule {
     fun provideAiProviderFactory(
         settings: DataStore<Preferences>,
         secureKeyStore: SecureKeyStore,
-    ): AiProviderFactory = AiProviderFactory(aiProviderSelectionProvider(settings, secureKeyStore))
+        resolver: StringResolver,
+    ): AiProviderFactory = AiProviderFactory(resolver, aiProviderSelectionProvider(settings, secureKeyStore))
 
     @Provides
     @Singleton
@@ -57,19 +59,21 @@ object IntelligenceModule {
         @ApplicationContext context: Context,
         aiProviderFactory: AiProviderFactory,
         alertsEngine: AlertsEngine,
+        resolver: StringResolver,
     ): IntelligenceOrchestrator {
         val tier = IntelligenceCapability.deviceTier(context)
         return IntelligenceOrchestrator(
             tier = tier,
-            dtcExplainer = DtcExplainer { aiProviderFactory.current() },
+            dtcExplainer = DtcExplainer(resolver) { aiProviderFactory.current() },
             alertsEngine = alertsEngine,
+            resolver = resolver,
         )
     }
 
     @Provides
     @Singleton
-    fun provideLocalInfoFetcher(aiProviderFactory: AiProviderFactory): LocalInfoFetcher =
-        LocalInfoFetcher { aiProviderFactory.current() }
+    fun provideLocalInfoFetcher(aiProviderFactory: AiProviderFactory, resolver: StringResolver): LocalInfoFetcher =
+        LocalInfoFetcher(resolver) { aiProviderFactory.current() }
 
     /**
      * Binds [GpsInfoSink] (defined in :core:obd) to [CityInfoAlerter] (built here, in
@@ -86,6 +90,7 @@ object IntelligenceModule {
         aiProviderFactory: AiProviderFactory,
         zoneBriefClient: ZoneBriefClient,
         zoneBriefHolder: ZoneBriefHolder,
+        resolver: StringResolver,
     ): GpsInfoSink {
         // Info local (festivales/cierres) por voz — feature existente.
         val cityInfo = CityInfoAlerter(
@@ -99,7 +104,7 @@ object IntelligenceModule {
         val zoneBrief = ZoneBriefAlerter(
             localityDetector = LocalityDetector(context),
             client = zoneBriefClient,
-            fetcher = ZoneBriefFetcher { aiProviderFactory.current() },
+            fetcher = ZoneBriefFetcher(resolver) { aiProviderFactory.current() },
             holder = zoneBriefHolder,
             alertsEngine = alertsEngine,
             sessionManager = sessionManager,
@@ -140,9 +145,10 @@ object IntelligenceModule {
         settings: DataStore<Preferences>,
         alertsEngine: AlertsEngine,
         aiProviderFactory: AiProviderFactory,
+        resolver: StringResolver,
     ): RestrictionRulesSource = AiRestrictionRulesSource(
         localityDetector = LocalityDetector(context),
-        fetcher = RestrictionRulesFetcher { aiProviderFactory.current() },
+        fetcher = RestrictionRulesFetcher(resolver) { aiProviderFactory.current() },
         alertsEngine = alertsEngine,
         gateProvider = aiPicoPlacaGateProvider(settings, aiProviderFactory),
         readCache = { settings.data.first()[PreferencesKeys.AI_RESTRICTION_RULES_JSON] },

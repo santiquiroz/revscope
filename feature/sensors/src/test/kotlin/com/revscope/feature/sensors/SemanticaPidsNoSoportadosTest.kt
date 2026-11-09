@@ -4,9 +4,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -15,8 +17,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaPidsNoSoportadosTest {
+    private val resolver = XmlStringResolver.es(
+        ObdR::class.java,
+        R::class.java,
+        resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+    )
 
     @get:Rule
     val compose = createComposeRule()
@@ -39,6 +46,7 @@ class SemanticaPidsNoSoportadosTest {
             pid = pid.pid,
             nombre = pid.nameEs.lowercase(),
             estado = EstadoSoporte.NoSoportado,
+            stringResolver = resolver,
         )
 
         compose.setContent {
@@ -63,10 +71,11 @@ class SemanticaPidsNoSoportadosTest {
             pid = "11",
             nombre = "posición de la mariposa",
             estado = EstadoSoporte.NoSoportado,
+            stringResolver = resolver,
         )
 
         compose.setContent {
-            RevScopeTheme { AvisoPidNoDisponible(disponibilidad) }
+            RevScopeTheme { AvisoPidNoDisponible(disponibilidad) { "posición de la mariposa" } }
         }
 
         compose.onNodeWithText("No disponible en esta ECU").assertIsDisplayed()

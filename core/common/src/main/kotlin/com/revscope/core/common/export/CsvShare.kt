@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.revscope.core.common.R
+import com.revscope.core.common.i18n.StringResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -15,10 +17,6 @@ import java.util.Locale
 
 private const val EXPORTS_DIR = "exports"
 private const val CSV_MIME_TYPE = "text/csv"
-private const val CHOOSER_TITLE = "Exportar CSV"
-private const val SHARE_TITLE = "Compartir archivo"
-private const val EXPORT_FAILED_MESSAGE = "No se pudo exportar el CSV"
-private const val SHARE_FAILED_MESSAGE = "No se pudo compartir el archivo"
 private const val FILE_NAME_TIMESTAMP_PATTERN = "yyyyMMdd-HHmm"
 private const val ISO_TIMESTAMP_PATTERN = "yyyy-MM-dd'T'HH:mm:ss"
 
@@ -38,25 +36,26 @@ object CsvShare {
         tipo: String,
         header: List<String>,
         rows: Sequence<List<Any?>>,
+        resolver: StringResolver,
         comment: String? = null,
     ) {
         val uri = writeCsvFile(context, tipo, header, rows, comment)
         if (uri == null) {
-            Toast.makeText(context, EXPORT_FAILED_MESSAGE, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, resolver.get(R.string.common_csv_export_failed), Toast.LENGTH_SHORT).show()
             return
         }
-        launchShareChooser(context, uri, CSV_MIME_TYPE, CHOOSER_TITLE)
+        launchShareChooser(context, uri, CSV_MIME_TYPE, resolver.get(R.string.common_csv_export_title))
     }
 
-    fun shareFile(context: Context, file: File, mime: String = CSV_MIME_TYPE) {
+    fun shareFile(context: Context, file: File, resolver: StringResolver, mime: String = CSV_MIME_TYPE) {
         val uri = runCatching {
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         }.onFailure { Timber.e(it, "CsvShare: no se pudo compartir ${file.name}") }.getOrNull()
         if (uri == null) {
-            Toast.makeText(context, errorAlCompartir(mime), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, errorAlCompartir(mime, resolver), Toast.LENGTH_SHORT).show()
             return
         }
-        launchShareChooser(context, uri, mime, SHARE_TITLE)
+        launchShareChooser(context, uri, mime, resolver.get(R.string.common_share_file_title))
     }
 
     /** Carpeta de exportaciones (la que publica el FileProvider). */
@@ -106,6 +105,6 @@ object CsvShare {
         return "revscope-$tipo-$stamp.csv"
     }
 
-    private fun errorAlCompartir(mime: String): String =
-        if (mime == CSV_MIME_TYPE) EXPORT_FAILED_MESSAGE else SHARE_FAILED_MESSAGE
+    private fun errorAlCompartir(mime: String, resolver: StringResolver): String =
+        resolver.get(if (mime == CSV_MIME_TYPE) R.string.common_csv_export_failed else R.string.common_file_share_failed)
 }

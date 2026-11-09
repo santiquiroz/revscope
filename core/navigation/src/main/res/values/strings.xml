@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spoken before a maneuver that is right ahead. Distances live in strings_units.xml. -->
+    <string name="nav_distance_now">Now</string>
+    <!-- %1$s = distance, %2$s = action -->
+    <string name="nav_spoken_with_distance">%1$s, %2$s</string>
+
+    <!-- Action + street. %1$s = action, %2$s = street name -->
+    <string name="nav_street_along">%1$s on %2$s</string>
+    <string name="nav_street_toward">%1$s toward %2$s</string>
+    <string name="nav_street_merge">%1$s onto %2$s</string>
+    <string name="nav_street_at">%1$s onto %2$s</string>
+
+    <string name="nav_arrived">You have arrived at your destination</string>
+    <string name="nav_depart">Start</string>
+    <string name="nav_continue">continue</string>
+    <string name="nav_take_exit">take the exit</string>
+    <string name="nav_take_exit_side">take the exit %1$s</string>
+    <string name="nav_take_ramp">take the ramp</string>
+    <string name="nav_take_ramp_side">take the ramp %1$s</string>
+    <string name="nav_merge">merge</string>
+    <string name="nav_merge_side">merge %1$s</string>
+    <!-- %1$s = turn phrase, e.g. "turn left" -->
+    <string name="nav_end_of_road">at the end of the road, %1$s</string>
+    <string name="nav_enter_roundabout">enter the roundabout</string>
+    <string name="nav_exit_roundabout">exit the roundabout</string>
+
+    <!-- Side of the exit, ramp or merge -->
+    <string name="nav_side_right">on the right</string>
+    <string name="nav_side_left">on the left</string>
+    <string name="nav_side_slight_right">slightly to the right</string>
+    <string name="nav_side_slight_left">slightly to the left</string>
+    <string name="nav_side_sharp_right">sharply to the right</string>
+    <string name="nav_side_sharp_left">sharply to the left</string>
+    <string name="nav_side_uturn">with a U-turn</string>
+
+    <string name="nav_turn_right">turn right</string>
+    <string name="nav_turn_left">turn left</string>
+    <string name="nav_turn_slight_right">turn slightly right</string>
+    <string name="nav_turn_slight_left">turn slightly left</string>
+    <string name="nav_turn_sharp_right">turn sharp right</string>
+    <string name="nav_turn_sharp_left">turn sharp left</string>
+    <string name="nav_turn_uturn">make a U-turn</string>
+
+    <string name="nav_keep_right">keep right</string>
+    <string name="nav_keep_left">keep left</string>
+    <string name="nav_keep_slight_right">keep slightly right</string>
+    <string name="nav_keep_slight_left">keep slightly left</string>
+    <string name="nav_keep_sharp_right">keep sharp right</string>
+    <string name="nav_keep_sharp_left">keep sharp left</string>
+    <string name="nav_keep_uturn">make a U-turn</string>
+
+    <string name="nav_off_route">Off route, recalculating</string>
+
+    <!-- Route alternative chips -->
+    <string name="nav_route_fastest">Fastest</string>
+    <string name="nav_route_curvy">Curvy</string>
+    <string name="nav_route_alt">Alt</string>
+</resources>

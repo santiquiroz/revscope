@@ -20,7 +20,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.annotation.StringRes
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.moneyFractionDigits
+import com.revscope.core.common.i18n.pricePerLiterInput
+import java.util.Currency
 
 private val BgColor = Color(0xFF0A0A0F)
 private val AccentColor = Color(0xFFE8FF00)
@@ -33,9 +39,12 @@ internal fun VehiculoActivoCard(vm: SettingsViewModel, onNavigateToVehicleProfil
     val askVehicleOnStart by vm.askVehicleOnStart.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Vehículo")
+        SectionTitle(stringResource(R.string.settings_vehicle_section_title))
         NavRow(
-            "Vehículo activo: ${activeVehicleProfile?.name ?: "Ninguno"}",
+            stringResource(
+                R.string.settings_vehicle_active,
+                activeVehicleProfile?.name ?: stringResource(R.string.settings_vehicle_none),
+            ),
             onNavigateToVehicleProfiles,
         )
         Row(
@@ -43,7 +52,7 @@ internal fun VehiculoActivoCard(vm: SettingsViewModel, onNavigateToVehicleProfil
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Preguntar vehículo al inicio",
+                stringResource(R.string.settings_vehicle_ask_on_start),
                 color = TextPrimaryColor,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
@@ -70,20 +79,19 @@ internal fun HerramientasCard(
     val autoTripOnMove by viajeVm.autoTripOnMove.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Herramientas")
-        NavRow("Perfiles de vehículo", onNavigateToVehicleProfiles)
+        SectionTitle(stringResource(R.string.settings_tools_section_title))
+        NavRow(stringResource(R.string.settings_vehicle_profiles), onNavigateToVehicleProfiles)
         ToggleRow(
-            "Mantener pantalla encendida",
+            stringResource(R.string.settings_keep_screen_on),
             keepScreenOn,
             vm::updateKeepScreenOn,
-            subtitle = "Durante la conducción con el dashboard abierto. Apagarlo ahorra batería en soporte de carro.",
+            subtitle = stringResource(R.string.settings_keep_screen_on_description),
         )
         ToggleRow(
-            "Iniciar viaje automáticamente al moverse",
+            stringResource(R.string.settings_auto_trip_on_move),
             autoTripOnMove,
             viajeVm::updateAutoTripOnMove,
-            subtitle = "Con el adaptador conectado y sin viaje (tras «Finalizar viaje (seguir conectado)»), " +
-                "abre uno al sostener 10 km/h durante 5 s.",
+            subtitle = stringResource(R.string.settings_auto_trip_on_move_description),
         )
     }
 }
@@ -94,45 +102,60 @@ internal fun CombustibleCard(vm: SettingsViewModel) {
     val fuelPriceExtra by vm.fuelPriceExtra.collectAsState()
     val fuelPriceDiesel by vm.fuelPriceDiesel.collectAsState()
 
+    CombustibleContenido(
+        FuelPriceFormat(vm.fuelRegion, vm.fuelCurrency),
+        FuelPriceFields(fuelPriceCorriente, fuelPriceExtra, fuelPriceDiesel),
+        FuelPriceActions(vm::updateFuelPriceCorriente, vm::updateFuelPriceExtra, vm::updateFuelPriceDiesel, vm::saveFuelPrices),
+    )
+}
+
+internal data class FuelPriceFormat(val region: Region, val currency: Currency)
+
+internal data class FuelPriceFields(val corriente: String, val extra: String, val diesel: String)
+
+internal class FuelPriceActions(
+    val onCorriente: (String) -> Unit,
+    val onExtra: (String) -> Unit,
+    val onDiesel: (String) -> Unit,
+    val onSave: () -> Unit,
+)
+
+@Composable
+internal fun CombustibleContenido(format: FuelPriceFormat, fields: FuelPriceFields, actions: FuelPriceActions) {
+    val perLiter = pricePerLiterInput(format.region)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("Combustible")
-        OutlinedTextField(
-            value = fuelPriceCorriente,
-            onValueChange = vm::updateFuelPriceCorriente,
-            label = { Text("Precio galón corriente (COP)", fontSize = 12.sp) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = settingsFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = fuelPriceExtra,
-            onValueChange = vm::updateFuelPriceExtra,
-            label = { Text("Precio galón extra (COP)", fontSize = 12.sp) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = settingsFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = fuelPriceDiesel,
-            onValueChange = vm::updateFuelPriceDiesel,
-            label = { Text("Precio galón diésel / ACPM (COP)", fontSize = 12.sp) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = settingsFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
+        SectionTitle(stringResource(R.string.settings_fuel_section_title))
+        val regular = if (perLiter) R.string.settings_fuel_regular_price_liter else R.string.settings_fuel_regular_price
+        val premium = if (perLiter) R.string.settings_fuel_premium_price_liter else R.string.settings_fuel_premium_price
+        val diesel = if (perLiter) R.string.settings_fuel_diesel_price_liter else R.string.settings_fuel_diesel_price
+        FuelPriceField(fields.corriente, actions.onCorriente, regular, format.currency)
+        FuelPriceField(fields.extra, actions.onExtra, premium, format.currency)
+        FuelPriceField(fields.diesel, actions.onDiesel, diesel, format.currency)
         Text(
-            "Se usa el precio del tipo de combustible del vehículo activo para estimar el costo de " +
-                "cada viaje. No hay fuente oficial en línea vigente en datos.gov.co para precios de " +
-                "gasolina/ACPM por municipio (ver detalle en el código) — ajusta manualmente según tu estación.",
+            stringResource(fuelPriceExplanation(format.region)),
             color = TextMutedColor,
             fontSize = 11.sp,
         )
         Button(
-            onClick = vm::saveFuelPrices,
+            onClick = actions.onSave,
             colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
-        ) { Text("Guardar precios", color = BgColor) }
+        ) { Text(stringResource(R.string.settings_fuel_save_prices), color = BgColor) }
     }
 }
+
+@Composable
+private fun FuelPriceField(value: String, onValueChange: (String) -> Unit, @StringRes label: Int, currency: Currency) {
+    val keyboard = if (moneyFractionDigits(currency) > 0) KeyboardType.Decimal else KeyboardType.Number
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(label, currency.currencyCode), fontSize = 12.sp) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+        colors = settingsFieldColors(),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+private fun fuelPriceExplanation(region: Region): Int =
+    if (region == Region.CO) R.string.settings_fuel_price_description else R.string.settings_fuel_price_hint

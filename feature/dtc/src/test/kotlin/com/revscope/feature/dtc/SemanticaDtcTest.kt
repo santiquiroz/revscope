@@ -17,8 +17,9 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import com.revscope.core.designsystem.DESCRIPCION_VOLVER
+import com.revscope.core.designsystem.R as DesignSystemR
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.intelligence.IntelligenceOrchestrator
 import com.revscope.core.obd.diagnostics.BorradoDtc
 import com.revscope.core.obd.diagnostics.DtcScan
@@ -43,8 +44,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaDtcTest {
+    private val resolverEs = XmlStringResolver.es(
+        DesignSystemR::class.java,
+        resDirs = listOf("../../core/designsystem/src/main/res"),
+    )
 
     @get:Rule
     val compose = createComposeRule()
@@ -78,11 +83,18 @@ class SemanticaDtcTest {
     }
 
     private fun montar(onVolver: () -> Unit = {}) {
+        val resolver = com.revscope.core.uitesting.XmlStringResolver.es(
+            com.revscope.feature.dtc.R::class.java,
+            com.revscope.core.obd.R::class.java,
+            resDirs = listOf("src/main/res", "../../core/obd/src/main/res"),
+        )
         val vm = DtcViewModel(
             mockk<IntelligenceOrchestrator>(relaxed = true),
             mockk<PidRegistry>(relaxed = true),
             registro,
-            BaseConocimientoDtc { GUIA_JSON },
+            BaseConocimientoDtc({ GUIA_JSON }, resolver),
+            resolver,
+            com.revscope.core.common.units.UnitFormatter(com.revscope.core.common.units.UnitSystem.METRIC, resolver.locale),
         )
         compose.setContent {
             RevScopeTheme { DtcScreen(onNavigateBack = onVolver, connectionVm = connectionVm, vm = vm) }
@@ -145,7 +157,7 @@ class SemanticaDtcTest {
         var volvio = false
         montar(onVolver = { volvio = true })
 
-        compose.onNodeWithContentDescription(DESCRIPCION_VOLVER).performClick()
+        compose.onNodeWithContentDescription(resolverEs.get(DesignSystemR.string.ds_back)).performClick()
 
         assertTrue(volvio)
     }

@@ -12,13 +12,13 @@ object LineaMonitor {
     }
 
     fun esDesborde(linea: String): Boolean =
-        linea.uppercase().contains("BUFFER FULL")
+        linea.uppercase().contains("BUFFER FULL") // i18n-ignore
 
     fun esError(linea: String): Boolean {
         val texto = linea.uppercase()
-        return texto.contains("CAN ERROR") ||
-            texto.contains("<RX ERROR") ||
-            texto.contains("BUS ERROR")
+        return texto.contains("CAN ERROR") || // i18n-ignore
+            texto.contains("<RX ERROR") || // i18n-ignore
+            texto.contains("BUS ERROR") // i18n-ignore
     }
 
     private fun esEstado(texto: String): Boolean =

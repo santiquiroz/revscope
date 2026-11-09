@@ -22,12 +22,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 
-enum class NivelEstado(val textoPorDefecto: String) {
-    OK("OK"),
-    ATENCION("Atención"),
-    FALLA("Falla"),
-    SIN_DATO("Sin dato"),
+enum class NivelEstado(val textoRes: Int) {
+    OK(R.string.ds_state_ok),
+    ATENCION(R.string.ds_state_attention),
+    FALLA(R.string.ds_state_failure),
+    SIN_DATO(R.string.ds_state_no_data),
 }
 
 fun NivelEstado.color(): Color = when (this) {
@@ -52,10 +53,11 @@ fun NivelEstado.icono(): ImageVector = when (this) {
 fun NivelBadge(
     nivel: NivelEstado,
     modifier: Modifier = Modifier,
-    texto: String = nivel.textoPorDefecto,
+    texto: String? = null,
 ) {
     val color = nivel.color()
     val lado = with(LocalDensity.current) { 14.sp.toDp() }
+    val etiqueta = texto ?: stringResource(nivel.textoRes)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -65,6 +67,6 @@ fun NivelBadge(
             .padding(horizontal = 8.dp, vertical = 2.dp),
     ) {
         Icon(nivel.icono(), contentDescription = null, tint = color, modifier = Modifier.size(lado))
-        Text(texto, color = color, style = RevScopeType.bodySmall)
+        Text(etiqueta, color = color, style = RevScopeType.bodySmall)
     }
 }

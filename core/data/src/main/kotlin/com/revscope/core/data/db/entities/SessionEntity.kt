@@ -16,6 +16,7 @@ data class SessionEntity(
     val distanceKm: Float,
     /** Best automatic launch times this session — null if no full run happened */
     val best0to60Ms: Long? = null,
+    val best0to60mphMs: Long? = null,
     val best0to100Ms: Long? = null,
     /** Estimated liters consumed this trip — null if fuel rate/MAF data was unavailable */
     val fuelLiters: Double? = null,

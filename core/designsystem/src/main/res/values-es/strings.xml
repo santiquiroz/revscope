@@ -1,0 +1,26 @@
+<resources>
+    <string name="ds_close_notice">Cerrar aviso</string>
+    <string name="ds_ecu_capabilities">Capacidades de la ECU</string>
+    <string name="ds_protocol">Protocolo</string>
+    <string name="ds_announced_pids">PIDs anunciados</string>
+    <string name="ds_expected_rate">Tasa esperada</string>
+    <string name="ds_ecu_no_pid_map">La ECU todavía no ha anunciado su mapa de PIDs.</string>
+    <string name="ds_back">Volver</string>
+    <string name="ds_voltage_reference_title">Referencia de voltaje</string>
+    <string name="ds_save">Guardar</string>
+    <string name="ds_cancel">Cancelar</string>
+    <string name="ds_voltage_reference_explanation">La ECU da la posición en %% de su referencia (%1$s V típico). Si la mediste con el multímetro, anótala aquí: se guarda para este vehículo.</string>
+    <string name="ds_voltage_reference_session">En esta sesión: %1$s medida con el multímetro</string>
+    <string name="ds_volts">Voltios</string>
+    <string name="ds_voltage_reference_range">Entre %1$s y %2$s V</string>
+    <string name="ds_state_ok">OK</string>
+    <string name="ds_state_attention">Atención</string>
+    <string name="ds_state_failure">Falla</string>
+    <string name="ds_state_no_data">Sin dato</string>
+    <string name="ds_vehicle_fallback">Sin vehículo</string>
+    <string name="ds_vehicle_description_fallback">sin vehículo</string>
+    <string name="ds_vehicle_selector_description">Vehículo: %1$s. Adaptador: %2$s. Toca para cambiar de vehículo</string>
+    <string name="ds_retry">Reintentar</string>
+    <string name="ds_step_of_total">Paso %1$d de %2$d</string>
+    <string name="ds_step_with_title">%1$s: %2$s</string>
+</resources>

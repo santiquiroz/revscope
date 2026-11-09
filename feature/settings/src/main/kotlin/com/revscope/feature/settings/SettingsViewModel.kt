@@ -1,12 +1,24 @@
 package com.revscope.feature.settings
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.data.datastore.FuelPricePrefs
 import com.revscope.core.data.datastore.PreferencesKeys
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.i18n.currencyFor
+import com.revscope.core.common.i18n.detect
+import com.revscope.core.common.i18n.moneyFractionDigits
+import com.revscope.core.common.i18n.systemLocale
+import com.revscope.core.common.i18n.toDisplayPrice
+import com.revscope.core.common.i18n.toStoredPerGallon
+import com.revscope.core.common.units.DistanceUnit
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -56,7 +68,11 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.util.Currency
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -73,6 +89,8 @@ class SettingsViewModel @Inject constructor(
     private val mcpServerController: McpServerController,
     private val updateChecker: com.revscope.core.obd.update.UpdateChecker,
     private val mapDownloadService: MapDownloadService,
+    private val stringResolver: StringResolver,
+    private val units: UnitFormatter,
 ) : ViewModel() {
 
     data class SaveResult(val success: Boolean, val message: String)
@@ -112,7 +130,7 @@ class SettingsViewModel @Inject constructor(
     private val _ttsEnabled = MutableStateFlow(true)
     val ttsEnabled: StateFlow<Boolean> = _ttsEnabled.asStateFlow()
 
-    private val _tempMaxC = MutableStateFlow("105")
+    private val _tempMaxC = MutableStateFlow(temperatureFieldValue(DEFAULT_TEMP_MAX_C, units).toString())
     val tempMaxC: StateFlow<String> = _tempMaxC.asStateFlow()
 
     private val _voltageMin = MutableStateFlow("11.8")
@@ -121,16 +139,20 @@ class SettingsViewModel @Inject constructor(
     private val _redlineRpm = MutableStateFlow("10500")
     val redlineRpm: StateFlow<String> = _redlineRpm.asStateFlow()
 
-    private val _fuelPriceCorriente = MutableStateFlow(FuelPricePrefs.DEFAULT_CORRIENTE.toLong().toString())
+    val fuelRegion: Region = Region.detect(appContext)
+    val fuelCurrency: Currency = currencyFor(fuelRegion, systemLocale())
+    private val fuelDefaults = FuelPricePrefs.defaultsFor(fuelRegion)
+
+    private val _fuelPriceCorriente = MutableStateFlow(fuelPriceField(fuelDefaults.corriente))
     val fuelPriceCorriente: StateFlow<String> = _fuelPriceCorriente.asStateFlow()
 
-    private val _fuelPriceExtra = MutableStateFlow(FuelPricePrefs.DEFAULT_EXTRA.toLong().toString())
+    private val _fuelPriceExtra = MutableStateFlow(fuelPriceField(fuelDefaults.extra))
     val fuelPriceExtra: StateFlow<String> = _fuelPriceExtra.asStateFlow()
 
-    private val _fuelPriceDiesel = MutableStateFlow(FuelPricePrefs.DEFAULT_DIESEL.toLong().toString())
+    private val _fuelPriceDiesel = MutableStateFlow(fuelPriceField(fuelDefaults.diesel))
     val fuelPriceDiesel: StateFlow<String> = _fuelPriceDiesel.asStateFlow()
 
-    private val _cameraAlertRadius = MutableStateFlow(CameraAlertRadius.DEFAULT_M.toString())
+    private val _cameraAlertRadius = MutableStateFlow(radiusFieldValue(CameraAlertRadius.DEFAULT_M, units).toString())
     val cameraAlertRadius: StateFlow<String> = _cameraAlertRadius.asStateFlow()
 
     private val _engineSoundEnabled = MutableStateFlow(false)
@@ -215,11 +237,11 @@ class SettingsViewModel @Inject constructor(
 
     fun checkForUpdates() {
         viewModelScope.launch {
-            _lastSaveResult.value = SaveResult(true, "Buscando actualizaciones…")
+            _lastSaveResult.value = SaveResult(true, stringResolver.get(R.string.settings_updates_checking))
             updateChecker.check(force = true)
             _lastSaveResult.value = updateChecker.available.value?.let {
-                SaveResult(true, "Nueva versión ${it.version} — revisa el aviso en Conducir")
-            } ?: SaveResult(true, "Estás en la última versión")
+                SaveResult(true, stringResolver.get(R.string.settings_updates_available, it.version))
+            } ?: SaveResult(true, stringResolver.get(R.string.settings_updates_latest))
         }
     }
 
@@ -232,7 +254,7 @@ class SettingsViewModel @Inject constructor(
                     it[PreferencesKeys.SERVER_RIDER_NAME] = _riderName.value.trim()
                 }
             }
-            _lastSaveResult.value = SaveResult(true, "Servidor guardado")
+            _lastSaveResult.value = SaveResult(true, stringResolver.get(R.string.settings_server_saved))
         }
     }
 
@@ -296,19 +318,21 @@ class SettingsViewModel @Inject constructor(
                 _picoPlacaRulesJson.value = prefs[PreferencesKeys.PICO_PLACA_RULES_JSON].orEmpty()
                 _alertsEnabled.value = prefs[PreferencesKeys.ALERTS_ENABLED] ?: true
                 _ttsEnabled.value = prefs[PreferencesKeys.ALERT_TTS_ENABLED] ?: true
-                _tempMaxC.value = (prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: 105).toString()
+                _tempMaxC.value =
+                    temperatureFieldValue(prefs[PreferencesKeys.ALERT_TEMP_MAX_C] ?: DEFAULT_TEMP_MAX_C, units).toString()
                 _voltageMin.value = (prefs[PreferencesKeys.ALERT_VOLTAGE_MIN] ?: 11.8f).toString()
                 _redlineRpm.value = (prefs[PreferencesKeys.ALERT_REDLINE_RPM] ?: 10_500).toString()
                 _askVehicleOnStart.value = prefs[PreferencesKeys.ASK_VEHICLE_ON_START] ?: true
-                val fuelPrices = FuelPricePrefs.read(settings)
-                _fuelPriceCorriente.value = fuelPrices.corriente.toLong().toString()
-                _fuelPriceExtra.value = fuelPrices.extra.toLong().toString()
-                _fuelPriceDiesel.value = fuelPrices.diesel.toLong().toString()
+                val fuelPrices = FuelPricePrefs.read(settings, fuelRegion)
+                _fuelPriceCorriente.value = fuelPriceField(fuelPrices.corriente)
+                _fuelPriceExtra.value = fuelPriceField(fuelPrices.extra)
+                _fuelPriceDiesel.value = fuelPriceField(fuelPrices.diesel)
                 _voiceTemperature.value = prefs[PreferencesKeys.VOICE_TEMPERATURE] ?: true
                 _voiceVoltage.value = prefs[PreferencesKeys.VOICE_VOLTAGE] ?: true
                 _voiceSpeedCameras.value = prefs[PreferencesKeys.VOICE_SPEED_CAMERAS] ?: true
                 _cameraAlertRadius.value =
-                    CameraAlertRadius.sanitize(prefs[PreferencesKeys.CAMERA_ALERT_RADIUS_M]).toString()
+                    radiusFieldValue(CameraAlertRadius.sanitize(prefs[PreferencesKeys.CAMERA_ALERT_RADIUS_M]), units)
+                        .toString()
                 _engineSoundEnabled.value = prefs[PreferencesKeys.ENGINE_SOUND_ENABLED] ?: false
                 _engineSoundPack.value = SoundPack.fromId(prefs[PreferencesKeys.ENGINE_SOUND_PACK]).id
                 _engineSoundVolume.value = (prefs[PreferencesKeys.ENGINE_SOUND_VOLUME] ?: 70).toString()
@@ -483,43 +507,43 @@ class SettingsViewModel @Inject constructor(
 
     fun saveFuelPrices() {
         viewModelScope.launch {
-            val corriente = _fuelPriceCorriente.value.toDoubleOrNull()
-            val extra = _fuelPriceExtra.value.toDoubleOrNull()
-            val diesel = _fuelPriceDiesel.value.toDoubleOrNull()
-            if (!isValidFuelPrice(corriente) || !isValidFuelPrice(extra) || !isValidFuelPrice(diesel)) {
-                _lastSaveResult.value = SaveResult(false, "Precio fuera de rango (1.000-50.000 COP)")
+            val texts = listOf(_fuelPriceCorriente.value, _fuelPriceExtra.value, _fuelPriceDiesel.value)
+            val stored = fuelPricesToStore(texts, fuelRegion)
+            if (stored == null) {
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(invalidFuelPriceMessage(fuelRegion)))
                 return@launch
             }
-            val result = runCatching {
-                settings.edit {
-                    it[PreferencesKeys.FUEL_PRICE_CORRIENTE] = corriente!!
-                    it[PreferencesKeys.FUEL_PRICE_EXTRA] = extra!!
-                    it[PreferencesKeys.FUEL_PRICE_DIESEL] = diesel!!
-                }
-            }
+            val result = runCatching { settings.edit { prefs -> writeFuelPrices(prefs, stored) } }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Precios de combustible actualizados")
+                SaveResult(true, stringResolver.get(R.string.settings_fuel_prices_updated))
             } else {
-                SaveResult(false, "Error guardando precios de combustible")
+                SaveResult(false, stringResolver.get(R.string.settings_fuel_prices_save_error))
             }
         }
     }
 
-    private fun isValidFuelPrice(price: Double?): Boolean = price != null && price in 1_000.0..50_000.0
+    private fun fuelPriceField(storedPerGallon: Double?): String =
+        fuelPriceFieldText(storedPerGallon, fuelRegion, fuelCurrency)
+
+    private fun writeFuelPrices(prefs: MutablePreferences, stored: List<Double?>) {
+        FUEL_PRICE_KEYS.zip(stored).forEach { (key, value) ->
+            if (value == null) prefs.remove(key) else prefs[key] = value
+        }
+    }
 
     fun saveAlertSettings() {
         viewModelScope.launch {
-            val temp = _tempMaxC.value.toIntOrNull()
+            val temp = _tempMaxC.value.toIntOrNull()?.let { temperatureFieldToCelsius(it, units) }
             val voltage = _voltageMin.value.toFloatOrNull()
             val redline = _redlineRpm.value.toIntOrNull()
-            if (temp == null || temp !in 60..150 ||
+            if (temp == null || temp !in TEMP_MAX_RANGE_C ||
                 voltage == null || voltage !in 8f..15f ||
                 redline == null || redline !in 3_000..20_000
             ) {
-                _lastSaveResult.value =
-                    SaveResult(false, "Umbrales fuera de rango (temp 60-150, volt 8-15, RPM 3000-20000)")
+                _lastSaveResult.value = SaveResult(false, thresholdsOutOfRangeMessage())
                 return@launch
             }
+            _tempMaxC.value = temperatureFieldValue(temp, units).toString()
             val result = runCatching {
                 settings.edit {
                     it[PreferencesKeys.ALERTS_ENABLED] = _alertsEnabled.value
@@ -531,12 +555,18 @@ class SettingsViewModel @Inject constructor(
             }
             if (result.isSuccess) alertsEngine.reloadThresholds()
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Alertas actualizadas")
+                SaveResult(true, stringResolver.get(R.string.settings_alerts_updated))
             } else {
-                SaveResult(false, "Error guardando alertas")
+                SaveResult(false, stringResolver.get(R.string.settings_alerts_save_error))
             }
         }
     }
+
+    private fun thresholdsOutOfRangeMessage(): String = stringResolver.get(
+        R.string.settings_alert_thresholds_out_of_range,
+        temperatureFieldValue(TEMP_MAX_RANGE_C.first, units),
+        temperatureFieldValue(TEMP_MAX_RANGE_C.last, units),
+    )
 
     /** Persists provider + its model override/base URL to DataStore and its key to SecureKeyStore. */
     fun saveAiSettings() {
@@ -547,7 +577,8 @@ class SettingsViewModel @Inject constructor(
                 if (keyStored) persistAiSelection(provider)
                 keyStored
             }
-            _lastSaveResult.value = aiSaveResult(result, keyEntered = _aiApiKey.value.isNotBlank())
+            _lastSaveResult.value =
+                aiSaveResult(result, keyEntered = _aiApiKey.value.isNotBlank(), resolver = stringResolver)
         }
     }
 
@@ -589,16 +620,27 @@ class SettingsViewModel @Inject constructor(
                 model = _aiModel.value.trim(),
                 customBaseUrl = _aiCustomBaseUrl.value.trim(),
             )
-            val provider = AiProviderFactory { selection }.current()
+            val provider = AiProviderFactory(stringResolver) { selection }.current()
             _lastSaveResult.value = if (provider == null) {
-                SaveResult(false, "Falta la API key" + if (selection.provider == AI_PROVIDER_CUSTOM) " o la base URL" else "")
+                SaveResult(
+                    false,
+                    stringResolver.get(
+                        if (selection.provider == AI_PROVIDER_CUSTOM) {
+                            R.string.settings_ai_api_key_or_base_url_missing
+                        } else {
+                            R.string.settings_ai_api_key_missing
+                        },
+                    ),
+                )
             } else {
                 val result = withContext(Dispatchers.IO) {
-                    provider.complete(AiRequest(user = "di OK", maxTokens = 10))
+                    provider.complete(AiRequest(user = "di OK", maxTokens = 10)) // i18n-ignore
                 }
                 result.fold(
-                    onSuccess = { SaveResult(true, "Conexión OK — ${provider.displayName}") },
-                    onFailure = ::aiConnectionFailure,
+                    onSuccess = {
+                        SaveResult(true, stringResolver.get(R.string.settings_ai_connection_success, provider.displayName))
+                    },
+                    onFailure = { error -> aiConnectionFailure(error, stringResolver) },
                 )
             }
             _aiTesting.value = false
@@ -640,7 +682,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val json = _customPidsJson.value.trim()
             if (json.isNotEmpty() && !isValidPidJson(json)) {
-                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_json_invalid))
                 return@launch
             }
             val result = runCatching {
@@ -652,9 +694,13 @@ class SettingsViewModel @Inject constructor(
             }
             _lastSaveResult.value = if (result.isSuccess) {
                 val count = if (json.isEmpty()) 0 else JSONArray(json).length()
-                SaveResult(true, if (count > 0) "$count PIDs custom aplicados" else "PIDs custom limpiados")
+                SaveResult(
+                    true,
+                    if (count > 0) stringResolver.get(R.string.settings_custom_pids_applied, count)
+                    else stringResolver.get(R.string.settings_custom_pids_cleared),
+                )
             } else {
-                SaveResult(false, "Error guardando PIDs custom")
+                SaveResult(false, stringResolver.get(R.string.settings_custom_pids_save_error))
             }
         }
     }
@@ -663,7 +709,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val json = _customAlertsJson.value.trim()
             if (json.isNotEmpty() && !isValidCustomAlertJson(json)) {
-                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_json_invalid))
                 return@launch
             }
             val result = runCatching {
@@ -672,9 +718,13 @@ class SettingsViewModel @Inject constructor(
             if (result.isSuccess) alertsEngine.reloadThresholds()
             _lastSaveResult.value = if (result.isSuccess) {
                 val count = if (json.isEmpty()) 0 else JSONArray(json).length()
-                SaveResult(true, if (count > 0) "$count alertas personalizadas aplicadas" else "Alertas personalizadas limpiadas")
+                SaveResult(
+                    true,
+                    if (count > 0) stringResolver.get(R.string.settings_custom_alerts_applied, count)
+                    else stringResolver.get(R.string.settings_custom_alerts_cleared),
+                )
             } else {
-                SaveResult(false, "Error guardando alertas personalizadas")
+                SaveResult(false, stringResolver.get(R.string.settings_custom_alerts_save_error))
             }
         }
     }
@@ -684,7 +734,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val json = _picoPlacaRulesJson.value.trim()
             if (json.isNotEmpty() && !isValidPicoPlacaRulesJson(json)) {
-                _lastSaveResult.value = SaveResult(false, "JSON inválido — revisa el formato")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_json_invalid))
                 return@launch
             }
             val result = runCatching {
@@ -693,10 +743,14 @@ class SettingsViewModel @Inject constructor(
             _lastSaveResult.value = if (result.isSuccess) {
                 SaveResult(
                     true,
-                    if (json.isEmpty()) "Reglas de pico y placa personalizadas limpiadas" else "Reglas de pico y placa personalizadas aplicadas",
+                    if (json.isEmpty()) {
+                        stringResolver.get(R.string.settings_custom_driving_restrictions_cleared)
+                    } else {
+                        stringResolver.get(R.string.settings_custom_driving_restrictions_applied)
+                    },
                 )
             } else {
-                SaveResult(false, "Error guardando reglas de pico y placa")
+                SaveResult(false, stringResolver.get(R.string.settings_custom_driving_restrictions_save_error))
             }
         }
     }
@@ -792,9 +846,9 @@ class SettingsViewModel @Inject constructor(
             val phone = _emergencyPhone.value.trim()
             val result = runCatching { settings.edit { it[PreferencesKeys.EMERGENCY_PHONE] = phone } }
             _lastSaveResult.value = if (result.isSuccess) {
-                SaveResult(true, "Teléfono de emergencia guardado")
+                SaveResult(true, stringResolver.get(R.string.settings_emergency_phone_saved))
             } else {
-                SaveResult(false, "Error guardando teléfono de emergencia")
+                SaveResult(false, stringResolver.get(R.string.settings_emergency_phone_save_error))
             }
         }
     }
@@ -803,7 +857,7 @@ class SettingsViewModel @Inject constructor(
     fun updateCrashDetectionEnabled(value: Boolean) {
         if (value && !canEnableCrashDetection()) {
             _lastSaveResult.value =
-                SaveResult(false, "Agrega el teléfono de emergencia y concede el permiso de SMS antes de activar")
+                SaveResult(false, stringResolver.get(R.string.settings_emergency_phone_required))
             return
         }
         _crashDetectionEnabled.value = value
@@ -820,7 +874,9 @@ class SettingsViewModel @Inject constructor(
      * navigating away from Settings mid-countdown cancels it and leaves a frozen alarm dialog.
      */
     fun testCrashAlert() {
-        crashResponder.simulateTrigger(activeVehicleProfile.value?.name ?: "tu vehículo")
+        crashResponder.simulateTrigger(
+            activeVehicleProfile.value?.name ?: stringResolver.get(R.string.settings_crash_alert_vehicle_fallback),
+        )
     }
 
     private fun canEnableCrashDetection(): Boolean =
@@ -836,13 +892,19 @@ class SettingsViewModel @Inject constructor(
             val error = runBackupOperation {
                 appContext.contentResolver.openOutputStream(uri)?.use { out ->
                     backupManager.export(out).getOrThrow()
-                } ?: error("No se pudo abrir el destino elegido")
+                } ?: error(stringResolver.get(R.string.settings_backup_destination_unavailable))
             }
             _backupState.value = BackupState.IDLE
             _lastSaveResult.value = if (error == null) {
-                SaveResult(true, "Copia de seguridad exportada")
+                SaveResult(true, stringResolver.get(R.string.settings_backup_exported))
             } else {
-                SaveResult(false, "Error exportando copia: ${error.message ?: "desconocido"}")
+                SaveResult(
+                    false,
+                    stringResolver.get(
+                        R.string.settings_backup_export_error,
+                        error.message ?: stringResolver.get(R.string.settings_unknown_error),
+                    ),
+                )
             }
         }
     }
@@ -853,13 +915,19 @@ class SettingsViewModel @Inject constructor(
             val error = runBackupOperation {
                 appContext.contentResolver.openInputStream(uri)?.use { input ->
                     backupManager.import(input).getOrThrow()
-                } ?: error("No se pudo abrir el archivo seleccionado")
+                } ?: error(stringResolver.get(R.string.settings_backup_file_unavailable))
             }
             if (error == null) {
                 _backupState.value = BackupState.RESTARTING_AFTER_IMPORT
             } else {
                 _backupState.value = BackupState.IDLE
-                _lastSaveResult.value = SaveResult(false, "Error importando copia: ${error.message ?: "desconocido"}")
+                _lastSaveResult.value = SaveResult(
+                    false,
+                    stringResolver.get(
+                        R.string.settings_backup_import_error,
+                        error.message ?: stringResolver.get(R.string.settings_unknown_error),
+                    ),
+                )
             }
         }
     }
@@ -882,7 +950,13 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             runCatching { cameraUpdater.storedCounts() }.getOrNull()?.let { stored ->
-                if (stored.total > 0) _cameraStatus.value = "${stored.total} radares guardados (${sourceBreakdown(stored)})"
+                if (stored.total > 0) {
+                    _cameraStatus.value = stringResolver.get(
+                        R.string.settings_speed_cameras_stored,
+                        stored.total,
+                        sourceBreakdown(stored),
+                    )
+                }
             }
         }
     }
@@ -890,31 +964,36 @@ class SettingsViewModel @Inject constructor(
     @SuppressLint("MissingPermission")
     fun downloadSpeedCameras() {
         viewModelScope.launch {
-            _cameraStatus.value = "Buscando tu ubicación…"
+            _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_location_search)
             val location = runCatching {
                 val lm = appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
                 lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                     ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
             }.getOrNull()
             if (location == null) {
-                _cameraStatus.value = "Sin ubicación — conecta el GPS o abre Maps un momento"
+                _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_no_location)
                 return@launch
             }
-            _cameraStatus.value = "Descargando radares (OpenStreetMap + ANSV)…"
+            _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_downloading)
             runCatching { cameraUpdater.downloadAround(location.latitude, location.longitude) }
                 .onSuccess { result ->
-                    _cameraStatus.value =
-                        "${result.total} radares en 50 km (${sourceBreakdown(result)}) — avisos por voz activos al conducir"
+                    _cameraStatus.value = stringResolver.get(
+                        R.string.settings_speed_cameras_downloaded,
+                        result.total,
+                        sourceBreakdown(result),
+                        cameraDownloadDistance(units),
+                        units.distanceLabel(),
+                    )
                     persistLastCameraCenter(location.latitude, location.longitude)
                 }
                 .onFailure {
-                    _cameraStatus.value = "Error descargando (¿internet?) — intenta de nuevo"
+                    _cameraStatus.value = stringResolver.get(R.string.settings_speed_cameras_download_error)
                 }
         }
     }
 
     private fun sourceBreakdown(result: CameraDownloadResult): String =
-        "OSM: ${result.osmCount} · ANSV: ${result.ansvCount}"
+        stringResolver.get(R.string.settings_speed_cameras_sources, result.osmCount, result.ansvCount)
 
     fun updateCameraAlertRadius(value: String) {
         _cameraAlertRadius.value = value
@@ -945,7 +1024,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val parsed = _engineSoundVolume.value.toIntOrNull()
             if (parsed == null) {
-                _lastSaveResult.value = SaveResult(false, "Volumen inválido — usa un número 0-100")
+                _lastSaveResult.value = SaveResult(false, stringResolver.get(R.string.settings_engine_volume_invalid))
                 return@launch
             }
             val volume = parsed.coerceIn(0, 100)
@@ -953,8 +1032,10 @@ class SettingsViewModel @Inject constructor(
             _lastSaveResult.value = runCatching {
                 settings.edit { it[PreferencesKeys.ENGINE_SOUND_VOLUME] = volume }
             }.fold(
-                onSuccess = { SaveResult(true, "Volumen del motor: $volume%") },
-                onFailure = { SaveResult(false, "Error guardando el volumen") },
+                onSuccess = {
+                    SaveResult(true, stringResolver.get(R.string.settings_engine_volume_saved, volume))
+                },
+                onFailure = { SaveResult(false, stringResolver.get(R.string.settings_engine_volume_save_error)) },
             )
         }
     }
@@ -963,19 +1044,30 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val parsed = _cameraAlertRadius.value.toIntOrNull()
             if (parsed == null) {
-                _lastSaveResult.value = SaveResult(false, "Radio inválido — usa un número en metros")
+                _lastSaveResult.value = SaveResult(false, radiusInvalidMessage())
                 return@launch
             }
-            val radius = CameraAlertRadius.sanitize(parsed)
-            _cameraAlertRadius.value = radius.toString()
+            val radius = CameraAlertRadius.sanitize(radiusFieldToMeters(parsed, units))
+            val shown = radiusFieldValue(radius, units)
+            _cameraAlertRadius.value = shown.toString()
             _lastSaveResult.value = runCatching {
                 settings.edit { it[PreferencesKeys.CAMERA_ALERT_RADIUS_M] = radius }
             }.fold(
-                onSuccess = { SaveResult(true, "Radio de aviso: $radius m") },
-                onFailure = { SaveResult(false, "Error guardando el radio de aviso") },
+                onSuccess = {
+                    SaveResult(
+                        true,
+                        stringResolver.get(R.string.settings_camera_alert_radius_saved, shown, radiusFieldUnit(units).label),
+                    )
+                },
+                onFailure = { SaveResult(false, stringResolver.get(R.string.settings_camera_alert_radius_save_error)) },
             )
         }
     }
+
+    private fun radiusInvalidMessage(): String = stringResolver.get(
+        R.string.settings_camera_alert_radius_invalid,
+        stringResolver.get(radiusUnitWordRes(units)),
+    )
 
     /** Guarda el centro de la última descarga exitosa para el refresco semanal automático. */
     private suspend fun persistLastCameraCenter(latitude: Double, longitude: Double) {
@@ -1014,3 +1106,66 @@ class SettingsViewModel @Inject constructor(
 
     private fun isValidPicoPlacaRulesJson(json: String): Boolean = PicoYPlacaEngine.parseRulesJson(json) != null
 }
+
+private const val DEFAULT_TEMP_MAX_C = 105
+private val TEMP_MAX_RANGE_C = 60..150
+private const val CAMERA_DOWNLOAD_RADIUS_KM = 50.0
+private const val METERS_PER_KM = 1000.0
+private const val FEET_PER_MILE = 5280.0
+
+internal fun temperatureFieldValue(celsius: Int, units: UnitFormatter): Int =
+    units.temperature(celsius.toDouble()).roundToInt()
+
+internal fun temperatureFieldToCelsius(value: Int, units: UnitFormatter): Int =
+    units.toMetricTemperature(value.toDouble()).roundToInt()
+
+internal fun radiusFieldUnit(units: UnitFormatter): DistanceUnit =
+    if (units.system == UnitSystem.METRIC) DistanceUnit.METERS else DistanceUnit.FEET
+
+internal fun radiusUnitWordRes(units: UnitFormatter): Int =
+    if (units.system == UnitSystem.METRIC) R.string.settings_units_word_meters else R.string.settings_units_word_feet
+
+internal fun radiusFieldValue(meters: Int, units: UnitFormatter): Int =
+    (units.distance(meters / METERS_PER_KM) * subunitsPerDistanceUnit(units)).roundToInt()
+
+internal fun radiusFieldToMeters(value: Int, units: UnitFormatter): Int =
+    (units.toMetricDistance(value / subunitsPerDistanceUnit(units)) * METERS_PER_KM).roundToInt()
+
+internal fun cameraDownloadDistance(units: UnitFormatter): Int =
+    units.distance(CAMERA_DOWNLOAD_RADIUS_KM).roundToInt()
+
+private fun subunitsPerDistanceUnit(units: UnitFormatter): Double =
+    if (units.system == UnitSystem.METRIC) METERS_PER_KM else FEET_PER_MILE
+
+private val CO_FUEL_PRICE_RANGE = 1_000.0..50_000.0
+private val FUEL_PRICE_KEYS = listOf(
+    PreferencesKeys.FUEL_PRICE_CORRIENTE,
+    PreferencesKeys.FUEL_PRICE_EXTRA,
+    PreferencesKeys.FUEL_PRICE_DIESEL,
+)
+
+internal fun fuelPriceFieldText(storedPerGallon: Double?, region: Region, currency: Currency): String {
+    val display = storedPerGallon?.let { toDisplayPrice(it, region) } ?: return ""
+    val digits = moneyFractionDigits(currency)
+    if (digits == 0) return display.toLong().toString()
+    return BigDecimal(display).setScale(digits, RoundingMode.HALF_UP).toPlainString()
+}
+
+internal fun fuelPricesToStore(texts: List<String>, region: Region): List<Double?>? {
+    val prices = texts.map(::parseFuelPriceText)
+    val valid = texts.zip(prices).all { (text, price) -> isValidFuelPriceInput(text, price, region) }
+    return if (valid) prices.map { price -> price?.let { toStoredPerGallon(it, region) } } else null
+}
+
+internal fun invalidFuelPriceMessage(region: Region): Int =
+    if (region == Region.CO) R.string.settings_fuel_price_out_of_range else R.string.settings_fuel_price_invalid
+
+private fun parseFuelPriceText(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
+
+// Colombia keeps its mandatory 1 000–50 000 COP range; elsewhere an empty field means "no price".
+private fun isValidFuelPriceInput(text: String, price: Double?, region: Region): Boolean = when {
+    region == Region.CO -> price != null && price in CO_FUEL_PRICE_RANGE
+    text.isBlank() -> true
+    else -> price != null && price.isFinite() && price > 0.0
+}
+

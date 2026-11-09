@@ -3,7 +3,9 @@ package com.revscope.core.obd.taller
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.revscope.core.data.db.AppDatabase
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.sesion.TallerRepositoryRoom
+import com.revscope.core.uitesting.XmlStringResolver
 
 fun baseDeDatosEnMemoria(): AppDatabase =
     Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java)
@@ -11,4 +13,4 @@ fun baseDeDatosEnMemoria(): AppDatabase =
         .build()
 
 fun AppDatabase.repositorioTaller(): TallerRepositoryRoom =
-    TallerRepositoryRoom(diagSessionDao(), vehicleKnowledgeDao())
+    TallerRepositoryRoom(diagSessionDao(), vehicleKnowledgeDao(), XmlStringResolver.es(R::class.java))

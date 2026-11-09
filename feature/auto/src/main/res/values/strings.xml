@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auto_speed">Speed</string>
+    <string name="auto_rpm">RPM</string>
+    <string name="auto_coolant_temp">Engine temp.</string>
+    <string name="auto_battery">Battery</string>
+    <string name="auto_reconnect">Reconnect</string>
+    <string name="auto_title">RevScope — %1$s</string>
+    <string name="auto_connecting">Connecting…</string>
+    <string name="auto_no_connection">Not connected</string>
+    <string name="auto_disconnected">Disconnected</string>
+</resources>

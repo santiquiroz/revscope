@@ -42,7 +42,7 @@ internal object PruebasElectricasBenelli {
 
     fun bateriaTerminada(eventoId: Long? = 24): EstadoPrueba.Terminada {
         val datos = bateria()
-        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     // El adaptador deja de responder al empezar a girar el motor de arranque y el enlace se pierde.
@@ -57,7 +57,7 @@ internal object PruebasElectricasBenelli {
             listOf(contacto, arranque),
             contexto = ContextoAnalisis(enlacePerdidoEn = PasosBateria.ARRANQUE),
         )
-        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorBateria.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     // Paso 2 de 4 grabando, a 4,5 s de terminar: el voltaje cayó al girar el motor de arranque y ya carga.
@@ -105,7 +105,7 @@ internal object PruebasElectricasBenelli {
 
     fun mapTerminado(eventoId: Long? = 26): EstadoPrueba.Terminada {
         val datos = map()
-        return EstadoPrueba.Terminada(AnalizadorMapBaro.analizar(datos, bandas), eventoId, datos)
+        return EstadoPrueba.Terminada(AnalizadorMapBaro.analizar(datos, bandas, resolverPrueba()), eventoId, datos)
     }
 
     fun enMap() = enPaso(TipoPrueba.MAP_BARO, 0, FasePaso.GRABANDO, 6_000)
@@ -123,7 +123,7 @@ internal object PruebasElectricasBenelli {
         val ahora = 1_758_848_000_000L
         val lecturas = listOf("0C" to 0.0, "0D" to 0.0).associate { (pid, v) -> pid to ObdReading(pid, v, "", ahora) }
         val ctx = ContextoPrueba(conectado = true, lecturas = lecturas, soportado = { it in soportados }, ahoraMs = ahora)
-        return reglas.map { it.evaluar(ctx) }
+        return reglas.map { it.evaluar(ctx, resolverPrueba()) }
     }
 
     private fun alternar(s: Double, a: Double, b: Double) = if ((s * 4).toInt() % 2 == 0) a else b

@@ -1,5 +1,6 @@
 package com.revscope.feature.map.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,14 +32,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.designsystem.rememberUnitFormatter
 import com.revscope.core.navigation.Maneuver
 import com.revscope.core.navigation.NavigationState
+import com.revscope.feature.map.R
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * La instrucción que se está siguiendo, arriba del mapa.
@@ -74,7 +79,7 @@ fun NavigationBanner(state: NavigationState, onStop: () -> Unit, modifier: Modif
                 }
             }
             IconButton(onClick = onStop) {
-                Icon(Icons.Default.Close, contentDescription = "Terminar navegación", tint = MUTED)
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.map_nav_end), tint = MUTED)
             }
         }
     }
@@ -93,10 +98,11 @@ fun NavigationProgressBar(state: NavigationState, speedKmh: Int? = null, modifie
         ) {
             // weight(fill=false): con 4 celdas en 320dp el Row sin pesos mide con ancho ilimitado
             // y el Surface CLIPEA la última celda en silencio; con pesos, reparten y nada se corta.
-            speedKmh?.let { ProgressField("$it km/h", "velocidad", Modifier.weight(1f, fill = false)) }
-            ProgressField(formatDistance(state.distanceRemainingM), "restante", Modifier.weight(1f, fill = false))
-            ProgressField(formatDuration(state.durationRemainingS), "en camino", Modifier.weight(1f, fill = false))
-            ProgressField(arrivalClock(state.durationRemainingS), "llegada", Modifier.weight(1f, fill = false))
+            val units = rememberUnitFormatter()
+            speedKmh?.let { ProgressField(units.formatSpeed(it.toDouble()), stringResource(R.string.map_nav_field_speed), Modifier.weight(1f, fill = false)) }
+            ProgressField(formatDistance(state.distanceRemainingM, units),stringResource(R.string.map_nav_field_remaining), Modifier.weight(1f, fill = false))
+            ProgressField(formatDuration(state.durationRemainingS), stringResource(R.string.map_nav_field_en_route), Modifier.weight(1f, fill = false))
+            ProgressField(arrivalClock(state.durationRemainingS), stringResource(R.string.map_nav_field_arrival), Modifier.weight(1f, fill = false))
         }
     }
 }
@@ -109,51 +115,59 @@ private fun ProgressField(value: String, label: String, modifier: Modifier = Mod
     }
 }
 
+@Composable
 private fun headline(state: NavigationState): String = when {
-    state.arrived -> "Llegó"
-    state.offRoute -> "Recalculando…"
-    else -> formatDistance(state.distanceToManeuverM)
+    state.arrived -> stringResource(R.string.map_nav_arrived)
+    state.offRoute -> stringResource(R.string.map_nav_recalculating)
+    else -> formatDistance(state.distanceToManeuverM, rememberUnitFormatter())
 }
 
+@Composable
 private fun subtitle(state: NavigationState): String? = when {
-    state.arrived -> "Llegó a su destino"
-    state.offRoute -> "Se salió de la ruta"
-    else -> state.maneuver?.let(::maneuverLabel)
+    state.arrived -> stringResource(R.string.map_nav_arrived_destination)
+    state.offRoute -> stringResource(R.string.map_nav_off_route)
+    else -> state.maneuver?.let { maneuverLabel(it) }
 }
 
 /** "Luego: ..." solo cuando las maniobras vienen pegadas; si no, es ruido. */
+@Composable
 private fun chained(state: NavigationState): String? {
     if (state.arrived || state.offRoute) return null
     if (state.distanceToManeuverM >= CHAIN_THRESHOLD_M) return null
     val next = state.nextManeuver ?: return null
-    return "Luego: ${maneuverLabel(next)}"
+    return stringResource(R.string.map_nav_then, maneuverLabel(next))
 }
 
+@Composable
 private fun maneuverLabel(maneuver: Maneuver): String {
     val street = maneuver.streetName?.trim()?.takeIf { it.isNotEmpty() }
-    val action = when (maneuver.type) {
-        "arrive" -> "Llegada"
-        "roundabout", "rotary", "roundabout turn" -> "Glorieta"
-        "exit roundabout", "exit rotary" -> "Salir de la glorieta"
-        "off ramp" -> "Tomar la salida"
-        "on ramp" -> "Tomar la rampa"
-        "merge" -> "Incorporarse"
-        "fork" -> "Bifurcación"
-        "end of road" -> "Fin de la vía"
-        "turn" -> sideLabel(maneuver.modifier) ?: "Girar"
-        else -> "Seguir"
-    }
+    val action = stringResource(maneuverActionRes(maneuver))
     return if (street == null) action else "$action · $street"
 }
 
-private fun sideLabel(modifier: String?): String? = when (modifier) {
-    "right" -> "Derecha"
-    "left" -> "Izquierda"
-    "slight right" -> "Leve derecha"
-    "slight left" -> "Leve izquierda"
-    "sharp right" -> "Cerrado derecha"
-    "sharp left" -> "Cerrado izquierda"
-    "uturn" -> "Giro en U"
+@StringRes
+private fun maneuverActionRes(maneuver: Maneuver): Int = when (maneuver.type) {
+    "arrive" -> R.string.map_maneuver_arrive
+    "roundabout", "rotary", "roundabout turn" -> R.string.map_maneuver_roundabout // i18n-ignore
+    "exit roundabout", "exit rotary" -> R.string.map_maneuver_exit_roundabout // i18n-ignore
+    "off ramp" -> R.string.map_maneuver_off_ramp // i18n-ignore
+    "on ramp" -> R.string.map_maneuver_on_ramp // i18n-ignore
+    "merge" -> R.string.map_maneuver_merge
+    "fork" -> R.string.map_maneuver_fork
+    "end of road" -> R.string.map_maneuver_end_of_road // i18n-ignore
+    "turn" -> sideLabel(maneuver.modifier) ?: R.string.map_maneuver_turn
+    else -> R.string.map_maneuver_continue
+}
+
+@StringRes
+private fun sideLabel(modifier: String?): Int? = when (modifier) {
+    "right" -> R.string.map_maneuver_right
+    "left" -> R.string.map_maneuver_left
+    "slight right" -> R.string.map_maneuver_slight_right // i18n-ignore
+    "slight left" -> R.string.map_maneuver_slight_left // i18n-ignore
+    "sharp right" -> R.string.map_maneuver_sharp_right // i18n-ignore
+    "sharp left" -> R.string.map_maneuver_sharp_left // i18n-ignore
+    "uturn" -> R.string.map_maneuver_uturn
     else -> null
 }
 
@@ -164,7 +178,7 @@ private fun maneuverIcon(state: NavigationState): ImageVector {
     turnIcon(maneuver.modifier)?.let { return it }
     return when (maneuver.type) {
         "arrive" -> Icons.Default.Flag
-        "roundabout", "rotary", "roundabout turn", "exit roundabout", "exit rotary" ->
+        "roundabout", "rotary", "roundabout turn", "exit roundabout", "exit rotary" -> // i18n-ignore
             Icons.Default.RoundaboutRight
         "merge" -> Icons.Default.Merge
         else -> Icons.Default.Straight
@@ -174,24 +188,32 @@ private fun maneuverIcon(state: NavigationState): ImageVector {
 private fun turnIcon(modifier: String?): ImageVector? = when (modifier) {
     "right" -> Icons.Default.TurnRight
     "left" -> Icons.Default.TurnLeft
-    "slight right" -> Icons.Default.TurnSlightRight
-    "slight left" -> Icons.Default.TurnSlightLeft
-    "sharp right" -> Icons.Default.TurnSharpRight
-    "sharp left" -> Icons.Default.TurnSharpLeft
+    "slight right" -> Icons.Default.TurnSlightRight // i18n-ignore
+    "slight left" -> Icons.Default.TurnSlightLeft // i18n-ignore
+    "sharp right" -> Icons.Default.TurnSharpRight // i18n-ignore
+    "sharp left" -> Icons.Default.TurnSharpLeft // i18n-ignore
     "uturn" -> Icons.Default.UTurnLeft
     else -> null
 }
 
 /** Mismo redondeo que la voz: si se oye "en 250 metros", en pantalla no puede decir 237. */
-private fun formatDistance(distanceM: Int): String = when {
-    distanceM < IMMEDIATE_M -> "Ahora"
-    distanceM < 1_000 -> "${(distanceM / METERS_ROUNDING).coerceAtLeast(1) * METERS_ROUNDING} m"
-    else -> String.format(Locale("es"), "%.1f km", distanceM / 1_000.0)
-}
+@Composable
+private fun formatDistance(distanceM: Int, units: UnitFormatter): String =
+    if (distanceM < IMMEDIATE_M) stringResource(R.string.map_nav_now) else navDistanceText(distanceM, units)
+
+internal fun navDistanceText(distanceM: Int, units: UnitFormatter): String =
+    units.formatShortDistance(snapMeters(distanceM, units.system).toDouble())
+
+private fun snapMeters(distanceM: Int, system: UnitSystem): Int =
+    if (system == UnitSystem.METRIC && distanceM < 1_000) {
+        (distanceM / METERS_ROUNDING).coerceAtLeast(1) * METERS_ROUNDING
+    } else {
+        distanceM
+    }
 
 private fun formatDuration(seconds: Int): String {
     val minutes = seconds / 60
-    return if (minutes >= 60) "${minutes / 60} h ${minutes % 60} min" else "$minutes min"
+    return if (minutes >= 60) "${minutes / 60} h ${minutes % 60} min" else "$minutes min" // i18n-ignore
 }
 
 private fun arrivalClock(secondsRemaining: Int): String =

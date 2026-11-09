@@ -32,6 +32,9 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(project(":core:ui-testing"))
+    testImplementation(libs.mockk)
+    testImplementation(libs.org.json)
+    testImplementation(libs.coroutines.test)
 }
 
 kotlin {

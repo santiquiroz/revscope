@@ -2,12 +2,14 @@ package com.revscope.feature.workshop.taller.modelo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.modelo.CableModelo
 import com.revscope.core.obd.taller.modelo.CableadoSensor
 import com.revscope.core.obd.taller.multimetro.FuncionCable
 import com.revscope.core.obd.taller.multimetro.ResolutorPlantilla
 import com.revscope.core.obd.taller.sesion.TallerRepository
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.EntornoTaller
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -24,6 +26,7 @@ import javax.inject.Inject
 class ConocimientoModeloViewModel @Inject constructor(
     private val repositorio: TallerRepository,
     entorno: EntornoTaller,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val local = MutableStateFlow(ConocimientoModeloUi())
@@ -46,7 +49,7 @@ class ConocimientoModeloViewModel @Inject constructor(
         val cableado = local.value.modelo?.cableado?.firstOrNull { it.sensor == sensor } ?: return
         val cable = cableado.cables.firstOrNull { it.funcion == funcion } ?: return
         local.update {
-            it.copy(dialogoCable = EdicionCableUi(sensor, funcion, funcion.etiqueta, cable.color.orEmpty()))
+            it.copy(dialogoCable = EdicionCableUi(sensor, funcion, funcion.etiqueta(resolver), cable.color.orEmpty()))
         }
     }
 
@@ -65,10 +68,10 @@ class ConocimientoModeloViewModel @Inject constructor(
             runCatching { repositorio.guardarCableado(modelo.clave, actualizado) }
                 .onSuccess { guardado ->
                     if (guardado) {
-                        local.update { it.copy(dialogoCable = null, mensaje = "Cableado guardado") }
+                        local.update { it.copy(dialogoCable = null, mensaje = resolver.get(R.string.workshop_modelo_wiring_saved)) }
                         cargar(vehiculoActual, conservarMensaje = true)
                     } else {
-                        local.update { it.copy(mensaje = "No se pudo guardar el cableado") }
+                        local.update { it.copy(mensaje = resolver.get(R.string.workshop_modelo_wiring_save_failed)) }
                     }
                 }
                 .onFailure(::falloGuardado)
@@ -78,7 +81,7 @@ class ConocimientoModeloViewModel @Inject constructor(
     fun mensajeMostrado() = local.update { it.copy(mensaje = null) }
 
     fun referenciaCopiada(referencia: String) =
-        local.update { it.copy(mensaje = "Referencia $referencia copiada") }
+        local.update { it.copy(mensaje = resolver.get(R.string.workshop_modelo_reference_copied, referencia)) }
 
     private suspend fun cargar(vehiculo: VehiculoTaller?, conservarMensaje: Boolean = false) {
         val version = ++versionCarga
@@ -98,14 +101,14 @@ class ConocimientoModeloViewModel @Inject constructor(
         } catch (e: Exception) {
             if (version != versionCarga) return
             Timber.w(e, "Conocimiento del modelo: no se pudo cargar")
-            local.value = local.value.copy(cargando = false, error = "No se pudo cargar el conocimiento del modelo")
+            local.value = local.value.copy(cargando = false, error = resolver.get(R.string.workshop_modelo_load_failed))
         }
     }
 
     private fun falloGuardado(error: Throwable) {
         if (error is CancellationException) throw error
         Timber.w(error, "Conocimiento del modelo: no se pudo guardar el cableado")
-        local.update { it.copy(mensaje = "No se pudo guardar el cableado") }
+        local.update { it.copy(mensaje = resolver.get(R.string.workshop_modelo_wiring_save_failed)) }
     }
 
     private fun CableadoSensor.conColor(funcion: FuncionCable, color: String?) = copy(

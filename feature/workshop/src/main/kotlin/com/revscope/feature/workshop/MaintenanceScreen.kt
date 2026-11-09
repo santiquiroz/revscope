@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -60,6 +61,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.data.db.entities.MaintenanceItemEntity
 import com.revscope.core.obd.legal.DocumentStatusCalculator.Nivel
 import com.revscope.core.obd.trip.MaintenanceCalculator
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.designsystem.rememberUnitFormatter
+import kotlin.math.abs
 import kotlin.math.roundToLong
 
 
@@ -97,10 +101,10 @@ fun MaintenanceScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = RevScopeColors.TextPrimary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(com.revscope.core.designsystem.R.string.ds_back), tint = RevScopeColors.TextPrimary)
                 }
                 Text(
-                    "Mantenimiento",
+                    stringResource(R.string.workshop_maintenance_title),
                     color = RevScopeColors.TextPrimary,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -110,7 +114,7 @@ fun MaintenanceScreen(
                     onClick = { vm.exportCsv(context) },
                     enabled = estados.isNotEmpty(),
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = RevScopeColors.Accent)
+                    Icon(Icons.Default.Download, contentDescription = stringResource(R.string.workshop_maintenance_export_csv), tint = RevScopeColors.Accent)
                 }
             }
 
@@ -168,8 +172,8 @@ fun MaintenanceScreen(
 @Composable
 private fun EmptyProfileState(onElegirVehiculo: () -> Unit) {
     EmptyState(
-        mensaje = "Activa un vehículo en Perfiles para configurar su mantenimiento.",
-        accion = AccionEstado("Elegir vehículo", onElegirVehiculo),
+        mensaje = stringResource(R.string.workshop_maintenance_activate_vehicle),
+        accion = AccionEstado(stringResource(R.string.workshop_maintenance_choose_vehicle), onElegirVehiculo),
         modifier = Modifier.padding(top = 24.dp, start = 16.dp, end = 16.dp),
     )
 }
@@ -178,7 +182,7 @@ private fun EmptyProfileState(onElegirVehiculo: () -> Unit) {
 private fun EmptyOdometerHint() {
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Text(
-            "Ingresa el kilometraje actual de tu vehículo para empezar",
+            stringResource(R.string.workshop_maintenance_odometer_hint),
             color = RevScopeColors.TextSecondary,
             fontSize = 13.sp,
             modifier = Modifier.padding(14.dp),
@@ -188,14 +192,15 @@ private fun EmptyOdometerHint() {
 
 @Composable
 private fun OdometerField(odometroActual: Double, onSave: (Double) -> Unit) {
+    val units = rememberUnitFormatter()
     var text by remember { mutableStateOf("") }
     var edited by remember { mutableStateOf(false) }
     LaunchedEffect(odometroActual) {
-        if (!edited) text = odometroActual.roundToLong().toString()
+        if (!edited) text = distanciaEditable(units, odometroActual)
     }
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            Text("Kilometraje actual", color = RevScopeColors.TextSecondary, fontSize = 12.sp)
+            Text(stringResource(R.string.workshop_maintenance_current_mileage), color = RevScopeColors.TextSecondary, fontSize = 12.sp)
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = text,
@@ -213,25 +218,26 @@ private fun OdometerField(odometroActual: Double, onSave: (Double) -> Unit) {
                 Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = {
-                        text.toDoubleOrNull()?.let {
+                        distanciaMetrica(units, text)?.let {
                             onSave(it)
                             edited = false
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent, contentColor = Color.Black),
-                ) { Text("Guardar") }
+                ) { Text(stringResource(R.string.workshop_maintenance_save)) }
             }
         }
     }
 }
 
 @Composable
-private fun MaintenanceItemCard(
+internal fun MaintenanceItemCard(
     estado: MaintenanceCalculator.ItemStatus,
     odometroActual: Double,
     onRegistrarServicio: () -> Unit,
     onEditarIntervalo: () -> Unit,
 ) {
+    val units = rememberUnitFormatter()
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -243,7 +249,7 @@ private fun MaintenanceItemCard(
                     modifier = Modifier.weight(1f),
                 )
                 IconButton(onClick = onEditarIntervalo) {
-                    Icon(Icons.Default.Edit, "Editar intervalo", tint = RevScopeColors.TextSecondary)
+                    Icon(Icons.Default.Edit, stringResource(R.string.workshop_maintenance_edit_interval), tint = RevScopeColors.TextSecondary)
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -256,18 +262,18 @@ private fun MaintenanceItemCard(
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    kmRestantesTexto(estado.kmRestantes),
+                    kmRestantesTexto(estado.kmRestantes, units),
                     color = nivelColor(estado.nivel),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onRegistrarServicio, contentPadding = PaddingValues(0.dp)) {
-                    Text("Registrar servicio", color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.workshop_maintenance_register_service), color = RevScopeColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Text(
-                "Cada ${estado.item.intervaloKm.roundToLong()} km",
+                stringResource(R.string.workshop_maintenance_every_km, units.formatDistance(estado.item.intervaloKm, decimals = 0)),
                 color = RevScopeColors.TextSecondary,
                 fontSize = 12.sp,
             )
@@ -281,10 +287,21 @@ private fun progresoIntervalo(estado: MaintenanceCalculator.ItemStatus, odometro
     return (consumido / estado.item.intervaloKm).toFloat().coerceIn(0f, 1f)
 }
 
-private fun kmRestantesTexto(kmRestantes: Double): String {
-    val km = kmRestantes.roundToLong()
-    return if (km <= 0) "Vencido hace ${-km} km" else "Faltan $km km"
+@Composable
+private fun kmRestantesTexto(kmRestantes: Double, units: UnitFormatter): String {
+    val texto = units.formatDistance(abs(kmRestantes), decimals = 0)
+    return if (units.distance(kmRestantes).roundToLong() <= 0) {
+        stringResource(R.string.workshop_maintenance_overdue_km, texto)
+    } else {
+        stringResource(R.string.workshop_maintenance_due_in_km, texto)
+    }
 }
+
+internal fun distanciaEditable(units: UnitFormatter, km: Double): String =
+    units.distance(km).roundToLong().toString()
+
+internal fun distanciaMetrica(units: UnitFormatter, texto: String): Double? =
+    texto.toDoubleOrNull()?.let(units::toMetricDistance)
 
 private fun nivelColor(nivel: Nivel): Color = when (nivel) {
     Nivel.OK -> RevScopeColors.Success
@@ -303,31 +320,32 @@ private fun AddItemButton(onClick: () -> Unit) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Add, contentDescription = null, tint = RevScopeColors.Accent)
             Spacer(Modifier.width(8.dp))
-            Text("Agregar ítem", color = RevScopeColors.Accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.workshop_maintenance_add_item), color = RevScopeColors.Accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 @Composable
 private fun AddItemDialog(onDismiss: () -> Unit, onConfirm: (String, Double) -> Unit) {
+    val units = rememberUnitFormatter()
     var nombre by remember { mutableStateOf("") }
     var intervalo by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nuevo ítem de mantenimiento") },
+        title = { Text(stringResource(R.string.workshop_maintenance_new_item)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
-                    label = { Text("Nombre") },
+                    label = { Text(stringResource(R.string.workshop_maintenance_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = intervalo,
                     onValueChange = { intervalo = it },
-                    label = { Text("Intervalo en km") },
+                    label = { Text(stringResource(R.string.workshop_maintenance_interval_km, units.distanceLabel())) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -336,10 +354,10 @@ private fun AddItemDialog(onDismiss: () -> Unit, onConfirm: (String, Double) -> 
         },
         confirmButton = {
             TextButton(onClick = {
-                intervalo.toDoubleOrNull()?.let { onConfirm(nombre, it) }
-            }) { Text("Agregar") }
+                distanciaMetrica(units, intervalo)?.let { onConfirm(nombre, it) }
+            }) { Text(stringResource(R.string.workshop_maintenance_add)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.workshop_maintenance_cancel)) } },
     )
 }
 
@@ -349,15 +367,16 @@ private fun EditIntervalDialog(
     onDismiss: () -> Unit,
     onConfirm: (Double) -> Unit,
 ) {
-    var intervalo by remember { mutableStateOf(item.intervaloKm.roundToLong().toString()) }
+    val units = rememberUnitFormatter()
+    var intervalo by remember { mutableStateOf(distanciaEditable(units, item.intervaloKm)) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Intervalo de ${item.nombre}") },
+        title = { Text(stringResource(R.string.workshop_maintenance_interval_for, item.nombre)) },
         text = {
             OutlinedTextField(
                 value = intervalo,
                 onValueChange = { intervalo = it },
-                label = { Text("Intervalo en km") },
+                label = { Text(stringResource(R.string.workshop_maintenance_interval_km, units.distanceLabel())) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -365,9 +384,9 @@ private fun EditIntervalDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                intervalo.toDoubleOrNull()?.let { onConfirm(it) }
-            }) { Text("Guardar") }
+                distanciaMetrica(units, intervalo)?.let { onConfirm(it) }
+            }) { Text(stringResource(R.string.workshop_maintenance_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.workshop_maintenance_cancel)) } },
     )
 }

@@ -2,6 +2,7 @@ package com.revscope.feature.vehicle
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.common.stateInSafe
 import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.VehicleProfileEntity
@@ -29,6 +30,7 @@ class VehicleViewModel @Inject constructor(
     private val registry: PidRegistry,
     private val sessionManager: ObdSessionManager,
     private val repositorioTaller: TallerRepository,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     val profiles: StateFlow<List<VehicleProfileEntity>> = profileDao.observeAll()
@@ -155,15 +157,15 @@ class VehicleViewModel @Inject constructor(
     /** Reads the VIN from the connected vehicle (Mode 09 02) into the form. */
     fun readVinFromVehicle(connectionVm: ConnectionViewModel) {
         viewModelScope.launch {
-            _vinStatus.value = "Leyendo VIN…"
+            _vinStatus.value = resolver.get(R.string.vehicle_vin_reading)
             val vin = connectionVm.rawExchange("09 02\r", 4_000)
                 .getOrNull()
                 ?.let { ResponseParser.parseVinResponse(it) }
             if (vin != null) {
                 _formVin.value = vin
-                _vinStatus.value = "VIN leído"
+                _vinStatus.value = resolver.get(R.string.vehicle_vin_read)
             } else {
-                _vinStatus.value = "El vehículo no reporta VIN por OBD"
+                _vinStatus.value = resolver.get(R.string.vehicle_vin_unavailable)
             }
         }
     }
@@ -175,11 +177,11 @@ class VehicleViewModel @Inject constructor(
         val address = sessionManager.lastAdapterAddress.value ?: return
         viewModelScope.launch {
             profileDao.clearAdapterLinkExcept(address, profile.id)
-            val updated = profile.copy(adapterAddress = address)
+            val updated = actual(profile).copy(adapterAddress = address)
             profileDao.update(updated)
             sessionManager.notifyProfileUpdated(updated)
             _editingProfile.value = updated
-            _adapterLinkStatus.value = "Adaptador vinculado a este perfil"
+            _adapterLinkStatus.value = resolver.get(R.string.vehicle_adapter_linked_status)
         }
     }
 
@@ -188,11 +190,11 @@ class VehicleViewModel @Inject constructor(
         val profile = _editingProfile.value ?: return
         if (profile.adapterAddress == null) return
         viewModelScope.launch {
-            val updated = profile.copy(adapterAddress = null)
+            val updated = actual(profile).copy(adapterAddress = null)
             profileDao.update(updated)
             sessionManager.notifyProfileUpdated(updated)
             _editingProfile.value = updated
-            _adapterLinkStatus.value = "Adaptador desvinculado"
+            _adapterLinkStatus.value = resolver.get(R.string.vehicle_adapter_unlinked_status)
         }
     }
 
@@ -253,7 +255,7 @@ class VehicleViewModel @Inject constructor(
             val editing = _editingProfile.value
             val plate = _formPlate.value.trim().ifEmpty { null }
             if (editing != null) {
-                val updated = editing.copy(
+                val updated = actual(editing).copy(
                     name = name,
                     type = _formType.value,
                     fuelType = _formFuelType.value,
@@ -296,6 +298,10 @@ class VehicleViewModel @Inject constructor(
             resetForm()
         }
     }
+
+    // La sección del bus CAN guarda por su cuenta: partir de la fila guardada para no pisar sus columnas.
+    private suspend fun actual(profile: VehicleProfileEntity): VehicleProfileEntity =
+        profileDao.getById(profile.id) ?: profile
 
     fun deleteProfile(id: Long) {
         viewModelScope.launch {

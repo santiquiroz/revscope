@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.revscope.core.designsystem.RevScopeTheme
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -26,7 +28,7 @@ class SemanticaModeloTest {
 
     @Before
     fun pantallaAngostaConLetraGrande() {
-        RuntimeEnvironment.setQualifiers("w360dp-h5700dp-xhdpi")
+        RuntimeEnvironment.setQualifiers("es-w360dp-h5700dp-xhdpi")
         RuntimeEnvironment.setFontScale(2f)
     }
 
@@ -46,7 +48,10 @@ class SemanticaModeloTest {
         ).assertExists()
         compose.onNodeWithText("No equivalente al original").assertExists()
         compose.onNodeWithText("Verde-amarillo").assertExists()
-        compose.onNodeWithContentDescription("Volver").assertAreaMinima()
+        compose.onNodeWithContentDescription(
+            XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res"))
+                .get(DesignSystemR.string.ds_back),
+        ).assertAreaMinima()
         compose.onNodeWithContentDescription("Copiar referencia 280756030001").assertAreaMinima()
         compose.onNodeWithContentDescription("Editar color de Señal").assertAreaMinima()
         compose.onNodeWithText("Ver y editar referencias").assertAreaMinima()

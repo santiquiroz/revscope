@@ -1,5 +1,7 @@
 package com.revscope.app.navigation
 
+import androidx.annotation.StringRes
+import com.revscope.app.R
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -51,6 +53,7 @@ import com.revscope.feature.session.SessionHistoryScreen
 import com.revscope.feature.settings.Mode22ScannerScreen
 import com.revscope.feature.settings.SettingsScreen
 import com.revscope.feature.vehicle.VehicleProfileScreen
+import com.revscope.feature.vehicle.perfilcan.PruebaEnVivoScreen
 import com.revscope.feature.workshop.AlDiaScreen
 import com.revscope.feature.workshop.HealthCheckScreen
 import com.revscope.feature.workshop.LiveMixtureScreen
@@ -77,16 +80,16 @@ import com.revscope.feature.workshop.taller.modelo.ReferenciasScreen
 
 internal data class BottomNavItem(
     val screen: Screen,
-    val label: String,
+    @StringRes val label: Int,
     val icon: ImageVector,
 )
 
 internal val bottomNavItems = listOf(
-    BottomNavItem(Screen.Dashboard, "Conducir", Icons.Default.Speed),
-    BottomNavItem(Screen.LiveMap, "Mapa", Icons.Default.Map),
-    BottomNavItem(Screen.Workshop, "Taller", Icons.Default.Build),
-    BottomNavItem(Screen.Sessions, "Viajes", Icons.Default.History),
-    BottomNavItem(Screen.Settings, "Ajustes", Icons.Default.Settings),
+    BottomNavItem(Screen.Dashboard, R.string.app_tab_drive, Icons.Default.Speed),
+    BottomNavItem(Screen.LiveMap, R.string.app_tab_map, Icons.Default.Map),
+    BottomNavItem(Screen.Workshop, R.string.app_tab_workshop, Icons.Default.Build),
+    BottomNavItem(Screen.Sessions, R.string.app_tab_trips, Icons.Default.History),
+    BottomNavItem(Screen.Settings, R.string.app_tab_settings, Icons.Default.Settings),
 )
 
 private val bottomNavRoutes = bottomNavItems.map { it.screen.route }.toSet()
@@ -147,7 +150,7 @@ fun RevScopeNavGraph(
     val connState by connectionVm.connectionState.collectAsState()
     val selectorVehiculo: @Composable () -> Unit = {
         SelectorVehiculo(
-            vehiculo = vehiculoEnEncabezado(connState, activeVehicleProfile),
+            vehiculo = vehiculoEnEncabezado(connState, activeVehicleProfile, vehiclePickerVm.resolver),
             onClick = {
                 hasOfferedVehiclePicker = true
                 vehiclePickerIsStartupPrompt = false
@@ -428,7 +431,24 @@ fun RevScopeNavGraph(
                 composable(Screen.VehicleProfile.route) {
                     VehicleProfileScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onProbarSenal = { vehiculoId, clave ->
+                            navController.navigate(Screen.PruebaEnVivo.withArgs(vehiculoId, clave))
+                        },
                         connectionVm = connectionVm,
+                    )
+                }
+                composable(
+                    route = Screen.PruebaEnVivo.route,
+                    arguments = listOf(
+                        navArgument(Screen.PruebaEnVivo.ARG_VEHICULO) { type = NavType.LongType },
+                        navArgument(Screen.PruebaEnVivo.ARG_CLAVE) { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val argumentos = checkNotNull(backStackEntry.arguments)
+                    PruebaEnVivoScreen(
+                        vehiculoId = argumentos.getLong(Screen.PruebaEnVivo.ARG_VEHICULO),
+                        clave = checkNotNull(argumentos.getString(Screen.PruebaEnVivo.ARG_CLAVE)),
+                        onVolver = { navController.popBackStack() },
                     )
                 }
                 composable(

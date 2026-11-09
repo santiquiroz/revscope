@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workshop_can_capture_title">Track CAN capture</string>
+    <string name="workshop_can_capture_before_you_go">Before you go</string>
+    <string name="workshop_can_capture_connect_adapter">Connect the adapter to capture the bus</string>
+    <string name="workshop_can_capture_label">Label</string>
+    <string name="workshop_can_capture_label_hint">Goes in the capture name, e.g. «ruta_autopista»</string>
+    <string name="workshop_can_capture_in_progress">CAPTURING · %1$s</string>
+    <string name="workshop_can_capture_elapsed">%1$s of %2$s</string>
+    <string name="workshop_can_capture_frames">Frames</string>
+    <string name="workshop_can_capture_overruns">Adapter buffer overruns</string>
+    <string name="workshop_can_capture_gps_speed">GPS speed</string>
+    <string name="workshop_can_capture_saved">CAPTURE SAVED</string>
+    <string name="workshop_can_capture_read_from_pc">Read it from your computer with leer_captura_can and leer_gps_captura_can.</string>
+    <string name="workshop_can_capture_failed">COULD NOT CAPTURE</string>
+    <string name="workshop_can_capture_notice_no_trip">No trip is recorded while you capture: the adapter listens to the bus and does not poll PIDs.</string>
+    <string name="workshop_can_capture_notice_auto_stop">Stops automatically after %1$s min. Keeps going with the screen off while the app stays connected.</string>
+    <string name="workshop_can_capture_notice_gps_privacy">Only GPS speed, accuracy, and heading are saved, once per second; never your position.</string>
+    <string name="workshop_can_capture_notice_no_location">No location permission: the capture will not include GPS speed.</string>
+    <string name="workshop_can_capture_stop_and_save">Stop and save</string>
+    <string name="workshop_can_capture_start">Start capture</string>
+    <string name="workshop_can_capture_speed_kmh">%1$d km/h</string>
+    <string name="workshop_can_capture_no_signal">no signal</string>
+    <string name="workshop_can_capture_no_gps_samples">no GPS samples</string>
+    <plurals name="workshop_can_capture_gps_samples">
+        <item quantity="one">%1$d GPS sample</item>
+        <item quantity="other">%1$d GPS samples</item>
+    </plurals>
+    <plurals name="workshop_can_capture_summary">
+        <item quantity="one">%1$d frame · %2$s · %3$s</item>
+        <item quantity="other">%1$d frames · %2$s · %3$s</item>
+    </plurals>
+
+    <string name="workshop_report_title">Workshop report</string>
+    <string name="workshop_report_share">Share</string>
+    <string name="workshop_report_print">Print or PDF</string>
+    <string name="workshop_report_edit_interpretation">Edit interpretation</string>
+    <string name="workshop_report_technician_interpretation">Technician\'s interpretation</string>
+    <string name="workshop_report_interpretation_note">This note appears separately from the findings calculated by RevScope.</string>
+    <string name="workshop_report_interpretation">Interpretation</string>
+    <string name="workshop_report_save">Save</string>
+    <string name="workshop_report_cancel">Cancel</string>
+    <string name="workshop_report_error_session_gone">This session no longer exists.</string>
+    <string name="workshop_report_error_save_interpretation">Could not save the interpretation.</string>
+    <string name="workshop_report_error_prepare_share">Could not prepare the report for sharing.</string>
+    <string name="workshop_report_error_generate">Could not generate the report.</string>
+    <string name="workshop_report_error_session_not_found">Could not find the session to generate the report.</string>
+</resources>

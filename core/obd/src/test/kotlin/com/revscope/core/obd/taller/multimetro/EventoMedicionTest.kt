@@ -1,6 +1,7 @@
 package com.revscope.core.obd.taller.multimetro
 
 import com.revscope.core.data.db.entities.VehicleType
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.grafica.VrefSesion
 import com.revscope.core.obd.taller.referencia.BandasTipicas
 import com.revscope.core.obd.taller.sesion.EventoTaller
@@ -8,6 +9,7 @@ import com.revscope.core.obd.taller.sesion.NuevoEvento
 import com.revscope.core.obd.taller.sesion.OrigenEvento
 import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.core.uitesting.XmlStringResolver
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -16,8 +18,12 @@ import org.junit.Test
 
 class EventoMedicionTest {
 
-    private val tps = PlantillasGenericas.para(SensorMultimetro.TPS, VehicleType.MOTORCYCLE)
+    private val resolver = XmlStringResolver.es(R::class.java)
+    private val tps = PlantillasGenericas.para(SensorMultimetro.TPS, VehicleType.MOTORCYCLE, resolver)
     private val bandas = BandasTipicas.para(VehicleType.MOTORCYCLE)
+
+    private fun combinar(plantilla: PlantillaCableado, lecturas: List<LecturaMultimetro>) =
+        VeredictoMultimetro.combinar(plantilla, lecturas, bandas, resolver = resolver)
 
     private fun guardado(e: NuevoEvento, instante: Long, id: Long = instante) = EventoTaller(
         id = id, sesionId = 1, instante = instante, tipo = e.tipo, titulo = e.titulo, resumen = e.resumen,
@@ -29,23 +35,23 @@ class EventoMedicionTest {
     @Test
     fun `la tabla guardada lleva el veredicto combinado y la referencia medida sirve para la prueba guiada`() {
         val lecturas = listOf(lectura(FuncionCable.REF_5V, "CERRADO", 4.96), lectura(FuncionCable.SENAL, "CERRADO", 0.1))
-        val veredicto = VeredictoMultimetro.combinar(tps, lecturas, bandas)
+        val veredicto = combinar(tps, lecturas)
 
-        val evento = EventoMedicion.tabla(tps, veredicto)
+        val evento = EventoMedicion.tabla(tps, veredicto, resolver = resolver)
 
         assertEquals(TipoEvento.MEDICION_MULTIMETRO, evento.tipo)
         assertEquals("Multímetro · TPS de 3 cables", evento.titulo)
         assertEquals(Veredicto.FALLA, evento.veredicto)
         assertEquals(veredicto.titulo, evento.payload.getJSONObject("veredicto").getString("titulo"))
-        assertEquals(4.96, VrefSesion.desde(listOf(guardado(evento, 1_000)))!!.voltios, 1e-9)
+        assertEquals(4.96, VrefSesion.desde(listOf(guardado(evento, 1_000)), resolver)!!.voltios, 1e-9)
     }
 
     @Test
     fun `la celda registrada sola resume cable, condición, valor y banda`() {
-        val celda = EvaluadorCelda.evaluar(tps, lectura(FuncionCable.SENAL, "CERRADO", 0.1), emptyMap(), bandas)
-        val acumulado = VeredictoMultimetro.combinar(tps, listOf(lectura(FuncionCable.SENAL, "CERRADO", 0.1)), bandas)
+        val celda = EvaluadorCelda.evaluar(tps, lectura(FuncionCable.SENAL, "CERRADO", 0.1), emptyMap(), bandas, resolver)
+        val acumulado = combinar(tps, listOf(lectura(FuncionCable.SENAL, "CERRADO", 0.1)))
 
-        val evento = EventoMedicion.celda(tps, celda, acumulado, OrigenEvento.MCP)
+        val evento = EventoMedicion.celda(tps, celda, acumulado, OrigenEvento.MCP, resolver)
 
         assertEquals("Señal · Cerrado: 0,10 V, bajo (0,3–1,0 V · Típico (editable))", evento.resumen)
         assertEquals(Veredicto.FALLA, evento.veredicto)
@@ -56,16 +62,17 @@ class EventoMedicionTest {
     fun `lo medido en la sesión junta los eventos y la medida más reciente de cada celda gana`() {
         val primero = EventoMedicion.tabla(
             tps,
-            VeredictoMultimetro.combinar(tps, listOf(lectura(FuncionCable.SENAL, "CERRADO", 0.1), lectura(FuncionCable.MASA, "CERRADO", 0.0)), bandas),
+            combinar(tps, listOf(lectura(FuncionCable.SENAL, "CERRADO", 0.1), lectura(FuncionCable.MASA, "CERRADO", 0.0))),
+            resolver = resolver,
         )
-        val segundo = EventoMedicion.tabla(tps, VeredictoMultimetro.combinar(tps, listOf(lectura(FuncionCable.SENAL, "CERRADO", 0.6)), bandas))
+        val segundo = EventoMedicion.tabla(tps, combinar(tps, listOf(lectura(FuncionCable.SENAL, "CERRADO", 0.6))), resolver = resolver)
         val otroSensor = EventoMedicion.tabla(
-            PlantillasGenericas.para(SensorMultimetro.MAP, VehicleType.MOTORCYCLE),
-            VeredictoMultimetro.combinar(
-                PlantillasGenericas.para(SensorMultimetro.MAP, VehicleType.MOTORCYCLE),
+            PlantillasGenericas.para(SensorMultimetro.MAP, VehicleType.MOTORCYCLE, resolver),
+            combinar(
+                PlantillasGenericas.para(SensorMultimetro.MAP, VehicleType.MOTORCYCLE, resolver),
                 listOf(lectura(FuncionCable.SENAL, "CONTACTO", 3.9)),
-                bandas,
             ),
+            resolver = resolver,
         )
 
         val lecturas = LecturasSesion.de(listOf(guardado(segundo, 2_000), guardado(otroSensor, 3_000), guardado(primero, 1_000)), SensorMultimetro.TPS)
@@ -85,12 +92,12 @@ class EventoMedicionTest {
         )
         val eventos = listOf(prueba("TERMINADA", 0.12, 1_000), prueba("FALLIDA", 0.5, 3_000), prueba("TERMINADA", 0.13, 2_000))
 
-        val ecu = LecturasEcuSesion.desde(eventos, SensorMultimetro.TPS)!!
+        val ecu = LecturasEcuSesion.desde(eventos, SensorMultimetro.TPS, resolver)!!
 
         assertEquals(0.13, ecu.voltiosPorCondicion.getValue(CondicionesMultimetro.CERRADO), 1e-9)
         assertEquals(0.89, ecu.voltiosPorCondicion.getValue(CondicionesMultimetro.FONDO), 1e-9)
         assertTrue(ecu.origen.contains("Barrido del TPS"))
-        assertNull(LecturasEcuSesion.desde(eventos, SensorMultimetro.MAP))
-        assertNull(LecturasEcuSesion.desde(emptyList(), SensorMultimetro.TPS))
+        assertNull(LecturasEcuSesion.desde(eventos, SensorMultimetro.MAP, resolver))
+        assertNull(LecturasEcuSesion.desde(emptyList(), SensorMultimetro.TPS, resolver))
     }
 }

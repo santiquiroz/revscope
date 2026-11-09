@@ -15,7 +15,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34])
 class CapturasPruebasMotorTest {
 
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolverPrueba())
 
     private fun ui(entrada: EntradaPantalla) = PruebaGuiadaUi(fase = pantalla.fase(entrada), vehiculo = "Benelli TNT 150i")
 

@@ -28,6 +28,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

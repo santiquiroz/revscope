@@ -1,5 +1,8 @@
 package com.revscope.core.intelligence.provider
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.intelligence.R
+
 /** Provider id constants — must match the literal values SecureKeyStore (:core:data) uses. */
 const val AI_PROVIDER_ANTHROPIC = "anthropic"
 const val AI_PROVIDER_OPENAI = "openai"
@@ -29,7 +32,10 @@ data class AiProviderSelection(
  * has no compile-time visibility into :core:data, where the DataStore/SecureKeyStore-backed
  * selection actually lives (wired in :app's IntelligenceModule).
  */
-class AiProviderFactory(private val selectionProvider: suspend () -> AiProviderSelection) {
+class AiProviderFactory(
+    private val resolver: StringResolver,
+    private val selectionProvider: suspend () -> AiProviderSelection,
+) {
 
     suspend fun current(): AiProvider? {
         val selection = selectionProvider()
@@ -50,10 +56,13 @@ class AiProviderFactory(private val selectionProvider: suspend () -> AiProviderS
             baseUrl?.takeIf { it.isNotBlank() } ?: NODO_BASE_URL_POR_DEFECTO,
             apiKey,
             model ?: OpenAiCompatibleProvider.DEFAULT_MODEL,
+            compatibleDisplayName(),
         )
 
     private fun customProvider(baseUrl: String?, apiKey: String?, model: String?): AiProvider? {
         val url = baseUrl?.takeIf { it.isNotBlank() } ?: return null
-        return OpenAiCompatibleProvider(url, apiKey, model ?: OpenAiCompatibleProvider.DEFAULT_MODEL)
+        return OpenAiCompatibleProvider(url, apiKey, model ?: OpenAiCompatibleProvider.DEFAULT_MODEL, compatibleDisplayName())
     }
+
+    private fun compatibleDisplayName(): String = resolver.get(R.string.ai_provider_openai_compatible)
 }

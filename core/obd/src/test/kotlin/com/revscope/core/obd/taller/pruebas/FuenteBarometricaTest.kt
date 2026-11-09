@@ -1,11 +1,14 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FuenteBarometricaTest {
+
+    private val es = XmlStringResolver.es(com.revscope.core.obd.R::class.java, resDirs = RES)
 
     @Test
     fun `a 1 500 m la atmósfera estándar da unos 84,6 kPa`() {
@@ -52,8 +55,20 @@ class FuenteBarometricaTest {
         assertEquals(OrigenBarometrica.ALTITUD_GPS, ref.origen)
         assertEquals(84.6, ref.kPa, 0.05)
         assertEquals(3.0, ref.incertidumbreKpa, 1e-9)
-        assertTrue(ref.etiqueta, ref.etiqueta.plano().contains("estimada"))
-        assertTrue(ref.etiqueta, ref.etiqueta.plano().contains("±3 kPa"))
+        val etiqueta = ref.etiqueta(es)
+        assertTrue(etiqueta, etiqueta.plano().contains("estimada"))
+        assertTrue(etiqueta, etiqueta.plano().contains("±3 kPa"))
+        assertEquals("Presión estimada por la altitud GPS (±3 kPa, por clima y altitud GPS)", etiqueta.plano())
+    }
+
+    @Test
+    fun `las etiquetas de la fuente salen en español y en inglés`() {
+        val ref = ReferenciaBarometrica(75.2, OrigenBarometrica.TELEFONO, FuenteBarometrica.INCERTIDUMBRE_TELEFONO_KPA)
+        val en = XmlStringResolver.en(com.revscope.core.obd.R::class.java, resDirs = RES)
+
+        assertEquals("el barómetro del teléfono (±0,5 kPa, típico)", ref.enFrase(es).plano())
+        assertEquals("Phone barometer (±0.5 kPa, typical)", ref.etiqueta(en).plano())
+        assertEquals("the pressure estimated from GPS altitude", OrigenBarometrica.ALTITUD_GPS.enFrase(en))
     }
 
     @Test
@@ -74,5 +89,9 @@ class FuenteBarometricaTest {
         val todas = FuenteBarometrica.disponibles(ecuKpa = 75.0, ambiente = LecturasAmbiente(presionTelefonoHpa = 752.0, altitudGpsM = 2_500.0))
 
         assertEquals(listOf(OrigenBarometrica.ECU, OrigenBarometrica.TELEFONO, OrigenBarometrica.ALTITUD_GPS), todas.map { it.origen })
+    }
+
+    private companion object {
+        val RES = listOf("src/main/res", "../common/src/main/res")
     }
 }

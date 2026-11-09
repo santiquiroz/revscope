@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Audio and vibration alerts -->
+    <string name="settings_alertas_title">Audio and vibration alerts</string>
+    <string name="settings_alertas_active">Active alerts (play over the intercom/speaker)</string>
+    <string name="settings_alertas_tts">Voice (TTS): spoken alerts and 0-100 times</string>
+    <string name="settings_alertas_voice_categories">Voice alerts by category</string>
+    <string name="settings_alertas_voice_temperature">Temperature</string>
+    <string name="settings_alertas_voice_voltage">Battery and charging</string>
+    <string name="settings_alertas_voice_speed_cameras">Speed cameras</string>
+    <string name="settings_alertas_voice_anomalies">Smart anomalies</string>
+    <string name="settings_alertas_voice_mil">Check engine light (MIL)</string>
+    <string name="settings_alertas_voice_redline">Redline</string>
+    <string name="settings_alertas_voice_custom_thresholds">Custom thresholds</string>
+    <string name="settings_alertas_voice_sport">0-100 times and laps</string>
+    <string name="settings_alertas_voice_pico_placa">Pico y placa when entering another city</string>
+    <string name="settings_alertas_voice_sunset">Sunset warning</string>
+    <string name="settings_alertas_voice_sunset_subtitle">One daily warning ~25 min before sunset: turn on your lights and make yourself visible</string>
+    <string name="settings_alertas_voice_potholes">Potholes and speed bumps</string>
+    <string name="settings_alertas_voice_potholes_subtitle">Warns you as you approach a pothole your own IMU already detected</string>
+    <string name="settings_alertas_voice_rain">Rain and wet-road lean</string>
+    <string name="settings_alertas_voice_rain_subtitle">Rain coming to your area + lean guard on wet pavement</string>
+    <string name="settings_alertas_voice_fatigue">Fatigue and hydration</string>
+    <string name="settings_alertas_voice_fatigue_subtitle">Break suggested every 2 h; hydration when it\'s hot</string>
+    <string name="settings_alertas_voice_local_info">Local info when changing cities</string>
+    <string name="settings_alertas_voice_local_info_supported">Uses your AI provider with web search (~$0.02 per city)</string>
+    <string name="settings_alertas_voice_local_info_unsupported">Requires Claude, OpenAI or Gemini (not available with Nodo or OpenAI-compatible)</string>
+    <string name="settings_alertas_ai_pico_placa">AI-powered Pico y placa in any city</string>
+    <string name="settings_alertas_ai_pico_placa_supported">Looks up the restriction for the city you\'re in (pico y placa, hoy no circula, rodízio…) and keeps it until it expires</string>
+    <string name="settings_alertas_ai_pico_placa_unsupported">Set up an AI provider with web search first — we recommend Gemini for its free tier</string>
+    <string name="settings_alertas_temp_max">Max temp %1$s</string>
+    <string name="settings_alertas_voltage_min">Min volt</string>
+    <string name="settings_alertas_redline_rpm">Redline RPM</string>
+    <string name="settings_alertas_redline_hint">Redline also controls the dashboard shift light.</string>
+    <string name="settings_alertas_save">Save alerts</string>
+
+    <!-- Engine sound -->
+    <string name="settings_alertas_engine_sound_title">Engine sound</string>
+    <string name="settings_alertas_engine_sound_description">Synthesizes the sound of a sports engine (or a funny one) following the real OBD2 RPM — plays through the speakers or the Bluetooth intercom. SoundRacer-style, without buying the adapter.</string>
+    <string name="settings_alertas_engine_sound_toggle">Engine sound while driving</string>
+    <string name="settings_alertas_engine_sound_toggle_subtitle">Only active with OBD telemetry connected</string>
+    <string name="settings_alertas_engine_sound_volume">Volume (0-100)</string>
+    <string name="settings_alertas_engine_sound_save_volume">Save volume</string>
+    <string name="settings_alertas_engine_sound_pack">Sound pack</string>
+
+    <!-- Speed cameras -->
+    <string name="settings_alertas_cameras_title">Speed cameras</string>
+    <string name="settings_alertas_cameras_description">Downloads speed cameras within %1$d %2$s of you. Sources: OpenStreetMap + official ANSV registry · updates automatically every week. While driving, the app warns you by voice as you approach (works offline after downloading).</string>
+    <string name="settings_alertas_cameras_download">Download cameras for my area</string>
+    <string name="settings_alertas_cameras_radius">Alert radius (%1$s)</string>
+    <string name="settings_alertas_cameras_radius_hint">Distance at which the voice warning plays (%1$d-%2$d %3$s). Fewer %4$s = fewer early warnings.</string>
+    <string name="settings_alertas_cameras_save_radius">Save radius</string>
+
+    <!-- Custom Pico y placa -->
+    <string name="settings_alertas_pico_placa_title">Custom Pico y placa</string>
+    <string name="settings_alertas_pico_placa_description">Your own rules for your city or new rotations — they override the built-in ones when the cityId matches.</string>
+    <string name="settings_alertas_pico_placa_json">Pico y placa rules JSON</string>
+    <string name="settings_alertas_pico_placa_example">Example (Medellín, rotation by day of the week):\n{\"cityId\":\"medellin\",\"displayName\":\"Medellín\",\"rotation\":{\"2\":[1,7],\"3\":[0,3]},\"startHour\":5,\"endHour\":20,\"carDigit\":\"LAST\",\"motoDigit\":\"FIRST\",\"validFromMs\":1770008400000,\"validUntilMs\":1785560399000}</string>
+    <string name="settings_alertas_pico_placa_apply">Validate and apply</string>
+</resources>

@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -29,11 +30,17 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.revscope.core.common.i18n.LocaleNumbers
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.fromMetric
+import com.revscope.core.common.units.labelForMetric
 import com.revscope.core.designsystem.FilaEtiquetaValor
 import com.revscope.core.designsystem.NivelBadge
 import com.revscope.core.designsystem.NivelEstado
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.feature.dtc.R
+import java.util.Locale
 
 @Composable
 internal fun TarjetaMil(mil: MilUi) {
@@ -76,15 +83,19 @@ internal fun FranjaSesion(detalle: DetalleDtc, onGuardar: () -> Unit) {
     }
 }
 
+@Composable
 private fun textoSesionAbierta(titulo: String, lecturaEnSesion: Boolean): String =
-    if (lecturaEnSesion) "Lectura anotada en la sesión «$titulo», con el freeze frame y las casillas de la guía."
-    else "Sesión abierta «$titulo»: las casillas de la guía se guardan en ella."
+    stringResource(
+        if (lecturaEnSesion) R.string.dtc_reading_saved_in_session
+        else R.string.dtc_session_open,
+        titulo,
+    )
 
 @Composable
 private fun SinSesion(guardando: Boolean, onGuardar: () -> Unit) {
     LineaIcono(
         Icons.Outlined.Info,
-        "Sin sesión de diagnóstico abierta: esta lectura y las casillas no quedan guardadas.",
+        stringResource(R.string.dtc_no_session_warning),
     )
     OutlinedButton(
         onClick = onGuardar,
@@ -92,7 +103,7 @@ private fun SinSesion(guardando: Boolean, onGuardar: () -> Unit) {
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
     ) {
         Text(
-            if (guardando) "Guardando…" else "Guardar esta lectura en una sesión nueva",
+            stringResource(if (guardando) R.string.dtc_saving else R.string.dtc_save_reading_new_session),
             color = RevScopeColors.TextPrimary,
             style = RevScopeType.label,
             textAlign = TextAlign.Center,
@@ -120,36 +131,40 @@ internal fun FreezeFrameCard(freezeFrame: FreezeFrameUi, enSesion: Boolean) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.PhotoCamera, contentDescription = null, tint = RevScopeColors.Accent, modifier = Modifier.size(18.dp))
             Text(
-                tituloFreezeFrame(freezeFrame.causante),
+                freezeFrame.causante?.let { stringResource(R.string.dtc_freeze_frame_by, it) }
+                    ?: stringResource(R.string.dtc_freeze_frame),
                 color = RevScopeColors.TextPrimary,
                 style = RevScopeType.label,
                 modifier = Modifier.weight(1f),
             )
         }
         Text(
-            "El estado del motor en el momento en que la ECU guardó la falla.",
+            stringResource(R.string.dtc_freeze_frame_description),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
         freezeFrame.items.forEach { FilaEtiquetaValor(it.label, it.value) }
         Text(
-            if (enSesion) "Guardado en la sesión: se conserva aunque borres los códigos."
-            else "Se pierde al borrar los códigos si no lo guardas en una sesión.",
+            stringResource(if (enSesion) R.string.dtc_freeze_frame_saved_notice else R.string.dtc_freeze_frame_lost_notice),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.bodySmall,
         )
     }
 }
 
-fun tituloFreezeFrame(causante: String?): String =
-    causante?.let { "Freeze frame · guardado por $it" } ?: "Freeze frame"
+// La lectura guardada sigue en métrico; solo el texto de la tarjeta pasa al sistema elegido.
+internal fun valorFreezeFrame(valor: Double, unidad: String, units: UnitFormatter, locale: Locale): String =
+    "${numeroFreezeFrame(units.fromMetric(valor, unidad), locale)} ${units.labelForMetric(unidad)}"
+
+private fun numeroFreezeFrame(valor: Double, locale: Locale): String =
+    if (valor % 1.0 == 0.0) "${valor.toInt()}" else LocaleNumbers.decimal(valor, 1, locale)
 
 @Composable
 internal fun MotivoBorradoDeshabilitado(motivo: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
         Icon(Icons.Filled.Warning, contentDescription = null, tint = RevScopeColors.Warning, modifier = Modifier.size(18.dp))
         Text(
-            "Borrar deshabilitado: $motivo",
+            stringResource(R.string.dtc_clear_disabled, motivo),
             color = RevScopeColors.TextPrimary,
             style = RevScopeType.bodySmall,
             modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },

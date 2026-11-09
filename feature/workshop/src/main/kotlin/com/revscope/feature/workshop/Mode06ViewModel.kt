@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.protocol.Mode06Parser
 import com.revscope.core.obd.session.ObdSessionManager
@@ -22,6 +23,7 @@ private const val MODE06_TIMEOUT_MS = 3_000L
 @HiltViewModel
 class Mode06ViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     data class MidGroup(
@@ -50,14 +52,14 @@ class Mode06ViewModel @Inject constructor(
     fun runScan() {
         if (_state.value is UiState.Scanning) return
         if (sessionManager.connectionState.value !is ConnectionState.Connected) {
-            _state.value = UiState.Error("Conecta el adaptador primero")
+            _state.value = UiState.Error(resolver.get(R.string.workshop_mode06_error_not_connected))
             return
         }
         viewModelScope.launch {
             try {
                 val mids = fetchSupportedMids()
                 if (mids.isEmpty()) {
-                    _state.value = UiState.Error("El vehículo no reporta resultados Mode 06 soportados")
+                    _state.value = UiState.Error(resolver.get(R.string.workshop_mode06_error_unsupported))
                     return@launch
                 }
                 val result = fetchGroups(mids)
@@ -66,7 +68,9 @@ class Mode06ViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Timber.e(e, "Mode06: scan failed")
-                _state.value = UiState.Error("Falló la lectura: ${e.message}")
+                _state.value = UiState.Error(
+                    resolver.get(R.string.workshop_mode06_error_reading, e.message ?: e.javaClass.simpleName),
+                )
             }
         }
     }
@@ -85,6 +89,7 @@ class Mode06ViewModel @Inject constructor(
                 rows = groups.asSequence().flatMap { group ->
                     group.results.asSequence().map { result -> mode06Row(group, result) }
                 },
+                resolver = resolver,
             )
         }
     }
@@ -117,7 +122,7 @@ class Mode06ViewModel @Inject constructor(
             if (results == null) {
                 incomplete = true
             } else if (results.isNotEmpty()) {
-                groups += MidGroup(mid, Mode06MidNames.nameFor(mid), results)
+                groups += MidGroup(mid, Mode06MidNames.nameFor(mid, resolver), results)
             }
         }
         return FetchGroupsResult(groups, incomplete)

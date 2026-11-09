@@ -2,7 +2,8 @@ package com.revscope.feature.workshop.taller.informe
 
 data class InformeUi(
     val cargando: Boolean = true,
-    val titulo: String = "Informe de taller",
+    // Vacío = todavía sin informe; la pantalla muestra el título genérico del idioma actual.
+    val titulo: String = "",
     val html: String = "",
     val interpretacion: String = "",
     val editorVisible: Boolean = false,

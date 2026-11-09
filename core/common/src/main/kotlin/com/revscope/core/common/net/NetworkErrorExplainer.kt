@@ -1,14 +1,14 @@
 package com.revscope.core.common.net
 
-object NetworkErrorExplainer {
+import com.revscope.core.common.R
+import com.revscope.core.common.i18n.StringResolver
 
-    const val CLEARTEXT_BLOCKED =
-        "Android bloquea http:// fuera de este teléfono: usa https (p. ej. un proxy con certificado) o un túnel"
+object NetworkErrorExplainer {
 
     private const val CLEARTEXT_MARKER = "cleartext"
 
-    fun explain(error: Throwable): String? =
-        if (causeChain(error).any(::isCleartextBlocked)) CLEARTEXT_BLOCKED else null
+    fun explain(error: Throwable, resolver: StringResolver): String? =
+        if (causeChain(error).any(::isCleartextBlocked)) resolver.get(R.string.common_cleartext_blocked) else null
 
     // Solo el mensaje: OkHttp también lanza UnknownServiceException por fallos de TLS.
     private fun isCleartextBlocked(error: Throwable): Boolean =

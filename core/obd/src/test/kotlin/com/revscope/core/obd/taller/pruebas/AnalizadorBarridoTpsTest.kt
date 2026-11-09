@@ -1,5 +1,6 @@
 package com.revscope.core.obd.taller.pruebas
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.taller.FormatoTaller
 import com.revscope.core.obd.taller.pruebas.BarridoSintetico.byteDeVoltios
@@ -10,6 +11,7 @@ import com.revscope.core.obd.taller.referencia.ClavesBanda
 import com.revscope.core.obd.taller.referencia.OrigenBanda
 import com.revscope.core.obd.taller.referencia.ResolutorBandas
 import com.revscope.core.obd.taller.sesion.Veredicto
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -18,6 +20,16 @@ import org.junit.Test
 
 class AnalizadorBarridoTpsTest {
 
+    private val resolver = XmlStringResolver.es(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
+    private val ingles = XmlStringResolver.en(
+        com.revscope.core.obd.R::class.java,
+        com.revscope.core.common.R::class.java,
+        resDirs = listOf("src/main/res", "../common/src/main/res"),
+    )
     private val tipicas = ResolutorBandas.resolverTodas(VehicleType.MOTORCYCLE, emptyList())
 
     // Caso Benelli TNT 150i (25-sep-2026): 2,35 % cerrado, 9,0-9,4 % medio, 17,6-18,0 % a fondo y 2,75 % al final.
@@ -30,7 +42,7 @@ class AnalizadorBarridoTpsTest {
 
     @Test
     fun `los datos del caso Benelli dan senal baja en todo el recorrido compatible con P0122`() {
-        val resultado = AnalizadorBarridoTps.analizar(benelli, tipicas)
+        val resultado = analizar(benelli, tipicas)
         val a = resultado.detalle as AnalisisBarridoTps
 
         assertEquals(PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO, a.patron)
@@ -68,7 +80,7 @@ class AnalizadorBarridoTpsTest {
 
     @Test
     fun `un TPS sano de 0,6 a 4,4 V es normal`() {
-        val resultado = AnalizadorBarridoTps.analizar(sano, tipicas)
+        val resultado = analizar(sano, tipicas)
         val a = resultado.detalle as AnalisisBarridoTps
 
         assertEquals(PatronTps.NORMAL, a.patron)
@@ -84,7 +96,7 @@ class AnalizadorBarridoTpsTest {
             this[20] = 0
             this[21] = 0
         }
-        val resultado = AnalizadorBarridoTps.analizar(datosConBarrido(barrido), tipicas)
+        val resultado = analizar(datosConBarrido(barrido), tipicas)
         val a = resultado.detalle as AnalisisBarridoTps
 
         assertEquals(PatronTps.CORTES_O_SALTOS, a.patron)
@@ -96,7 +108,7 @@ class AnalizadorBarridoTpsTest {
     @Test
     fun `cerrado en 1,4 V da senal alta compatible con P0123`() {
         val alto = byteDeVoltios(1.4)
-        val resultado = AnalizadorBarridoTps.analizar(
+        val resultado = analizar(
             datos(listOf(alto), listOf(byteDeVoltios(2.9)), listOf(sanoFondo), listOf(alto)),
             tipicas,
         )
@@ -110,7 +122,7 @@ class AnalizadorBarridoTpsTest {
     @Test
     fun `a 6 Hz las detecciones quedan con baja confianza por tasa`() {
         val lento = datos(listOf(sanoCerrado), listOf(byteDeVoltios(2.5)), listOf(sanoFondo), listOf(sanoCerrado), hz = 6.0)
-        val resultado = AnalizadorBarridoTps.analizar(lento, tipicas)
+        val resultado = analizar(lento, tipicas)
         val a = resultado.detalle as AnalisisBarridoTps
 
         assertEquals(6.0, a.tasaHz, 0.2)
@@ -123,7 +135,7 @@ class AnalizadorBarridoTpsTest {
     fun `una meseta en plena subida es zona muerta y el patron pasa a rango o desempeno`() {
         val subida = (0..40).map { sanoCerrado + (sanoFondo - sanoCerrado) * it / 40 }
         val conMeseta = subida.take(16) + List(6) { subida[16] } + subida.drop(17)
-        val resultado = AnalizadorBarridoTps.analizar(datosConBarrido(conMeseta + subida.reversed().drop(1)), tipicas)
+        val resultado = analizar(datosConBarrido(conMeseta + subida.reversed().drop(1)), tipicas)
         val a = resultado.detalle as AnalisisBarridoTps
 
         assertEquals(1, a.irregularidades.count { it.tipo == TipoIrregularidad.ZONA_MUERTA })
@@ -135,7 +147,7 @@ class AnalizadorBarridoTpsTest {
     @Test
     fun `la interpretacion cita la banda editada por el usuario`() {
         val fondoUsuario = BandaReferencia(ClavesBanda.TPS_FONDO_V, 3.5, 4.2, "V", OrigenBanda.USUARIO)
-        val resultado = AnalizadorBarridoTps.analizar(benelli, tipicas + (ClavesBanda.TPS_FONDO_V to fondoUsuario))
+        val resultado = analizar(benelli, tipicas + (ClavesBanda.TPS_FONDO_V to fondoUsuario))
 
         assertTrue(resultado.interpretacion, resultado.interpretacion.contains("3,5–4,2 V, Editado por ti"))
     }
@@ -143,7 +155,7 @@ class AnalizadorBarridoTpsTest {
     @Test
     fun `sin muestras en un sostenido no hay veredicto de patron y pide repetir`() {
         val sinMedio = benelli.copy(muestras = benelli.muestras.filterNot { it.tMicros / 1_000 in 6_000L..11_000L })
-        val resultado = AnalizadorBarridoTps.analizar(sinMedio, tipicas)
+        val resultado = analizar(sinMedio, tipicas)
 
         assertEquals(Veredicto.ATENCION, resultado.veredicto)
         assertEquals("Sin datos suficientes del TPS", resultado.titulo)
@@ -160,7 +172,10 @@ class AnalizadorBarridoTpsTest {
     }
 
     private fun analisis(d: DatosPrueba, bandas: Map<String, BandaReferencia> = tipicas): AnalisisBarridoTps =
-        AnalizadorBarridoTps.analizar(d, bandas).detalle as AnalisisBarridoTps
+        analizar(d, bandas).detalle as AnalisisBarridoTps
+
+    private fun analizar(d: DatosPrueba, bandas: Map<String, BandaReferencia>, res: StringResolver = resolver) =
+        AnalizadorBarridoTps.analizar(d, bandas, res)
 
     private fun v2(x: Double) = FormatoTaller.redondear(x, 2)
 
@@ -174,7 +189,7 @@ class AnalizadorBarridoTpsTest {
 
     @Test
     fun `sin muestras del barrido lento no se declara normal ni sin zonas muertas`() {
-        val resultado = AnalizadorBarridoTps.analizar(sinBarridoLento(sano), tipicas)
+        val resultado = analizar(sinBarridoLento(sano), tipicas)
         val a = resultado.detalle as AnalisisBarridoTps
 
         assertEquals(PatronTps.SIN_BARRIDO, a.patron)
@@ -187,13 +202,37 @@ class AnalizadorBarridoTpsTest {
 
     @Test
     fun `sin barrido lento la senal baja se mantiene y avisa que falto el barrido`() {
-        val resultado = AnalizadorBarridoTps.analizar(sinBarridoLento(benelli), tipicas)
+        val resultado = analizar(sinBarridoLento(benelli), tipicas)
 
         assertEquals(PatronTps.SENAL_BAJA_TODO_EL_RECORRIDO, (resultado.detalle as AnalisisBarridoTps).patron)
         assertTrue(
             resultado.hallazgos.toString(),
             resultado.hallazgos.any { it.startsWith("No llegaron muestras suficientes del barrido lento") },
         )
+    }
+
+    @Test
+    fun `en ingles el caso Benelli explica la senal baja con punto decimal y la banda tipica`() {
+        val resultado = analizar(benelli, tipicas, ingles)
+
+        assertEquals("Low signal across entire sweep, smooth and steady", resultado.titulo)
+        assertEquals(
+            "Closed 0.12 V (0.3–1.0 V, Typical (editable)) and wide open 0.89 V (3.8–4.8 V, Typical (editable)): " +
+                "the signal stays low across the entire sweep. Travel is 0.77 V, 21% of typical (≈3.65 V). " +
+                "It rises in order, smoothly, and repeats the closed reading (0.02 V): consistent with P0122 (low TPS signal).",
+            resultado.interpretacion,
+        )
+    }
+
+    @Test
+    fun `en ingles los hallazgos cuentan la zona muerta en plena subida`() {
+        val subida = (0..40).map { sanoCerrado + (sanoFondo - sanoCerrado) * it / 40 }
+        val conMeseta = subida.take(16) + List(6) { subida[16] } + subida.drop(17)
+        val resultado = analizar(datosConBarrido(conMeseta + subida.reversed().drop(1)), tipicas, ingles)
+
+        assertEquals(listOf("1 dead zone while opening or closing", "1 dead zone"), resultado.hallazgos)
+        assertTrue(resultado.interpretacion, resultado.interpretacion.startsWith("Travel is "))
+        assertTrue(resultado.interpretacion, resultado.interpretacion.contains("but 1 dead zone while opening or closing: consistent with P0121"))
     }
 
     private fun sinBarridoLento(datos: DatosPrueba) =

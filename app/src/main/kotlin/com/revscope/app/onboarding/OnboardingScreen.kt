@@ -50,11 +50,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.app.R
 
 private val BgColor = Color(0xFF0A0A0F)
 private val SurfaceColor = Color(0xFF12121A)
@@ -138,14 +140,14 @@ private fun WizardBar(
     ) {
         if (step > 0) {
             TextButton(onClick = onBack) {
-                Text("Atrás", color = TextMutedColor)
+                Text(stringResource(R.string.app_onboarding_back), color = TextMutedColor)
             }
         }
         Spacer(Modifier.weight(1f))
         if (showAdvance) {
             if (step < OnboardingViewModel.TOTAL_STEPS - 1) {
                 TextButton(onClick = onSkip) {
-                    Text("Saltar", color = TextMutedColor)
+                    Text(stringResource(R.string.app_onboarding_skip), color = TextMutedColor)
                 }
                 Spacer(Modifier.width(8.dp))
             }
@@ -155,7 +157,9 @@ private fun WizardBar(
                 modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text(
-                    if (step == OnboardingViewModel.TOTAL_STEPS - 1) "Empezar" else "Siguiente",
+                    stringResource(
+                        if (step == OnboardingViewModel.TOTAL_STEPS - 1) R.string.app_onboarding_start else R.string.app_onboarding_next,
+                    ),
                     color = BgColor,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -187,10 +191,9 @@ private fun Step0Permissions() {
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(16.dp))
-        Text("Bienvenido a RevScope", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.app_onboarding_welcome), color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Necesitamos estos permisos para que la app funcione bien. " +
-                "Puedes cambiarlos luego en Ajustes del sistema.",
+            stringResource(R.string.app_onboarding_permissions_intro),
             color = TextMutedColor,
             fontSize = 14.sp,
         )
@@ -199,24 +202,24 @@ private fun Step0Permissions() {
 
         PermissionCard(
             icon = Icons.Default.LocationOn,
-            title = "Ubicación",
-            rationale = "Para grabar tus rutas y avisarte de radares.",
+            title = stringResource(R.string.app_onboarding_location),
+            rationale = stringResource(R.string.app_onboarding_location_rationale),
             granted = locationGranted,
             onRequest = { locationLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
         )
 
         PermissionCard(
             icon = Icons.Default.Notifications,
-            title = "Notificaciones",
-            rationale = "Para el resumen de viaje y de pico y placa.",
+            title = stringResource(R.string.app_onboarding_notifications),
+            rationale = stringResource(R.string.app_onboarding_notifications_rationale),
             granted = notificationsGranted,
             onRequest = { notificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
         )
 
         PermissionCard(
             icon = Icons.Default.Bluetooth,
-            title = "Bluetooth",
-            rationale = "Para conectar el adaptador OBD2.",
+            title = stringResource(R.string.app_onboarding_bluetooth),
+            rationale = stringResource(R.string.app_onboarding_bluetooth_rationale),
             granted = bluetoothGranted,
             onRequest = { bluetoothLauncher.launch(bluetoothPermissions()) },
         )
@@ -232,9 +235,9 @@ private fun Step1Vehicle(vm: OnboardingViewModel) {
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(16.dp))
-        Text("Tu vehículo", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.app_onboarding_vehicle_title), color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Crealo ahora y la app se adapta: gauges, marchas y alertas según sea moto o carro.",
+            stringResource(R.string.app_onboarding_vehicle_intro),
             color = TextMutedColor,
             fontSize = 14.sp,
         )
@@ -242,21 +245,21 @@ private fun Step1Vehicle(vm: OnboardingViewModel) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Nombre") },
+            label = { Text(stringResource(R.string.app_onboarding_vehicle_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = onboardingTextFieldColors(),
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            VehicleTypeChip("Auto", active = type == "CAR", onClick = { type = "CAR" })
-            VehicleTypeChip("Moto", active = type == "MOTORCYCLE", onClick = { type = "MOTORCYCLE" })
+            VehicleTypeChip(stringResource(R.string.app_onboarding_vehicle_car), active = type == "CAR", onClick = { type = "CAR" })
+            VehicleTypeChip(stringResource(R.string.app_onboarding_vehicle_motorcycle), active = type == "MOTORCYCLE", onClick = { type = "MOTORCYCLE" })
         }
 
         OutlinedTextField(
             value = plate,
             onValueChange = { plate = it },
-            label = { Text("Placa (opcional)") },
+            label = { Text(stringResource(R.string.app_onboarding_vehicle_plate)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = onboardingTextFieldColors(),
@@ -271,9 +274,9 @@ private fun Step1Vehicle(vm: OnboardingViewModel) {
             if (profileCreated) {
                 Icon(Icons.Default.Check, contentDescription = null, tint = BgColor)
                 Spacer(Modifier.width(6.dp))
-                Text("Creado", color = BgColor, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.app_onboarding_vehicle_created), color = BgColor, fontWeight = FontWeight.SemiBold)
             } else {
-                Text("Crear", color = BgColor, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.app_onboarding_vehicle_create), color = BgColor, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -308,16 +311,16 @@ private fun Step2Adapter(vm: OnboardingViewModel, onFinished: (goToAdapterScan: 
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(16.dp))
-        Text("¿Tenés adaptador OBD2?", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.app_onboarding_adapter_title), color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Un adaptador Bluetooth OBD2 te da datos en vivo del motor: RPM, velocidad, temperatura y más.",
+            stringResource(R.string.app_onboarding_adapter_intro),
             color = TextMutedColor,
             fontSize = 14.sp,
         )
 
         AdapterOptionCard(
-            title = "Sí, configurarlo ahora",
-            subtitle = "Te llevamos directo a buscar tu adaptador.",
+            title = stringResource(R.string.app_onboarding_adapter_now),
+            subtitle = stringResource(R.string.app_onboarding_adapter_now_subtitle),
             onClick = {
                 vm.setGpsOnlyMode(false)
                 vm.markDone()
@@ -326,8 +329,8 @@ private fun Step2Adapter(vm: OnboardingViewModel, onFinished: (goToAdapterScan: 
         )
 
         AdapterOptionCard(
-            title = "Sí, pero después",
-            subtitle = "Seguimos con el resto del wizard, lo configurás luego desde Ajustes.",
+            title = stringResource(R.string.app_onboarding_adapter_later),
+            subtitle = stringResource(R.string.app_onboarding_adapter_later_subtitle),
             onClick = {
                 vm.setGpsOnlyMode(false)
                 vm.next()
@@ -335,8 +338,8 @@ private fun Step2Adapter(vm: OnboardingViewModel, onFinished: (goToAdapterScan: 
         )
 
         AdapterOptionCard(
-            title = "No tengo — usar solo GPS",
-            subtitle = "RevScope funciona igual con datos de GPS.",
+            title = stringResource(R.string.app_onboarding_adapter_none),
+            subtitle = stringResource(R.string.app_onboarding_adapter_none_subtitle),
             selected = gpsOnlySelected,
             onClick = {
                 gpsOnlySelected = true
@@ -353,7 +356,7 @@ private fun Step2Adapter(vm: OnboardingViewModel, onFinished: (goToAdapterScan: 
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
             ) {
-                Text("Continuar", color = BgColor, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.app_onboarding_continue), color = BgColor, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -389,11 +392,11 @@ private fun AdapterOptionCard(
 @Composable
 private fun GpsOnlyFeatureList() {
     val features = listOf(
-        "Mapa con radares automáticos",
-        "Viajes GPS con telemetría de movimiento",
-        "Detección de caída",
-        "Pico y placa",
-        "Historial y reportes",
+        R.string.app_onboarding_gps_feature_radars,
+        R.string.app_onboarding_gps_feature_trips,
+        R.string.app_onboarding_gps_feature_crash,
+        R.string.app_onboarding_gps_feature_pico_placa,
+        R.string.app_onboarding_gps_feature_history,
     )
     Column(
         modifier = Modifier
@@ -406,7 +409,7 @@ private fun GpsOnlyFeatureList() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Check, contentDescription = null, tint = AccentColor)
                 Spacer(Modifier.width(12.dp))
-                Text(feature, color = TextPrimaryColor, fontSize = 14.sp)
+                Text(stringResource(feature), color = TextPrimaryColor, fontSize = 14.sp)
             }
         }
     }
@@ -416,10 +419,9 @@ private fun GpsOnlyFeatureList() {
 private fun Step3Ai(vm: OnboardingViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Spacer(Modifier.height(16.dp))
-        Text("¿Querés la capa de inteligencia?", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.app_onboarding_ai_title), color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Con una API key gratis de Gemini activás el mecánico IA, el debrief de viaje, " +
-                "pico y placa por IA y la explicación de códigos de falla.",
+            stringResource(R.string.app_onboarding_ai_intro),
             color = TextMutedColor,
             fontSize = 14.sp,
         )
@@ -444,10 +446,10 @@ private fun onboardingTextFieldColors() = OutlinedTextFieldDefaults.colors(
 private fun Step4Done() {
     Column {
         Spacer(Modifier.height(16.dp))
-        Text("Listo", color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.app_onboarding_done_title), color = TextPrimaryColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Podés cambiar todo esto después en Ajustes.",
+            stringResource(R.string.app_onboarding_done_body),
             color = TextMutedColor,
             fontSize = 14.sp,
         )
@@ -488,7 +490,7 @@ private fun PermissionCard(
                 onClick = onRequest,
                 colors = ButtonDefaults.buttonColors(containerColor = AccentColor),
             ) {
-                Text("Permitir", color = BgColor)
+                Text(stringResource(R.string.app_onboarding_allow), color = BgColor)
             }
         }
     }
@@ -498,7 +500,9 @@ private fun PermissionCard(
 private fun PermissionStatusIcon(granted: Boolean) {
     Icon(
         imageVector = if (granted) Icons.Default.Check else Icons.Default.Close,
-        contentDescription = if (granted) "Concedido" else "No concedido",
+        contentDescription = stringResource(
+            if (granted) R.string.app_onboarding_granted else R.string.app_onboarding_not_granted,
+        ),
         tint = if (granted) GrantedColor else DeniedColor,
     )
 }

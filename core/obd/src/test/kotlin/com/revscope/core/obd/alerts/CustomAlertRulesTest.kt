@@ -1,12 +1,15 @@
 package com.revscope.core.obd.alerts
 
 import com.revscope.core.obd.model.ObdReading
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CustomAlertRulesTest {
+    private val resolver = XmlStringResolver.es(R::class.java)
 
     @Test
     fun `lectura por debajo del minimo genera mensaje con nombre y valor`() {
@@ -16,7 +19,7 @@ class CustomAlertRulesTest {
         val reading = ObdReading(pid = "0A", value = 150.0, unit = "kPa")
         assertEquals(
             "Presión de combustible fuera de rango: 150 kPa",
-            CustomAlertRules.evaluate(reading, rules),
+            CustomAlertRules.evaluate(reading, rules, resolver),
         )
     }
 
@@ -28,7 +31,7 @@ class CustomAlertRulesTest {
         val reading = ObdReading(pid = "0A", value = 450.0, unit = "kPa")
         assertEquals(
             "Presión de combustible fuera de rango: 450 kPa",
-            CustomAlertRules.evaluate(reading, rules),
+            CustomAlertRules.evaluate(reading, rules, resolver),
         )
     }
 
@@ -38,7 +41,7 @@ class CustomAlertRulesTest {
             """[{"pid":"0A","min":200,"max":400,"nombre":"Presión de combustible"}]"""
         )
         val reading = ObdReading(pid = "0A", value = 300.0, unit = "kPa")
-        assertNull(CustomAlertRules.evaluate(reading, rules))
+        assertNull(CustomAlertRules.evaluate(reading, rules, resolver))
     }
 
     @Test
@@ -46,8 +49,8 @@ class CustomAlertRulesTest {
         val rules = CustomAlertRules.parse("""[{"pid":"0B","max":100,"nombre":"Carga del motor"}]""")
         val dentro = ObdReading(pid = "0B", value = 10.0, unit = "%")
         val fuera = ObdReading(pid = "0B", value = 120.0, unit = "%")
-        assertNull(CustomAlertRules.evaluate(dentro, rules))
-        assertEquals("Carga del motor fuera de rango: 120 %", CustomAlertRules.evaluate(fuera, rules))
+        assertNull(CustomAlertRules.evaluate(dentro, rules, resolver))
+        assertEquals("Carga del motor fuera de rango: 120 %", CustomAlertRules.evaluate(fuera, rules, resolver))
     }
 
     @Test
@@ -55,15 +58,15 @@ class CustomAlertRulesTest {
         val rules = CustomAlertRules.parse("""[{"pid":"0C","min":800,"nombre":"RPM ralenti"}]""")
         val dentro = ObdReading(pid = "0C", value = 900.0, unit = "rpm")
         val fuera = ObdReading(pid = "0C", value = 500.0, unit = "rpm")
-        assertNull(CustomAlertRules.evaluate(dentro, rules))
-        assertEquals("RPM ralenti fuera de rango: 500 rpm", CustomAlertRules.evaluate(fuera, rules))
+        assertNull(CustomAlertRules.evaluate(dentro, rules, resolver))
+        assertEquals("RPM ralenti fuera de rango: 500 rpm", CustomAlertRules.evaluate(fuera, rules, resolver))
     }
 
     @Test
     fun `mensaje conserva un decimal cuando el valor no es entero`() {
         val rules = CustomAlertRules.parse("""[{"pid":"0A","max":230,"nombre":"Presión"}]""")
         val reading = ObdReading(pid = "0A", value = 233.4, unit = "kPa")
-        assertEquals("Presión fuera de rango: 233.4 kPa", CustomAlertRules.evaluate(reading, rules))
+        assertEquals("Presión fuera de rango: 233,4 kPa", CustomAlertRules.evaluate(reading, rules, resolver))
     }
 
     @Test
@@ -83,14 +86,22 @@ class CustomAlertRulesTest {
             """[{"pid":"0A","min":200,"nombre":"Presión de combustible"}]"""
         )
         val reading = ObdReading(pid = "FF", value = 10.0, unit = "")
-        assertNull(CustomAlertRules.evaluate(reading, rules))
+        assertNull(CustomAlertRules.evaluate(reading, rules, resolver))
     }
 
     @Test
     fun `pid de la regla es insensible a mayusculas`() {
         val rules = CustomAlertRules.parse("""[{"pid":"0a","max":100,"nombre":"Test"}]""")
         val reading = ObdReading(pid = "0A", value = 150.0, unit = "u")
-        assertEquals("Test fuera de rango: 150 u", CustomAlertRules.evaluate(reading, rules))
+        assertEquals("Test fuera de rango: 150 u", CustomAlertRules.evaluate(reading, rules, resolver))
+    }
+
+    @Test
+    fun `mensaje de alerta se resuelve en ingles`() {
+        val english = XmlStringResolver.en(R::class.java)
+        val rules = CustomAlertRules.parse("""[{"pid":"0A","max":230,"nombre":"Fuel pressure"}]""")
+        val reading = ObdReading(pid = "0A", value = 233.4, unit = "kPa")
+        assertEquals("Fuel pressure out of range: 233.4 kPa", CustomAlertRules.evaluate(reading, rules, english))
     }
 
     @Test

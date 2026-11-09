@@ -1,6 +1,7 @@
 package com.revscope.feature.workshop.taller
 
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.obd.R as ObdR
 import com.revscope.core.obd.taller.dtc.AccionGuia
 import com.revscope.core.obd.taller.multimetro.SensorMultimetro
 import com.revscope.core.obd.taller.pruebas.TipoPrueba
@@ -16,6 +17,8 @@ import com.revscope.core.obd.taller.sesion.TipoEvento
 import com.revscope.core.obd.taller.sesion.UmbralesComparacion
 import com.revscope.core.obd.taller.sesion.Veredicto
 import com.revscope.core.obd.workshop.MetricasChequeo
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.uitesting.XmlStringResolver
 
 // Datos del caso real del 25-sep-2026 (Benelli TNT 150i, P0122) tal como quedarían en una sesión.
 internal object CasoBenelli {
@@ -93,7 +96,9 @@ internal object CasoBenelli {
         codigos = listOf("P0122"),
         chequeoBase = ChequeoRegistrado(3, BENELLI.id, JULIO_11, emptyList(), base),
         metricasAhora = ahora,
-        comparacion = ComparadorChequeo.comparar(base, ahora, UmbralesComparacion.desde(emptyMap())),
+        comparacion = ComparadorChequeo.comparar(
+            base, ahora, UmbralesComparacion.desde(emptyMap()), XmlStringResolver.es(ObdR::class.java, resDirs = listOf("../../core/obd/src/main/res")),
+        ),
         sugeridas = listOf(
             PruebaSugerida(AccionGuia.Prueba(TipoPrueba.TPS_BARRIDO), listOf("P0122", "«Se ahoga al acelerar»")),
             PruebaSugerida(AccionGuia.Multimetro(SensorMultimetro.TPS), listOf("P0122", "«Se ahoga al acelerar»")),
@@ -102,8 +107,16 @@ internal object CasoBenelli {
         ),
     )
 
-    fun estadoSesion(ui: UiSesion = UiSesion(eventosAbiertos = setOf(3))): SesionTallerEstado =
-        EstadoPantallaSesion.de(DatosSesion(sesion, eventos.shuffled(java.util.Random(4)), analisis, BENELLI, conectado = true), ui, BOGOTA)
+    fun estadoSesion(
+        ui: UiSesion = UiSesion(eventosAbiertos = setOf(3)),
+        resolver: StringResolver = PruebaStringResolver.es(),
+    ): SesionTallerEstado =
+        EstadoPantallaSesion.de(
+            DatosSesion(sesion, eventos.shuffled(java.util.Random(4)), analisis, BENELLI, conectado = true),
+            ui,
+            BOGOTA,
+            resolver,
+        )
 
     fun datosHub(abierta: Boolean): DatosHub {
         val cerradas = listOf(

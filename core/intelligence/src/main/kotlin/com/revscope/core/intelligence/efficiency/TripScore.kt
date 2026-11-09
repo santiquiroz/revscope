@@ -1,5 +1,7 @@
 package com.revscope.core.intelligence.efficiency
 
+import com.revscope.core.intelligence.R
+
 /**
  * Result of a trip scored by [DriveStyleClassifier].
  *
@@ -27,11 +29,12 @@ data class TripScore(
     }
 }
 
-enum class DriveStyle(val label: String, val emoji: String) {
-    ECO("Eco", "🌿"),
-    NORMAL("Normal", "🚗"),
-    SPORT("Sport", "🏎️"),
-    AGGRESSIVE("Agresivo", "🔥");
+/** [labelRes] is a string resource id (R.string.ai_drive_style_*). */
+enum class DriveStyle(val labelRes: Int) {
+    ECO(R.string.ai_drive_style_eco),
+    NORMAL(R.string.ai_drive_style_normal),
+    SPORT(R.string.ai_drive_style_sport),
+    AGGRESSIVE(R.string.ai_drive_style_aggressive);
 
     companion object {
         fun fromScore(score: Int): DriveStyle = when {

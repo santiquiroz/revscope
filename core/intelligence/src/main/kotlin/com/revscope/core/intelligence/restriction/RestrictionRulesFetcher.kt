@@ -1,7 +1,9 @@
 package com.revscope.core.intelligence.restriction
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.intelligence.provider.AiProvider
 import com.revscope.core.intelligence.provider.AiRequest
+import com.revscope.core.intelligence.provider.withResponseLanguage
 import com.revscope.core.obd.legal.PicoYPlacaEngine
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
@@ -30,8 +32,12 @@ sealed interface RestrictionFetchResult {
  *
  * Traffic is kept minimal on purpose: JSON-only system prompt, one short user turn,
  * hard [MAX_TOKENS] cap. Caching/cooldowns live in the caller (AiRestrictionRulesSource).
+ * [resolver] supplies the response-language line, so displayName comes back in the app language.
  */
-class RestrictionRulesFetcher(private val providerProvider: suspend () -> AiProvider?) {
+class RestrictionRulesFetcher(
+    private val resolver: StringResolver,
+    private val providerProvider: suspend () -> AiProvider?,
+) {
 
     suspend fun fetchRules(municipio: String, region: String?, pais: String?): RestrictionFetchResult {
         val provider = providerProvider() ?: return RestrictionFetchResult.Unavailable
@@ -47,7 +53,7 @@ class RestrictionRulesFetcher(private val providerProvider: suspend () -> AiProv
     ): RestrictionFetchResult = try {
         val request = AiRequest(
             system = SYSTEM_PROMPT,
-            user = buildPrompt(municipio, region, pais),
+            user = buildPrompt(municipio, region, pais).withResponseLanguage(resolver),
             maxTokens = MAX_TOKENS,
             needsWebSearch = true,
         )
@@ -67,9 +73,10 @@ class RestrictionRulesFetcher(private val providerProvider: suspend () -> AiProv
 
     private fun buildPrompt(municipio: String, region: String?, pais: String?): String {
         val lugar = listOfNotNull(municipio, region, pais).joinToString(", ")
-        return "¿Restricción vehicular por dígito de placa (pico y placa, hoy no circula, rodízio o similar) " +
-            "vigente hoy ${today()} en $lugar? Si no existe o no se basa en dígitos de placa: $NO_RESTRICTION_MARKER. " +
-            "Si existe, JSON exacto: $SCHEMA_HINT"
+        // Cuerpo del prompt: no es texto de interfaz, se queda en español.
+        return "¿Restricción vehicular por dígito de placa (pico y placa, hoy no circula, rodízio o similar) " + // i18n-ignore
+            "vigente hoy ${today()} en $lugar? Si no existe o no se basa en dígitos de placa: $NO_RESTRICTION_MARKER. " + // i18n-ignore
+            "Si existe, JSON exacto: $SCHEMA_HINT" // i18n-ignore
     }
 
     private fun today(): String = LocalDate.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -102,15 +109,15 @@ class RestrictionRulesFetcher(private val providerProvider: suspend () -> AiProv
 
     private companion object {
         const val SYSTEM_PROMPT =
-            "Servicio de datos vehiculares. Responde SOLO un JSON de una línea o exactamente NONE. " +
-                "Sin markdown, sin explicaciones."
+            "Servicio de datos vehiculares. Responde SOLO un JSON de una línea o exactamente NONE. " + // i18n-ignore
+                "Sin markdown, sin explicaciones." // i18n-ignore
 
         const val SCHEMA_HINT =
-            """{"cityId":"slug","displayName":"...","scheme":"WEEKDAY_ROTATION|DATE_PARITY",""" +
-                """"rotation":{"2":[dígitos lunes],...,"6":[dígitos viernes]},""" +
-                """"dateParityRestricted":{"ODD_DAY":[...],"EVEN_DAY":[...]},""" +
-                """"startHour":0-23,"endHour":1-24,"carDigit":"FIRST|LAST","motoDigit":"FIRST|LAST",""" +
-                """"motosExentas":bool,"validFromMs":epochMs,"validUntilMs":epochMs,""" +
-                """"timeZoneId":"IANA tz". Incluye solo el campo del scheme que aplique."""
+            """{"cityId":"slug","displayName":"...","scheme":"WEEKDAY_ROTATION|DATE_PARITY",""" + // i18n-ignore
+                """"rotation":{"2":[dígitos lunes],...,"6":[dígitos viernes]},""" + // i18n-ignore
+                """"dateParityRestricted":{"ODD_DAY":[...],"EVEN_DAY":[...]},""" + // i18n-ignore
+                """"startHour":0-23,"endHour":1-24,"carDigit":"FIRST|LAST","motoDigit":"FIRST|LAST",""" + // i18n-ignore
+                """"motosExentas":bool,"validFromMs":epochMs,"validUntilMs":epochMs,""" + // i18n-ignore
+                """"timeZoneId":"IANA tz". Incluye solo el campo del scheme que aplique.""" // i18n-ignore
     }
 }

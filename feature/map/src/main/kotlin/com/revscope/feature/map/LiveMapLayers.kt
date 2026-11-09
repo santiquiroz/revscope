@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import com.revscope.core.common.units.UnitFormatter
 import com.revscope.core.data.db.entities.PotholeEntity
 import com.revscope.core.data.db.entities.SpeedCameraEntity
 import com.revscope.core.data.db.entities.VehicleType
@@ -76,7 +77,7 @@ internal const val ICON_ME = "icono-yo"
 internal const val ICON_ME_MOTO = "icono-yo-moto"
 internal const val ICON_ME_AUTO = "icono-yo-auto"
 
-private const val TEXT_FONT = "Noto Sans Regular"
+private const val TEXT_FONT = "Noto Sans Regular" // i18n-ignore
 
 /** Datos que las capas dibujan. Un solo objeto para no arrastrar ocho parámetros. */
 data class LiveMapData(
@@ -114,7 +115,7 @@ data class LiveMapData(
  * cámara, así que el círculo de una tapaba el pin de la anterior. Acá van agrupados en capas,
  * que es lo que hace un motor vectorial; con radares muy juntos el apilado se ve distinto.
  */
-fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
+fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData, units: UnitFormatter) {
     registerIcons(style)
 
     // Las alternativas grises van DEBAJO de la planeada (se agregan primero): así la elegida
@@ -185,7 +186,7 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
         ),
     )
 
-    style.addSource(GeoJsonSource(SRC_MARKERS, markerFeatures(data)))
+    style.addSource(GeoJsonSource(SRC_MARKERS, markerFeatures(data, units)))
     style.addLayer(
         SymbolLayer(LYR_MARKERS, SRC_MARKERS).withProperties(
             PropertyFactory.iconImage(Expression.get(PROP_KIND)),
@@ -258,11 +259,11 @@ fun installLiveMapLayers(style: Style, density: Float, data: LiveMapData) {
 }
 
 /** Reescribe los datos sin recrear capas. Silencioso y seguro si el estilo cambió de abajo. */
-fun updateLiveMapData(style: Style, data: LiveMapData) {
+fun updateLiveMapData(style: Style, data: LiveMapData, units: UnitFormatter) {
     style.getSourceAs<GeoJsonSource>(SRC_PLANNED_ALT)?.setGeoJson(alternativeGeometries(data))
     style.getSourceAs<GeoJsonSource>(SRC_PLANNED)?.setGeoJson(plannedGeometry(data.plannedRoute))
     style.getSourceAs<GeoJsonSource>(SRC_CIRCLES)?.setGeoJson(circleFeatures(data))
-    style.getSourceAs<GeoJsonSource>(SRC_MARKERS)?.setGeoJson(markerFeatures(data))
+    style.getSourceAs<GeoJsonSource>(SRC_MARKERS)?.setGeoJson(markerFeatures(data, units))
     // Geometría pelada y no FeatureCollection: setGeoJson(FeatureCollection) hace una copia
     // defensiva extra, y esta línea llega a 18.000 puntos.
     style.getSourceAs<GeoJsonSource>(SRC_LIVE)?.setGeoJson(liveGeometry(data.route))
@@ -320,7 +321,7 @@ private fun circleFeatures(data: LiveMapData): FeatureCollection {
     return FeatureCollection.fromFeatures(features)
 }
 
-private fun markerFeatures(data: LiveMapData): FeatureCollection {
+private fun markerFeatures(data: LiveMapData, units: UnitFormatter): FeatureCollection {
     val features = mutableListOf<Feature>()
 
     data.destination?.let {
@@ -333,7 +334,7 @@ private fun markerFeatures(data: LiveMapData): FeatureCollection {
             put(FEATURE_PROP_NAME, peer.rider)
             peer.speedKmh?.let { put(FEATURE_PROP_SPEED_KMH, it) }
         }
-        features += marker(peer.lat, peer.lon, icon, heading = peer.headingDeg ?: 0.0, label = peerLabel(peer), extra = extra)
+        features += marker(peer.lat, peer.lon, icon, heading = peer.headingDeg ?: 0.0, label = peerLabel(peer, units), extra = extra)
     }
     data.potholes.forEach {
         val extra = mapOf(FEATURE_PROP_HITS to it.hits, FEATURE_PROP_LAST_HIT_MS to it.lastHitAt)
@@ -384,10 +385,10 @@ private fun Feature.addExtraProperty(key: String, value: Any?) {
     }
 }
 
-/** "$rider" solo, o "$rider\n$speed km/h" cuando el peer reporta velocidad. */
-private fun peerLabel(peer: RoomClient.Peer): String {
+/** "$rider" solo, o "$rider\n$speed" cuando el peer reporta velocidad. */
+internal fun peerLabel(peer: RoomClient.Peer, units: UnitFormatter): String {
     val speedKmh = peer.speedKmh ?: return peer.rider
-    return "${peer.rider}\n${speedKmh.roundToInt()} km/h"
+    return "${peer.rider}\n${units.formatSpeed(speedKmh.roundToInt().toDouble())}"
 }
 
 /**

@@ -1,5 +1,7 @@
 package com.revscope.core.obd.protocol
 
+import com.revscope.core.obd.R
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -7,6 +9,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReadinessParserTest {
+
+    private val es = XmlStringResolver.es(R::class.java)
+
+    private fun ReadinessParser.ReadinessStatus.nombres(resolver: XmlStringResolver = es) =
+        monitors.associateBy { resolver.get(it.nombre) }
+
+    @Test
+    fun `los nombres de monitores salen en ingles`() {
+        val status = ReadinessParser.parse("41 01 00 0F 41 00")!!
+        assertTrue("Boost pressure" in status.nombres(XmlStringResolver.en(R::class.java)))
+    }
 
     @Test
     fun `mil encendida y conteo de dtcs`() {
@@ -29,7 +42,7 @@ class ReadinessParserTest {
     fun `monitor soportado incompleto se reporta`() {
         // C bit0 catalizador soportado, D bit0 = incompleto
         val status = ReadinessParser.parse("41 01 00 07 01 01")!!
-        val cat = status.monitors.first { it.nombre == "Catalizador" }
+        val cat = status.nombres().getValue("Catalizador")
         assertTrue(cat.soportado)
         assertFalse(cat.completo)
     }
@@ -39,7 +52,7 @@ class ReadinessParserTest {
         // B bit3 = 1 → compresión (diésel)
         val status = ReadinessParser.parse("41 01 00 0F 41 00")!!
         assertTrue(status.isDiesel)
-        assertTrue(status.monitors.any { it.nombre == "Catalizador NMHC" })
+        assertTrue("Catalizador NMHC" in status.nombres())
     }
 
     @Test
@@ -51,7 +64,7 @@ class ReadinessParserTest {
     fun `misfire incompleto en byte B`() {
         // B: bit0 misfire soportado, bit4 misfire incompleto
         val status = ReadinessParser.parse("41 01 00 11 00 00")!!
-        val misfire = status.monitors.first { it.nombre == "Encendido (misfire)" }
+        val misfire = status.nombres().getValue("Encendido (misfire)")
         assertTrue(misfire.soportado)
         assertFalse(misfire.completo)
     }

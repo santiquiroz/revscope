@@ -1,0 +1,8 @@
+<resources>
+    <string name="data_invalid_database_file">El archivo no contiene una base de datos válida</string>
+    <string name="data_invalid_zip_entry">Entrada de zip inválida: %1$s</string>
+    <string name="data_incompatible_database_version">Versión de base de datos incompatible (%1$d) — actualiza RevScope antes de importar</string>
+    <string name="data_backup_too_old">Copia de seguridad demasiado antigua (versión %1$d): no se puede restaurar en esta versión de RevScope</string>
+    <string name="data_backup_busy">La base de datos está ocupada; intenta la copia de nuevo en unos segundos.</string>
+    <string name="data_unsupported_entry_type">Tipo de entrada no soportado: %1$s</string>
+</resources>

@@ -25,12 +25,12 @@ enum class DispositivoCaptura(val anchoDp: Int, val altoDp: Int, val densidad: S
 
     val sufijo: String get() = "w$anchoDp"
 
-    fun calificadores(altoMinimoDp: Int = 0): String =
-        "w${anchoDp}dp-h${maxOf(altoDp, altoMinimoDp)}dp-$densidad"
+    fun calificadores(altoMinimoDp: Int = 0, idioma: String = "es"): String =
+        "$idioma-w${anchoDp}dp-h${maxOf(altoDp, altoMinimoDp)}dp-$densidad" // i18n-ignore
 }
 
 data class VarianteCaptura(val dispositivo: DispositivoCaptura, val escalaLetra: Float) {
-    val sufijo: String get() = "${dispositivo.sufijo}_fs${(escalaLetra * 100).toInt()}"
+    val sufijo: String get() = "${dispositivo.sufijo}_fs${(escalaLetra * 100).toInt()}" // i18n-ignore
 }
 
 val ESCALAS_LETRA = listOf(1.0f, 1.3f, 2.0f)
@@ -40,8 +40,10 @@ fun variantesCaptura(): List<VarianteCaptura> =
         ESCALAS_LETRA.map { escala -> VarianteCaptura(dispositivo, escala) }
     }
 
-fun rutaCaptura(componente: String, variante: VarianteCaptura): String =
-    "${MatrizCaptura.DIRECTORIO}/${componente}_${variante.sufijo}.png"
+fun rutaCaptura(componente: String, variante: VarianteCaptura, idioma: String = "es"): String {
+    val sufijoIdioma = if (idioma != "es") "_$idioma" else ""
+    return "${MatrizCaptura.DIRECTORIO}/${componente}_${variante.sufijo}$sufijoIdioma.png"
+}
 
 /**
  * Renderiza un composable en los dos teléfonos y las tres escalas de letra de la matriz, con el
@@ -55,17 +57,27 @@ object MatrizCaptura {
      * [altoMinimoDp] alarga la ventana para ver entero un contenido que en el teléfono se recorre
      * con scroll; el ancho y la densidad siguen siendo los del teléfono de la variante.
      */
-    fun componente(nombre: String, altoMinimoDp: Int = 0, contenido: @Composable () -> Unit) =
-        capturarVariantes(nombre, altoMinimoDp) { EnvolturaComponente(contenido) }
+    fun componente(
+        nombre: String,
+        altoMinimoDp: Int = 0,
+        idioma: String = "es",
+        contenido: @Composable () -> Unit,
+    ) = capturarVariantes(nombre, altoMinimoDp, idioma) { EnvolturaComponente(contenido) }
 
-    fun pantalla(nombre: String, altoMinimoDp: Int = 0, contenido: @Composable () -> Unit) =
-        capturarVariantes(nombre, altoMinimoDp) { EnvolturaPantalla(contenido) }
+    fun pantalla(
+        nombre: String,
+        altoMinimoDp: Int = 0,
+        idioma: String = "es",
+        contenido: @Composable () -> Unit,
+    ) = capturarVariantes(nombre, altoMinimoDp, idioma) { EnvolturaPantalla(contenido) }
 
     /** Los diálogos viven en su propia ventana: se captura la pantalla entera, no solo la vista. */
-    fun dialogo(nombre: String, contenido: @Composable () -> Unit) {
+    fun dialogo(nombre: String, idioma: String = "es", contenido: @Composable () -> Unit) {
         variantesCaptura().forEach { variante ->
-            aplicarVariante(variante, altoMinimoDp = 0)
-            capturarPantallaConVentanas(rutaCaptura(nombre, variante)) { EnvolturaPantalla(contenido) }
+            aplicarVariante(variante, altoMinimoDp = 0, idioma = idioma)
+            capturarPantallaConVentanas(rutaCaptura(nombre, variante, idioma)) {
+                EnvolturaPantalla(contenido)
+            }
         }
     }
 
@@ -77,15 +89,20 @@ object MatrizCaptura {
         }
     }
 
-    private fun capturarVariantes(nombre: String, altoMinimoDp: Int, envoltura: @Composable () -> Unit) {
+    private fun capturarVariantes(
+        nombre: String,
+        altoMinimoDp: Int,
+        idioma: String,
+        envoltura: @Composable () -> Unit,
+    ) {
         variantesCaptura().forEach { variante ->
-            aplicarVariante(variante, altoMinimoDp)
-            captureRoboImage(filePath = rutaCaptura(nombre, variante)) { envoltura() }
+            aplicarVariante(variante, altoMinimoDp, idioma)
+            captureRoboImage(filePath = rutaCaptura(nombre, variante, idioma)) { envoltura() }
         }
     }
 
-    private fun aplicarVariante(variante: VarianteCaptura, altoMinimoDp: Int) {
-        RuntimeEnvironment.setQualifiers(variante.dispositivo.calificadores(altoMinimoDp))
+    private fun aplicarVariante(variante: VarianteCaptura, altoMinimoDp: Int, idioma: String) {
+        RuntimeEnvironment.setQualifiers(variante.dispositivo.calificadores(altoMinimoDp, idioma))
         RuntimeEnvironment.setFontScale(variante.escalaLetra)
     }
 }

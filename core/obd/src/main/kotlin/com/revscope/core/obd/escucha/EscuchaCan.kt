@@ -1,5 +1,7 @@
 package com.revscope.core.obd.escucha
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.protocol.ResponseParser
 import javax.inject.Inject
@@ -24,10 +26,13 @@ private class Acumulado(val inicio: Long, val limiteMs: Long) {
     var huecoAbiertoDesde: Long? = null
 }
 
-class EscuchaCan internal constructor(private val ahora: () -> Long) {
+class EscuchaCan internal constructor(
+    private val resolver: StringResolver,
+    private val ahora: () -> Long,
+) {
 
     @Inject
-    constructor() : this(System::currentTimeMillis)
+    constructor(resolver: StringResolver) : this(resolver, System::currentTimeMillis)
 
     suspend fun capturar(bt: Transport, opciones: OpcionesEscucha): CapturaCan {
         val protocolo = leerProtocolo(bt)
@@ -35,14 +40,12 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
         val a = Acumulado(ahora(), opciones.duracionMs)
         var silencioso = true
         try {
-            bt.exchange("AT H1\r")
-            bt.exchange("AT S0\r")
-            bt.exchange("AT CAF0\r")
+            ComandosMonitor.preparar(bt)
             silencioso = configurarSilencioso(bt)
-            if (opciones.filtro != null) bt.exchange("AT CRA ${opciones.filtro}\r")
+            if (opciones.filtro != null) bt.exchange("AT CRA ${opciones.filtro}\r") // i18n-ignore
             monitorear(bt, opciones, bits29, a)
         } finally {
-            restaurar(bt)
+            ComandosMonitor.restaurar(bt)
         }
         a.huecoAbiertoDesde?.let { cerrarHueco(a, it) }
         return CapturaCan(
@@ -82,7 +85,7 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
     ): Boolean {
         var primeraLinea = true
         var huboDesborde = false
-        bt.monitorear("AT MA", restante, opciones.detener) { linea ->
+        bt.monitorear(ComandosMonitor.MONITOR, restante, opciones.detener) { linea ->
             if (primeraLinea) {
                 a.huecoAbiertoDesde?.let { cerrarHueco(a, it) }
                 primeraLinea = false
@@ -108,15 +111,15 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
         (ahora() - a.inicio).coerceIn(0L, a.limiteMs)
 
     private suspend fun leerProtocolo(bt: Transport): String {
-        val numero = ResponseParser.cleanResponse(bt.exchange("AT DPN\r")).removePrefix("A")
+        val numero = ResponseParser.cleanResponse(bt.exchange("AT DPN\r")).removePrefix("A") // i18n-ignore
         if (numero !in PROTOCOLOS_CAN) {
-            throw IllegalStateException("el protocolo $numero no es CAN; el modo escucha solo funciona con CAN")
+            throw IllegalStateException(resolver.get(R.string.obd_listen_protocol_not_can, numero))
         }
         return numero
     }
 
     private suspend fun configurarSilencioso(bt: Transport): Boolean =
-        !ResponseParser.cleanResponse(bt.exchange("AT CSM1\r")).contains("?")
+        !ResponseParser.cleanResponse(bt.exchange(ComandosMonitor.SILENCIOSO)).contains("?")
 
     private fun clasificar(linea: String, bits29: Boolean, a: Acumulado) {
         if (LineaMonitor.esError(linea)) {
@@ -126,14 +129,9 @@ class EscuchaCan internal constructor(private val ahora: () -> Long) {
         LineaMonitor.parsear(linea, ahora() - a.inicio, bits29)?.let { a.tramas.add(it) }
     }
 
-    private suspend fun restaurar(bt: Transport) {
-        for (comando in RESTAURACION) runCatching { bt.exchange(comando) }
-    }
-
     companion object {
         private const val MAX_RELANZAMIENTOS = 50
         private val PROTOCOLOS_CAN = setOf("6", "7", "8", "9")
-        private val RESTAURACION = listOf("AT CAF1\r", "AT AR\r", "AT S0\r", "AT H0\r")
 
         fun normalizarEtiqueta(etiqueta: String): String =
             etiqueta.lowercase().map { if (it in 'a'..'z' || it in '0'..'9' || it == '_') it else '_' }

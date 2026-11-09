@@ -32,7 +32,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,9 +47,10 @@ import com.revscope.core.obd.workshop.OdometerChecker
 import com.revscope.core.obd.workshop.OdometerVerifier
 import java.text.SimpleDateFormat
 import java.util.Date
+import com.revscope.core.designsystem.rememberUnitFormatter
 import java.util.Locale
-import kotlin.math.roundToLong
 
+private const val DATE_PATTERN = "d MMM yyyy, HH:mm" // i18n-ignore: locale-neutral date pattern.
 
 @Composable
 fun OdometerScreen(
@@ -61,6 +64,7 @@ fun OdometerScreen(
     val leyendoAhora by viewModel.leyendoAhora.collectAsState()
     val mensaje by viewModel.mensaje.collectAsState()
     val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
     val isConnected = connectionState is ConnectionState.Connected
 
     // Una sola lista: con letra grande, la Column fija dejaba el histórico sin alto.
@@ -83,12 +87,17 @@ fun OdometerScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = RevScopeColors.Accent, contentColor = Color.Black),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (leyendoAhora) "Leyendo…" else "Leer ahora")
+                Text(
+                    stringResource(
+                        if (leyendoAhora) R.string.workshop_odometer_reading_in_progress
+                        else R.string.workshop_odometer_reading,
+                    ),
+                )
             }
         }
         if (!isConnected) {
             item(key = "sin_conexion") {
-                Text("Conecta el adaptador para leer el odómetro del vehículo", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
+                Text(stringResource(R.string.workshop_odometer_connect_adapter), color = RevScopeColors.TextSecondary, fontSize = 13.sp)
             }
         }
         mensaje?.let { texto ->
@@ -99,7 +108,7 @@ fun OdometerScreen(
         if (isConnected && soportado == false) {
             item(key = "no_soportado") { NoSoportadoCard() }
         }
-        odometroItems(lastCheck, historial)
+        odometroItems(lastCheck, historial, locale)
     }
 }
 
@@ -107,17 +116,17 @@ fun OdometerScreen(
 private fun EncabezadoOdometro(puedeExportar: Boolean, onVolver: () -> Unit, onExportar: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onVolver) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = RevScopeColors.TextPrimary)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(com.revscope.core.designsystem.R.string.ds_back), tint = RevScopeColors.TextPrimary)
         }
         Text(
-            "Verificación de kilometraje",
+            stringResource(R.string.workshop_odometer_title),
             color = RevScopeColors.TextPrimary,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onExportar, enabled = puedeExportar) {
-            Icon(Icons.Default.Download, "Exportar CSV", tint = RevScopeColors.Accent)
+            Icon(Icons.Default.Download, stringResource(R.string.workshop_odometer_export_csv), tint = RevScopeColors.Accent)
         }
     }
 }
@@ -125,24 +134,25 @@ private fun EncabezadoOdometro(puedeExportar: Boolean, onVolver: () -> Unit, onE
 private fun LazyListScope.odometroItems(
     lastCheck: OdometerChecker.Result?,
     historial: List<OdometerVerifier.Reading>,
+    locale: Locale,
 ) {
     val ultima = lastCheck?.reading ?: historial.lastOrNull()
     if (ultima == null) {
         item(key = "vacio") { EmptyState() }
         return
     }
-    item(key = "ultima") { UltimaLecturaCard(ultima, lastCheck?.diagnosis) }
+    item(key = "ultima") { UltimaLecturaCard(ultima, lastCheck?.diagnosis, locale) }
     item(key = "titulo_historico") {
-        Text("Histórico", color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.workshop_odometer_history), color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
-    items(historial.asReversed()) { lectura -> HistorialRow(lectura) }
+    items(historial.asReversed()) { lectura -> HistorialRow(lectura, locale) }
 }
 
 @Composable
 private fun EmptyState() {
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Text(
-            "Aún no hay lecturas del odómetro. Conecta el adaptador y toca \"Leer ahora\".",
+            stringResource(R.string.workshop_odometer_empty),
             color = RevScopeColors.TextSecondary,
             fontSize = 13.sp,
             modifier = Modifier.padding(14.dp),
@@ -155,14 +165,13 @@ private fun NoSoportadoCard() {
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                "Odómetro no disponible por OBD",
+                stringResource(R.string.workshop_odometer_unavailable_title),
                 color = RevScopeColors.Warning,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "Tu vehículo no expone el PID estándar 01 A6 — común en motos y vehículos anteriores a 2015. " +
-                    "Usa el escáner Mode 22 (Taller → Escáner avanzado) para buscar el DID propietario del fabricante.",
+                stringResource(R.string.workshop_odometer_unavailable_description),
                 color = RevScopeColors.TextSecondary,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(top = 4.dp),
@@ -172,13 +181,18 @@ private fun NoSoportadoCard() {
 }
 
 @Composable
-private fun UltimaLecturaCard(ultima: OdometerVerifier.Reading, diagnosis: DiagnosticRules.Diagnosis?) {
-    val fecha = formatFecha(ultima.epochMs)
+internal fun UltimaLecturaCard(
+    ultima: OdometerVerifier.Reading,
+    diagnosis: DiagnosticRules.Diagnosis?,
+    locale: Locale,
+) {
+    val fecha = formatFecha(ultima.epochMs, locale)
+    val units = rememberUnitFormatter()
     Surface(shape = RoundedCornerShape(14.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            Text("Última lectura ECU", color = RevScopeColors.TextSecondary, fontSize = 12.sp)
+            Text(stringResource(R.string.workshop_odometer_last_ecu_reading), color = RevScopeColors.TextSecondary, fontSize = 12.sp)
             Text(
-                "${ultima.km.roundToLong()} km",
+                units.formatDistance(ultima.km, decimals = 0),
                 color = RevScopeColors.TextPrimary,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
@@ -203,16 +217,17 @@ private fun EstadoRow(d: DiagnosticRules.Diagnosis) {
 }
 
 @Composable
-private fun HistorialRow(lectura: OdometerVerifier.Reading) {
+internal fun HistorialRow(lectura: OdometerVerifier.Reading, locale: Locale) {
+    val units = rememberUnitFormatter()
     Surface(shape = RoundedCornerShape(10.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         FilaEtiquetaValor(
-            etiqueta = formatFecha(lectura.epochMs),
-            valor = "${lectura.km.roundToLong()} km",
+            etiqueta = formatFecha(lectura.epochMs, locale),
+            valor = units.formatDistance(lectura.km, decimals = 0),
             colorValor = RevScopeColors.TextPrimary,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
         )
     }
 }
 
-private fun formatFecha(epochMs: Long): String =
-    SimpleDateFormat("d MMM yyyy, HH:mm", Locale("es")).format(Date(epochMs))
+private fun formatFecha(epochMs: Long, locale: Locale): String =
+    SimpleDateFormat(DATE_PATTERN, locale).format(Date(epochMs))

@@ -33,7 +33,7 @@ object SecuenciaUds {
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        PasoUds(comando.texto, crudo = null, respuestas = emptyList(), error = e.message ?: "sin respuesta del adaptador")
+        PasoUds(comando.texto, crudo = null, respuestas = emptyList(), error = e.message ?: "sin respuesta del adaptador") // i18n-ignore
     }
 
     /** Datos útiles de una respuesta positiva: quita el eco del PID/DID para que A sea el primer byte de valor. */

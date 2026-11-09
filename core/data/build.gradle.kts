@@ -34,6 +34,7 @@ ksp {
 }
 
 dependencies {
+    implementation(project(":core:common"))
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
@@ -59,6 +60,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.room.testing)
     testImplementation(libs.androidx.test.core)
+    testImplementation(project(":core:ui-testing"))
 }
 
 kotlin {

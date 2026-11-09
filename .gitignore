@@ -43,3 +43,7 @@ logs/
 backups/
 
 .kotlin/
+
+# Python
+__pycache__/
+*.pyc

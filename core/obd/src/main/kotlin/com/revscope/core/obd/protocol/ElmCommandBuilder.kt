@@ -9,36 +9,36 @@ object ElmCommandBuilder {
     // ── Initialisation sequence ──────────────────────────────────────────────
 
     /** Full reset — returns ELM version string, then '>'. */
-    fun reset() = "AT Z\r"
+    fun reset() = "AT Z\r" // i18n-ignore
 
     /** Disable echo — adapter will not repeat commands back. */
-    fun echoOff() = "AT E0\r"
+    fun echoOff() = "AT E0\r" // i18n-ignore
 
     /** Disable line feeds in responses. */
-    fun lineFeedsOff() = "AT L0\r"
+    fun lineFeedsOff() = "AT L0\r" // i18n-ignore
 
     /**
      * Disable spaces in OBD-II data bytes.
      * IMPORTANT: with this active, "41 0C 0F A0" becomes "410C0FA0".
      * ResponseParser handles both forms via whitespace stripping.
      */
-    fun spacesOff() = "AT S0\r"
+    fun spacesOff() = "AT S0\r" // i18n-ignore
 
     /** Disable response headers (removes ECU address prefix). */
-    fun headersOff() = "AT H0\r"
+    fun headersOff() = "AT H0\r" // i18n-ignore
 
     /**
      * Auto-detect vehicle OBD protocol.
      * ELM327 tries all protocols (ISO 9141-2, KWP2000, CAN 11-bit/29-bit, etc.)
      * and latches onto the first that gets a valid response.
      */
-    fun autoProtocol() = "AT SP 0\r"
+    fun autoProtocol() = "AT SP 0\r" // i18n-ignore
 
     /** Enable adaptive timing mode 1 — auto-adjusts response timeout. */
-    fun adaptiveTiming() = "AT AT 1\r"
+    fun adaptiveTiming() = "AT AT 1\r" // i18n-ignore
 
     /** Request the ELM327 firmware version string. */
-    fun printVersion() = "AT I\r"
+    fun printVersion() = "AT I\r" // i18n-ignore
 
     // ── Supported PIDs queries ───────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ object ElmCommandBuilder {
     fun readVin() = "09 02\r"
 
     /** Request the ECU/calibration name string. */
-    fun readEcuName() = "09 0A\r"
+    fun readEcuName() = "09 0A\r" // i18n-ignore
 
     // ── Mode 22 — manufacturer-specific PIDs ─────────────────────────────────
 

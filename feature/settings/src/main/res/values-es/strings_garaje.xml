@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_fuel_regular_price">Precio galón corriente (%1$s)</string>
+    <string name="settings_fuel_premium_price">Precio galón extra (%1$s)</string>
+    <string name="settings_fuel_diesel_price">Precio galón diésel / ACPM (%1$s)</string>
+    <string name="settings_fuel_regular_price_liter">Precio litro corriente (%1$s)</string>
+    <string name="settings_fuel_premium_price_liter">Precio litro extra (%1$s)</string>
+    <string name="settings_fuel_diesel_price_liter">Precio litro diésel (%1$s)</string>
+    <string name="settings_fuel_price_description">Se usa el precio del tipo de combustible del vehículo activo para estimar el costo de cada viaje. No hay fuente oficial en línea vigente en datos.gov.co para precios de gasolina/ACPM por municipio (ver detalle en el código) — ajusta manualmente según tu estación.</string>
+    <string name="settings_fuel_price_hint">Pon lo que pagas en tu estación.</string>
+    <string name="settings_fuel_price_invalid">Pon precios mayores que cero o déjalos vacíos</string>
+</resources>

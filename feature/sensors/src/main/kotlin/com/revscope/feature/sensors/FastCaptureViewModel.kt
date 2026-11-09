@@ -7,6 +7,11 @@ import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.revscope.core.common.export.CsvShare
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.common.units.fromMetric
+import com.revscope.core.common.units.labelForMetric
 import com.revscope.core.data.datastore.PreferencesKeys
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.pid.EstadoSoporte
@@ -18,6 +23,7 @@ import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import com.revscope.core.obd.taller.pid.DisponibilidadPid
 import com.revscope.core.obd.taller.grafica.FuenteVref
+import com.revscope.core.obd.taller.grafica.ResolutorVref
 import com.revscope.core.obd.taller.grafica.UnidadPosicion
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.referencia.BandaReferencia
@@ -60,6 +66,8 @@ class FastCaptureViewModel @Inject constructor(
     private val fuenteVref: FuenteVref,
     private val repositorio: TallerRepository,
     private val vehiculo: VehiculoActivo,
+    private val resolver: StringResolver,
+    private val units: UnitFormatter,
 ) : ViewModel() {
 
     private val captura = manager.captura
@@ -101,9 +109,10 @@ class FastCaptureViewModel @Inject constructor(
                 ventanaMs = o.ventanaMs,
                 pausada = o.congeladas != null,
                 bandas = o.bandas,
-            ),
+            ).enUnidades(units),
+            resolver,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapeoGraficaCaptura.de(entradaVacia()))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapeoGraficaCaptura.de(entradaVacia(), resolver))
 
     private var refresco: Job? = null
 
@@ -120,8 +129,9 @@ class FastCaptureViewModel @Inject constructor(
         registry.allDefinitions().filter { it.mode == "01" }.sortedBy { it.pid }
 
     fun disponibilidad(pid: String): DisponibilidadPid {
-        val nombre = registry.getDefinition(pid)?.nameEs?.lowercase() ?: "este parámetro"
-        return DisponibilidadPid.resolver(pid, nombre, registry)
+        val nombre = registry.getDefinition(pid)?.nameEs?.lowercase()
+            ?: resolver.get(R.string.sensors_this_parameter)
+        return DisponibilidadPid.resolver(pid, nombre, registry, resolver)
     }
 
     fun nombreDe(pid: String): String = registry.getDefinition(pid)?.nameEs ?: pid
@@ -149,7 +159,7 @@ class FastCaptureViewModel @Inject constructor(
         val estados = SeleccionPids.PEDAL_Y_MARIPOSA.map(::disponibilidad)
         val disponibles = estados.filter(DisponibilidadPid::puedeConsultarse).map(DisponibilidadPid::pid)
         if (disponibles.isEmpty()) {
-            val rechazo = estados.first().copy(motivo = "Esta ECU no reporta posición de pedal ni mariposa.")
+            val rechazo = estados.first().copy(motivo = resolver.get(R.string.sensors_pedal_throttle_not_reported))
             _pidNoDisponible.value = resolverAvisoPidNoDisponible(
                 actual = _pidNoDisponible.value,
                 rechazo = rechazo,
@@ -172,7 +182,7 @@ class FastCaptureViewModel @Inject constructor(
             captura.iniciar(config)
                 .onSuccess { inicio ->
                     _mensaje.value = inicio.pidsNoSoportados.takeIf { it.isNotEmpty() }
-                        ?.let { "No soportados por este vehículo: ${it.joinToString()}" }
+                        ?.let { resolver.get(R.string.sensors_capture_pid_unsupported, it.joinToString()) }
                 }
                 .onFailure { _mensaje.value = it.message }
         }
@@ -185,6 +195,10 @@ class FastCaptureViewModel @Inject constructor(
     fun descartarMensaje() {
         _mensaje.value = null
     }
+
+    fun motivoVisible(motivo: String): String = motivoVisible(motivo, resolver)
+
+    fun textoRestablecerVref(referencia: EstadoVref): String? = ResolutorVref.textoRestablecer(referencia, resolver)
 
     fun elegirUnidad(unidad: UnidadPosicion) = opciones.update { it.copy(unidad = unidad) }
 
@@ -207,7 +221,7 @@ class FastCaptureViewModel @Inject constructor(
 
     suspend fun exportarLargo(context: Context) {
         val ruta = ultimoResumen.value?.rutaCsv ?: return
-        CsvShare.shareFile(context, File(ruta))
+        CsvShare.shareFile(context, File(ruta), resolver)
     }
 
     suspend fun exportarAncho(context: Context) {
@@ -220,7 +234,8 @@ class FastCaptureViewModel @Inject constructor(
             tipo = "ancho-captura",
             header = CapturaCsv.cabeceraAncha(inicio.pidsAceptados),
             rows = CapturaCsv.filasAnchas(muestras, inicio.pidsAceptados, inicioEpochMs).asSequence(),
-            comment = "revscope-captura v1 (ancho); pids=${inicio.pidsAceptados.joinToString(",")}",
+            comment = "revscope-captura v1 (ancho); pids=${inicio.pidsAceptados.joinToString(",")}", // i18n-ignore
+            resolver = resolver,
         )
     }
 
@@ -307,6 +322,19 @@ internal data class OpcionesGrafica(
     val bandas: Map<String, BandaReferencia> = emptyMap(),
     val dialogoVref: Boolean = false,
 )
+
+// La captura guardada sigue en métrico; la gráfica recibe números y etiquetas ya en el sistema elegido.
+internal fun EntradaGraficaCaptura.enUnidades(units: UnitFormatter): EntradaGraficaCaptura {
+    if (units.system == UnitSystem.METRIC) return this
+    val metrica = unidadPid
+    return copy(
+        series = series.mapValues { (pid, serie) -> serieEnUnidades(serie, metrica(pid), units) },
+        unidadPid = { units.labelForMetric(metrica(it)) },
+    )
+}
+
+private fun serieEnUnidades(serie: SerieCaptura, unidad: String, units: UnitFormatter): SerieCaptura =
+    serie.map { (t, v) -> t to units.fromMetric(v, unidad) }
 
 internal data class ReconciliacionPids(
     val aceptados: List<String>,

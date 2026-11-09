@@ -31,13 +31,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.protocol.Mode06Parser
+import com.revscope.core.common.i18n.LocaleNumbers
+import java.util.Locale
 
 
 @Composable
@@ -58,10 +62,10 @@ fun Mode06Screen(
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = RevScopeColors.TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(com.revscope.core.designsystem.R.string.ds_back), tint = RevScopeColors.TextPrimary)
             }
             Text(
-                "Resultados a bordo (Mode 06)",
+                stringResource(R.string.workshop_mode06_title),
                 color = RevScopeColors.TextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -71,11 +75,11 @@ fun Mode06Screen(
                 onClick = { viewModel.exportResults(context) },
                 enabled = !doneState?.groups.isNullOrEmpty(),
             ) {
-                Icon(Icons.Default.Download, contentDescription = "Exportar CSV", tint = RevScopeColors.Accent)
+                Icon(Icons.Default.Download, contentDescription = stringResource(R.string.workshop_mode06_export_csv), tint = RevScopeColors.Accent)
             }
         }
         Text(
-            "Los valores dependen del fabricante — útil para comparar antes/después de una reparación.",
+            stringResource(R.string.workshop_mode06_description),
             color = RevScopeColors.TextSecondary,
             fontSize = 13.sp,
             modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
@@ -83,7 +87,7 @@ fun Mode06Screen(
 
         if (!isConnected) {
             Text(
-                "Conecta el adaptador para leer los resultados de las pruebas a bordo.",
+                stringResource(R.string.workshop_mode06_connect_adapter),
                 color = RevScopeColors.Danger,
                 fontSize = 13.sp,
             )
@@ -97,7 +101,7 @@ fun Mode06Screen(
 @Composable
 private fun Mode06Body(state: Mode06ViewModel.UiState, onRetry: () -> Unit) {
     when (state) {
-        Mode06ViewModel.UiState.Idle -> Text("Preparando…", color = RevScopeColors.TextSecondary, fontSize = 13.sp)
+        Mode06ViewModel.UiState.Idle -> Text(stringResource(R.string.workshop_mode06_preparing), color = RevScopeColors.TextSecondary, fontSize = 13.sp)
         is Mode06ViewModel.UiState.Scanning -> ScanningProgress(state)
         is Mode06ViewModel.UiState.Done -> ResultsList(state.groups, state.incomplete, onRetry)
         is Mode06ViewModel.UiState.Error -> ErrorState(state.message, onReintentar = onRetry)
@@ -114,7 +118,7 @@ private fun ScanningProgress(state: Mode06ViewModel.UiState.Scanning) {
         trackColor = RevScopeColors.Surface,
     )
     Text(
-        "Leyendo pruebas a bordo (${state.current}/${state.total})…",
+        stringResource(R.string.workshop_mode06_reading_progress, state.current, state.total),
         color = RevScopeColors.TextSecondary,
         fontSize = 12.sp,
         modifier = Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite },
@@ -126,7 +130,7 @@ private fun ResultsList(groups: List<Mode06ViewModel.MidGroup>, incomplete: Bool
     Column {
         if (incomplete) IncompleteScanBanner()
         if (groups.isEmpty()) {
-            ErrorState("El vehículo no devolvió resultados Mode 06 legibles.", onReintentar = onRetry)
+            ErrorState(stringResource(R.string.workshop_mode06_no_results), onReintentar = onRetry)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(groups, key = { it.mid }) { group -> MidGroupCard(group) }
@@ -143,7 +147,7 @@ private fun IncompleteScanBanner() {
         modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
     ) {
         Text(
-            "Escaneo incompleto — se perdió el enlace; repite el escaneo",
+            stringResource(R.string.workshop_mode06_scan_incomplete),
             color = RevScopeColors.Danger,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
@@ -157,7 +161,7 @@ private fun MidGroupCard(group: Mode06ViewModel.MidGroup) {
     Surface(shape = RoundedCornerShape(12.dp), color = RevScopeColors.Surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                "${group.name} (MID ${group.mid})",
+                stringResource(R.string.workshop_mode06_group_mid, group.name, group.mid),
                 color = RevScopeColors.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -169,6 +173,7 @@ private fun MidGroupCard(group: Mode06ViewModel.MidGroup) {
 
 @Composable
 private fun TestResultRow(result: Mode06Parser.TestResult) {
+    val locale = LocalConfiguration.current.locales[0]
     Row(
         Modifier
             .fillMaxWidth()
@@ -177,26 +182,41 @@ private fun TestResultRow(result: Mode06Parser.TestResult) {
     ) {
         Icon(
             if (result.pass) Icons.Default.CheckCircle else Icons.Default.Cancel,
-            contentDescription = if (result.pass) "Dentro de límites" else "Fuera de límites",
+            contentDescription = stringResource(
+                if (result.pass) R.string.workshop_mode06_within_limits else R.string.workshop_mode06_outside_limits,
+            ),
             tint = if (result.pass) RevScopeColors.Success else RevScopeColors.Danger,
             modifier = Modifier.padding(end = 10.dp),
         )
         Column(Modifier.weight(1f)) {
             Text(
-                "TID ${result.tid} · UAS 0x${"%02X".format(result.uasId)}",
+                stringResource(
+                    R.string.workshop_mode06_tid_uas,
+                    result.tid,
+                    "%02X".format(Locale.ROOT, result.uasId),
+                ),
                 color = RevScopeColors.TextSecondary,
                 fontSize = 12.sp,
             )
             Text(
-                "%.2f %s".format(result.value, result.unit),
+                stringResource(
+                    R.string.workshop_mode06_value_unit,
+                    LocaleNumbers.decimal(result.value, 2, locale),
+                    result.unit,
+                ),
                 color = RevScopeColors.TextPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                "límite %.2f–%.2f %s · raw %d (%d–%d)".format(
-                    result.min, result.max, result.unit,
-                    result.rawValue, result.rawMin, result.rawMax,
+                stringResource(
+                    R.string.workshop_mode06_limit_raw,
+                    LocaleNumbers.decimal(result.min, 2, locale),
+                    LocaleNumbers.decimal(result.max, 2, locale),
+                    result.unit,
+                    result.rawValue,
+                    result.rawMin,
+                    result.rawMax,
                 ),
                 color = RevScopeColors.TextSecondary,
                 fontSize = 12.sp,

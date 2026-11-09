@@ -1,14 +1,19 @@
 package com.revscope.core.navigation
 
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class ManeuverAnnouncerTest {
 
-    private val announcer = ManeuverAnnouncer()
+    private val metric = UnitFormatter(UnitSystem.METRIC, Locale("es"))
+    private val announcer = ManeuverAnnouncer(XmlStringResolver.es(R::class.java), metric)
 
     private fun state(
         distanceM: Int,
@@ -150,5 +155,19 @@ class ManeuverAnnouncerTest {
         announcer.reset()
 
         assertNotNull(announcer.next(state(390)))
+    }
+
+    @Test
+    fun `en ingles el desvio se avisa en ingles`() {
+        val english = ManeuverAnnouncer(XmlStringResolver.en(R::class.java), metric)
+
+        assertEquals("Off route, recalculating", english.next(state(300, offRoute = true)))
+    }
+
+    @Test
+    fun `en US el aviso inicial lejano se dice en millas`() {
+        val english = ManeuverAnnouncer(XmlStringResolver.en(R::class.java), UnitFormatter(UnitSystem.US, Locale.US))
+
+        assertEquals("In 1.9 miles, turn right onto Carrera 52", english.next(state(3_000)))
     }
 }

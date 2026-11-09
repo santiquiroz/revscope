@@ -2,6 +2,7 @@ package com.revscope.feature.workshop
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
 import com.revscope.core.obd.pid.PidRegistry
@@ -22,6 +23,7 @@ private const val READINGS_SUBSCRIPTION_TIMEOUT_MS = 5_000L
 class LiveMixtureViewModel @Inject constructor(
     private val sessionManager: ObdSessionManager,
     private val registry: PidRegistry,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     val capacidadesEcu: StateFlow<CapacidadesEcu> = sessionManager.capacidadesEcu
@@ -42,5 +44,5 @@ class LiveMixtureViewModel @Inject constructor(
     fun definition(pid: String): PidDefinition? = registry.getDefinition(pid)
 
     fun disponibilidad(pid: String, nombre: String): DisponibilidadPid =
-        DisponibilidadPid.resolver(pid, nombre, registry)
+        DisponibilidadPid.resolver(pid, nombre, registry, resolver)
 }

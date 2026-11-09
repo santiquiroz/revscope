@@ -1,6 +1,8 @@
 package com.revscope.core.obd.escucha
 
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.ConnectionState
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.obd.connection.Transport
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +16,9 @@ import java.io.IOException
 
 class EscuchaCanTest {
 
-    private fun escucha(ahora: () -> Long = { 5_000L }) = EscuchaCan(ahora)
+    private val resolver = XmlStringResolver.es(R::class.java)
+
+    private fun escucha(ahora: () -> Long = { 5_000L }) = EscuchaCan(resolver, ahora)
 
     private fun opciones(
         etiqueta: String = "base",
@@ -83,7 +87,7 @@ class EscuchaCanTest {
             avanzarReloj = { reloj++ },
         )
 
-        val captura = EscuchaCan { reloj }.capturar(bt, opciones(duracionMs = 1_000L))
+        val captura = EscuchaCan(resolver) { reloj }.capturar(bt, opciones(duracionMs = 1_000L))
 
         assertEquals(51, bt.llamadasMonitor)
         assertEquals(51, captura.desbordes)
@@ -149,7 +153,7 @@ class EscuchaCanTest {
             },
         )
 
-        val captura = EscuchaCan { reloj }.capturar(bt, OpcionesEscucha("base", 10_000L, null, detener = { parar }))
+        val captura = EscuchaCan(resolver) { reloj }.capturar(bt, OpcionesEscucha("base", 10_000L, null, detener = { parar }))
 
         assertEquals(2, captura.tramas.size)
         assertEquals(200L, captura.duracionMs)

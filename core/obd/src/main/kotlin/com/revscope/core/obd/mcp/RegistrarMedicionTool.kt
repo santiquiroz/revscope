@@ -1,5 +1,7 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.multimetro.AsistenteMultimetro
 import com.revscope.core.obd.taller.multimetro.CeldaRegistrada
 import com.revscope.core.obd.taller.multimetro.FuncionCable
@@ -13,7 +15,10 @@ import org.json.JSONObject
 import javax.inject.Inject
 
 /** Anota una medición del multímetro en la sesión abierta y devuelve el veredicto de la celda y el acumulado. */
-class RegistrarMedicionTool @Inject constructor(private val asistente: AsistenteMultimetro) : McpTool {
+class RegistrarMedicionTool @Inject constructor(
+    private val asistente: AsistenteMultimetro,
+    private val resolver: StringResolver,
+) : McpTool {
 
     override val name = "registrar_medicion"
     override val description =
@@ -71,10 +76,10 @@ class RegistrarMedicionTool @Inject constructor(private val asistente: Asistente
             JSONObject()
                 .put("sensor", r.plantilla.sensor.name)
                 .put("titulo", r.plantilla.titulo)
-                .put("fuenteColores", r.plantilla.fuenteColores ?: "Genérica típica, sin colores")
+                .put("fuenteColores", r.plantilla.fuenteColores ?: resolver.get(R.string.obd_multimeter_generic_no_colors))
                 .put("dondeMedir", r.plantilla.dondeMedir),
         )
-        .put("celda", MedicionJson.celda(r.plantilla, r.celda).put("texto", TextoCelda.completo(r.plantilla, r.celda)))
+        .put("celda", MedicionJson.celda(r.plantilla, r.celda).put("texto", TextoCelda.completo(r.plantilla, r.celda, resolver)))
         .put("acumulado", MedicionJson.veredicto(r.acumulado))
         .put("pendientes", JSONArray(r.pendientes.map { (f, c) -> JSONObject().put("funcion", f.name).put("condicion", c) }))
         .toString()

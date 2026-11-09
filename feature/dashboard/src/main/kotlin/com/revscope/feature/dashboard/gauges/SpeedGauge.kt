@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
 import com.revscope.core.designsystem.TextoAjustable
+import com.revscope.core.designsystem.rememberUnitFormatter
 
 // Upper semicircle: West (180°) to East (0°) going through North, sweep = -180°
 private const val ARC_START = 180f
@@ -35,11 +36,12 @@ private const val FRACCION_ALTO_NUMERO = 0.36f
 fun SpeedGauge(
     speed: Float?,
     maxSpeed: Int = 260,
-    unit: String = "km/h",
     modifier: Modifier = Modifier,
     size: Dp = 160.dp,
 ) {
-    val fraction = ((speed ?: 0f) / maxSpeed).coerceIn(0f, 1f)
+    val units = rememberUnitFormatter()
+    val shown = speed?.let { units.speed(it.toDouble()) }
+    val fraction = ((shown ?: 0.0) / units.speed(maxSpeed.toDouble())).toFloat().coerceIn(0f, 1f)
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -84,13 +86,13 @@ fun SpeedGauge(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             TextoAjustable(
-                texto = speed?.toInt()?.toString() ?: "—",
+                texto = shown?.toInt()?.toString() ?: "—",
                 estilo = RevScopeType.numeros.copy(fontSize = 48.sp),
                 color = RevScopeColors.TextPrimary,
                 modifier = Modifier.fillMaxWidth().height(lado * FRACCION_ALTO_NUMERO),
             )
             TextoAjustable(
-                texto = unit,
+                texto = units.speedLabel(),
                 estilo = RevScopeType.bodySmall,
                 color = RevScopeColors.TextSecondary,
                 modifier = Modifier.fillMaxWidth(),

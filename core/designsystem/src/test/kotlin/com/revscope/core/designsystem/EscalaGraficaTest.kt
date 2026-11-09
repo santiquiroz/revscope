@@ -3,6 +3,7 @@ package com.revscope.core.designsystem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class EscalaGraficaTest {
 
@@ -15,9 +16,10 @@ class EscalaGraficaTest {
 
     @Test
     fun `el texto del eje usa coma y los decimales del paso`() {
-        assertEquals("0,5", EscalaGrafica.texto(0.5, 0.5))
-        assertEquals("0,25", EscalaGrafica.texto(0.25, 0.05))
-        assertEquals("20", EscalaGrafica.texto(20.0, 5.0))
+        assertEquals("0,5", EscalaGrafica.texto(0.5, 0.5, Locale("es")))
+        assertEquals("0,25", EscalaGrafica.texto(0.25, 0.05, Locale("es")))
+        assertEquals("20", EscalaGrafica.texto(20.0, 5.0, Locale("es")))
+        assertEquals("0.5", EscalaGrafica.texto(0.5, 0.5, Locale.US))
     }
 
     @Test

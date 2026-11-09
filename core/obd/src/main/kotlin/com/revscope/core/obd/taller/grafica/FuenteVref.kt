@@ -4,6 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.taller.multimetro.FuncionCable
 import com.revscope.core.obd.taller.pruebas.ReferenciaVoltaje
 import com.revscope.core.obd.taller.sesion.EventoTaller
@@ -20,18 +22,20 @@ import javax.inject.Inject
 data class EstadoVref(val usada: ReferenciaVoltaje, val medida: ReferenciaVoltaje?, val editadaV: Double?)
 
 object VrefSesion {
-    const val ORIGEN = "Medida con el multímetro en esta sesión"
+    const val ORIGEN = "Medida con el multímetro en esta sesión" // i18n-ignore
 
     // Lee la forma de LecturaMultimetro del asistente (§2.5): {"lecturas":[{"funcion","valor","unidad"}]}.
-    fun desde(eventos: List<EventoTaller>): ReferenciaVoltaje? = eventos
+    fun desde(eventos: List<EventoTaller>, resolver: StringResolver): ReferenciaVoltaje? = eventos
         .filter { it.tipo == TipoEvento.MEDICION_MULTIMETRO }
         .sortedByDescending { it.instante }
-        .firstNotNullOfOrNull(::referenciaDe)
+        .firstNotNullOfOrNull { referenciaDe(it, resolver) }
 
-    private fun referenciaDe(evento: EventoTaller): ReferenciaVoltaje? {
+    private fun referenciaDe(evento: EventoTaller, resolver: StringResolver): ReferenciaVoltaje? {
         val lecturas = runCatching { JSONObject(evento.payloadJson).optJSONArray("lecturas") }.getOrNull() ?: return null
         val valores = voltiosDeReferencia(lecturas).filter { it in ReferenciaVoltaje.MIN_V..ReferenciaVoltaje.MAX_V }
-        return valores.takeIf { it.isNotEmpty() }?.let { ReferenciaVoltaje(it.average(), ORIGEN) }
+        return valores.takeIf { it.isNotEmpty() }?.let {
+            ReferenciaVoltaje(it.average(), resolver.get(R.string.obd_vref_source))
+        }
     }
 
     private fun voltiosDeReferencia(lecturas: JSONArray): List<Double> = (0 until lecturas.length())
@@ -48,9 +52,11 @@ object ResolutorVref {
         texto.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it in ReferenciaVoltaje.MIN_V..ReferenciaVoltaje.MAX_V }
 
     // Quitar el valor editado vuelve a lo medido en la sesión, o a la típica si no hay medición.
-    fun textoRestablecer(estado: EstadoVref): String? {
+    fun textoRestablecer(estado: EstadoVref, resolver: StringResolver): String? {
         if (estado.editadaV == null) return null
-        return estado.medida?.let { "Usar la del multímetro (${FormatoPosicion.voltios(it.voltios)})" } ?: "Volver a 5,0 V típico"
+        return estado.medida?.let {
+            resolver.get(R.string.obd_vref_use_multimeter, FormatoPosicion.voltios(it.voltios, resolver))
+        } ?: resolver.get(R.string.obd_vref_restore_typical)
     }
 }
 
@@ -68,12 +74,13 @@ class PreferenciasVrefDataStore @Inject constructor(private val settings: DataSt
         settings.edit { prefs -> if (voltios == null) prefs.remove(clave(vehiculoId)) else prefs[clave(vehiculoId)] = voltios }
     }
 
-    private fun clave(vehiculoId: Long?) = doublePreferencesKey("taller_vref_v_${vehiculoId ?: "sin_vehiculo"}")
+    private fun clave(vehiculoId: Long?) = doublePreferencesKey("taller_vref_v_${vehiculoId ?: "sin_vehiculo"}") // i18n-ignore
 }
 
 class FuenteVref @Inject constructor(
     private val preferencias: PreferenciasVref,
     private val repositorio: TallerRepository,
+    private val resolver: StringResolver,
     private val vehiculo: VehiculoActivo,
 ) {
     suspend fun actual(): EstadoVref {
@@ -87,6 +94,6 @@ class FuenteVref @Inject constructor(
 
     private suspend fun medidaEnSesion(vehiculoId: Long): ReferenciaVoltaje? {
         val sesion = repositorio.sesionAbierta(vehiculoId) ?: return null
-        return VrefSesion.desde(repositorio.eventos(sesion.id))
+        return VrefSesion.desde(repositorio.eventos(sesion.id), resolver)
     }
 }

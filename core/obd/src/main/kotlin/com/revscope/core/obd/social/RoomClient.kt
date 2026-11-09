@@ -113,7 +113,7 @@ class RoomClient @Inject constructor(
             val request = Request.Builder()
                 .url("$wsBase/v1/rooms/${code.uppercase()}/ws?rider=${config.riderName}")
                 .header("User-Agent", RevScopeHttp.USER_AGENT)
-                .apply { if (config.token.isNotBlank()) header("Authorization", "Bearer ${config.token}") }
+                .apply { if (config.token.isNotBlank()) header("Authorization", "Bearer ${config.token}") } // i18n-ignore
                 .build()
             socket = ok.newWebSocket(request, listener)
             _roomCode.value = code.uppercase()

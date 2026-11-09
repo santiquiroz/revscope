@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PruebaGuiadaContent -->
+    <string name="workshop_prueba_pantalla_titulo">Guided tests</string>
+    <string name="workshop_prueba_pantalla_cancelada">Test canceled</string>
+    <string name="workshop_prueba_pantalla_analizando">Analyzing the test…</string>
+    <string name="workshop_prueba_pantalla_nada_guardado">Nothing was saved to the session.</string>
+    <string name="workshop_prueba_pantalla_empezar_de_nuevo">Start over</string>
+    <string name="workshop_prueba_pantalla_fallida">The test didn\'t finish: %1$s. Anything recorded was saved to the session, if one was open.</string>
+    <string name="workshop_prueba_pantalla_volver">Back</string>
+    <string name="workshop_prueba_pantalla_descartar_titulo">Discard the test?</string>
+    <string name="workshop_prueba_pantalla_descartar">Discard</string>
+    <string name="workshop_prueba_pantalla_seguir">Continue the test</string>
+    <string name="workshop_prueba_pantalla_aviso_detiene">Capture stops and the test isn\'t analyzed.</string>
+    <string name="workshop_prueba_pantalla_aviso_pasos_hechos">%1$d of %2$d completed steps won\'t be saved to the session.</string>
+    <string name="workshop_prueba_pantalla_aviso_paso_en_curso">What was recorded in the current step won\'t be saved to the session.</string>
+
+    <!-- PreparacionPrueba -->
+    <string name="workshop_prueba_pantalla_elegir_intro">Step by step, reading at the maximum rate and with a verdict. If a session is open, the result is saved to it.</string>
+    <string name="workshop_prueba_pantalla_proxima_version">Coming in a future version</string>
+    <string name="workshop_prueba_pantalla_antes_de_empezar">Before you start</string>
+    <string name="workshop_prueba_pantalla_comprobando">Checking the adapter and the motorcycle…</string>
+    <string name="workshop_prueba_pantalla_pasos">Steps</string>
+    <string name="workshop_prueba_pantalla_paso_numerado">%1$d. %2$s</string>
+    <string name="workshop_prueba_pantalla_ajustes">Settings</string>
+    <string name="workshop_prueba_pantalla_empezar">Start test</string>
+    <string name="workshop_prueba_pantalla_resolver_marcado">Fix the flagged items to start.</string>
+    <string name="workshop_prueba_pantalla_no_cumple">Not met</string>
+    <string name="workshop_prueba_pantalla_aviso">Warning</string>
+    <string name="workshop_prueba_pantalla_cumple">Met</string>
+    <string name="workshop_prueba_pantalla_vref_titulo" formatted="false">Reference for converting % to V</string>
+    <string name="workshop_prueba_pantalla_vref_valor">%1$s V · %2$s</string>
+    <string name="workshop_prueba_pantalla_cambiar">Change</string>
+    <string name="workshop_prueba_pantalla_voz">Voice guidance</string>
+    <string name="workshop_prueba_pantalla_voz_descripcion">Reads out each step and the countdown: your hands stay on the throttle</string>
+
+    <!-- PruebaGuiadaViewModel -->
+    <string name="workshop_prueba_pantalla_guardado_sesion_nueva">Result saved to a new session</string>
+    <string name="workshop_prueba_pantalla_no_guardado">Couldn\'t save the result</string>
+    <string name="workshop_prueba_pantalla_error_generico">Something went wrong</string>
+    <string name="workshop_prueba_pantalla_no_calibra">No adapter reading or more than 1 V of difference: not calibrated</string>
+</resources>

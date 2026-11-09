@@ -3,14 +3,15 @@ package com.revscope.feature.settings
 import java.text.Normalizer
 
 /** Agrupación temática de las cards de Ajustes — cada una es una sección colapsable en la UI. */
-internal enum class SettingsSectionId(val title: String) {
-    VEHICULO_GARAGE("Vehículo y garage"),
-    RADARES_ALERTAS("Radares y alertas"),
-    MAPA("Mapa"),
-    INTELIGENCIA_ARTIFICIAL("Inteligencia artificial"),
-    SALA_SOCIAL("Sala y social"),
-    NOTIFICACIONES_SEGUNDO_PLANO("Notificaciones y segundo plano"),
-    AVANZADO_DIAGNOSTICO("Avanzado y diagnóstico"),
+internal enum class SettingsSectionId(val titleRes: Int) {
+    IDIOMA_UNIDADES(R.string.settings_section_language),
+    VEHICULO_GARAGE(R.string.settings_section_vehicle_garage),
+    RADARES_ALERTAS(R.string.settings_section_speed_cameras_alerts),
+    MAPA(R.string.settings_section_map),
+    INTELIGENCIA_ARTIFICIAL(R.string.settings_section_ai),
+    SALA_SOCIAL(R.string.settings_section_social),
+    NOTIFICACIONES_SEGUNDO_PLANO(R.string.settings_section_background_notifications),
+    AVANZADO_DIAGNOSTICO(R.string.settings_section_advanced_diagnostics),
 }
 
 /**

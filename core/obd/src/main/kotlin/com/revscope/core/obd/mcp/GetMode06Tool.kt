@@ -1,5 +1,6 @@
 package com.revscope.core.obd.mcp
 
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.connection.ConnectionState
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.protocol.Mode06Parser
@@ -11,6 +12,7 @@ import javax.inject.Inject
 
 class GetMode06Tool @Inject constructor(
     private val sessionManager: ObdSessionManager,
+    private val resolver: StringResolver,
 ) : McpTool {
 
     override val name = "get_mode06"
@@ -57,7 +59,7 @@ class GetMode06Tool @Inject constructor(
 
     private fun prueba(test: Mode06Parser.TestResult): JSONObject = JSONObject()
         .put("mid", test.mid)
-        .put("nombre", Mode06MidNames.nameFor(test.mid))
+        .put("nombre", Mode06MidNames.nameFor(test.mid, resolver))
         .put("tid", test.tid)
         .put("valor", test.value)
         .put("minimo", test.min)

@@ -30,15 +30,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.revscope.core.common.i18n.AndroidStringResolver
 import com.revscope.core.designsystem.ConfirmarDestructivoDialog
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
+import com.revscope.feature.workshop.R
 
 data class OpcionAgregar(
     val icono: ImageVector,
@@ -49,49 +54,58 @@ data class OpcionAgregar(
 )
 
 internal object OpcionesAgregar {
+    @Composable
     fun de(a: AccionesSesion): List<OpcionAgregar> = listOfNotNull(
         OpcionAgregar(
             Icons.Filled.BugReport,
-            "Leer códigos",
-            "Activos, pendientes, permanentes y freeze frame",
+            stringResource(R.string.workshop_session_add_read_codes),
+            stringResource(R.string.workshop_session_add_read_codes_description),
             true,
             a.onLeerCodigos,
         ),
-        a.onPruebaGuiada?.let { OpcionAgregar(Icons.Filled.Science, "Prueba guiada", "Paso a paso, con veredicto", true, it) },
+        a.onPruebaGuiada?.let {
+            OpcionAgregar(
+                Icons.Filled.Science,
+                stringResource(R.string.workshop_session_add_guided_test),
+                stringResource(R.string.workshop_session_add_guided_test_description),
+                true,
+                it,
+            )
+        },
         a.onMultimetro?.let {
             OpcionAgregar(
                 Icons.Filled.ElectricalServices,
-                "Medición con multímetro",
-                "Lo que mides en cada cable",
+                stringResource(R.string.workshop_session_add_multimeter),
+                stringResource(R.string.workshop_session_add_multimeter_description),
                 false,
                 it,
             )
         },
         OpcionAgregar(
             Icons.AutoMirrored.Filled.ShowChart,
-            "Captura rápida",
-            "Hasta 6 PIDs a la tasa máxima, con CSV",
+            stringResource(R.string.workshop_session_add_quick_capture),
+            stringResource(R.string.workshop_session_add_quick_capture_description),
             true,
             a.onCaptura,
         ),
         OpcionAgregar(
             Icons.Filled.MonitorHeart,
-            "Chequeo de salud",
-            "Para comparar con el chequeo base",
+            stringResource(R.string.workshop_session_add_health_check),
+            stringResource(R.string.workshop_session_add_health_check_description),
             true,
             a.onChequeo,
         ),
         OpcionAgregar(
             Icons.Filled.Sensors,
-            "Instantánea de sensores",
-            "Una foto de los valores actuales",
+            stringResource(R.string.workshop_session_add_sensor_snapshot),
+            stringResource(R.string.workshop_session_add_sensor_snapshot_description),
             true,
             a.onInstantanea,
         ),
         OpcionAgregar(
             Icons.AutoMirrored.Filled.Notes,
-            "Nota",
-            "Lo que viste, mediste o cambiaste",
+            stringResource(R.string.workshop_session_add_note),
+            stringResource(R.string.workshop_session_add_note_description),
             false,
             a.onPedirNota,
         ),
@@ -117,7 +131,7 @@ fun HojaAgregarContent(opciones: List<OpcionAgregar>, conectado: Boolean) {
         modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 16.dp),
     ) {
         Text(
-            "Agregar a la sesión",
+            stringResource(R.string.workshop_session_add_title),
             color = RevScopeColors.TextPrimary,
             style = RevScopeType.title,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
@@ -164,7 +178,7 @@ private fun RequiereAdaptador() {
             tint = RevScopeColors.Warning,
             modifier = Modifier.size(with(LocalDensity.current) { 14.sp.toDp() }),
         )
-        Text("Requiere adaptador", color = RevScopeColors.Warning, style = RevScopeType.bodySmall)
+        Text(stringResource(R.string.workshop_session_requires_adapter), color = RevScopeColors.Warning, style = RevScopeType.bodySmall)
     }
 }
 
@@ -183,44 +197,44 @@ private fun DialogoCerrar(acciones: AccionesSesion) {
     AlertDialog(
         onDismissRequest = acciones.onCancelarDialogo,
         containerColor = RevScopeColors.SurfaceHigh,
-        title = { Text("¿Cerrar la sesión?", color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
+        title = { Text(stringResource(R.string.workshop_session_close_title), color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
         text = {
             Text(
-                "Las lecturas nuevas ya no se anotarán en ella. La línea de tiempo se conserva y puedes seguir " +
-                    "consultándola.",
+                stringResource(R.string.workshop_session_close_message),
                 color = RevScopeColors.TextPrimary,
                 style = RevScopeType.body,
             )
         },
-        confirmButton = { BotonDialogo("Cerrar sesión", acciones.onConfirmarCierre, principal = true) },
-        dismissButton = { BotonDialogo("Cancelar", acciones.onCancelarDialogo) },
+        confirmButton = { BotonDialogo(stringResource(R.string.workshop_session_close_confirm), acciones.onConfirmarCierre, principal = true) },
+        dismissButton = { BotonDialogo(stringResource(R.string.workshop_action_cancel), acciones.onCancelarDialogo) },
     )
 }
 
 @Composable
 private fun DialogoEliminar(estado: SesionTallerEstado, acciones: AccionesSesion) {
+    val context = LocalContext.current
+    val resolver = remember(context) { AndroidStringResolver(context) }
     ConfirmarDestructivoDialog(
-        titulo = "¿Eliminar la sesión?",
-        textoConfirmar = "Eliminar sesión",
+        titulo = stringResource(R.string.workshop_session_delete_title),
+        textoConfirmar = stringResource(R.string.workshop_session_delete_confirm),
         onConfirmar = acciones.onConfirmarEliminacion,
         onCancelar = acciones.onCancelarDialogo,
-        mensaje = "«${estado.titulo}» se borra del teléfono y no se puede recuperar.",
-        avisos = AvisosEliminacion.de(estado.loQueSeBorra),
+        mensaje = stringResource(R.string.workshop_session_delete_message, estado.titulo),
+        avisos = AvisosEliminacion.de(estado.loQueSeBorra, resolver),
     )
 }
 
 internal object AvisosEliminacion {
-    fun de(borra: LoQueSeBorra): List<String> = listOfNotNull(
-        "Se pierden los síntomas, las notas, la comparación y ${eventos(borra.eventos)} de la línea de tiempo.",
-        borra.adjuntos.takeIf { it > 0 }?.let(::adjuntos),
-        "Se conservan los chequeos de salud y los viajes guardados, y los códigos de la ECU siguen como están.",
+    fun de(borra: LoQueSeBorra, resolver: com.revscope.core.common.i18n.StringResolver): List<String> = listOfNotNull(
+        resolver.get(
+            R.string.workshop_session_delete_events_message,
+            resolver.plural(R.plurals.workshop_session_delete_event_count, borra.eventos, borra.eventos),
+        ),
+        borra.adjuntos.takeIf { it > 0 }?.let {
+            resolver.plural(R.plurals.workshop_session_delete_capture_files, it, it)
+        },
+        resolver.get(R.string.workshop_session_delete_preserved_data),
     )
-
-    private fun eventos(n: Int) = if (n == 1) "el evento" else "los $n eventos"
-
-    private fun adjuntos(n: Int) =
-        if (n == 1) "Se borra 1 archivo CSV de capturas guardado en la sesión."
-        else "Se borran $n archivos CSV de capturas guardados en la sesión."
 }
 
 @Composable
@@ -228,13 +242,13 @@ private fun DialogoNota(nota: String, acciones: AccionesSesion) {
     AlertDialog(
         onDismissRequest = acciones.onCancelarDialogo,
         containerColor = RevScopeColors.SurfaceHigh,
-        title = { Text("Agregar una nota", color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
+        title = { Text(stringResource(R.string.workshop_session_note_title), color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
         text = {
             OutlinedTextField(
                 value = nota,
                 onValueChange = acciones.onCambiarNota,
-                label = { Text("Nota", style = RevScopeType.body) },
-                supportingText = { Text("Qué viste, mediste o cambiaste.", style = RevScopeType.bodySmall) },
+                label = { Text(stringResource(R.string.workshop_session_note_label), style = RevScopeType.body) },
+                supportingText = { Text(stringResource(R.string.workshop_session_note_hint), style = RevScopeType.bodySmall) },
                 minLines = 3,
                 textStyle = RevScopeType.body,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -249,8 +263,15 @@ private fun DialogoNota(nota: String, acciones: AccionesSesion) {
                 modifier = Modifier.fillMaxWidth(),
             )
         },
-        confirmButton = { BotonDialogo("Guardar nota", acciones.onGuardarNota, principal = true, habilitado = nota.isNotBlank()) },
-        dismissButton = { BotonDialogo("Cancelar", acciones.onCancelarDialogo) },
+        confirmButton = {
+            BotonDialogo(
+                stringResource(R.string.workshop_session_note_save),
+                acciones.onGuardarNota,
+                principal = true,
+                habilitado = nota.isNotBlank(),
+            )
+        },
+        dismissButton = { BotonDialogo(stringResource(R.string.workshop_action_cancel), acciones.onCancelarDialogo) },
     )
 }
 

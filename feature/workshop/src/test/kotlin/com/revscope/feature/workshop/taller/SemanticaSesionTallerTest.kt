@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.revscope.core.designsystem.RevScopeTheme
 import com.revscope.core.obd.connection.ConnectionState
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -21,14 +22,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaSesionTallerTest {
 
     @get:Rule
     val compose = createComposeRule()
 
     private fun hub(abierta: Boolean, conexion: ConnectionState = CasoBenelli.conectado) =
-        ResumenHub.de(CasoBenelli.datosHub(abierta), conexion, verTodas = false, zona = BOGOTA)
+        ResumenHub.de(CasoBenelli.datosHub(abierta), conexion, verTodas = false, zona = BOGOTA, locale = Locale("es"))
 
     @Test
     fun `sin sesión la CTA inicia el diagnóstico y con sesión la continúa`() {

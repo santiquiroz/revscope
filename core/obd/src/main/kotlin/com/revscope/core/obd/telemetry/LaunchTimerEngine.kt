@@ -13,6 +13,7 @@ private const val STANDSTILL_SPEED_KMH = 0.5
 private const val ARM_AFTER_STANDSTILL_MS = 700L
 private const val TARGET_60 = 60.0
 private const val TARGET_100 = 100.0
+private const val TARGET_60_MPH = 96.56064
 
 // A real launch reaches 60 in seconds. Crawling through traffic and touching
 // 60 km/h five minutes later is NOT a run — field data showed "0-60" of 53-98 s.
@@ -26,7 +27,7 @@ private const val MAX_RUN_TOTAL_MS = 35_000L
  */
 class LaunchTimerEngine {
 
-    data class LaunchResult(val to60Ms: Long?, val to100Ms: Long?)
+    data class LaunchResult(val to60Ms: Long?, val to100Ms: Long?, val to60MphMs: Long? = null)
 
     enum class State { IDLE, ARMED, RUNNING }
 
@@ -42,6 +43,7 @@ class LaunchTimerEngine {
     private var prevSpeed = 0.0
     private var prevTimestamp = -1L
     private var to60Ms: Long? = null
+    private var to60MphMs: Long? = null
 
     fun process(reading: ObdReading) {
         if (reading.pid != "0D") return
@@ -64,6 +66,7 @@ class LaunchTimerEngine {
                 // the vehicle began moving somewhere in between.
                 launchStartMs = prevTimestamp.takeIf { it >= 0 } ?: now
                 to60Ms = null
+                to60MphMs = null
                 _state.value = State.RUNNING
                 Timber.i("LaunchTimer: running")
             }
@@ -75,17 +78,20 @@ class LaunchTimerEngine {
                     return storePrev(speed, now)
                 }
                 if (elapsed > MAX_RUN_TOTAL_MS) {
-                    if (to60Ms != null) finish(LaunchResult(to60Ms, null)) else reset()
+                    if (to60Ms != null) finish(LaunchResult(to60Ms, null, to60MphMs)) else reset()
                     return storePrev(speed, now)
                 }
                 if (to60Ms == null && speed >= TARGET_60) {
                     to60Ms = interpolateCrossing(TARGET_60, now, speed)
                 }
+                if (to60MphMs == null && speed >= TARGET_60_MPH) {
+                    to60MphMs = interpolateCrossing(TARGET_60_MPH, now, speed)
+                }
                 if (speed >= TARGET_100) {
-                    finish(LaunchResult(to60Ms, interpolateCrossing(TARGET_100, now, speed)))
+                    finish(LaunchResult(to60Ms, interpolateCrossing(TARGET_100, now, speed), to60MphMs))
                 } else if (speed <= STANDSTILL_SPEED_KMH) {
                     // Aborted run — report a partial only if 0–60 was achieved
-                    if (to60Ms != null) finish(LaunchResult(to60Ms, null)) else reset()
+                    if (to60Ms != null) finish(LaunchResult(to60Ms, null, to60MphMs)) else reset()
                 }
             }
         }
@@ -102,6 +108,7 @@ class LaunchTimerEngine {
         _state.value = State.IDLE
         standstillSince = -1L
         to60Ms = null
+        to60MphMs = null
     }
 
     private fun finish(result: LaunchResult) {

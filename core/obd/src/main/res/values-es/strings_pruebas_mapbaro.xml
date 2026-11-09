@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MAP contra barométrica: pasos y comprobación -->
+    <string name="obd_mapbaro_titulo_paso_contacto">Contacto</string>
+    <string name="obd_mapbaro_comprobacion_diferencia">Diferencia entre el MAP y la barométrica (más ±%1$s de la fuente)</string>
+
+    <!-- MAP contra barométrica: título -->
+    <string name="obd_mapbaro_titulo_sin_datos">Sin lecturas del MAP</string>
+    <string name="obd_mapbaro_titulo_sin_referencia">MAP en %1$s, sin presión barométrica para comparar</string>
+    <string name="obd_mapbaro_titulo_map_bajo">El MAP marca %1$s por debajo de la barométrica</string>
+    <string name="obd_mapbaro_titulo_map_alto">El MAP marca %1$s por encima de la barométrica</string>
+    <string name="obd_mapbaro_titulo_no_concluyente">MAP cerca de la barométrica, sin poder concluir</string>
+    <string name="obd_mapbaro_titulo_normal">El MAP coincide con la barométrica</string>
+
+    <!-- MAP contra barométrica: interpretación -->
+    <string name="obd_mapbaro_interp_sin_datos">No llegaron lecturas del MAP (PID 0B) con el contacto puesto: sin ellas no hay nada que comparar.</string>
+    <string name="obd_mapbaro_interp_map">Con el motor apagado, el MAP marcó %1$s (%2$s).</string>
+    <string name="obd_mapbaro_sin_referencia">No hubo presión barométrica de referencia: la ECU no reportó el PID 33, el teléfono no tiene barómetro y no hubo altitud GPS.</string>
+    <string name="obd_mapbaro_banda_tipica">≤ %1$s, %2$s</string>
+    <string name="obd_mapbaro_frase_referencia">La referencia fue %1$s: %2$s. La diferencia es de %3$s; sin vacío se espera %4$s, más ±%5$s de la fuente.</string>
+    <string name="obd_mapbaro_frase_equivalencia">%1$s equivalen a la presión atmosférica a unos %2$s de altitud.</string>
+    <string name="obd_mapbaro_veredicto_bajo">Marca de menos: compatible con un sensor MAP descalibrado (P0106) o con una referencia de 5&#160;V baja. El MAP comparte esa referencia con el TPS: si el TPS también marca bajo, revisa la referencia común.</string>
+    <string name="obd_mapbaro_veredicto_alto">Marca de más: compatible con un sensor MAP descalibrado (P0106), con la señal alta (P0108) o con la masa del sensor abierta.</string>
+    <string name="obd_mapbaro_veredicto_normal">Coincide dentro de la banda: el MAP lee bien la presión con el motor apagado.</string>
+    <string name="obd_mapbaro_nota_ecu">Muchas ECU calculan la barométrica con el mismo sensor MAP al poner el contacto: que coincidan no descarta un MAP descalibrado.</string>
+    <string name="obd_mapbaro_no_concluyente_contraste">Coincide con %1$s pero no con %2$s: con referencias que no concuerdan no se puede concluir.</string>
+    <string name="obd_mapbaro_no_concluyente_incertidumbre">La diferencia supera la banda típica pero cabe en la incertidumbre de la fuente: con esta referencia no se puede concluir.</string>
+
+    <!-- MAP contra barométrica: hallazgos -->
+    <string name="obd_mapbaro_hallazgo_diferencia">El MAP marca %1$s %2$s de la barométrica (tolerancia ±%3$s)</string>
+    <string name="obd_mapbaro_hallazgo_variacion">El MAP varió %1$s con el motor apagado: señal inestable, compatible con un falso contacto</string>
+    <string name="obd_mapbaro_hallazgo_contraste">Contra %1$s (%2$s), el MAP marca %3$s %4$s: fuera de ±%5$s</string>
+
+    <!-- MAP contra barométrica: siguiente paso -->
+    <string name="obd_mapbaro_siguiente_sin_datos">Revisa que el adaptador siga conectado y que la ECU reporte el MAP (PID 0B)</string>
+    <string name="obd_mapbaro_siguiente_sin_referencia">Activa la ubicación del teléfono (para la altitud GPS) o usa un teléfono con barómetro y repite la prueba</string>
+    <string name="obd_mapbaro_siguiente_medir_map">Mide la referencia de 5&#160;V, la masa y la señal del MAP con el multímetro (plantilla MAP)</string>
+    <string name="obd_mapbaro_siguiente_repetir_barometro">Repite con el barómetro del teléfono o con la barométrica de la ECU (PID 33): son referencias más exactas que la altitud</string>
+    <string name="obd_mapbaro_siguiente_contrastar">Para descartar un MAP descalibrado, repite la prueba con un teléfono que tenga barómetro</string>
+
+    <!-- MAP contra barométrica: medidas -->
+    <string name="obd_mapbaro_medida_map">MAP con el motor apagado: %1$s (%2$s)</string>
+    <string name="obd_mapbaro_medida_baro">Barométrica: %1$s · %2$s</string>
+    <string name="obd_mapbaro_medida_baro_sin_fuente">Barométrica: sin fuente</string>
+    <string name="obd_mapbaro_medida_diferencia">Diferencia: %1$s (tolerancia ±%2$s con la fuente)</string>
+    <string name="obd_mapbaro_medida_altitud">El MAP equivale a unos %1$s de altitud</string>
+    <string name="obd_mapbaro_medida_contraste">Contraste: %1$s %2$s (diferencia %3$s)</string>
+
+    <!-- MAP contra barométrica: formato -->
+    <plurals name="obd_mapbaro_rango_estable">
+        <item quantity="one">estable en %1$d lectura</item>
+        <item quantity="other">estable en %1$d lecturas</item>
+    </plurals>
+    <plurals name="obd_mapbaro_rango">
+        <item quantity="one">de %1$s a %2$s, %3$d lectura</item>
+        <item quantity="other">de %1$s a %2$s, %3$d lecturas</item>
+    </plurals>
+    <string name="obd_mapbaro_miles">%1$d&#160;%2$03d</string>
+</resources>

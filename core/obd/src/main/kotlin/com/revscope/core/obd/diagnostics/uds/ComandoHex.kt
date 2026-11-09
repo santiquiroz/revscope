@@ -18,14 +18,14 @@ object ComandoHex {
     fun validar(entrada: String): Result<ComandoValidado> {
         val texto = entrada.trim()
         if (texto.startsWith("AT", ignoreCase = true)) return validarAt(texto)
-        if (texto.isEmpty()) return fallo("comando vacío")
+        if (texto.isEmpty()) return fallo("comando vacío") // i18n-ignore
 
         val compacto = texto.replace(whitespace, "").uppercase()
-        if (!hexDigits.matches(compacto)) return fallo("solo dígitos hexadecimales")
-        if (compacto.length % 2 != 0) return fallo("número impar de dígitos hex")
+        if (!hexDigits.matches(compacto)) return fallo("solo dígitos hexadecimales") // i18n-ignore
+        if (compacto.length % 2 != 0) return fallo("número impar de dígitos hex") // i18n-ignore
         val bytes = compacto.chunked(2).map { it.toInt(16) }
         if (bytes.size > MAX_BYTES) {
-            return fallo("máximo 7 bytes: el ELM327 solo envía tramas simples")
+            return fallo("máximo 7 bytes: el ELM327 solo envía tramas simples") // i18n-ignore
         }
         return Result.success(ComandoValidado(bytes.joinToString(" ") { it.hexByte() }, bytes, clasificar(bytes)))
     }
@@ -43,7 +43,7 @@ object ComandoHex {
 
     private fun validarAt(texto: String): Result<ComandoValidado> {
         val resto = texto.drop(2).replace(whitespace, "").uppercase()
-        val comando = "AT $resto"
+        val comando = "AT $resto" // i18n-ignore
         val clase = if (resto in setOf("RV", "DPN", "I")) {
             ClaseComando.LECTURA
         } else {

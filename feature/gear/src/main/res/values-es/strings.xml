@@ -1,0 +1,15 @@
+<resources>
+    <string name="gear_title">Marchas</string>
+    <string name="gear_table_calibrated">Tabla calibrada</string>
+    <string name="gear_calibrating">Calibrando…</string>
+    <plurals name="gear_observations">
+        <item quantity="one">%1$d obs</item>
+        <item quantity="other">%1$d obs</item>
+    </plurals>
+    <plurals name="gear_observation_progress">
+        <item quantity="one">%1$d / %2$d obs</item>
+        <item quantity="other">%1$d / %2$d obs</item>
+    </plurals>
+    <string name="gear_speed_rpm_ratio_table">Tabla de ratios velocidad/RPM</string>
+    <string name="gear_ratio">Ratio: %1$s</string>
+</resources>

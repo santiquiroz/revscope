@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="t_hola">Hello %1$s</string>
+    <string name="t_apos">Don\'t</string>
+    <plurals name="t_min">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+</resources>

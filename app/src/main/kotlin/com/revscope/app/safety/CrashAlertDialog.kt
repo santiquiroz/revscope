@@ -20,6 +20,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.revscope.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -61,26 +63,26 @@ fun CrashAlertDialog(state: CrashResponder.AlarmState, onEstoyBien: () -> Unit) 
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 Text(
-                    "¿Estás bien?",
+                    stringResource(R.string.app_crash_title),
                     color = Color.White,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    "Se detectó una posible caída de ${state.vehicleName}.",
+                    stringResource(R.string.app_crash_detected, state.vehicleName),
                     color = Color.White,
                     fontSize = 16.sp,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    "${state.remainingMs / 1000}s",
+                    stringResource(R.string.app_crash_countdown, (state.remainingMs / 1000).toInt()),
                     color = AlarmAccentColor,
                     fontSize = 64.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    "Si no respondes, enviaremos un SMS de emergencia con tu ubicación.",
+                    stringResource(R.string.app_crash_sms_warning),
                     color = TextMutedColor,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
@@ -92,7 +94,7 @@ fun CrashAlertDialog(state: CrashResponder.AlarmState, onEstoyBien: () -> Unit) 
                         .fillMaxWidth(0.8f)
                         .height(56.dp),
                 ) {
-                    Text("ESTOY BIEN", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.app_crash_im_ok), color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

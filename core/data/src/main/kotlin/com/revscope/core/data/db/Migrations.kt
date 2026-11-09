@@ -192,6 +192,21 @@ private val MIGRATION_18_19_SQL = listOf(
     "ALTER TABLE `vehicle_profiles` ADD COLUMN `knowledgeKey` TEXT",
 )
 
+/** Perfiles CAN: perfil elegido, modo de lectura y fuente por señal. Puramente aditiva. */
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `perfilCanId` TEXT")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `fuenteDatos` TEXT NOT NULL DEFAULT 'ESTANDAR'")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `fuentesPorSenal` TEXT NOT NULL DEFAULT '{}'")
+    }
+}
+
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `sessions` ADD COLUMN `best0to60mphMs` INTEGER")
+    }
+}
+
 // Al final del archivo: los val de nivel superior se inicializan en orden de aparición.
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_9_10,
@@ -204,4 +219,6 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_16_17,
     MIGRATION_17_18,
     MIGRATION_18_19,
+    MIGRATION_19_20,
+    MIGRATION_20_21,
 )

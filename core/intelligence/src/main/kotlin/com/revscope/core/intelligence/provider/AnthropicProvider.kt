@@ -19,7 +19,7 @@ class AnthropicProvider(
 ) : AiProvider {
 
     override val providerId: String = "anthropic"
-    override val displayName: String = "Claude (Anthropic)"
+    override val displayName: String = "Claude (Anthropic)" // i18n-ignore: nombre de marca
     override val supportsWebSearch: Boolean = true
 
     override suspend fun complete(request: AiRequest): Result<String> = withContext(Dispatchers.IO) {

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Vehículo al día: DocumentStatusCalculator -->
+    <string name="obd_doc_title_soat">SOAT</string>
+    <string name="obd_doc_title_rtm">Tecnomecánica</string>
+    <string name="obd_doc_title_insurance">Seguro</string>
+    <string name="obd_doc_title_mot">MOT</string>
+    <string name="obd_doc_title_safety_inspection">Inspección de seguridad</string>
+    <string name="obd_doc_title_inspection">Inspección técnica</string>
+    <string name="obd_doc_title_comprehensive">Todo riesgo</string>
+    <string name="obd_doc_title_license">Licencia</string>
+    <string name="obd_doc_title_pico_placa">Pico y placa</string>
+    <string name="obd_doc_not_configured">Por configurar</string>
+    <string name="obd_doc_expires_today">Vence hoy</string>
+    <plurals name="obd_doc_expires_in_days">
+        <item quantity="one">Vence en %1$d días</item>
+        <item quantity="other">Vence en %1$d días</item>
+    </plurals>
+    <plurals name="obd_doc_expired_days_ago">
+        <item quantity="one">Venció hace 1 día</item>
+        <item quantity="other">Venció hace %1$d días</item>
+    </plurals>
+    <string name="obd_doc_banner_expired">%1$s vencido</string>
+    <string name="obd_doc_banner_pico_placa_until">Pico y placa hasta las %1$d:00</string>
+    <string name="obd_doc_banner_pico_placa_today">Pico y placa restringido hoy</string>
+    <string name="obd_doc_pico_placa_wait_until">No salgas hasta las %1$s:00</string>
+    <string name="obd_doc_pico_placa_restricted_until">Hoy tienes restricción hasta las %1$s:00</string>
+    <string name="obd_doc_pico_placa_update_rules">Actualiza las reglas del semestre</string>
+    <string name="obd_doc_pico_placa_motorcycles_exempt">Motos exentas en %1$s</string>
+    <string name="obd_doc_pico_placa_free">Puedes salir</string>
+    <string name="obd_doc_pico_placa_rules_pending">Configura la rotación vigente de %1$s en Ajustes (JSON)</string>
+
+    <!-- Resumen de reglas de pico y placa: CityRulesFormatter -->
+    <string name="obd_city_rules_weekday_mon">L</string>
+    <string name="obd_city_rules_weekday_tue">M</string>
+    <string name="obd_city_rules_weekday_wed">X</string>
+    <string name="obd_city_rules_weekday_thu">J</string>
+    <string name="obd_city_rules_weekday_fri">V</string>
+    <string name="obd_city_rules_parity">Impar:%1$s Par:%2$s</string>
+    <string name="obd_city_rules_motorcycles_exempt">" · motos exentas"</string>
+
+    <!-- Aviso diario: DailyStatusNotifier -->
+    <string name="obd_daily_status_title">Vehículo al día</string>
+    <string name="obd_daily_status_channel">Documentos del vehículo</string>
+
+    <!-- Chequeo de salud: DiagnosticRules -->
+    <string name="obd_diag_area_mixture">Mezcla</string>
+    <string name="obd_diag_area_o2">Sensor O2</string>
+    <string name="obd_diag_area_electrical">Eléctrico</string>
+    <string name="obd_diag_area_cooling">Refrigeración</string>
+    <string name="obd_diag_area_readiness">Readiness</string>
+    <string name="obd_diag_ltft_ok">Fuel trim largo %1$s%%</string>
+    <string name="obd_diag_ltft_ok_cause">El ECU compensa dentro del rango normal</string>
+    <string name="obd_diag_ltft_fail">Fuel trim largo %1$s%% fuera de control</string>
+    <string name="obd_diag_ltft_fail_cause">El ECU no logra compensar la mezcla — revisar sistema de combustible completo</string>
+    <string name="obd_diag_ltft_lean">Mezcla pobre (LTFT +%1$s%%)</string>
+    <string name="obd_diag_ltft_lean_cause">Mezcla pobre: fugas de vacío, inyectores sucios o sensor MAF sucio</string>
+    <string name="obd_diag_ltft_rich">Mezcla rica (LTFT %1$s%%)</string>
+    <string name="obd_diag_ltft_rich_cause">Mezcla rica: inyector goteando, presión de combustible alta o MAF descalibrado</string>
+    <string name="obd_diag_total_trim_high">Corrección total %1$s%% excesiva</string>
+    <string name="obd_diag_total_trim_high_cause">La suma de trims corto y largo supera ±%1$s%% — condición activa de mezcla</string>
+    <string name="obd_diag_total_trim_ok">Corrección total %1$s%%</string>
+    <string name="obd_diag_total_trim_ok_cause">Trims combinados dentro del rango</string>
+    <string name="obd_diag_o2_few_samples">Muestras insuficientes</string>
+    <string name="obd_diag_o2_few_samples_cause">Se necesitan más lecturas para diagnosticar el sensor</string>
+    <string name="obd_diag_o2_stuck_low">Sensor O2 clavado bajo (&lt;%1$sV)</string>
+    <string name="obd_diag_o2_stuck_low_cause">Sensor perezoso/agotado o mezcla extremadamente pobre</string>
+    <string name="obd_diag_o2_stuck_high">Sensor O2 clavado alto (&gt;%1$sV)</string>
+    <string name="obd_diag_o2_stuck_high_cause">Sensor contaminado o mezcla extremadamente rica</string>
+    <string name="obd_diag_o2_switching">Sensor O2 oscilando</string>
+    <string name="obd_diag_o2_switching_cause">El sensor conmuta — comportamiento sano</string>
+    <string name="obd_diag_voltage_low_running">Voltaje %1$sV bajo en marcha</string>
+    <string name="obd_diag_voltage_low_running_cause">El alternador/estator no está cargando bien</string>
+    <string name="obd_diag_battery_low">Batería baja (%1$sV)</string>
+    <string name="obd_diag_battery_low_cause">Batería descargada o al final de su vida</string>
+    <string name="obd_diag_voltage_ok">Voltaje %1$sV</string>
+    <string name="obd_diag_voltage_ok_cause">Sistema de carga dentro del rango</string>
+    <string name="obd_diag_overheating">Sobrecalentamiento (%1$s°C)</string>
+    <string name="obd_diag_overheating_cause">Detener el motor — revisar refrigerante, bomba, ventilador y termostato</string>
+    <string name="obd_diag_temperature_ok">Temperatura %1$s°C</string>
+    <string name="obd_diag_temperature_ok_cause">Dentro del rango de operación</string>
+    <plurals name="obd_diag_mil_on">
+        <item quantity="one">Testigo de motor (MIL) encendido — %1$d códigos</item>
+        <item quantity="other">Testigo de motor (MIL) encendido — %1$d códigos</item>
+    </plurals>
+    <string name="obd_diag_mil_on_cause">Hay fallas activas — revisar los códigos DTC antes de la tecnomecánica</string>
+    <string name="obd_diag_mil_off">Sin testigo de motor</string>
+    <string name="obd_diag_mil_off_cause">No hay fallas activas reportadas</string>
+    <string name="obd_diag_monitor_ready">%1$s: listo</string>
+    <string name="obd_diag_monitor_ready_cause">Monitor completado</string>
+    <string name="obd_diag_monitor_not_ready">%1$s: NO listo</string>
+    <string name="obd_diag_monitor_not_ready_cause">Monitor incompleto — conducir 20-30 min variados antes de la tecnomecánica</string>
+
+    <!-- Tendencia de batería: BatteryTrendAnalyzer -->
+    <plurals name="obd_battery_trend_no_data">
+        <item quantity="one">Se necesitan al menos %1$d viajes con voltaje</item>
+        <item quantity="other">Se necesitan al menos %1$d viajes con voltaje</item>
+    </plurals>
+    <string name="obd_battery_trend_declining">Voltaje de carga cayó %1$s V vs tus viajes anteriores — revisa batería/alternador antes de quedar varado</string>
+    <string name="obd_battery_trend_weak">Carga promedio %1$s V (esperado &gt;13.2 V con motor encendido)</string>
+    <string name="obd_battery_trend_stable">Carga estable en %1$s V</string>
+
+    <!-- Modo 06: Mode06MidNames -->
+    <string name="obd_mode06_catalyst_b1">Catalizador B1</string>
+    <string name="obd_mode06_catalyst_b2">Catalizador B2</string>
+    <string name="obd_mode06_misfire_general">Misfire general</string>
+    <string name="obd_mode06_misfire_cylinder">Misfire cilindro %1$d</string>
+    <string name="obd_mode06_mid">MID %1$s</string>
+
+    <!-- Odómetro: OdometerVerifier -->
+    <string name="obd_odometer_area">Odómetro</string>
+    <string name="obd_odometer_baseline">Línea base registrada (%1$s km)</string>
+    <string name="obd_odometer_baseline_cause">Primera lectura del odómetro ECU — las próximas lecturas se comparan contra esta</string>
+    <string name="obd_odometer_rolled_back">El odómetro retrocedió (%1$s km → %2$s km)</string>
+    <string name="obd_odometer_rolled_back_cause">Posible manipulación del odómetro — el kilometraje no puede disminuir</string>
+    <string name="obd_odometer_behind_app">El odómetro avanzó %1$s km pero la app registró %2$s km recorridos</string>
+    <string name="obd_odometer_behind_app_cause">El odómetro avanza menos que la distancia registrada por la app — posible manipulación o lectura no confiable</string>
+    <string name="obd_odometer_reading">Odómetro %1$s km</string>
+    <string name="obd_odometer_window_too_short">ventana insuficiente para comparar</string>
+    <string name="obd_odometer_consistent">Lectura consistente con la distancia registrada por la app</string>
+</resources>

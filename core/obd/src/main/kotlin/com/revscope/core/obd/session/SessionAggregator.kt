@@ -2,6 +2,7 @@ package com.revscope.core.obd.session
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.revscope.core.common.i18n.Region
 import com.revscope.core.data.datastore.FuelPricePrefs
 import com.revscope.core.data.db.dao.GpsDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -25,12 +26,13 @@ class SessionAggregator(
     private val imuDao: ImuDao,
     private val settings: DataStore<Preferences>,
     private val gpsDao: GpsDao,
+    private val regionProvider: () -> Region = { Region.system() },
 ) {
 
     /**
      * Closes the session and fills the trip aggregates.
      * [activeProfileProvider] is called lazily at the point the redline is needed,
-     * matching the manager's original "read the latest active profile" semantics.
+     * matching the manager's original "read the latest active profile" semantics. // i18n-ignore // i18n-ignore
      */
     suspend fun close(sessionId: Long, activeProfileProvider: () -> VehicleProfileEntity?) {
         val session = sessionDao.getById(sessionId) ?: return
@@ -85,20 +87,24 @@ class SessionAggregator(
         val fuel = computeFuelResult(sessionId, fuelType)
         TripAggregates(
             fuelLiters = fuel?.liters,
-            fuelCostCop = fuel?.costCop,
+            fuelCostCop = fuel?.cost,
             ecoScore = computeEcoScore(sessionId, activeProfileProvider),
         )
     }.onFailure { Timber.w(it, "SessionAggregator: failed to compute trip aggregates") }
         .getOrNull()
 
-    private suspend fun computeFuelResult(sessionId: Long, fuelType: String?): FuelCostCalculator.FuelResult? {
-        val precioGalonCop = FuelPricePrefs.priceFor(FuelPricePrefs.read(settings), fuelType)
+    private suspend fun computeFuelResult(sessionId: Long, fuelType: String?): TripFuel? {
+        val pricePerGallon = FuelPricePrefs.priceFor(FuelPricePrefs.read(settings, regionProvider()), fuelType)
+        return computeFuelLiters(sessionId, pricePerGallon ?: 0.0)?.let { tripFuel(it, pricePerGallon) }
+    }
+
+    private suspend fun computeFuelLiters(sessionId: Long, pricePerGallon: Double): FuelCostCalculator.FuelResult? {
         val fuelRatePoints = telemetryDao.pointsForSessionAndPid(sessionId, PID_FUEL_RATE)
             .map { it.timestamp to it.value.toDouble() }
-        FuelCostCalculator.fromFuelRate(fuelRatePoints, precioGalonCop)?.let { return it }
+        FuelCostCalculator.fromFuelRate(fuelRatePoints, pricePerGallon)?.let { return it }
         val mafPoints = telemetryDao.pointsForSessionAndPid(sessionId, PID_MAF)
             .map { it.timestamp to it.value.toDouble() }
-        return FuelCostCalculator.fromMaf(mafPoints, precioGalonCop)
+        return FuelCostCalculator.fromMaf(mafPoints, pricePerGallon)
     }
 
     private suspend fun computeEcoScore(sessionId: Long, activeProfileProvider: () -> VehicleProfileEntity?): Int? {
@@ -124,6 +130,10 @@ class SessionAggregator(
         private fun defaultRedlineRpm(vehicleType: VehicleType): Int =
             if (vehicleType == VehicleType.MOTORCYCLE) MOTORCYCLE_DEFAULT_REDLINE_RPM else CAR_DEFAULT_REDLINE_RPM
 
+        // No price for the region → liters are still recorded, but the trip gets no cost (never "$0").
+        internal fun tripFuel(result: FuelCostCalculator.FuelResult, pricePerGallon: Double?): TripFuel =
+            TripFuel(liters = result.liters, cost = result.costCop.takeIf { pricePerGallon != null })
+
         /** Pure GPS-track fallback for [resolveTripMotion] — no I/O, unit-testable directly. */
         internal fun gpsFallbackMotion(gpsPoints: List<GpsPointEntity>): TripMotion =
             TripMotion(
@@ -134,3 +144,5 @@ class SessionAggregator(
 }
 
 internal data class TripMotion(val maxSpeed: Float, val distanceKm: Float)
+
+internal data class TripFuel(val liters: Double, val cost: Double?)

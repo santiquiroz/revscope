@@ -6,6 +6,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.revscope.core.designsystem.RevScopeColors
 import com.revscope.core.designsystem.RevScopeType
@@ -26,7 +27,7 @@ internal fun BarraInferior(rutaActual: String?, onNavegar: (BottomNavItem) -> Un
                 icon = { Icon(item.icon, contentDescription = null) },
                 label = {
                     TextoAjustable(
-                        texto = item.label,
+                        texto = stringResource(item.label),
                         estilo = RevScopeType.bodySmall,
                         color = LocalContentColor.current,
                         minimo = 7.sp,

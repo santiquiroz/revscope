@@ -1,5 +1,7 @@
 package com.revscope.core.obd.telemetry.captura
 
+import com.revscope.core.common.i18n.StringResolver
+import com.revscope.core.obd.R
 import com.revscope.core.obd.connection.Transport
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.PidDefinition
@@ -49,6 +51,7 @@ class CapturaRapida(
     private val gate: PollingGate,
     private val registry: PidRegistry,
     private val nuevoSumidero: () -> SumideroCaptura,
+    private val resolver: StringResolver,
     private val dispositivo: LectorDispositivo,
     private val relojNanos: () -> Long = System::nanoTime,
     private val relojEpochMs: () -> Long = System::currentTimeMillis,
@@ -88,10 +91,10 @@ class CapturaRapida(
     override val ultimoResumen: StateFlow<ResumenCaptura?> = _ultimoResumen.asStateFlow()
 
     override suspend fun iniciar(config: ConfigCaptura): Result<InicioCaptura> = arranque.withLock {
-        if (job?.isActive == true) return Result.failure(IllegalStateException("Ya hay una captura rápida activa"))
+        if (job?.isActive == true) return Result.failure(IllegalStateException(resolver.get(R.string.obd_capture_active)))
         val bt = enlace.transporte()
         val scope = enlace.scopeEnlace()
-        if (bt == null || scope == null) return Result.failure(IllegalStateException("Sin adaptador conectado"))
+        if (bt == null || scope == null) return Result.failure(IllegalStateException(resolver.get(R.string.obd_adapter_not_connected)))
         val (defs, noSoportados) = seleccionar(config.pids).getOrElse { return Result.failure(it) }
         val nueva = prepararConTurno(bt, defs, noSoportados, config).getOrElse { return Result.failure(it) }
         sesion = nueva
@@ -127,13 +130,15 @@ class CapturaRapida(
 
     private fun seleccionar(pids: List<String>): Result<Pair<List<PidDefinition>, List<String>>> {
         val pedidos = pids.map { it.trim().uppercase() }.filter { it.isNotEmpty() }.distinct()
-        if (pedidos.isEmpty()) return Result.failure(IllegalArgumentException("Elige al menos un PID"))
+        if (pedidos.isEmpty()) return Result.failure(IllegalArgumentException(resolver.get(R.string.obd_capture_select_pid)))
         if (pedidos.size > LimitesCaptura.MAX_PIDS) {
-            return Result.failure(IllegalArgumentException("Como máximo ${LimitesCaptura.MAX_PIDS} PIDs a la vez"))
+            return Result.failure(IllegalArgumentException(resolver.get(R.string.obd_capture_pid_limit, LimitesCaptura.MAX_PIDS)))
         }
         val (aceptados, rechazados) = pedidos.partition(::esCapturable)
         if (aceptados.isEmpty()) {
-            return Result.failure(IllegalArgumentException("Ningún PID pedido está soportado por este vehículo: $rechazados"))
+            return Result.failure(
+                IllegalArgumentException(resolver.get(R.string.obd_capture_unsupported_pids, rechazados)),
+            )
         }
         return Result.success(aceptados.mapNotNull(registry::getDefinition) to rechazados)
     }
@@ -149,7 +154,9 @@ class CapturaRapida(
         noSoportados: List<String>,
         config: ConfigCaptura,
     ): Result<Sesion> {
-        if (!turno.tomar(TurnoCaptura.CAPTURA_RAPIDA)) return Result.failure(IllegalStateException(TurnoCaptura.ocupado(turno.ocupadoPor)))
+        if (!turno.tomar(TurnoCaptura.CAPTURA_RAPIDA)) {
+            return Result.failure(IllegalStateException(TurnoCaptura.ocupado(turno.ocupadoPor, resolver)))
+        }
         val preparada = try {
             prepararSesion(bt, defs, noSoportados, config)
         } catch (e: Throwable) {
@@ -191,6 +198,7 @@ class CapturaRapida(
         val poller = FastPoller(
             exchange = { cmd -> bt.exchange(cmd, TIMEOUT_PETICION_MS) },
             registry = registry,
+            resolver = resolver,
             relojNanos = relojNanos,
             relojEpochMs = relojEpochMs,
             esCan = info.esCan,
@@ -211,7 +219,7 @@ class CapturaRapida(
             it.abrir(CapturaCsv.lineasIniciales(CapturaCsv.metadatos(info, pids, inicioEpochMs, tecnicas)))
         }
         return Sesion(
-            inicio, config, inicioEpochMs, defs, bt, poller, tecnicasElm, FastCaptureBuffer(pids), RateMeter(info.esCan),
+            inicio, config, inicioEpochMs, defs, bt, poller, tecnicasElm, FastCaptureBuffer(pids), RateMeter(info.esCan, resolver),
             sumidero, poller.inicioNanos,
         )
     }
@@ -315,7 +323,7 @@ class CapturaRapida(
         val estado = EstadoDispositivo(
             lectura.bateriaPct, lectura.cargando, lectura.termico, transcurridoMs(s), stats.ratioErrores, stats.peticionesTotales,
         )
-        when (val decision = CaptureSafeguards.decidir(estado, s.inicio.duracionMaxMs)) {
+        when (val decision = CaptureSafeguards.decidir(estado, s.inicio.duracionMaxMs, resolver)) {
             is DecisionSalvaguarda.Detener -> throw DetencionCaptura(decision.motivo)
             is DecisionSalvaguarda.Limitar -> limitar(s, decision.maxHz)
             DecisionSalvaguarda.Continuar -> limitar(s, null)
@@ -388,8 +396,9 @@ class CapturaRapida(
     }
 
     companion object {
-        const val MOTIVO_USUARIO = "detenida por el usuario"
-        const val MOTIVO_ENLACE = "enlace perdido"
+        // Códigos estables: ControladorPruebaGuiada clasifica el fin con startsWith; pasarlos a un tipo estructurado está pendiente.
+        const val MOTIVO_USUARIO = "detenida por el usuario" // i18n-ignore
+        const val MOTIVO_ENLACE = "enlace perdido" // i18n-ignore
         private const val PID_REFRIGERANTE = "05"
         private const val GUARDIA_REFRIGERANTE_MS = 5_000L
         private const val VIGILANCIA_MS = 1_000L

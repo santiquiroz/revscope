@@ -33,10 +33,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.revscope.core.common.i18n.AppLanguage
+import com.revscope.core.common.units.AppUnits
 import com.revscope.core.designsystem.FranjaSelectorVehiculo
 import kotlinx.coroutines.delay
 
@@ -98,9 +101,32 @@ fun SettingsScreen(
         onImportRequested = { uri -> pendingImportUri = uri },
     )
 
+    val tagActual = remember { AppLanguage.savedTag(context) }
+    val unidadesActual = remember { AppUnits.savedTag(context) }
+    val idiomaSectionEntry = SettingsEntry(
+        SettingsEntryMeta(
+            id = "idioma",
+            section = SettingsSectionId.IDIOMA_UNIDADES,
+            title = stringResource(R.string.settings_entry_language),
+            subtitle = "",
+            keywords = stringResource(R.string.settings_search_keywords_language).split('|'),
+        ),
+    ) {
+        IdiomaSection(tagActual = tagActual, onElegir = { tag ->
+            AppLanguage.persist(context, tag)
+            restartApp(context)
+        })
+        SectionTitle(stringResource(R.string.settings_units_title))
+        UnidadesSection(tagActual = unidadesActual, onElegir = { tag ->
+            AppUnits.persist(context, tag)
+            restartApp(context)
+        })
+    }
+
     val deepLinkSection = remember(initialExpandedSection) {
         settingsSectionFromDeepLinkKey(initialExpandedSection)
     }
+    val entriesWithLanguage = listOf(idiomaSectionEntry) + entries
     val sectionExpansion = SettingsSectionId.entries.associateWith { section ->
         rememberSaveable(key = section.name) {
             mutableStateOf(
@@ -115,7 +141,13 @@ fun SettingsScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Ajustes", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+                    title = {
+                        Text(
+                            stringResource(R.string.settings_screen_title),
+                            color = TextPrimaryColor,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceColor),
                 )
                 FranjaSelectorVehiculo(selector = selectorVehiculo)
@@ -135,7 +167,7 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Buscar en ajustes", fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.settings_search_label), fontSize = 12.sp) },
                 singleLine = true,
                 colors = settingsFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
@@ -143,13 +175,13 @@ fun SettingsScreen(
 
             val isSearching = SettingsSearch.isActive(searchQuery)
             val matchedIds = if (isSearching) {
-                SettingsSearch.filter(searchQuery, entries.map { it.meta }).map { it.id }.toSet()
+                SettingsSearch.filter(searchQuery, entriesWithLanguage.map { it.meta }).map { it.id }.toSet()
             } else {
                 null
             }
 
             SettingsSectionId.entries.forEach { section ->
-                val sectionEntries = entries.filter { it.meta.section == section }
+                val sectionEntries = entriesWithLanguage.filter { it.meta.section == section }
                 val visibleEntries = matchedIds?.let { ids -> sectionEntries.filter { it.meta.id in ids } }
                     ?: sectionEntries
                 if (isSearching && visibleEntries.isEmpty()) return@forEach
@@ -157,7 +189,7 @@ fun SettingsScreen(
                 val expandedState = sectionExpansion.getValue(section)
                 val expanded = isSearching || expandedState.value
                 SettingsSectionHeader(
-                    title = section.title,
+                    title = stringResource(section.titleRes),
                     itemCount = visibleEntries.size,
                     expanded = expanded,
                     onToggle = {
@@ -181,6 +213,7 @@ private data class SettingsEntry(
     val content: @Composable () -> Unit,
 )
 
+@Composable
 private fun buildSettingsEntries(
     vm: SettingsViewModel,
     onNavigateToVehicleProfiles: () -> Unit,
@@ -193,183 +226,180 @@ private fun buildSettingsEntries(
         SettingsEntryMeta(
             id = "vehiculo_activo",
             section = SettingsSectionId.VEHICULO_GARAGE,
-            title = "Vehículo",
-            subtitle = "Vehículo activo y arranque",
-            keywords = listOf("vehiculo", "garage", "perfil activo", "auto", "moto", "carro"),
+            title = stringResource(R.string.settings_entry_vehicle_title),
+            subtitle = stringResource(R.string.settings_entry_vehicle_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_vehicle).split('|'),
         ),
     ) { VehiculoActivoCard(vm, onNavigateToVehicleProfiles) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "herramientas",
             section = SettingsSectionId.VEHICULO_GARAGE,
-            title = "Herramientas",
-            subtitle = "Perfiles de vehículo, pantalla encendida y viaje automático",
-            keywords = listOf("perfiles", "pantalla", "screen", "herramientas", "viaje", "auto-viaje", "automatico"),
+            title = stringResource(R.string.settings_entry_tools_title),
+            subtitle = stringResource(R.string.settings_entry_tools_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_tools).split('|'),
         ),
     ) { HerramientasCard(vm, onNavigateToVehicleProfiles) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "combustible",
             section = SettingsSectionId.VEHICULO_GARAGE,
-            title = "Combustible",
-            subtitle = "Precios de gasolina, extra y diésel",
-            keywords = listOf("gasolina", "combustible", "precio", "diesel", "acpm", "galon"),
+            title = stringResource(R.string.settings_entry_fuel_title),
+            subtitle = stringResource(R.string.settings_entry_fuel_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_fuel).split('|'),
         ),
     ) { CombustibleCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "alertas_audio",
             section = SettingsSectionId.RADARES_ALERTAS,
-            title = "Alertas de audio y vibración",
-            subtitle = "Voz, TTS y umbrales de temperatura/voltaje/RPM",
-            keywords = listOf(
-                "voz", "tts", "alerta", "temperatura", "voltaje", "rpm", "zona roja",
-                "pico y placa", "atardecer", "huecos", "lluvia", "fatiga",
-            ),
+            title = stringResource(R.string.settings_entry_audio_alerts_title),
+            subtitle = stringResource(R.string.settings_entry_audio_alerts_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_audio_alerts).split('|'),
         ),
     ) { AlertasAudioCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "sonido_motor",
             section = SettingsSectionId.RADARES_ALERTAS,
-            title = "Sonido de motor",
-            subtitle = "Simulación de sonido de motor deportivo",
-            keywords = listOf("sonido", "motor", "soundracer", "pack"),
+            title = stringResource(R.string.settings_entry_engine_sound_title),
+            subtitle = stringResource(R.string.settings_entry_engine_sound_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_engine_sound).split('|'),
         ),
     ) { SonidoMotorCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "radares_velocidad",
             section = SettingsSectionId.RADARES_ALERTAS,
-            title = "Radares de velocidad",
-            subtitle = "Descarga y radio de aviso de radares",
-            keywords = listOf("radar", "camara", "cámara", "fotomulta", "velocidad", "ansv"),
+            title = stringResource(R.string.settings_entry_speed_cameras_title),
+            subtitle = stringResource(R.string.settings_entry_speed_cameras_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_speed_cameras).split('|'),
         ),
     ) { RadaresVelocidadCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "pico_placa_personalizado",
             section = SettingsSectionId.RADARES_ALERTAS,
-            title = "Pico y placa personalizado",
-            subtitle = "Reglas propias por ciudad",
-            keywords = listOf("pico y placa", "restriccion", "rotacion", "ciudad"),
+            title = stringResource(R.string.settings_entry_custom_driving_restrictions_title),
+            subtitle = stringResource(R.string.settings_entry_custom_driving_restrictions_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_custom_driving_restrictions).split('|'),
         ),
     ) { PicoPlacaPersonalizadoCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "mapa",
             section = SettingsSectionId.MAPA,
-            title = "Mapa",
-            subtitle = "Descarga de mapas offline",
-            keywords = listOf("mapa", "offline", "descarga"),
+            title = stringResource(R.string.settings_entry_map_title),
+            subtitle = stringResource(R.string.settings_entry_map_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_map).split('|'),
         ),
     ) { MapaCard(vm, snackbarHostState) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "ia",
             section = SettingsSectionId.INTELIGENCIA_ARTIFICIAL,
-            title = "Inteligencia artificial",
-            subtitle = "Proveedor, API key y modelo",
-            keywords = listOf("ia", "ai", "claude", "openai", "gemini", "nodo", "api key", "modelo"),
+            title = stringResource(R.string.settings_entry_ai_title),
+            subtitle = stringResource(R.string.settings_entry_ai_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_ai).split('|'),
         ),
     ) { InteligenciaArtificialCard(vm, onOpenAiValue) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "servidor_colaborativo",
             section = SettingsSectionId.SALA_SOCIAL,
-            title = "Servidor colaborativo",
-            subtitle = "Servidor RevScope para rodadas y fantasmas",
-            keywords = listOf("servidor", "rodadas", "fantasmas", "huecos", "social"),
+            title = stringResource(R.string.settings_entry_collaborative_server_title),
+            subtitle = stringResource(R.string.settings_entry_collaborative_server_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_collaborative_server).split('|'),
         ),
     ) { ServidorColaborativoCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "companero_viaje",
             section = SettingsSectionId.SALA_SOCIAL,
-            title = "Compañero de viaje",
-            subtitle = "Brief al llegar a una zona nueva",
-            keywords = listOf("viaje", "brief", "peajes", "zona", "companero"),
+            title = stringResource(R.string.settings_entry_travel_companion_title),
+            subtitle = stringResource(R.string.settings_entry_travel_companion_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_travel_companion).split('|'),
         ),
     ) { CompaneroViajeCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "avisos_segundo_plano",
             section = SettingsSectionId.NOTIFICACIONES_SEGUNDO_PLANO,
-            title = "Avisos en segundo plano",
-            subtitle = "Alarmas exactas y optimización de batería",
-            keywords = listOf("notificacion", "alarma", "bateria", "doze", "segundo plano"),
+            title = stringResource(R.string.settings_entry_background_alerts_title),
+            subtitle = stringResource(R.string.settings_entry_background_alerts_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_background_alerts).split('|'),
         ),
     ) { AvisosSegundoPlanoCard() },
     SettingsEntry(
         SettingsEntryMeta(
             id = "deteccion_caida",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Detección de caída",
-            subtitle = "Alarma y SMS de emergencia",
-            keywords = listOf("caida", "choque", "accidente", "sms", "emergencia"),
+            title = stringResource(R.string.settings_entry_crash_detection_title),
+            subtitle = stringResource(R.string.settings_entry_crash_detection_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_crash_detection).split('|'),
         ),
     ) { DeteccionCaidaCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "modo_guardia",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Modo guardia antirrobo",
-            subtitle = "Alarma si el adaptador OBD despierta",
-            keywords = listOf("guardia", "antirrobo", "robo", "alarma"),
+            title = stringResource(R.string.settings_entry_anti_theft_guard_title),
+            subtitle = stringResource(R.string.settings_entry_anti_theft_guard_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_anti_theft_guard).split('|'),
         ),
     ) { ModoGuardiaCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "muestreo_obd",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Muestreo OBD",
-            subtitle = "Frecuencia de lectura de sensores y captura rápida",
-            keywords = listOf("muestreo", "frecuencia", "hz", "rapido", "sondeo", "polling", "captura", "escaner"),
+            title = stringResource(R.string.settings_entry_obd_sampling_title),
+            subtitle = stringResource(R.string.settings_entry_obd_sampling_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_obd_sampling).split('|'),
         ),
     ) { MuestreoObdCard() },
     SettingsEntry(
         SettingsEntryMeta(
             id = "pids_personalizados",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "PIDs personalizados",
-            subtitle = "JSON de PIDs custom (Modo 22)",
-            keywords = listOf("pid", "modo 22", "json", "custom"),
+            title = stringResource(R.string.settings_entry_custom_pids_title),
+            subtitle = stringResource(R.string.settings_entry_custom_pids_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_custom_pids).split('|'),
         ),
     ) { CustomPidsCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "alertas_pid_personalizadas",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Alertas personalizadas por PID",
-            subtitle = "Umbrales por PID en JSON",
-            keywords = listOf("alerta", "pid", "umbral", "tpms"),
+            title = stringResource(R.string.settings_entry_custom_pid_alerts_title),
+            subtitle = stringResource(R.string.settings_entry_custom_pid_alerts_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_custom_pid_alerts).split('|'),
         ),
     ) { CustomPidAlertsCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "copia_seguridad",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Copia de seguridad",
-            subtitle = "Exportar e importar backup",
-            keywords = listOf("backup", "copia", "exportar", "importar", "restaurar"),
+            title = stringResource(R.string.settings_entry_backup_title),
+            subtitle = stringResource(R.string.settings_entry_backup_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_backup).split('|'),
         ),
     ) { CopiaSeguridadCard(vm, onImportRequested) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "servidor_mcp",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Servidor MCP (red local)",
-            subtitle = "Expone el vehículo a asistentes de IA en WiFi",
-            keywords = listOf("mcp", "claude desktop", "lm studio", "token", "permisos", "control", "borrar dtc"),
+            title = stringResource(R.string.settings_entry_mcp_server_title),
+            subtitle = stringResource(R.string.settings_entry_mcp_server_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_mcp_server).split('|'),
         ),
     ) { ServidorMcpCard(vm) },
     SettingsEntry(
         SettingsEntryMeta(
             id = "acerca_de",
             section = SettingsSectionId.AVANZADO_DIAGNOSTICO,
-            title = "Acerca de",
-            subtitle = "Versión y actualizaciones",
-            keywords = listOf("version", "actualizacion", "onboarding", "acerca"),
+            title = stringResource(R.string.settings_entry_about_title),
+            subtitle = stringResource(R.string.settings_entry_about_subtitle),
+            keywords = stringResource(R.string.settings_search_keywords_about).split('|'),
         ),
     ) { AcercaDeCard(vm, onRerunOnboarding) },
 )
@@ -379,20 +409,29 @@ private fun BackupRestoreConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> U
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = SurfaceColor,
-        title = { Text("Restaurar copia de seguridad", color = TextPrimaryColor, fontWeight = FontWeight.SemiBold) },
+        title = {
+            Text(
+                stringResource(R.string.settings_backup_restore_title),
+                color = TextPrimaryColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
         text = {
             Text(
-                "Reemplaza TODOS los datos actuales (viajes, perfiles, informes y ajustes) por los " +
-                    "de la copia elegida. Esta acción no se puede deshacer.",
+                stringResource(R.string.settings_backup_restore_warning),
                 color = TextMutedColor,
                 fontSize = 13.sp,
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Reemplazar", color = AccentColor) }
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.settings_backup_restore_confirm), color = AccentColor)
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar", color = TextMutedColor) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_cancel), color = TextMutedColor)
+            }
         },
     )
 }

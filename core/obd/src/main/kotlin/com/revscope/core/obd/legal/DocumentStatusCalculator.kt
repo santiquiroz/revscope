@@ -1,6 +1,9 @@
 package com.revscope.core.obd.legal
 
+import com.revscope.core.common.i18n.Region
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleProfileEntity
+import com.revscope.core.obd.R
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -54,13 +57,37 @@ object DocumentStatusCalculator {
         nowMs: Long,
         timeZoneId: String = "America/Bogota",
         aiFallbackRules: PicoYPlacaEngine.CityRules? = null,
-    ): List<DocStatus> = listOf(
-        expiryStatus(DocType.SOAT, "SOAT", documents.soatExpiresAt, nowMs, timeZoneId),
-        expiryStatus(DocType.RTM, "Tecnomecánica", documents.rtmExpiresAt, nowMs, timeZoneId),
-        picoYPlacaStatus(documents, overrideRules, aiFallbackRules, nowMs),
-        expiryStatus(DocType.TODO_RIESGO, "Todo riesgo", documents.insuranceExpiresAt, nowMs, timeZoneId),
-        expiryStatus(DocType.LICENCIA, "Licencia", documents.licenseExpiresAt, nowMs, timeZoneId),
-    )
+        resolver: StringResolver,
+        region: Region,
+    ): List<DocStatus> {
+        val expiry = ExpiryContext(nowMs, timeZoneId, resolver)
+        val picoYPlaca = if (region == Region.CO) {
+            picoYPlacaStatus(documents, overrideRules, aiFallbackRules, nowMs, resolver)
+        } else {
+            null
+        }
+        return listOfNotNull(
+            expiryStatus(DocType.SOAT, insuranceTitleRes(region), documents.soatExpiresAt, expiry),
+            expiryStatus(DocType.RTM, inspectionTitleRes(region), documents.rtmExpiresAt, expiry),
+            picoYPlaca,
+            expiryStatus(DocType.TODO_RIESGO, R.string.obd_doc_title_comprehensive, documents.insuranceExpiresAt, expiry),
+            expiryStatus(DocType.LICENCIA, R.string.obd_doc_title_license, documents.licenseExpiresAt, expiry),
+        )
+    }
+
+    fun insuranceTitleRes(region: Region): Int = when (region) {
+        Region.CO -> R.string.obd_doc_title_soat
+        Region.GB, Region.US, Region.OTHER -> R.string.obd_doc_title_insurance
+    }
+
+    fun inspectionTitleRes(region: Region): Int = when (region) {
+        Region.CO -> R.string.obd_doc_title_rtm
+        Region.GB -> R.string.obd_doc_title_mot
+        Region.US -> R.string.obd_doc_title_safety_inspection
+        Region.OTHER -> R.string.obd_doc_title_inspection
+    }
+
+    private class ExpiryContext(val nowMs: Long, val timeZoneId: String, val resolver: StringResolver)
 
     /** True cuando la ciudad del perfil no tiene reglas curadas vigentes — momento de preguntar a la IA. */
     fun needsAiFallback(cityId: String?, overrideRules: PicoYPlacaEngine.CityRules?, nowMs: Long): Boolean {
@@ -82,43 +109,49 @@ object DocumentStatusCalculator {
         )
 
     /** Texto corto para el banner del Dashboard; null si no hay nada urgente hoy. */
-    fun bannerText(statuses: List<DocStatus>): String? {
+    fun bannerText(statuses: List<DocStatus>, resolver: StringResolver): String? {
         val vencidosNoPico = statuses.filter { it.nivel == Nivel.VENCIDO && it.tipo != DocType.PICO_Y_PLACA }
         val picoYPlaca = statuses.firstOrNull { it.tipo == DocType.PICO_Y_PLACA }
         val picoYPlacaAplicaHoy = picoYPlaca?.nivel == Nivel.VENCIDO || picoYPlaca?.nivel == Nivel.ATENCION
         if (vencidosNoPico.isEmpty() && !picoYPlacaAplicaHoy) return null
         val partes = buildList {
-            vencidosNoPico.forEach { add("${it.titulo} vencido") }
-            if (picoYPlacaAplicaHoy) add(picoYPlacaBannerPhrase(picoYPlaca))
+            vencidosNoPico.forEach { add(resolver.get(R.string.obd_doc_banner_expired, it.titulo)) }
+            if (picoYPlacaAplicaHoy) add(picoYPlacaBannerPhrase(picoYPlaca, resolver))
         }
         return partes.joinToString(" · ")
     }
 
-    private fun picoYPlacaBannerPhrase(status: DocStatus?): String =
-        status?.horaLimite?.let { "Pico y placa hasta las $it:00" } ?: "Pico y placa restringido hoy"
+    private fun picoYPlacaBannerPhrase(status: DocStatus?, resolver: StringResolver): String =
+        status?.horaLimite?.let { resolver.get(R.string.obd_doc_banner_pico_placa_until, it) }
+            ?: resolver.get(R.string.obd_doc_banner_pico_placa_today)
 
-    private fun expiryStatus(
-        tipo: DocType,
-        titulo: String,
-        expiresAt: Long?,
-        nowMs: Long,
-        timeZoneId: String,
-    ): DocStatus {
-        if (expiresAt == null) return DocStatus(tipo, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
-        val daysUntil = daysBetween(nowMs, expiresAt, timeZoneId)
+    private fun expiryStatus(tipo: DocType, tituloRes: Int, expiresAt: Long?, ctx: ExpiryContext): DocStatus {
+        val resolver = ctx.resolver
+        val titulo = resolver.get(tituloRes)
+        if (expiresAt == null) {
+            return DocStatus(tipo, Nivel.SIN_CONFIGURAR, titulo, resolver.get(R.string.obd_doc_not_configured))
+        }
+        val daysUntil = daysBetween(ctx.nowMs, expiresAt, ctx.timeZoneId)
         return when {
-            daysUntil < 0 -> DocStatus(tipo, Nivel.VENCIDO, titulo, vencidoHaceDiasTexto(daysUntil), diasRestantes = daysUntil)
-            daysUntil == 0L -> DocStatus(tipo, Nivel.ATENCION, titulo, "Vence hoy", diasRestantes = daysUntil)
+            daysUntil < 0 ->
+                DocStatus(tipo, Nivel.VENCIDO, titulo, vencidoHaceDiasTexto(daysUntil, resolver), diasRestantes = daysUntil)
+            daysUntil == 0L ->
+                DocStatus(tipo, Nivel.ATENCION, titulo, resolver.get(R.string.obd_doc_expires_today), diasRestantes = daysUntil)
             daysUntil <= WARNING_THRESHOLD_DAYS ->
-                DocStatus(tipo, Nivel.ATENCION, titulo, "Vence en $daysUntil días", diasRestantes = daysUntil)
-            else -> DocStatus(tipo, Nivel.OK, titulo, "Vence en $daysUntil días", diasRestantes = daysUntil)
+                DocStatus(tipo, Nivel.ATENCION, titulo, venceEnDiasTexto(daysUntil, resolver), diasRestantes = daysUntil)
+            else -> DocStatus(tipo, Nivel.OK, titulo, venceEnDiasTexto(daysUntil, resolver), diasRestantes = daysUntil)
         }
     }
 
-    private fun vencidoHaceDiasTexto(daysUntil: Long): String {
+    private fun venceEnDiasTexto(daysUntil: Long, resolver: StringResolver): String =
+        resolver.plural(R.plurals.obd_doc_expires_in_days, daysUntil.toPluralCount(), daysUntil)
+
+    private fun vencidoHaceDiasTexto(daysUntil: Long, resolver: StringResolver): String {
         val diasVencido = -daysUntil
-        return if (diasVencido == 1L) "Venció hace 1 día" else "Venció hace $diasVencido días"
+        return resolver.plural(R.plurals.obd_doc_expired_days_ago, diasVencido.toPluralCount(), diasVencido)
     }
+
+    private fun Long.toPluralCount(): Int = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
     private fun daysBetween(nowMs: Long, expiresAtMs: Long, timeZoneId: String): Long {
         val nowDate = Instant.ofEpochMilli(nowMs).atZone(ZoneId.of(timeZoneId)).toLocalDate()
@@ -131,27 +164,30 @@ object DocumentStatusCalculator {
         overrideRules: PicoYPlacaEngine.CityRules?,
         aiFallbackRules: PicoYPlacaEngine.CityRules?,
         nowMs: Long,
+        resolver: StringResolver,
     ): DocStatus {
-        val titulo = "Pico y placa"
+        val titulo = resolver.get(R.string.obd_doc_title_pico_placa)
+        val sinConfigurar = DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, resolver.get(R.string.obd_doc_not_configured))
         val plate = documents.plate?.trim()
         val cityId = documents.picoPlacaCity
-        if (cityId == null || plate.isNullOrEmpty()) {
-            return DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
-        }
+        if (cityId == null || plate.isNullOrEmpty()) return sinConfigurar
         val rules = pickActiveRules(cityId, overrideRules, aiFallbackRules, nowMs)
-            ?: return DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, rulesPendientesDetalle(cityId))
+            ?: return sinConfigurar.copy(detalle = rulesPendientesDetalle(cityId, resolver))
         val result = PicoYPlacaEngine.check(plate, documents.isMotorcycle, rules, nowMs)
         return when (result.status) {
             PicoYPlacaEngine.Status.SIN_RESTRICCION ->
-                DocStatus(DocType.PICO_Y_PLACA, Nivel.OK, titulo, sinRestriccionDetalle(documents, rules))
-            PicoYPlacaEngine.Status.RESTRINGIDO_HOY_FUERA_DE_HORARIO ->
-                DocStatus(DocType.PICO_Y_PLACA, Nivel.ATENCION, titulo, "No salgas hasta las ${result.endHour}:00", result.endHour)
-            PicoYPlacaEngine.Status.RESTRINGIDO_AHORA ->
-                DocStatus(DocType.PICO_Y_PLACA, Nivel.VENCIDO, titulo, "Hoy tienes restricción hasta las ${result.endHour}:00", result.endHour)
+                DocStatus(DocType.PICO_Y_PLACA, Nivel.OK, titulo, sinRestriccionDetalle(documents, rules, resolver))
+            PicoYPlacaEngine.Status.RESTRINGIDO_HOY_FUERA_DE_HORARIO -> DocStatus(
+                DocType.PICO_Y_PLACA, Nivel.ATENCION, titulo,
+                resolver.get(R.string.obd_doc_pico_placa_wait_until, result.endHour.toString()), result.endHour,
+            )
+            PicoYPlacaEngine.Status.RESTRINGIDO_AHORA -> DocStatus(
+                DocType.PICO_Y_PLACA, Nivel.VENCIDO, titulo,
+                resolver.get(R.string.obd_doc_pico_placa_restricted_until, result.endHour.toString()), result.endHour,
+            )
             PicoYPlacaEngine.Status.REGLAS_VENCIDAS ->
-                DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Actualiza las reglas del semestre")
-            PicoYPlacaEngine.Status.SIN_DATOS ->
-                DocStatus(DocType.PICO_Y_PLACA, Nivel.SIN_CONFIGURAR, titulo, "Por configurar")
+                sinConfigurar.copy(detalle = resolver.get(R.string.obd_doc_pico_placa_update_rules))
+            PicoYPlacaEngine.Status.SIN_DATOS -> sinConfigurar
         }
     }
 
@@ -170,11 +206,19 @@ object DocumentStatusCalculator {
         }
     }
 
-    private fun sinRestriccionDetalle(documents: VehicleDocuments, rules: PicoYPlacaEngine.CityRules): String =
-        if (documents.isMotorcycle && rules.motosExentas) "Motos exentas en ${rules.displayName}" else "Puedes salir"
+    private fun sinRestriccionDetalle(
+        documents: VehicleDocuments,
+        rules: PicoYPlacaEngine.CityRules,
+        resolver: StringResolver,
+    ): String =
+        if (documents.isMotorcycle && rules.motosExentas) {
+            resolver.get(R.string.obd_doc_pico_placa_motorcycles_exempt, rules.displayName)
+        } else {
+            resolver.get(R.string.obd_doc_pico_placa_free)
+        }
 
-    private fun rulesPendientesDetalle(cityId: String): String {
+    private fun rulesPendientesDetalle(cityId: String, resolver: StringResolver): String {
         val nombre = CityRegistry.CITIES.firstOrNull { it.id == cityId }?.nombre ?: cityId
-        return "Configura la rotación vigente de $nombre en Ajustes (JSON)"
+        return resolver.get(R.string.obd_doc_pico_placa_rules_pending, nombre)
     }
 }

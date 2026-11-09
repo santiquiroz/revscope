@@ -1,0 +1,26 @@
+<resources>
+    <string name="ds_close_notice">Close notice</string>
+    <string name="ds_ecu_capabilities">ECU capabilities</string>
+    <string name="ds_protocol">Protocol</string>
+    <string name="ds_announced_pids">Announced PIDs</string>
+    <string name="ds_expected_rate">Expected rate</string>
+    <string name="ds_ecu_no_pid_map">The ECU has not announced its PID map yet.</string>
+    <string name="ds_back">Back</string>
+    <string name="ds_voltage_reference_title">Voltage reference</string>
+    <string name="ds_save">Save</string>
+    <string name="ds_cancel">Cancel</string>
+    <string name="ds_voltage_reference_explanation">The ECU reports position as a percentage of its reference voltage (%1$s V typical). If you measured it with a multimeter, enter it here to save it for this vehicle.</string>
+    <string name="ds_voltage_reference_session">Measured with a multimeter in this session: %1$s</string>
+    <string name="ds_volts">Volts</string>
+    <string name="ds_voltage_reference_range">Between %1$s and %2$s V</string>
+    <string name="ds_state_ok">OK</string>
+    <string name="ds_state_attention">Attention</string>
+    <string name="ds_state_failure">Failure</string>
+    <string name="ds_state_no_data">No data</string>
+    <string name="ds_vehicle_fallback">No vehicle</string>
+    <string name="ds_vehicle_description_fallback">no vehicle</string>
+    <string name="ds_vehicle_selector_description">Vehicle: %1$s. Adapter: %2$s. Tap to change vehicle</string>
+    <string name="ds_retry">Retry</string>
+    <string name="ds_step_of_total">Step %1$d of %2$d</string>
+    <string name="ds_step_with_title">%1$s: %2$s</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_units_word_meters">meters</string>
+    <string name="settings_units_word_feet">feet</string>
+</resources>

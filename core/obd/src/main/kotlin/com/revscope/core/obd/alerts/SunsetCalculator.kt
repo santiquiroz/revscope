@@ -9,7 +9,7 @@ import kotlin.math.sin
 
 /**
  * Atardecer local por ecuación solar NOAA simplificada (declinación aproximada,
- * exactitud ±5 min — suficiente para un aviso de "enciende luces"). Puro y offline.
+ * exactitud ±5 min — suficiente para un aviso de "enciende luces"). Puro y offline. // i18n-ignore
  */
 object SunsetCalculator {
 

@@ -5,6 +5,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.revscope.core.common.units.UnitFormatter
+import com.revscope.core.common.units.UnitSystem
+import com.revscope.core.designsystem.R as DesignSystemR
+import com.revscope.core.uitesting.XmlStringResolver
 import com.revscope.core.data.db.entities.SessionEntity
 import com.revscope.core.designsystem.RevScopeTheme
 import org.junit.Assert.assertEquals
@@ -16,7 +20,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "es")
 class SemanticaViajesTest {
 
     @get:Rule
@@ -38,6 +42,7 @@ class SemanticaViajesTest {
             RevScopeTheme {
                 SessionHistoryContent(
                     historial = HistorialUi(sesiones, emptyList(), filtro = null, candidatoComparar = null),
+                    resolver = XmlStringResolver.es(R::class.java),
                     acciones = AccionesHistorial(
                         onAbrir = {},
                         onComparar = {},
@@ -58,7 +63,8 @@ class SemanticaViajesTest {
         compose.onNodeWithContentDescription("Borrar viaje").performClick()
 
         compose.onNodeWithText("¿Borrar el viaje?").assertIsDisplayed()
-        compose.onNodeWithText(descripcionViaje(viaje)).assertIsDisplayed()
+        val es = XmlStringResolver.es(R::class.java)
+        compose.onNodeWithText(descripcionViaje(viaje, es, UnitFormatter(UnitSystem.METRIC, es.locale))).assertIsDisplayed()
         assertTrue(borrados.isEmpty())
 
         compose.onNodeWithText("Borrar viaje").performClick()
@@ -72,7 +78,10 @@ class SemanticaViajesTest {
         montar(listOf(viaje), borrados)
 
         compose.onNodeWithContentDescription("Borrar viaje").performClick()
-        compose.onNodeWithText("Cancelar").performClick()
+        compose.onNodeWithText(
+            XmlStringResolver.es(DesignSystemR::class.java, resDirs = listOf("../../core/designsystem/src/main/res"))
+                .get(DesignSystemR.string.ds_cancel),
+        ).performClick()
 
         assertTrue(borrados.isEmpty())
     }
@@ -92,5 +101,14 @@ class SemanticaViajesTest {
         montar(listOf(viaje), mutableListOf())
 
         compose.onNodeWithContentDescription("Comparar este viaje").assertIsDisplayed()
+    }
+
+    @Test
+    fun `trip description uses English resources`() {
+        val en = XmlStringResolver.en(R::class.java)
+        val description = descripcionViaje(viaje, en, UnitFormatter(UnitSystem.METRIC, en.locale))
+
+        assertTrue(description.startsWith("Trip on "))
+        assertTrue(description.endsWith("12.3 km"))
     }
 }

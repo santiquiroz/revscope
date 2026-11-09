@@ -15,7 +15,7 @@ android {
         applicationId = "com.revscope.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
+        versionCode = 29
         // Al subir de versión se edita revscope.versionName en gradle.properties: core:common la usa en el User-Agent.
         versionName = providers.gradleProperty("revscope.versionName").get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -50,6 +50,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    androidResources {
+        localeFilters += listOf("en", "es")
     }
 
     testOptions {

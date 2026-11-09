@@ -3,6 +3,7 @@ package com.revscope.feature.workshop.taller.prueba
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.data.db.entities.VehicleType
 import com.revscope.core.obd.taller.grafica.EstadoVref
 import com.revscope.core.obd.taller.grafica.FuenteVref
@@ -24,6 +25,7 @@ import com.revscope.core.obd.taller.sesion.RegistroTaller
 import com.revscope.core.obd.taller.sesion.SolicitudSesion
 import com.revscope.core.obd.taller.sesion.TallerRepository
 import com.revscope.core.obd.taller.sesion.VehiculoActivo
+import com.revscope.feature.workshop.R
 import com.revscope.feature.workshop.taller.EntornoTaller
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -69,10 +71,11 @@ class PruebaGuiadaViewModel @Inject constructor(
     private val vehiculo: VehiculoActivo,
     private val registro: RegistroTaller,
     private val fuenteDesfase: FuenteDesfase,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val tipoDeArgumento = guardado.get<String>(ARG_TIPO)?.let { nombre -> TipoPrueba.entries.firstOrNull { it.name == nombre } }
-    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles)
+    private val pantalla = PantallaPrueba(CatalogoPruebas::definicion, CatalogoPruebas.disponibles, resolver)
     private val local = MutableStateFlow(LocalPrueba(tipo = tipoDeArgumento))
     private val salidas = Channel<Unit>(Channel.BUFFERED)
     val salir: Flow<Unit> = salidas.receiveAsFlow()
@@ -142,7 +145,7 @@ class PruebaGuiadaViewModel @Inject constructor(
 
     // null quita la calibración; con lo del multímetro se guarda la diferencia contra el adaptador.
     fun guardarDesfase(multimetroV: Double?) {
-        val nuevo = multimetroV?.let { CalibracionVoltaje.desde(it, local.value.voltajeAdaptador) ?: return avisar(NO_CALIBRA) }
+        val nuevo = multimetroV?.let { CalibracionVoltaje.desde(it, local.value.voltajeAdaptador) ?: return avisar(resolver.get(R.string.workshop_prueba_pantalla_no_calibra)) }
         cerrarDialogo()
         viewModelScope.launch {
             runCatching { fuenteDesfase.guardar(nuevo) }.onFailure { Timber.w(it, "Prueba guiada: no se pudo guardar el desfase") }
@@ -173,10 +176,11 @@ class PruebaGuiadaViewModel @Inject constructor(
     fun guardarEnSesion() = accion {
         val tipo = estado.value.fase.tipo ?: return@accion
         if (registro.sesionAbierta() == null) {
-            registro.abrirSesion(SolicitudSesion(titulo = tipo.titulo)).onFailure { return@accion avisar(it.message) }
+            registro.abrirSesion(SolicitudSesion(titulo = tipo.titulo(resolver))).onFailure { return@accion avisar(it.message) }
         }
         val id = controlador.guardarResultadoEnSesion()
-        avisar(if (id != null) "Resultado guardado en una sesión nueva" else "No se pudo guardar el resultado")
+        val texto = if (id != null) R.string.workshop_prueba_pantalla_guardado_sesion_nueva else R.string.workshop_prueba_pantalla_no_guardado
+        avisar(resolver.get(texto))
     }
 
     fun mensajeMostrado() = local.update { it.copy(mensaje = null) }
@@ -226,7 +230,7 @@ class PruebaGuiadaViewModel @Inject constructor(
                 val definicion = tipo?.let(CatalogoPruebas::definicion) ?: return@collectLatest
                 while (true) {
                     val ctx = ContextoPrueba(enlace.conectado(), enlace.lecturas(), enlace::soportado, entorno.ahora())
-                    local.update { it.copy(precondiciones = definicion.precondiciones.map { p -> p.evaluar(ctx) }) }
+                    local.update { it.copy(precondiciones = definicion.precondiciones.map { p -> p.evaluar(ctx, resolver) }) }
                     delay(REFRESCO_PRECONDICIONES_MS)
                 }
             }
@@ -246,11 +250,10 @@ class PruebaGuiadaViewModel @Inject constructor(
         }
     }
 
-    private fun avisar(mensaje: String?) = local.update { it.copy(mensaje = mensaje ?: "Algo salió mal") }
+    private fun avisar(mensaje: String?) = local.update { it.copy(mensaje = mensaje ?: resolver.get(R.string.workshop_prueba_pantalla_error_generico)) }
 
     companion object {
         const val ARG_TIPO = "tipo"
-        private const val NO_CALIBRA = "Sin lectura del adaptador o con más de 1 V de diferencia: no se calibró"
         private const val DETENER_TRAS_MS = 5_000L
         private const val REFRESCO_SERIE_MS = 150L
         private const val REFRESCO_PRECONDICIONES_MS = 1_000L

@@ -24,8 +24,8 @@ enum class TipoNota { NOTA, EJEMPLO, PENDIENTE, FUENTE }
 
 data class NotaModelo(val tipo: TipoNota, val texto: String, val fuente: String, val url: String? = null) {
     init {
-        require(texto.isNotBlank()) { "Nota sin texto" }
-        require(fuente.isNotBlank()) { "La nota «$texto» necesita citar la fuente" }
+        require(texto.isNotBlank()) { "Nota sin texto" } // i18n-ignore
+        require(fuente.isNotBlank()) { "La nota «$texto» necesita citar la fuente" } // i18n-ignore
     }
 }
 
@@ -40,8 +40,8 @@ data class RepuestoModelo(
     val fuente: String,
 ) {
     init {
-        require(referencia.isNotBlank()) { "Repuesto $rol sin referencia" }
-        require(fuente.isNotBlank()) { "El repuesto $referencia necesita citar la fuente" }
+        require(referencia.isNotBlank()) { "Repuesto $rol sin referencia" } // i18n-ignore
+        require(fuente.isNotBlank()) { "El repuesto $referencia necesita citar la fuente" } // i18n-ignore
     }
 }
 
@@ -52,8 +52,8 @@ data class CableadoSensor(
     val fuente: String,
 ) {
     init {
-        require(cables.isNotEmpty()) { "Cableado de $sensor sin cables" }
-        require(fuente.isNotBlank()) { "El cableado de $sensor necesita citar la fuente" }
+        require(cables.isNotEmpty()) { "Cableado de $sensor sin cables" } // i18n-ignore
+        require(fuente.isNotBlank()) { "El cableado de $sensor necesita citar la fuente" } // i18n-ignore
     }
 }
 

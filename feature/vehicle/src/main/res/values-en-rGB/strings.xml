@@ -1,0 +1,8 @@
+<resources>
+    <string name="vehicle_motorcycle">Motorbike</string>
+    <string name="vehicle_license_plate">Number plate</string>
+    <string name="vehicle_delete_profile_warning">This deletes the profile and its settings: PIDs, gears, number plate, and document expiry dates. You can’t undo this.</string>
+    <string name="vehicle_can_test_gear">Change gear and check if it matches</string>
+    <string name="vehicle_can_test_rpm">Rev a little and compare with the rev counter</string>
+    <string name="vehicle_can_test_speed">Push the motorbike and compare with the speedometer</string>
+</resources>

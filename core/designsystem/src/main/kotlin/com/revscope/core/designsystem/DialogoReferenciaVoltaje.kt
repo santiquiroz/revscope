@@ -18,6 +18,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import com.revscope.core.common.i18n.LocaleNumbers
+import java.util.Locale
 
 /**
  * Editor de la referencia con la que un % de posición se pasa a voltios. [leer] valida el texto (coma o
@@ -34,14 +38,16 @@ fun DialogoReferenciaVoltaje(
 ) {
     var texto by remember { mutableStateOf(valorInicial) }
     val valor = leer(texto)
+    val locale = LocalConfiguration.current.locales[0]
+    val referenciaTipica = LocaleNumbers.decimal(5.0, 1, locale)
     AlertDialog(
         onDismissRequest = onCerrar,
         containerColor = RevScopeColors.SurfaceHigh,
-        title = { Text("Referencia de voltaje", color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
-        text = { CuerpoReferencia(texto, valor != null, medida) { texto = it } },
+        title = { Text(stringResource(R.string.ds_voltage_reference_title), color = RevScopeColors.TextPrimary, style = RevScopeType.title) },
+        text = { CuerpoReferencia(texto, valor != null, medida, referenciaTipica, locale) { texto = it } },
         confirmButton = {
             TextButton(onClick = { onGuardar(valor) }, enabled = valor != null, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Guardar", color = if (valor != null) RevScopeColors.Accent else RevScopeColors.TextSecondary, style = RevScopeType.label)
+                Text(stringResource(R.string.ds_save), color = if (valor != null) RevScopeColors.Accent else RevScopeColors.TextSecondary, style = RevScopeType.label)
             }
         },
         dismissButton = {
@@ -52,7 +58,7 @@ fun DialogoReferenciaVoltaje(
                     }
                 }
                 TextButton(onClick = onCerrar, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text("Cancelar", color = RevScopeColors.TextPrimary, style = RevScopeType.label)
+                    Text(stringResource(R.string.ds_cancel), color = RevScopeColors.TextPrimary, style = RevScopeType.label)
                 }
             }
         },
@@ -60,21 +66,38 @@ fun DialogoReferenciaVoltaje(
 }
 
 @Composable
-private fun CuerpoReferencia(texto: String, valido: Boolean, medida: String?, onTexto: (String) -> Unit) {
+private fun CuerpoReferencia(
+    texto: String,
+    valido: Boolean,
+    medida: String?,
+    referenciaTipica: String,
+    locale: Locale,
+    onTexto: (String) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            "La ECU da la posición en % de su referencia (5,0 V típico). Si la mediste con el multímetro, anótala " +
-                "aquí: se guarda para este vehículo.",
+            stringResource(R.string.ds_voltage_reference_explanation, referenciaTipica),
             color = RevScopeColors.TextSecondary,
             style = RevScopeType.body,
         )
-        medida?.let { Text("En esta sesión: $it medida con el multímetro", color = RevScopeColors.TextPrimary, style = RevScopeType.body) }
+        medida?.let {
+            Text(stringResource(R.string.ds_voltage_reference_session, it), color = RevScopeColors.TextPrimary, style = RevScopeType.body)
+        }
         OutlinedTextField(
             value = texto,
             onValueChange = onTexto,
-            label = { Text("Voltios") },
+            label = { Text(stringResource(R.string.ds_volts)) },
             isError = !valido,
-            supportingText = { Text("Entre 3,0 y 5,5 V", color = if (valido) RevScopeColors.TextSecondary else RevScopeColors.Danger) },
+            supportingText = {
+                Text(
+                    stringResource(
+                        R.string.ds_voltage_reference_range,
+                        LocaleNumbers.decimal(3.0, 1, locale),
+                        LocaleNumbers.decimal(5.5, 1, locale),
+                    ),
+                    color = if (valido) RevScopeColors.TextSecondary else RevScopeColors.Danger,
+                )
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
