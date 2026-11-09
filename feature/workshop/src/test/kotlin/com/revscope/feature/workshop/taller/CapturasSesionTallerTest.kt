@@ -11,6 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
@@ -22,7 +23,7 @@ class CapturasSesionTallerTest {
 
     private fun hub(abierta: Boolean, conexion: ConnectionState) =
         ResumenHub.de(
-            CasoBenelli.datosHub(abierta), conexion, verTodas = false, zona = BOGOTA,
+            CasoBenelli.datosHub(abierta), conexion, verTodas = false, zona = BOGOTA, locale = Locale("es"),
             capacidades = CapacidadesEcu.desde(null, emptySet(), com.revscope.feature.workshop.taller.prueba.resolverPrueba()),
         )
 

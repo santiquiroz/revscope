@@ -16,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.util.Locale
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -69,6 +70,7 @@ class CapturasReadmeWorkshopTest {
             CasoBenelli.conectado,
             verTodas = false,
             zona = BOGOTA,
+            locale = Locale.US,
             capacidades = capacidades,
         )
         RuntimeEnvironment.setQualifiers("en-w412dp-h2000dp-xxhdpi")

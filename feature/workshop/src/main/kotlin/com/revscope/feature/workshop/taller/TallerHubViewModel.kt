@@ -2,6 +2,7 @@ package com.revscope.feature.workshop.taller
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.revscope.core.common.i18n.StringResolver
 import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.taller.sesion.TallerRepository
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
@@ -23,6 +24,7 @@ import javax.inject.Inject
 class TallerHubViewModel @Inject constructor(
     private val repositorio: TallerRepository,
     private val entorno: EntornoTaller,
+    private val resolver: StringResolver,
 ) : ViewModel() {
 
     private val verTodas = MutableStateFlow(false)
@@ -34,7 +36,7 @@ class TallerHubViewModel @Inject constructor(
             verTodas,
             entorno.capacidades,
         ) { datos, conexion, todas, capacidades ->
-            ResumenHub.de(datos, conexion, todas, entorno.zona, capacidades)
+            ResumenHub.de(datos, conexion, todas, entorno.zona, resolver.locale, capacidades)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(DETENER_TRAS_MS), TallerHubEstado())
 
     fun alternarVerTodas() {
