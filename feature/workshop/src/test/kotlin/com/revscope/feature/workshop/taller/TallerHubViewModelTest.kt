@@ -37,7 +37,7 @@ class TallerHubViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun TestScope.vmActivo(): TallerHubViewModel =
-        TallerHubViewModel(repositorio, entorno).also { vm -> backgroundScope.launch { vm.estado.collect {} } }
+        TallerHubViewModel(repositorio, entorno, XmlStringResolver.es(R::class.java)).also { vm -> backgroundScope.launch { vm.estado.collect {} } }
 
     private fun sesion(id: Long, inicio: Long, cierre: Long? = null, vehiculo: Long = BENELLI.id) =
         SesionTaller(id = id, vehiculoId = vehiculo, inicio = inicio, cierre = cierre, titulo = "Sesión $id")

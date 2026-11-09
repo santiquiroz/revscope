@@ -8,6 +8,7 @@ import com.revscope.core.obd.taller.sesion.SesionTaller
 import com.revscope.core.obd.taller.sesion.VehiculoTaller
 import com.revscope.core.obd.taller.pid.CapacidadesEcu
 import java.time.ZoneId
+import java.util.Locale
 
 sealed interface EstadoAdaptador {
     data class Conectado(val dispositivo: String) : EstadoAdaptador
@@ -62,6 +63,7 @@ internal object ResumenHub {
         conexion: ConnectionState,
         verTodas: Boolean,
         zona: ZoneId,
+        locale: Locale,
         capacidades: CapacidadesEcu = CapacidadesEcu.SIN_DATOS,
     ): TallerHubEstado {
         val abierta = datos.sesiones.firstOrNull { it.abierta }
@@ -70,8 +72,8 @@ internal object ResumenHub {
             vehiculo = datos.vehiculo?.nombre,
             esMoto = datos.vehiculo?.tipo?.let { it == VehicleType.MOTORCYCLE } ?: true,
             adaptador = adaptador(conexion),
-            sesionAbierta = abierta?.let { tarjeta(it, datos.eventosAbierta, zona) },
-            anteriores = datos.sesiones.filterNot { it.abierta }.sortedByDescending { it.inicio }.map { fila(it, zona) },
+            sesionAbierta = abierta?.let { tarjeta(it, datos.eventosAbierta, zona, locale) },
+            anteriores = datos.sesiones.filterNot { it.abierta }.sortedByDescending { it.inicio }.map { fila(it, zona, locale) },
             verTodas = verTodas,
             capacidades = capacidades,
         )
@@ -84,21 +86,21 @@ internal object ResumenHub {
         is ConnectionState.Error -> EstadoAdaptador.ConError(conexion.message)
     }
 
-    private fun tarjeta(sesion: SesionTaller, eventos: List<EventoTaller>, zona: ZoneId): TarjetaSesionAbierta {
+    private fun tarjeta(sesion: SesionTaller, eventos: List<EventoTaller>, zona: ZoneId, locale: Locale): TarjetaSesionAbierta {
         val ultimo = LineaDeTiempo.ordenar(eventos).lastOrNull()
         return TarjetaSesionAbierta(
             id = sesion.id,
             titulo = sesion.titulo,
-            desde = FechasTaller.fechaHora(sesion.inicio, zona),
+            desde = FechasSesion.fechaHora(sesion.inicio, zona, locale),
             codigos = EstadoSesion.codigosActuales(eventos),
             eventos = eventos.size,
-            ultimoEvento = ultimo?.let { "${FechasTaller.hora(it.instante, zona)} · ${it.titulo}" },
+            ultimoEvento = ultimo?.let { "${FechasSesion.hora(it.instante, zona, locale)} · ${it.titulo}" },
         )
     }
 
-    private fun fila(sesion: SesionTaller, zona: ZoneId): FilaSesionAnterior {
-        val cierre = sesion.cierre?.let { " – ${FechasTaller.hora(it, zona)}" }.orEmpty()
-        return FilaSesionAnterior(sesion.id, sesion.titulo, "${FechasTaller.fechaHora(sesion.inicio, zona)}$cierre")
+    private fun fila(sesion: SesionTaller, zona: ZoneId, locale: Locale): FilaSesionAnterior {
+        val cierre = sesion.cierre?.let { " – ${FechasSesion.hora(it, zona, locale)}" }.orEmpty()
+        return FilaSesionAnterior(sesion.id, sesion.titulo, "${FechasSesion.fechaHora(sesion.inicio, zona, locale)}$cierre")
     }
 }
 
