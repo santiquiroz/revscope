@@ -25,6 +25,7 @@ internal fun accionesHub(nav: NavHostController): AccionesHub {
         onMarchas = ir(Screen.GearAnalyzer),
         onPerfiles = ir(Screen.VehicleProfile),
         onMantenimiento = ir(Screen.Maintenance),
+        onTanqueos = ir(Screen.Tanqueos),
         onOdometro = ir(Screen.Odometer),
         onVelocimetros = ir(Screen.SpeedComparison),
         onConocimientoModelo = ir(Screen.ConocimientoModelo),

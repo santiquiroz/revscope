@@ -69,6 +69,8 @@
     <string name="workshop_hub_tool_vehicle_profiles_description">Vehículos guardados, línea roja y VIN</string>
     <string name="workshop_hub_tool_maintenance">Mantenimiento</string>
     <string name="workshop_hub_tool_maintenance_description">Aceite, llantas, batería y otros ítems por kilometraje</string>
+    <string name="workshop_hub_tool_fuel_log">Tanqueos</string>
+    <string name="workshop_hub_tool_fuel_log_description">Registra tanqueos y calibra el consumo estimado</string>
     <string name="workshop_hub_tool_odometer_check">Verificación de kilometraje</string>
     <string name="workshop_hub_tool_odometer_check_description">Odómetro real de la ECU e histórico contra manipulación</string>
     <string name="workshop_hub_tool_compare_speed">Comparar velocímetros</string>

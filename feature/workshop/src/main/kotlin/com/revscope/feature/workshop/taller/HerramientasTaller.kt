@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.LocalGasStation
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.revscope.feature.workshop.R
@@ -43,6 +44,7 @@ data class AccionesHub(
     val onMarchas: () -> Unit = {},
     val onPerfiles: () -> Unit = {},
     val onMantenimiento: () -> Unit = {},
+    val onTanqueos: () -> Unit = {},
     val onOdometro: () -> Unit = {},
     val onVelocimetros: () -> Unit = {},
     val onConocimientoModelo: () -> Unit = {},
@@ -198,6 +200,13 @@ internal object HerramientasTaller {
                     R.string.workshop_hub_tool_maintenance_description,
                     false,
                     a.onMantenimiento,
+                ),
+                HerramientaTaller(
+                    Icons.Filled.LocalGasStation,
+                    R.string.workshop_hub_tool_fuel_log,
+                    R.string.workshop_hub_tool_fuel_log_description,
+                    false,
+                    a.onTanqueos,
                 ),
                 HerramientaTaller(
                     Icons.Filled.Speed,

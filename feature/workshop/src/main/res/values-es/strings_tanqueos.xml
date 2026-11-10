@@ -1,0 +1,33 @@
+<resources>
+    <string name="workshop_fuel_log_title">Tanqueos</string>
+    <string name="workshop_fuel_log_choose_vehicle_message">Elige un vehículo para administrar sus tanqueos.</string>
+    <string name="workshop_fuel_log_choose_vehicle">Elegir vehículo</string>
+    <string name="workshop_fuel_log_calibration">Calibración del consumo</string>
+    <string name="workshop_fuel_log_current_factor">Factor actual: %1$s</string>
+    <string name="workshop_fuel_log_suggestion">Tu estimado difiere %1$s en %2$d intervalos.</string>
+    <string name="workshop_fuel_log_apply_factor">Aplicar %1$s</string>
+    <string name="workshop_fuel_log_matches">El estimado coincide con tus tanqueos (desvío %1$s).</string>
+    <string name="workshop_fuel_log_help">Tanquea siempre hasta lleno y registra todos los viajes con RevScope.</string>
+    <plurals name="workshop_fuel_log_more_intervals">
+        <item quantity="one">Registra %1$d tanqueo más hasta tanque lleno para calibrar</item>
+        <item quantity="other">Registra %1$d tanqueos más hasta tanque lleno para calibrar</item>
+    </plurals>
+    <string name="workshop_fuel_log_intervals">Intervalos</string>
+    <string name="workshop_fuel_log_entries">Tanqueos</string>
+    <string name="workshop_fuel_log_comparison">Real: %1$s · estimado: %2$s · desvío: %3$s</string>
+    <string name="workshop_fuel_log_used">Usado</string>
+    <string name="workshop_fuel_log_ignored_before_factor">Anterior al factor actual</string>
+    <string name="workshop_fuel_log_ignored_no_data">Datos de combustible insuficientes</string>
+    <string name="workshop_fuel_log_ignored_incomplete">Un viaje no tiene estimado de combustible</string>
+    <string name="workshop_fuel_log_ignored_deviation">El desvío supera el 25 %</string>
+    <string name="workshop_fuel_log_full">Lleno</string>
+    <string name="workshop_fuel_log_partial">Parcial</string>
+    <string name="workshop_fuel_log_delete">Borrar tanqueo</string>
+    <string name="workshop_fuel_log_add">Registrar tanqueo</string>
+    <string name="workshop_fuel_log_volume">Volumen (%1$s)</string>
+    <string name="workshop_fuel_log_full_tank">Tanque lleno</string>
+    <string name="workshop_fuel_log_invalid_volume">Ingresa un volumen válido mayor que cero.</string>
+    <string name="workshop_fuel_log_save">Guardar</string>
+    <string name="workshop_fuel_log_gallons">gal</string>
+    <string name="workshop_fuel_log_liters">L</string>
+</resources>

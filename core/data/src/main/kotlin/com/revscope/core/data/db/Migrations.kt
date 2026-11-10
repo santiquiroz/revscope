@@ -207,6 +207,22 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
     }
 }
 
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `fuel_ups` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`vehicleProfileId` INTEGER NOT NULL, " +
+                "`timestamp` INTEGER NOT NULL, " +
+                "`liters` REAL NOT NULL, " +
+                "`fullTank` INTEGER NOT NULL)",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_fuel_ups_vehicleProfileId` ON `fuel_ups` (`vehicleProfileId`)")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `fuelFactor` REAL NOT NULL DEFAULT 1.0")
+        db.execSQL("ALTER TABLE `vehicle_profiles` ADD COLUMN `fuelFactorSince` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 // Al final del archivo: los val de nivel superior se inicializan en orden de aparición.
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_9_10,
@@ -221,4 +237,5 @@ val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_18_19,
     MIGRATION_19_20,
     MIGRATION_20_21,
+    MIGRATION_21_22,
 )

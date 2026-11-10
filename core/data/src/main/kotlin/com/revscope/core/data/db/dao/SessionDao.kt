@@ -20,6 +20,9 @@ interface SessionDao {
     @Query("SELECT * FROM sessions ORDER BY startedAt DESC")
     fun observeAll(): Flow<List<SessionEntity>>
 
+    @Query("SELECT * FROM sessions WHERE vehicleProfileId = :profileId AND endedAt IS NOT NULL ORDER BY startedAt ASC")
+    fun observeClosedForProfile(profileId: Long): Flow<List<SessionEntity>>
+
     @Query("SELECT * FROM sessions WHERE id = :id")
     suspend fun getById(id: Long): SessionEntity?
 

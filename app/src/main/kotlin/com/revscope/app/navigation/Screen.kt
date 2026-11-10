@@ -47,6 +47,7 @@ sealed class Screen(val route: String) {
         fun withArgs(vehiculoId: Long, clave: String) = "prueba_en_vivo/$vehiculoId/$clave"
     }
     object Maintenance : Screen("maintenance")
+    object Tanqueos : Screen("tanqueos")
     object Odometer : Screen("odometer")
     object SpeedComparison : Screen("speed_comparison")
     object MechanicChat : Screen("mechanic_chat")

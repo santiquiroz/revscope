@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.revscope.core.data.db.dao.DiagSessionDao
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.FuelUpDao
 import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -19,6 +20,7 @@ import com.revscope.core.data.db.dao.VehicleProfileDao
 import com.revscope.core.data.db.entities.DiagEventEntity
 import com.revscope.core.data.db.entities.DiagSessionEntity
 import com.revscope.core.data.db.entities.GpsPointEntity
+import com.revscope.core.data.db.entities.FuelUpEntity
 import com.revscope.core.data.db.entities.HealthReportEntity
 import com.revscope.core.data.db.entities.HrPointEntity
 import com.revscope.core.data.db.entities.ImuPointEntity
@@ -53,8 +55,9 @@ import com.revscope.core.data.db.entities.VehicleProfileEntity
         VehicleKnowledgeEntity::class,
         VehiclePartEntity::class,
         ReferenceBandEntity::class,
+        FuelUpEntity::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -72,4 +75,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun savedPlaceDao(): SavedPlaceDao
     abstract fun diagSessionDao(): DiagSessionDao
     abstract fun vehicleKnowledgeDao(): VehicleKnowledgeDao
+    abstract fun fuelUpDao(): FuelUpDao
 }

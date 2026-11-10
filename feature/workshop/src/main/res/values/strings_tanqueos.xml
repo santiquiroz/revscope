@@ -1,0 +1,33 @@
+<resources>
+    <string name="workshop_fuel_log_title">Fuel log</string>
+    <string name="workshop_fuel_log_choose_vehicle_message">Select a vehicle to manage its fuel log.</string>
+    <string name="workshop_fuel_log_choose_vehicle">Choose vehicle</string>
+    <string name="workshop_fuel_log_calibration">Fuel consumption calibration</string>
+    <string name="workshop_fuel_log_current_factor">Current factor: %1$s</string>
+    <string name="workshop_fuel_log_suggestion">Your estimate differs by %1$s across %2$d intervals.</string>
+    <string name="workshop_fuel_log_apply_factor">Apply %1$s</string>
+    <string name="workshop_fuel_log_matches">The estimate matches your fill-ups (deviation %1$s).</string>
+    <string name="workshop_fuel_log_help">Always fill the tank completely and record every trip with RevScope.</string>
+    <plurals name="workshop_fuel_log_more_intervals">
+        <item quantity="one">Record %1$d more fill-up to a full tank to calibrate</item>
+        <item quantity="other">Record %1$d more fill-ups to a full tank to calibrate</item>
+    </plurals>
+    <string name="workshop_fuel_log_intervals">Intervals</string>
+    <string name="workshop_fuel_log_entries">Fill-ups</string>
+    <string name="workshop_fuel_log_comparison">Real: %1$s · estimated: %2$s · deviation: %3$s</string>
+    <string name="workshop_fuel_log_used">Used</string>
+    <string name="workshop_fuel_log_ignored_before_factor">Before current factor</string>
+    <string name="workshop_fuel_log_ignored_no_data">Not enough fuel data</string>
+    <string name="workshop_fuel_log_ignored_incomplete">A trip has no fuel estimate</string>
+    <string name="workshop_fuel_log_ignored_deviation">Deviation exceeds 25%</string>
+    <string name="workshop_fuel_log_full">Full</string>
+    <string name="workshop_fuel_log_partial">Partial</string>
+    <string name="workshop_fuel_log_delete">Delete fill-up</string>
+    <string name="workshop_fuel_log_add">Record fill-up</string>
+    <string name="workshop_fuel_log_volume">Volume (%1$s)</string>
+    <string name="workshop_fuel_log_full_tank">Full tank</string>
+    <string name="workshop_fuel_log_invalid_volume">Enter a valid volume greater than zero.</string>
+    <string name="workshop_fuel_log_save">Save</string>
+    <string name="workshop_fuel_log_gallons">gal</string>
+    <string name="workshop_fuel_log_liters">L</string>
+</resources>

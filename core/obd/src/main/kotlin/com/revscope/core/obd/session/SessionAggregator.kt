@@ -16,6 +16,7 @@ import com.revscope.core.data.db.entities.vehicleType
 import com.revscope.core.obd.telemetry.TripStatsCalculator
 import com.revscope.core.obd.trip.EcoScoreCalculator
 import com.revscope.core.obd.trip.FuelCostCalculator
+import com.revscope.core.obd.trip.conFactor
 import timber.log.Timber
 import kotlin.math.roundToInt
 
@@ -29,11 +30,6 @@ class SessionAggregator(
     private val regionProvider: () -> Region = { Region.system() },
 ) {
 
-    /**
-     * Closes the session and fills the trip aggregates.
-     * [activeProfileProvider] is called lazily at the point the redline is needed,
-     * matching the manager's original "read the latest active profile" semantics. // i18n-ignore // i18n-ignore
-     */
     suspend fun close(sessionId: Long, activeProfileProvider: () -> VehicleProfileEntity?) {
         val session = sessionDao.getById(sessionId) ?: return
         val maxRpm = telemetryDao.maxValue(sessionId, "0C") ?: 0f
@@ -83,19 +79,21 @@ class SessionAggregator(
         sessionId: Long,
         activeProfileProvider: () -> VehicleProfileEntity?,
     ): TripAggregates? = runCatching {
-        val fuelType = activeProfileProvider()?.fuelType
-        val fuel = computeFuelResult(sessionId, fuelType)
+        val profile = activeProfileProvider()
+        val fuel = computeFuelResult(sessionId, profile?.fuelType, profile?.fuelFactor ?: 1.0)
         TripAggregates(
             fuelLiters = fuel?.liters,
             fuelCostCop = fuel?.cost,
-            ecoScore = computeEcoScore(sessionId, activeProfileProvider),
+            ecoScore = computeEcoScore(sessionId, profile),
         )
     }.onFailure { Timber.w(it, "SessionAggregator: failed to compute trip aggregates") }
         .getOrNull()
 
-    private suspend fun computeFuelResult(sessionId: Long, fuelType: String?): TripFuel? {
+    private suspend fun computeFuelResult(sessionId: Long, fuelType: String?, factor: Double): TripFuel? {
         val pricePerGallon = FuelPricePrefs.priceFor(FuelPricePrefs.read(settings, regionProvider()), fuelType)
-        return computeFuelLiters(sessionId, pricePerGallon ?: 0.0)?.let { tripFuel(it, pricePerGallon) }
+        return computeFuelLiters(sessionId, pricePerGallon ?: 0.0)
+            ?.conFactor(factor)
+            ?.let { tripFuel(it, pricePerGallon) }
     }
 
     private suspend fun computeFuelLiters(sessionId: Long, pricePerGallon: Double): FuelCostCalculator.FuelResult? {
@@ -107,14 +105,13 @@ class SessionAggregator(
         return FuelCostCalculator.fromMaf(mafPoints, pricePerGallon)
     }
 
-    private suspend fun computeEcoScore(sessionId: Long, activeProfileProvider: () -> VehicleProfileEntity?): Int? {
+    private suspend fun computeEcoScore(sessionId: Long, profile: VehicleProfileEntity?): Int? {
         // ImuPointEntity.gLong is in G — EcoScoreCalculator's thresholds are m/s².
         val accelLongitudinal = imuDao.pointsForSession(sessionId)
             .map { it.gLong.toDouble() * EARTH_GRAVITY_MS2 }
         val rpmPoints = telemetryDao.pointsForSessionAndPid(sessionId, "0C")
             .map { it.timestamp to it.value.toDouble() }
         if (accelLongitudinal.isEmpty() && rpmPoints.isEmpty()) return null
-        val profile = activeProfileProvider()
         val redlineRpm = profile?.redlineRpm ?: defaultRedlineRpm(profile?.vehicleType ?: VehicleType.CAR)
         return EcoScoreCalculator.calculate(accelLongitudinal, rpmPoints, redlineRpm).score
     }
