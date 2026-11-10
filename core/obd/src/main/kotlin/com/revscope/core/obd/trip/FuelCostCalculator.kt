@@ -53,3 +53,6 @@ object FuelCostCalculator {
         return total
     }
 }
+
+fun FuelCostCalculator.FuelResult.conFactor(factor: Double): FuelCostCalculator.FuelResult =
+    copy(liters = liters * factor, costCop = costCop * factor)

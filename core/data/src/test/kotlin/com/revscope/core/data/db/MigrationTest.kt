@@ -96,6 +96,17 @@ class MigrationTest {
     }
 
     @Test
+    fun `migra 21 a 22 crea fuel_ups y deja el factor en 1`() {
+        helper.createDatabase(TEST_DB, 21).use(::seedMotoWithSession)
+
+        helper.runMigrationsAndValidate(TEST_DB, 22, true, MIGRATION_21_22).use { db ->
+            assertEquals(1.0, db.firstColumn("SELECT fuelFactor FROM vehicle_profiles WHERE id = 1") { it.getDouble(0) }, 0.0)
+            assertEquals(0, db.queryInt("SELECT fuelFactorSince FROM vehicle_profiles WHERE id = 1"))
+            assertEquals(0, db.queryInt("SELECT COUNT(*) FROM fuel_ups"))
+        }
+    }
+
+    @Test
     fun `9 a 19 encadenado conserva la moto y la sesion con los defaults nuevos`() {
         helper.createDatabase(TEST_DB, 9).use(::seedMotoWithSession)
 

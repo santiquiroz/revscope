@@ -64,4 +64,8 @@ data class VehicleProfileEntity(
     /** JSON clave → "AUTO" | "PID" | "BUS" | "GPS" | "CALCULADA". `defaultValue` debe coincidir con MIGRATION_19_20. */
     @ColumnInfo(defaultValue = "{}")
     val fuentesPorSenal: String = "{}",
+    @ColumnInfo(defaultValue = "1.0")
+    val fuelFactor: Double = 1.0,
+    @ColumnInfo(defaultValue = "0")
+    val fuelFactorSince: Long = 0,
 )

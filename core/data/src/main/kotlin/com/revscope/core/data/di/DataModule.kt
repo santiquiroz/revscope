@@ -11,6 +11,7 @@ import com.revscope.core.data.db.AppDatabase
 import com.revscope.core.data.db.ALL_MIGRATIONS
 import com.revscope.core.data.db.dao.DiagSessionDao
 import com.revscope.core.data.db.dao.GpsDao
+import com.revscope.core.data.db.dao.FuelUpDao
 import com.revscope.core.data.db.dao.HealthReportDao
 import com.revscope.core.data.db.dao.HrDao
 import com.revscope.core.data.db.dao.ImuDao
@@ -59,6 +60,9 @@ object DataModule {
 
     @Provides
     fun provideSessionDao(db: AppDatabase): SessionDao = db.sessionDao()
+
+    @Provides
+    fun provideFuelUpDao(db: AppDatabase): FuelUpDao = db.fuelUpDao()
 
     @Provides
     fun provideTelemetryDao(db: AppDatabase): TelemetryDao = db.telemetryDao()

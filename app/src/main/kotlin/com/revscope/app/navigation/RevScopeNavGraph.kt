@@ -58,6 +58,7 @@ import com.revscope.feature.workshop.AlDiaScreen
 import com.revscope.feature.workshop.HealthCheckScreen
 import com.revscope.feature.workshop.LiveMixtureScreen
 import com.revscope.feature.workshop.MaintenanceScreen
+import com.revscope.feature.workshop.TanqueosScreen
 import com.revscope.feature.workshop.MechanicChatScreen
 import com.revscope.feature.workshop.Mode06Screen
 import com.revscope.feature.workshop.O2WaveScreen
@@ -327,6 +328,12 @@ fun RevScopeNavGraph(
                 }
                 composable(Screen.Maintenance.route) {
                     MaintenanceScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onElegirVehiculo = { navController.navigate(Screen.VehicleProfile.route) },
+                    )
+                }
+                composable(Screen.Tanqueos.route) {
+                    TanqueosScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onElegirVehiculo = { navController.navigate(Screen.VehicleProfile.route) },
                     )

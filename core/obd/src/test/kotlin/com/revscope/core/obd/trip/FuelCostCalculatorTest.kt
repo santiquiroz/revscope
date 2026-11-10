@@ -74,4 +74,14 @@ class FuelCostCalculatorTest {
     fun `fromMaf con un solo punto retorna null`() {
         assertNull(FuelCostCalculator.fromMaf(listOf(0L to 14.7), precioGalonCop))
     }
+
+    @Test
+    fun `conFactor escala litros y costo y conserva estimado`() {
+        val original = FuelCostCalculator.FuelResult(2.0, 8_000.0, estimado = true)
+        val corregido = original.conFactor(1.2)
+
+        assertEquals(2.4, corregido.liters, 0.0)
+        assertEquals(9_600.0, corregido.costCop, 0.0)
+        assertEquals(true, corregido.estimado)
+    }
 }

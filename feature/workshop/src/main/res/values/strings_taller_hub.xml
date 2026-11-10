@@ -69,6 +69,8 @@
     <string name="workshop_hub_tool_vehicle_profiles_description">Saved vehicles, redline and VIN</string>
     <string name="workshop_hub_tool_maintenance">Maintenance</string>
     <string name="workshop_hub_tool_maintenance_description">Oil, tires, battery and other mileage-based items</string>
+    <string name="workshop_hub_tool_fuel_log">Fuel log</string>
+    <string name="workshop_hub_tool_fuel_log_description">Record fill-ups and calibrate fuel estimates</string>
     <string name="workshop_hub_tool_odometer_check">Odometer check</string>
     <string name="workshop_hub_tool_odometer_check_description">ECU odometer and history to check for tampering</string>
     <string name="workshop_hub_tool_compare_speed">Compare speed readings</string>
