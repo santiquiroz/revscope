@@ -77,6 +77,9 @@
     <string name="obd_diag_voltage_ok_cause">Sistema de carga dentro del rango</string>
     <string name="obd_diag_overheating">Sobrecalentamiento (%1$s°C)</string>
     <string name="obd_diag_overheating_cause">Detener el motor — revisar refrigerante, bomba, ventilador y termostato</string>
+    <string name="obd_diag_overheating_cause_air_oil">Detener el motor — revisar nivel y estado del aceite, flujo de aire al motor y mezcla pobre</string>
+    <string name="obd_diag_temp_high_engine_off">Temperatura alta con motor apagado (%1$s°C)</string>
+    <string name="obd_diag_temp_high_engine_off_cause">Calor residual tras apagar — repetir el chequeo con el motor en marcha</string>
     <string name="obd_diag_temperature_ok">Temperatura %1$s°C</string>
     <string name="obd_diag_temperature_ok_cause">Dentro del rango de operación</string>
     <plurals name="obd_diag_mil_on">

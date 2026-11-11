@@ -68,4 +68,7 @@ data class VehicleProfileEntity(
     val fuelFactor: Double = 1.0,
     @ColumnInfo(defaultValue = "0")
     val fuelFactorSince: Long = 0,
+    /** "LIQUIDA" | "AIRE_ACEITE". `defaultValue` debe coincidir con MIGRATION_22_23. */
+    @ColumnInfo(defaultValue = "LIQUIDA")
+    val refrigeracion: String = "LIQUIDA",
 )

@@ -2,6 +2,8 @@ package com.revscope.core.obd.workshop
 
 import com.revscope.core.obd.R
 import com.revscope.core.obd.protocol.ReadinessParser
+import com.revscope.core.obd.workshop.DiagnosticRules.Refrigeracion.AIRE_ACEITE
+import com.revscope.core.obd.workshop.DiagnosticRules.Refrigeracion.LIQUIDA
 import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -87,14 +89,60 @@ class DiagnosticRulesTest {
     }
 
     @Test
-    fun `sobrecalentamiento es falla`() {
-        assertEquals(DiagnosticRules.Nivel.FALLA, DiagnosticRules.evaluarTemperatura(108.0, es).nivel)
+    fun `liquida a 108 en marcha es falla con causa de refrigerante`() {
+        val diagnosis = temperatura(108.0, LIQUIDA, true)
+
+        assertEquals(DiagnosticRules.Nivel.FALLA, diagnosis.nivel)
+        assertEquals(es.get(R.string.obd_diag_overheating_cause), diagnosis.causaProbable)
     }
 
     @Test
-    fun `temperatura normal ok`() {
-        assertEquals(DiagnosticRules.Nivel.OK, DiagnosticRules.evaluarTemperatura(88.0, es).nivel)
+    fun `liquida a 88 es ok`() {
+        assertEquals(DiagnosticRules.Nivel.OK, temperatura(88.0, LIQUIDA, true).nivel)
     }
+
+    @Test
+    fun `liquida justo en 105 es ok`() {
+        assertEquals(DiagnosticRules.Nivel.OK, temperatura(105.0, LIQUIDA, true).nivel)
+    }
+
+    @Test
+    fun `aire-aceite a 114 en marcha es ok`() {
+        assertEquals(DiagnosticRules.Nivel.OK, temperatura(114.0, AIRE_ACEITE, true).nivel)
+    }
+
+    @Test
+    fun `aire-aceite a 131 en marcha es falla con causa de aceite`() {
+        val diagnosis = temperatura(131.0, AIRE_ACEITE, true)
+
+        assertEquals(DiagnosticRules.Nivel.FALLA, diagnosis.nivel)
+        assertEquals(es.get(R.string.obd_diag_overheating_cause_air_oil), diagnosis.causaProbable)
+    }
+
+    @Test
+    fun `aire-aceite a 131 sin saber si hay motor es falla`() {
+        assertEquals(DiagnosticRules.Nivel.FALLA, temperatura(131.0, AIRE_ACEITE, null).nivel)
+    }
+
+    @Test
+    fun `aire-aceite a 131 con motor apagado es atencion`() {
+        assertEquals(DiagnosticRules.Nivel.ATENCION, temperatura(131.0, AIRE_ACEITE, false).nivel)
+    }
+
+    @Test
+    fun `liquida a 114 con motor apagado es atencion`() {
+        assertEquals(DiagnosticRules.Nivel.ATENCION, temperatura(114.0, LIQUIDA, false).nivel)
+    }
+
+    @Test
+    fun `refrigeracion se lee del perfil y cae en liquida`() {
+        assertEquals(AIRE_ACEITE, DiagnosticRules.Refrigeracion.desde("AIRE_ACEITE"))
+        assertEquals(LIQUIDA, DiagnosticRules.Refrigeracion.desde(null))
+        assertEquals(LIQUIDA, DiagnosticRules.Refrigeracion.desde("xyz"))
+    }
+
+    private fun temperatura(tempC: Double, refrigeracion: DiagnosticRules.Refrigeracion, motorEncendido: Boolean?) =
+        DiagnosticRules.evaluarTemperatura(tempC, refrigeracion, motorEncendido, es)
 
     @Test
     fun `readiness con mil encendida es falla`() {

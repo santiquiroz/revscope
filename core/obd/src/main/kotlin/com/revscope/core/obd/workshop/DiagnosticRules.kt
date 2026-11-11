@@ -11,6 +11,14 @@ object DiagnosticRules {
 
     enum class Nivel { OK, ATENCION, FALLA }
 
+    enum class Refrigeracion {
+        LIQUIDA, AIRE_ACEITE;
+
+        companion object {
+            fun desde(valor: String?): Refrigeracion = entries.firstOrNull { it.name == valor } ?: LIQUIDA
+        }
+    }
+
     data class Diagnosis(
         val nivel: Nivel,
         val area: String,
@@ -97,19 +105,38 @@ object DiagnosticRules {
         }
     }
 
-    fun evaluarTemperatura(tempC: Double, resolver: StringResolver): Diagnosis {
+    fun evaluarTemperatura(
+        tempC: Double,
+        refrigeracion: Refrigeracion,
+        motorEncendido: Boolean?,
+        resolver: StringResolver,
+    ): Diagnosis {
         val area = resolver.get(R.string.obd_diag_area_cooling)
         val valor = decimal(tempC, 0, resolver)
         return when {
-            tempC > TEMP_MAX -> Diagnosis(
-                Nivel.FALLA, area, resolver.get(R.string.obd_diag_overheating, valor),
-                resolver.get(R.string.obd_diag_overheating_cause),
-            )
-            else -> Diagnosis(
+            tempC <= limiteTemperatura(refrigeracion) -> Diagnosis(
                 Nivel.OK, area, resolver.get(R.string.obd_diag_temperature_ok, valor),
                 resolver.get(R.string.obd_diag_temperature_ok_cause),
             )
+            motorEncendido == false -> Diagnosis(
+                Nivel.ATENCION, area, resolver.get(R.string.obd_diag_temp_high_engine_off, valor),
+                resolver.get(R.string.obd_diag_temp_high_engine_off_cause),
+            )
+            else -> Diagnosis(
+                Nivel.FALLA, area, resolver.get(R.string.obd_diag_overheating, valor),
+                resolver.get(causaSobrecalentamiento(refrigeracion)),
+            )
         }
+    }
+
+    private fun limiteTemperatura(refrigeracion: Refrigeracion): Double = when (refrigeracion) {
+        Refrigeracion.LIQUIDA -> TEMP_MAX_LIQUIDA
+        Refrigeracion.AIRE_ACEITE -> TEMP_MAX_AIRE_ACEITE
+    }
+
+    private fun causaSobrecalentamiento(refrigeracion: Refrigeracion): Int = when (refrigeracion) {
+        Refrigeracion.LIQUIDA -> R.string.obd_diag_overheating_cause
+        Refrigeracion.AIRE_ACEITE -> R.string.obd_diag_overheating_cause_air_oil
     }
 
     fun evaluarReadiness(status: ReadinessParser.ReadinessStatus, resolver: StringResolver): List<Diagnosis> = buildList {
@@ -146,5 +173,6 @@ object DiagnosticRules {
     private const val O2_ALTO = 0.8
     private const val VOLT_MIN_MARCHA = 13.2
     private const val VOLT_MIN_REPOSO = 11.8
-    private const val TEMP_MAX = 105.0
+    private const val TEMP_MAX_LIQUIDA = 105.0
+    private const val TEMP_MAX_AIRE_ACEITE = 130.0
 }

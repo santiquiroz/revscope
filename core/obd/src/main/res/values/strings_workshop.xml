@@ -77,6 +77,9 @@
     <string name="obd_diag_voltage_ok_cause">Charging system within range</string>
     <string name="obd_diag_overheating">Overheating (%1$s°C)</string>
     <string name="obd_diag_overheating_cause">Stop the engine — check coolant, water pump, fan and thermostat</string>
+    <string name="obd_diag_overheating_cause_air_oil">Stop the engine — check oil level and condition, airflow over the engine and a lean mixture</string>
+    <string name="obd_diag_temp_high_engine_off">High temperature with engine off (%1$s°C)</string>
+    <string name="obd_diag_temp_high_engine_off_cause">Residual heat after shutdown — repeat the check with the engine running</string>
     <string name="obd_diag_temperature_ok">Temperature %1$s°C</string>
     <string name="obd_diag_temperature_ok_cause">Within operating range</string>
     <plurals name="obd_diag_mil_on">

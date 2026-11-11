@@ -9,6 +9,9 @@
     <string name="vehicle_fuel_regular">Corriente</string>
     <string name="vehicle_fuel_premium">Extra</string>
     <string name="vehicle_fuel_diesel">Diésel</string>
+    <string name="vehicle_cooling">Refrigeración</string>
+    <string name="vehicle_cooling_liquid">Líquida</string>
+    <string name="vehicle_cooling_air_oil">Aire-aceite</string>
     <string name="vehicle_vin_hint">VIN — activa el perfil solo al conectar</string>
     <string name="vehicle_read_vin">Leer VIN</string>
     <string name="vehicle_max_rpm">RPM máx gauge</string>

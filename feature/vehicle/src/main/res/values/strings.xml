@@ -9,6 +9,9 @@
     <string name="vehicle_fuel_regular">Regular</string>
     <string name="vehicle_fuel_premium">Premium</string>
     <string name="vehicle_fuel_diesel">Diesel</string>
+    <string name="vehicle_cooling">Cooling</string>
+    <string name="vehicle_cooling_liquid">Liquid</string>
+    <string name="vehicle_cooling_air_oil">Air/oil</string>
     <string name="vehicle_vin_hint">VIN — activate profile only when connected</string>
     <string name="vehicle_read_vin">Read VIN</string>
     <string name="vehicle_max_rpm">Max gauge RPM</string>

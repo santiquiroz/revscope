@@ -229,7 +229,13 @@ class HealthCheckViewModel @Inject constructor(
             val o2Samples = collectO2Samples()
             val readings = sessionManager.readings.value
             return MuestreoMezcla(
-                DiagnosticosChequeo.mezcla(readings, o2Samples, registry::estadoSoporte, resolver),
+                DiagnosticosChequeo.mezcla(
+                    readings,
+                    o2Samples,
+                    registry::estadoSoporte,
+                    DiagnosticRules.Refrigeracion.desde(sessionManager.activeProfile.value?.refrigeracion),
+                    resolver,
+                ),
                 readings,
             )
         } finally {
@@ -335,6 +341,7 @@ internal object DiagnosticosChequeo {
         lecturas: Map<String, ObdReading>,
         muestrasO2: List<Double>,
         estadoSoporte: (String) -> EstadoSoporte,
+        refrigeracion: DiagnosticRules.Refrigeracion,
         resolver: StringResolver,
     ): List<DiagnosticRules.Diagnosis> = buildList {
         val largoB1 = lecturaSoportada(lecturas, LONG_TRIM_B1_PID, estadoSoporte)
@@ -349,8 +356,9 @@ internal object DiagnosticosChequeo {
             add(DiagnosticRules.evaluarO2(muestrasO2, resolver))
         }
         agregarVoltajeSiHayRpm(lecturas, estadoSoporte, resolver)
+        val motorEncendido = lecturaSoportada(lecturas, RPM_PID, estadoSoporte)?.let { it.value > ENGINE_RUNNING_RPM }
         lecturaSoportada(lecturas, COOLANT_TEMP_PID, estadoSoporte)
-            ?.let { add(DiagnosticRules.evaluarTemperatura(it.value, resolver)) }
+            ?.let { add(DiagnosticRules.evaluarTemperatura(it.value, refrigeracion, motorEncendido, resolver)) }
     }
 
     fun parametrosNoDisponibles(estadoSoporte: (String) -> EstadoSoporte, resolver: StringResolver): List<String> =
