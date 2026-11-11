@@ -1,16 +1,18 @@
 package com.revscope.core.obd.mcp
 
 import com.revscope.core.data.db.dao.SessionDao
+import com.revscope.core.data.db.dao.TelemetryDao
 import org.json.JSONObject
 import javax.inject.Inject
 
 /** Agregados completos de un viaje puntual por id. */
 class GetViajeDetalleTool @Inject constructor(
     private val sessionDao: SessionDao,
+    private val telemetryDao: TelemetryDao,
 ) : McpTool {
 
     override val name = "get_viaje_detalle"
-    override val description = "Detalle agregado de un viaje puntual por su id (distancia, velocidad, combustible, lanzamientos)"
+    override val description = "Detalle agregado de un viaje puntual por su id (distancia, velocidad, RPM y temperatura de motor máximas, combustible, lanzamientos)"
     override val inputSchema: JSONObject = McpSchemas.requiredInt("id", "Id del viaje (ver get_viajes)")
 
     override suspend fun call(arguments: JSONObject): String {
@@ -26,6 +28,7 @@ class GetViajeDetalleTool @Inject constructor(
             .put("distanciaKm", session.distanceKm)
             .put("velocidadMaxKmh", session.maxSpeed)
             .put("rpmMax", session.maxRpm)
+            .put("tempMotorMaxC", telemetryDao.maxValue(id, ENGINE_TEMP_PID) ?: JSONObject.NULL)
             .put("mejor0a60Ms", session.best0to60Ms ?: JSONObject.NULL)
             .put("mejor0a60mphMs", session.best0to60mphMs ?: JSONObject.NULL)
             .put("mejor0a100Ms", session.best0to100Ms ?: JSONObject.NULL)
@@ -33,5 +36,9 @@ class GetViajeDetalleTool @Inject constructor(
             .put("costoCombustibleCop", session.fuelCostCop ?: JSONObject.NULL)
             .put("ecoScore", session.ecoScore ?: JSONObject.NULL)
             .toString()
+    }
+
+    private companion object {
+        const val ENGINE_TEMP_PID = "05"
     }
 }
