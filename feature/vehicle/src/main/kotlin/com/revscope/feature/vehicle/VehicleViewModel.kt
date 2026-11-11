@@ -56,6 +56,10 @@ class VehicleViewModel @Inject constructor(
     private val _formFuelType = MutableStateFlow("CORRIENTE")
     val formFuelType: StateFlow<String> = _formFuelType.asStateFlow()
 
+    /** "LIQUIDA" | "AIRE_ACEITE" — ver VehicleProfileEntity.refrigeracion */
+    private val _formRefrigeracion = MutableStateFlow("LIQUIDA")
+    val formRefrigeracion: StateFlow<String> = _formRefrigeracion.asStateFlow()
+
     private val _formVin = MutableStateFlow("")
     val formVin: StateFlow<String> = _formVin.asStateFlow()
 
@@ -116,13 +120,16 @@ class VehicleViewModel @Inject constructor(
             _formMaxRpm.value = "12000"
             _formRedlineRpm.value = "10500"
             _formGearCount.value = "5"
+            _formRefrigeracion.value = "AIRE_ACEITE"
         } else {
             _formMaxRpm.value = "8000"
             _formRedlineRpm.value = "6500"
             _formGearCount.value = "6"
+            _formRefrigeracion.value = "LIQUIDA"
         }
     }
 
+    fun setRefrigeracion(v: String) { _formRefrigeracion.value = v }
     fun setFuelType(v: String) { _formFuelType.value = v }
     fun setVin(v: String) { _formVin.value = v }
     fun setMaxRpm(v: String) { _formMaxRpm.value = v }
@@ -205,6 +212,7 @@ class VehicleViewModel @Inject constructor(
         _formName.value = profile.name
         _formType.value = profile.type
         _formFuelType.value = profile.fuelType
+        _formRefrigeracion.value = profile.refrigeracion
         _formVin.value = profile.vin.orEmpty()
         _formEnabledPids.value = parseEnabledPids(profile.enabledPids)
         _formMaxRpm.value = profile.maxRpm.toString()
@@ -259,6 +267,7 @@ class VehicleViewModel @Inject constructor(
                     name = name,
                     type = _formType.value,
                     fuelType = _formFuelType.value,
+                    refrigeracion = _formRefrigeracion.value,
                     vin = _formVin.value.trim().ifEmpty { null },
                     enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
                     maxRpm = maxRpm,
@@ -279,6 +288,7 @@ class VehicleViewModel @Inject constructor(
                         name = name,
                         type = _formType.value,
                         fuelType = _formFuelType.value,
+                        refrigeracion = _formRefrigeracion.value,
                         vin = _formVin.value.trim().ifEmpty { null },
                         enabledPids = JSONArray(_formEnabledPids.value.toList()).toString(),
                         gearRatios = null,
@@ -315,6 +325,7 @@ class VehicleViewModel @Inject constructor(
         _formName.value = ""
         _formType.value = "CAR"
         _formFuelType.value = "CORRIENTE"
+        _formRefrigeracion.value = "LIQUIDA"
         _formVin.value = ""
         _formEnabledPids.value = DEFAULT_PIDS
         _formMaxRpm.value = "8000"

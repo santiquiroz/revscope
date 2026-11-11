@@ -3,6 +3,7 @@ package com.revscope.feature.workshop
 import com.revscope.core.obd.model.ObdReading
 import com.revscope.core.obd.pid.EstadoSoporte
 import com.revscope.core.obd.protocol.ReadinessParser
+import com.revscope.core.obd.workshop.DiagnosticRules
 import com.revscope.core.uitesting.XmlStringResolver
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -43,6 +44,7 @@ class DiagnosticosChequeoTest {
             lecturas = lecturas,
             muestrasO2 = List(40) { 0.1 },
             estadoSoporte = { pid -> if (pid == "14") EstadoSoporte.NoSoportado else EstadoSoporte.Soportado },
+            refrigeracion = DiagnosticRules.Refrigeracion.LIQUIDA,
             resolver = strings,
         )
 
@@ -55,10 +57,38 @@ class DiagnosticosChequeoTest {
             lecturas = mapOf("VBAT" to lectura("VBAT", 11.2, "V")),
             muestrasO2 = emptyList(),
             estadoSoporte = { EstadoSoporte.Soportado },
+            refrigeracion = DiagnosticRules.Refrigeracion.LIQUIDA,
             resolver = strings,
         )
 
         assertFalse(diagnosticos.any { it.area == "Eléctrico" })
+    }
+
+    @Test
+    fun `moto de aire-aceite a 114 grados en marcha no es sobrecalentamiento`() {
+        val diagnosticos = DiagnosticosChequeo.mezcla(
+            lecturas = mapOf("0C" to lectura("0C", 1500.0, "rpm"), "05" to lectura("05", 114.0, "°C")),
+            muestrasO2 = emptyList(),
+            estadoSoporte = { EstadoSoporte.Soportado },
+            refrigeracion = DiagnosticRules.Refrigeracion.AIRE_ACEITE,
+            resolver = strings,
+        )
+
+        assertTrue(diagnosticos.none { it.nivel != DiagnosticRules.Nivel.OK })
+    }
+
+    @Test
+    fun `temperatura alta con RPM en cero es atencion y no falla`() {
+        val diagnosticos = DiagnosticosChequeo.mezcla(
+            lecturas = mapOf("0C" to lectura("0C", 0.0, "rpm"), "05" to lectura("05", 114.0, "°C")),
+            muestrasO2 = emptyList(),
+            estadoSoporte = { EstadoSoporte.Soportado },
+            refrigeracion = DiagnosticRules.Refrigeracion.LIQUIDA,
+            resolver = strings,
+        )
+
+        assertTrue(diagnosticos.any { it.nivel == DiagnosticRules.Nivel.ATENCION })
+        assertTrue(diagnosticos.none { it.nivel == DiagnosticRules.Nivel.FALLA })
     }
 
     @Test
@@ -71,7 +101,7 @@ class DiagnosticosChequeoTest {
             "VBAT" to lectura("VBAT", 11.2, "V"),
         )
 
-        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), estadoSoporte, todos)
+        val diagnosticos = DiagnosticosChequeo.mezcla(lecturas, emptyList(), estadoSoporte, DiagnosticRules.Refrigeracion.LIQUIDA, todos)
         val noDisponibles = DiagnosticosChequeo.parametrosNoDisponibles(estadoSoporte, todos)
 
         assertFalse(diagnosticos.any { it.area == "Eléctrico" })

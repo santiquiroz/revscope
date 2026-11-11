@@ -84,6 +84,7 @@ fun VehicleProfileScreen(
     val formName by vm.formName.collectAsState()
     val formType by vm.formType.collectAsState()
     val formFuelType by vm.formFuelType.collectAsState()
+    val formRefrigeracion by vm.formRefrigeracion.collectAsState()
     val formVin by vm.formVin.collectAsState()
     val formEnabledPids by vm.formEnabledPids.collectAsState()
     val editingProfile by vm.editingProfile.collectAsState()
@@ -185,6 +186,20 @@ fun VehicleProfileScreen(
                     label = stringResource(R.string.vehicle_fuel_diesel),
                     selected = formFuelType == "DIESEL",
                     onClick = { vm.setFuelType("DIESEL") },
+                )
+            }
+
+            Text(stringResource(R.string.vehicle_cooling), color = RevScopeColors.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ChipSeleccion(
+                    texto = stringResource(R.string.vehicle_cooling_liquid),
+                    seleccionado = formRefrigeracion == "LIQUIDA",
+                    onClick = { vm.setRefrigeracion("LIQUIDA") },
+                )
+                ChipSeleccion(
+                    texto = stringResource(R.string.vehicle_cooling_air_oil),
+                    seleccionado = formRefrigeracion == "AIRE_ACEITE",
+                    onClick = { vm.setRefrigeracion("AIRE_ACEITE") },
                 )
             }
 

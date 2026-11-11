@@ -107,6 +107,22 @@ class MigrationTest {
     }
 
     @Test
+    fun `migra 22 a 23 deja las motos en aire-aceite y los carros en liquida`() {
+        helper.createDatabase(TEST_DB, 22).use { db ->
+            seedMotoWithSession(db)
+            db.execSQL(
+                "INSERT INTO vehicle_profiles (id, name, type, vin, enabledPids, gearRatios, createdAt, maxRpm, redlineRpm) " +
+                    "VALUES (2, 'Carro', 'CAR', NULL, '0C', NULL, 1700000000000, 8000, 6500)",
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 23, true, MIGRATION_22_23).use { db ->
+            assertEquals("AIRE_ACEITE", db.queryString("SELECT refrigeracion FROM vehicle_profiles WHERE id = 1"))
+            assertEquals("LIQUIDA", db.queryString("SELECT refrigeracion FROM vehicle_profiles WHERE id = 2"))
+        }
+    }
+
+    @Test
     fun `9 a 19 encadenado conserva la moto y la sesion con los defaults nuevos`() {
         helper.createDatabase(TEST_DB, 9).use(::seedMotoWithSession)
 
